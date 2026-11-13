@@ -69,6 +69,11 @@ counter() {
 	in_target counter "$1" "$2"
 }
 
+# src_counter <seen|redirected|tproxy> <ip>: per-source counter of the src-probe-up probe.
+src_counter() {
+	in_target src-counter "$1" "$2"
+}
+
 # client <ip> <mac or -> <command>: a wired network client, all traffic
 # of which goes through the test bench.
 client() {
@@ -223,22 +228,35 @@ in_target acl listed
 
 section "13. A device excluded inside an intercepted subnet goes direct"
 in_target exclude "$SUBNET" "$MAC_IP" "$EXCLUDED_MAC"
+in_target src-probe-up "$UNLISTED_IP" "$MAC_IP"
 excl_ip=$(counter metabox_redirect_lanac 'ip saddr @metabox_src_ip_exclude')
 excl_mac=$(counter metabox_redirect_lanac 'ether saddr @metabox_src_mac_exclude')
-redir=$(counter metabox_redirect 'redirect to')
+seen_unlisted=$(src_counter seen "$UNLISTED_IP")
+redir_unlisted=$(src_counter redirected "$UNLISTED_IP")
 tcp_to_outside "$UNLISTED_IP" "$EXCLUDED_MAC" >/dev/null
 check "MAC exclusion counter grew" "$(counter metabox_redirect_lanac 'ether saddr @metabox_src_mac_exclude')" -gt "$excl_mac"
+check "TCP of the excluded MAC reached the probe" "$(src_counter seen "$UNLISTED_IP")" -gt "$seen_unlisted"
+check "TCP of the excluded MAC was not redirected" "$(src_counter redirected "$UNLISTED_IP")" = "$redir_unlisted"
+seen_mac=$(src_counter seen "$MAC_IP")
+redir_mac=$(src_counter redirected "$MAC_IP")
 tcp_to_outside "$MAC_IP" "$LISTED_MAC" >/dev/null
 check "address exclusion counter grew, the listed MAC did not win" "$(counter metabox_redirect_lanac 'ip saddr @metabox_src_ip_exclude')" -gt "$excl_ip"
-check "redirect counter did not change for the excluded clients" "$(counter metabox_redirect 'redirect to')" = "$redir"
+check "TCP of the excluded address reached the probe" "$(src_counter seen "$MAC_IP")" -gt "$seen_mac"
+check "TCP of the excluded address was not redirected" "$(src_counter redirected "$MAC_IP")" = "$redir_mac"
 udp_excl=$(counter metabox_mangle_lanac 'ip saddr @metabox_src_ip_exclude')
-tproxy=$(counter metabox_mangle_prerouting 'tproxy ip to')
+seen_mac=$(src_counter seen "$MAC_IP")
+tproxy_mac=$(src_counter tproxy "$MAC_IP")
 client_sh "$MAC_IP" "$LISTED_MAC" "echo metabox | nc -u -w 1 $OUTSIDE 9999 >/dev/null 2>&1 || true"
 check "UDP of the excluded address returns before tproxy" "$(counter metabox_mangle_lanac 'ip saddr @metabox_src_ip_exclude')" -gt "$udp_excl"
-check "tproxy counter did not change for it" "$(counter metabox_mangle_prerouting 'tproxy ip to')" = "$tproxy"
+check "UDP of the excluded address reached the probe" "$(src_counter seen "$MAC_IP")" -gt "$seen_mac"
+check "UDP of the excluded address got no tproxy mark" "$(src_counter tproxy "$MAC_IP")" = "$tproxy_mac"
 got=$(tcp_to_outside "$UNLISTED_IP" -)
 check "a client of the subnet without exclusion goes through sing-box ($got)" "$got" = connected
-check "redirect counter grew for it" "$(counter metabox_redirect 'redirect to')" -gt "$redir"
+check "its TCP was redirected" "$(src_counter redirected "$UNLISTED_IP")" -gt "$redir_unlisted"
+tproxy_unlisted=$(src_counter tproxy "$UNLISTED_IP")
+client_sh "$UNLISTED_IP" - "echo metabox | nc -u -w 1 $OUTSIDE 9999 >/dev/null 2>&1 || true"
+check "its UDP got the tproxy mark" "$(src_counter tproxy "$UNLISTED_IP")" -gt "$tproxy_unlisted"
+in_target src-probe-down
 in_target exclude-off "$SUBNET"
 
 section "14. stop removes the dataplane, start brings it back"

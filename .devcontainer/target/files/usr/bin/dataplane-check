@@ -125,6 +125,32 @@ foreign-mark-counter)
 		sed -n 's/.*counter packets \([0-9]*\) .*/\1/p'
 	;;
 foreign-mark-down) nft delete table inet metabox_check_mark ;;
+src-probe-up)
+	# Per-source counters after the dataplane chains: redirect rewrites the destination port
+	# to the redirect port, tproxy sets the tproxy mark. The rule-wide dataplane counters
+	# are also moved by unrelated traffic of the test bench.
+	shift
+	port=$(uci -q get metabox.dataplane.redirect_port || echo 5331)
+	mark=$(uci -q get metabox.dataplane.tproxy_mark || echo 101)
+	{
+		echo 'table inet metabox_check_src {'
+		echo '	chain prerouting {'
+		echo '		type filter hook prerouting priority filter + 10; policy accept;'
+		for a in "$@"; do
+			echo "		ip saddr $a counter comment \"seen $a\""
+			echo "		ip saddr $a tcp dport $port counter comment \"redirected $a\""
+			echo "		ip saddr $a meta l4proto udp meta mark $mark counter comment \"tproxy $a\""
+		done
+		echo '	}'
+		echo '}'
+	} | nft -f -
+	;;
+src-counter)
+	# $2 is seen, redirected or tproxy, $3 a source address given to src-probe-up.
+	nft list chain inet metabox_check_src prerouting | grep -F -- "comment \"$2 $3\"" |
+		sed -n 's/.*counter packets \([0-9]*\) .*/\1/p'
+	;;
+src-probe-down) nft delete table inet metabox_check_src ;;
 snapshot) snapshot ;;
 apply) /usr/bin/apply-cycle-check >/dev/null ;;
 kill)
@@ -185,7 +211,7 @@ forget-state) rm -f /var/run/metabox/dataplane.state ;;
 stop) /etc/init.d/$SERVICE stop ;;
 start) /etc/init.d/$SERVICE start ;;
 *)
-	echo "usage: $0 state|expect-up|expect-down|counter <chain> <pattern>|singbox-pid|wait|log-has <a> <b>|acl all|listed|exclude <subnet> <ip> <mac>|exclude-off <subnet>|router-tcp|router-udp|foreign-mark-up|foreign-mark-counter <mark>|foreign-mark-down|snapshot|apply|kill|foreign-up|foreign-down|foreign-present|dataplane 0|1|forget-state|stop|start" >&2
+	echo "usage: $0 state|expect-up|expect-down|counter <chain> <pattern>|singbox-pid|wait|log-has <a> <b>|acl all|listed|exclude <subnet> <ip> <mac>|exclude-off <subnet>|router-tcp|router-udp|foreign-mark-up|foreign-mark-counter <mark>|foreign-mark-down|src-probe-up <ip>...|src-counter <kind> <ip>|src-probe-down|snapshot|apply|kill|foreign-up|foreign-down|foreign-present|dataplane 0|1|forget-state|stop|start" >&2
 	exit 2
 	;;
 esac
