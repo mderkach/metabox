@@ -1,6 +1,6 @@
 import { renderWithQuery } from '@test/renderWithQuery';
 import { selectOption } from '@test/selectOption';
-import { render, renderHook, screen, waitFor } from '@testing-library/react';
+import { render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { JSONPath } from 'jsonc-parser';
 import { useMemo } from 'react';
@@ -520,10 +520,12 @@ describe('secret fields', () => {
 
     await user.click(screen.getByRole('button', { name: 'Показать private_key' }));
 
-    const revealed = screen.getByRole('textbox', { name: 'private_key' });
-
-    expect(revealed).not.toHaveAttribute('readonly');
-    expect(revealed).toHaveValue('-----BEGIN KEY-----\nk1');
+    expect(screen.getByRole('textbox', { name: 'private_key' })).not.toHaveAttribute('readonly');
+    expect(
+      within(screen.getByRole('list', { name: 'private_key: значения' }))
+        .getAllByRole('listitem')
+        .map((item) => item.textContent)
+    ).toEqual(['-----BEGIN KEY-----', 'k1']);
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 });

@@ -26,9 +26,6 @@ export function isUnset(value: unknown): value is null | undefined {
   return value === UNSET || value === undefined;
 }
 
-/** Line break in a multiline field: list values go one per line. */
-const LINE_BREAK = /\r?\n/;
-
 /** An entry of digits only: a "string or number" field serves it as a number. */
 const DIGITS = /^\d+$/;
 
@@ -108,17 +105,6 @@ export function unpackList(value: unknown): string[] {
   }
 
   return Array.isArray(value) ? value.filter((item) => typeof item === 'string') : [];
-}
-
-/** Multiline field into list values: empty lines and surrounding spaces drop out. */
-export function textToList(text: string, listable: boolean): string | string[] | null {
-  return packList(
-    text
-      .split(LINE_BREAK)
-      .map((line) => line.trim())
-      .filter((line) => line !== ''),
-    listable
-  );
 }
 
 export function listToText(value: unknown): string {

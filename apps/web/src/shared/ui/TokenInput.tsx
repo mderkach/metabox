@@ -7,13 +7,9 @@ import { Badge } from './shadcn/badge';
 
 const SEPARATOR = /[\s,]+/;
 
-function unique(values: readonly string[]): string[] {
-  return [...new Set(values)];
-}
-
 /**
  * Short values typed one by one: each one is a chip. Enter, a comma or a space
- * closes a value, and a pasted list splits into chips by itself.
+ * (or `separator`) closes a value, and a pasted list splits into chips by itself.
  *
  * The text being typed is already the last item of `value`: a form that writes
  * on change does not wait for Enter, and a value left unclosed is not lost.
@@ -24,6 +20,8 @@ export function TokenInput({
   onValueChange,
   label,
   isValid,
+  separator = SEPARATOR,
+  distinct = true,
   ref,
   className,
   placeholder,
@@ -36,6 +34,10 @@ export function TokenInput({
   label: string;
   /** A chip that fails it is marked as an error; the form says why. */
   isValid?: (token: string) => boolean;
+  /** What closes a value when typed or pasted; Enter always closes it. */
+  separator?: RegExp;
+  /** A repeated value is dropped. */
+  distinct?: boolean;
 }) {
   const { t } = useTranslation('shared');
   const [typed, setTyped] = useState('');
@@ -44,6 +46,8 @@ export function TokenInput({
   // outside, such as a picked device, closes it.
   const draft = typed !== '' && value.at(-1) === typed ? typed : '';
   const tokens = draft === '' ? value : value.slice(0, -1);
+
+  const unique = (values: readonly string[]) => (distinct ? [...new Set(values)] : [...values]);
 
   const setRef = (element: HTMLInputElement | null) => {
     input.current = element;
@@ -56,7 +60,7 @@ export function TokenInput({
   };
 
   const type = (text: string) => {
-    const parts = text.split(SEPARATOR);
+    const parts = text.split(separator);
     const tail = parts.pop() ?? '';
     const closed = unique([...tokens, ...parts.filter((part) => part.length > 0)]);
 

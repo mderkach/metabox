@@ -9,10 +9,12 @@ function Harness({
   initial = [],
   onChange = vi.fn<(value: string[]) => void>(),
   isValid,
+  lines = false,
 }: {
   initial?: string[];
   onChange?: (value: string[]) => void;
   isValid?: (token: string) => boolean;
+  lines?: boolean;
 }) {
   const [value, setValue] = useState(initial);
 
@@ -22,6 +24,8 @@ function Harness({
       label='Домен'
       value={value}
       isValid={isValid}
+      separator={lines ? /\n/ : undefined}
+      distinct={!lines}
       onValueChange={(next) => {
         setValue(next);
         onChange(next);
@@ -72,6 +76,16 @@ describe('TokenInput', () => {
 
     expect(chips()).toEqual(['a.example', 'b.example']);
     expect(screen.getByRole('textbox', { name: 'Домен' })).toHaveValue('c.example');
+  });
+
+  it('with a line separator keeps spaces, commas and repeats inside values', async () => {
+    const user = userEvent.setup();
+
+    render(<Harness lines />);
+    await user.click(screen.getByRole('textbox', { name: 'Домен' }));
+    await user.paste('-----BEGIN CERTIFICATE-----\na, b\n-----BEGIN CERTIFICATE-----\n');
+
+    expect(chips()).toEqual(['-----BEGIN CERTIFICATE-----', 'a, b', '-----BEGIN CERTIFICATE-----']);
   });
 
   it('Backspace in an empty field takes the last chip back for editing', async () => {

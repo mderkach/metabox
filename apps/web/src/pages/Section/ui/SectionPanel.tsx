@@ -1,12 +1,10 @@
 import { useTranslation } from 'react-i18next';
 
-import { ConfigDocumentState, type GenericSection } from '@entities/Config';
-import { ConfigNodeAddForm } from '@features/Config/ConfigNodeAdd';
-import { ConfigNodeDeleteButton } from '@features/Config/ConfigNodeDelete';
-import { ConfigNodeEditor, ConfigNodeMeta } from '@widgets/Config/ConfigNode';
+import type { GenericSection } from '@entities/Config';
 import { ConfigNodePanel, ConfigNodePanelSheet } from '@widgets/Config/ConfigNodePanel';
 
-import { nodeTag } from '../lib';
+import { SectionPanelActions } from './SectionPanelActions';
+import { SectionPanelBody } from './SectionPanelBody';
 
 /** The picked node: its place in the section, the node from the text and its name on screen. */
 export interface SectionPanelNode {
@@ -43,46 +41,41 @@ export function SectionPanel({
   onDeleted: () => void;
 }) {
   const { t } = useTranslation('pages/Section');
-  // The revision in the key recreates the form and editor on an update not from the user:
-  // after discarding changes the field must not keep the discarded text.
-  const revision = ConfigDocumentState.use.revision();
   const title = picked === null ? t('add.title') : picked.name;
-  const actions =
-    picked === null ? undefined : (
-      <ConfigNodeDeleteButton
-        section={section}
-        index={picked.index}
-        name={picked.name}
-        tag={nodeTag(picked.node)}
-        onDeleted={onDeleted}
-      />
-    );
-  const body =
-    picked === null ? (
-      <ConfigNodeAddForm section={section} takenTags={takenTags} builtTags={builtTags} onAdded={onAdded} />
-    ) : (
-      <>
-        <div className='flex flex-wrap items-center gap-2 empty:hidden'>
-          <ConfigNodeMeta section={section} node={picked.node} name={picked.name} />
-        </div>
-        <ConfigNodeEditor
-          key={`${String(revision)}:${String(picked.index)}`}
-          section={section}
-          index={picked.index}
-          node={picked.node}
-          name={picked.name}
-          builtTags={builtTags}
-        />
-      </>
-    );
 
   return sheet ? (
-    <ConfigNodePanelSheet open={open} title={title} actions={actions} onClose={onClose}>
-      {body}
+    <ConfigNodePanelSheet
+      open={open}
+      title={title}
+      actions={
+        picked === null ? undefined : <SectionPanelActions section={section} picked={picked} onDeleted={onDeleted} />
+      }
+      onClose={onClose}
+    >
+      <SectionPanelBody
+        section={section}
+        picked={picked}
+        takenTags={takenTags}
+        builtTags={builtTags}
+        onAdded={onAdded}
+      />
     </ConfigNodePanelSheet>
   ) : (
-    <ConfigNodePanel key={picked?.index ?? 'add'} title={title} actions={actions} onClose={onClose}>
-      {body}
+    <ConfigNodePanel
+      key={picked?.index ?? 'add'}
+      title={title}
+      actions={
+        picked === null ? undefined : <SectionPanelActions section={section} picked={picked} onDeleted={onDeleted} />
+      }
+      onClose={onClose}
+    >
+      <SectionPanelBody
+        section={section}
+        picked={picked}
+        takenTags={takenTags}
+        builtTags={builtTags}
+        onAdded={onAdded}
+      />
     </ConfigNodePanel>
   );
 }

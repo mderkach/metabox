@@ -11,23 +11,18 @@ import {
   parseScalar,
   SECRET_MASK,
   secretMaskOf,
-  textToList,
   UNSET,
 } from '../model';
 
 describe('node form field values', () => {
-  it('a multiline field returns values without empty lines and edge spaces', () => {
-    expect(textToList(' a.example \n\n b.example ', false)).toEqual(['a.example', 'b.example']);
-  });
-
   it('a single value of a listable field stays a string, an ordinary list stays a list', () => {
-    expect(textToList('h2', true)).toBe('h2');
-    expect(textToList('h2', false)).toEqual(['h2']);
+    expect(packList(['h2'], true)).toBe('h2');
+    expect(packList(['h2'], false)).toEqual(['h2']);
     expect(packList(['tcp', 'udp'], true)).toEqual(['tcp', 'udp']);
   });
 
   it('an empty list means "no key"', () => {
-    expect(textToList('\n  \n', true)).toBe(UNSET);
+    expect(packList([], true)).toBe(UNSET);
     expect(packList([], false)).toBe(UNSET);
   });
 
