@@ -21,6 +21,7 @@ export function TokenInput({
   label,
   isValid,
   tokenLabel,
+  pasteFilter,
   separator = SEPARATOR,
   distinct = true,
   ref,
@@ -37,6 +38,8 @@ export function TokenInput({
   isValid?: (token: string) => boolean;
   /** A name shown on the chip before its value, such as a device for its address. */
   tokenLabel?: (token: string) => string | undefined;
+  /** Pasted text before it splits into chips, such as a list without its comment lines. */
+  pasteFilter?: (text: string) => string;
   /** What closes a value when typed or pasted; Enter always closes it. */
   separator?: RegExp;
   /** A repeated value is dropped. */
@@ -145,7 +148,8 @@ export function TokenInput({
         // A one-line field drops line breaks from pasted text, and a list
         // copied one value per line would glue into one value.
         onPaste={(event) => {
-          const pasted = event.clipboardData.getData('text');
+          const text = event.clipboardData.getData('text');
+          const pasted = pasteFilter === undefined ? text : pasteFilter(text);
           const { selectionStart, selectionEnd } = event.currentTarget;
 
           event.preventDefault();

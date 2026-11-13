@@ -19,6 +19,14 @@ export function entryLines(text: string): string[] {
   return text.split('\n').filter((line) => line !== '');
 }
 
+/** A pasted list without its `#` comment lines: split into chips, a comment would turn into words. */
+export function dropCommentLines(text: string): string {
+  return text
+    .split(/\r?\n/)
+    .filter((line) => !line.trim().startsWith('#'))
+    .join('\n');
+}
+
 /** List lines: empty ones and `#` comments are skipped. */
 export function listEntries(text: string): string[] {
   return text

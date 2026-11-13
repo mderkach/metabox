@@ -15,6 +15,7 @@ import { showQueryError } from '@shared/api';
 import { Button, Input, Label, ToggleGroup, ToggleGroupItem, TokenInput } from '@shared/ui';
 
 import {
+  dropCommentLines,
   entryLines,
   isListEntry,
   LIST_STORAGE,
@@ -154,6 +155,7 @@ export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly s
               }}
               onBlur={field.onBlur}
               isValid={isListEntry}
+              pasteFilter={dropCommentLines}
               placeholder={t('field.entries.placeholder')}
               spellCheck={false}
               autoCapitalize='off'
