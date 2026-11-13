@@ -10,7 +10,7 @@ const SOURCES = import.meta.glob<string>(['/src/**/*.{ts,tsx}', '!/src/**/__test
 /**
  * Where the panel shows the connection source and who sets the device label
  * there. Search, facet and the address parameter, export take the label from the
- * connections screen; the rule form takes it from its own condition helper.
+ * connections screen; the rule form takes it from its model for the chips and the lease warning.
  */
 const PLACES: readonly { place: string; file: string }[] = [
   { place: 'ячейка и мобильная карточка', file: '/src/widgets/ConnectionTable/ui/ConnectionSourceCell.tsx' },
@@ -18,7 +18,7 @@ const PLACES: readonly { place: string; file: string }[] = [
   { place: 'поиск, фасет, параметр адреса и выгрузка', file: '/src/pages/Connections/lib/Connections.lib.ts' },
   { place: 'сводка обзора', file: '/src/pages/Overview/ui/OverviewConnections.tsx' },
   { place: 'объяснение маршрута', file: '/src/widgets/RouteExplanation/ui/RouteExplanationTitle.tsx' },
-  { place: 'форма правила', file: '/src/features/Rule/RuleEdit/ui/RuleSourceDevices.tsx' },
+  { place: 'форма правила', file: '/src/features/Rule/RuleEdit/model/RuleEdit.model.ts' },
   { place: 'подпись правила без имени', file: '/src/entities/Rule/ui/useRuleTitle.ts' },
 ];
 

@@ -12,8 +12,8 @@
     },
     "entries": {
       "label": "Domains and addresses",
-      "placeholder": "example.com\n203.0.113.0/24",
-      "hint": "One domain, IP or subnet per line. Lines starting with # are skipped."
+      "placeholder": "example.com, 203.0.113.0/24",
+      "hint": "A domain, IP or subnet. Enter, a comma or a space adds a value; a pasted list splits by itself."
     }
   },
   "submit": "Save to draft",
@@ -23,6 +23,6 @@
     "tagTaken": "The name is already taken by another set",
     "tagNotFileName": "For a file the list name is limited to Latin letters, digits, dots and dashes: the file name is built from it",
     "entriesRequired": "The list is empty: add at least one line",
-    "entryInvalid": "Line “{{entry}}” looks like neither a domain nor an address"
+    "entryInvalid": "“{{entry}}” looks like neither a domain nor an address"
   }
 }
