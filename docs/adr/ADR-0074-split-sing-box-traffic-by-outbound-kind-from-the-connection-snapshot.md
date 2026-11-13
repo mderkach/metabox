@@ -1,6 +1,6 @@
 # ADR-0074. Split sing-box traffic by outbound kind from the connection snapshot and spread unseen bytes by weight
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-12
 - Deciders: repository owner
 

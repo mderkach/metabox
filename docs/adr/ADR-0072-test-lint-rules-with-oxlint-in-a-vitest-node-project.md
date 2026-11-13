@@ -1,6 +1,6 @@
 # ADR-0072. Test lint rules with oxlint in a Vitest Node project
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-31
 - Deciders: repository owner
 

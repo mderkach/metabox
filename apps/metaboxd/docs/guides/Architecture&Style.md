@@ -85,7 +85,7 @@ Export the minimum. Names follow the Go standard: `MixedCaps`, abbreviations ent
 
 Errors are a return value, not a panic. `panic` is allowed only for an impossible state inside the process; it must not appear in a request handler or in the apply loop.
 
-Comments follow the "Placement of technical knowledge" rule in [AGENTS.md](../../../../AGENTS.md): godoc does not retell the implementation, it describes what is not visible from the signature. Example from existing code: [`apps/metaboxd/main.go:1`](../../main.go).
+Comments follow the "Where technical knowledge lives" section of [AGENTS.md](../../../../AGENTS.md): godoc does not retell the implementation, it describes what is not visible from the signature. Example from existing code: [`apps/metaboxd/main.go:1`](../../main.go).
 
 There is one package comment, in the file named after the package or in `doc.go`, and it starts with `Package <name>`.
 

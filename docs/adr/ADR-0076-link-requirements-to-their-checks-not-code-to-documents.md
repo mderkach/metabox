@@ -1,6 +1,6 @@
 # ADR-0076. Link requirements to their checks, not code to documents
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-13
 - Deciders: repository owner
 
