@@ -1,6 +1,8 @@
 import i18next, { type Resource } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
+import { FALLBACK_LANGUAGE, I18N_OPTIONS } from '@shared/lib/i18n';
+
 /**
  * The test dictionary is assembled at once and synchronously: a render in a test does not wait, and
  * a network load would substitute a placeholder for the text the
@@ -29,10 +31,8 @@ function collectResources(): Resource {
 
 export async function initTestI18n(): Promise<void> {
   await i18next.use(initReactI18next).init({
-    lng: 'ru',
-    fallbackLng: 'ru',
+    ...I18N_OPTIONS,
+    lng: FALLBACK_LANGUAGE,
     resources: collectResources(),
-    defaultNS: false,
-    interpolation: { escapeValue: false },
   });
 }
