@@ -128,4 +128,21 @@ describe('TokenInput', () => {
     expect(port).not.toHaveTextContent('ошибка');
     expect(word).toHaveTextContent('https, ошибка');
   });
+
+  it('shows the name of a value on its chip before the value itself', () => {
+    render(
+      <TokenInput
+        label='Источник'
+        aria-label='Источник'
+        value={['192.168.1.60/32', '10.0.0.0/8']}
+        onValueChange={vi.fn<(value: string[]) => void>()}
+        tokenLabel={(token) => (token === '192.168.1.60/32' ? 'Ноутбук' : undefined)}
+      />
+    );
+
+    const [device, subnet] = within(screen.getByRole('list', { name: 'Источник: значения' })).getAllByRole('listitem');
+
+    expect(device).toHaveTextContent('Ноутбук 192.168.1.60/32');
+    expect(subnet).toHaveTextContent(/^10\.0\.0\.0\/8$/);
+  });
 });

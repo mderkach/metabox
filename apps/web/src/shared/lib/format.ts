@@ -21,7 +21,12 @@ export function formatBytes(bytes: number): string {
     unit += 1;
   }
 
-  const amount = unit === 0 ? String(Math.round(value)) : value.toFixed(1);
+  let amount = unit === 0 ? String(Math.round(value)) : value.toFixed(1);
+
+  if (Number(amount) >= BYTE_STEP && unit < BYTE_UNITS.length - 1) {
+    amount = (value / BYTE_STEP).toFixed(1);
+    unit += 1;
+  }
 
   return `${amount} ${i18next.t(BYTE_UNITS[unit], { ns: 'shared' })}`;
 }
