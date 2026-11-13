@@ -45,6 +45,8 @@ export interface RouteEditorState {
   nodes: unknown[];
   /** Rule nodes of the file from the device, without draft edits. */
   appliedNodes: unknown[];
+  /** Rule names of the file from the device, one per node of `appliedNodes`. */
+  appliedNames: (string | null)[];
 }
 
 /**
@@ -70,6 +72,7 @@ export function useRouteEditor(): RouteEditorState {
 
   const appliedText = document.appliedText;
   const appliedNodes = useMemo(() => (appliedText === null ? [] : readRules(appliedText)), [appliedText]);
+  const appliedNames = useMemo(() => (appliedText === null ? [] : readRuleNames(appliedText)), [appliedText]);
 
   return {
     source: document.query,
@@ -81,11 +84,12 @@ export function useRouteEditor(): RouteEditorState {
     outboundTypes,
     nodes,
     appliedNodes,
+    appliedNames,
   };
 }
 
 export interface RuleMarks {
-  /** Rows absent from the applied config: new and changed in the draft. */
+  /** Rows absent from the applied config (new and changed in the draft) and renamed ones. */
   edited: ReadonlySet<string>;
   hits: RuleHitsColumn;
 }
@@ -97,13 +101,23 @@ export interface RuleMarks {
  */
 export function useRuleMarks(editor: RouteEditorState): RuleMarks {
   const hits = useRuleHits();
-  const { rules, nodes, appliedNodes } = editor;
+  const { rules, nodes, appliedNodes, appliedNames } = editor;
 
   const applied = useMemo(() => toAppliedIndices(nodes, appliedNodes), [nodes, appliedNodes]);
 
+  // The name is a comment above the node: a renamed rule matches its applied node and is told by the name.
   const edited = useMemo(
-    () => new Set(rules.filter((_rule, position) => applied[position] === null).map((rule) => rule.id)),
-    [rules, applied]
+    () =>
+      new Set(
+        rules
+          .filter((rule, position) => {
+            const index = applied[position];
+
+            return index === null || (appliedNames.at(index) ?? null) !== rule.name;
+          })
+          .map((rule) => rule.id)
+      ),
+    [rules, applied, appliedNames]
   );
 
   const column = useMemo((): RuleHitsColumn => {

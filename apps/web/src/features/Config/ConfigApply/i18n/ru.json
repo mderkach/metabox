@@ -95,6 +95,7 @@
       "removed": "Удалено: {{title}} (правило {{index}})",
       "changed": "Изменено: <node>{{title}}</node> (правило {{index}})",
       "moved": "Перемещено: <node>{{title}}</node> с места {{previous}} на {{index}}",
+      "renamed": "Переименовано из «{{previousTitle}}» в «<node>{{title}}</node>» (правило {{index}})",
       "more_one": "И ещё {{count}} изменение",
       "more_few": "И ещё {{count}} изменения",
       "more_many": "И ещё {{count}} изменений"

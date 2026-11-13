@@ -7,7 +7,8 @@ import { ConfigApplySectionLink } from './ConfigApplySectionLink';
 
 export function ConfigApplyChangeItem({ change, onNavigate }: { change: ConfigChange; onNavigate: () => void }) {
   const { t } = useTranslation('features/Config/ConfigApply');
-  const target = change.section === null ? null : toSectionLink(change.section);
+  const node = change.kind === CONFIG_CHANGE.Added || change.kind === CONFIG_CHANGE.Changed ? change.index : undefined;
+  const target = change.section === null ? null : toSectionLink(change.section, node);
 
   if (change.kind === CONFIG_CHANGE.Setting) {
     const from = toValueText(change.from);
