@@ -55,7 +55,7 @@ TSDoc and godoc do not retell the implementation line by line, only what the sig
 
 A code comment is written in two cases only: a contract the signature does not show (TSDoc, godoc), or a non-obvious "why": a bug workaround, a protocol requirement, a link to an ADR or issue. One or two sentences; a longer explanation belongs in an ADR or a guide. Not allowed: retelling the neighbouring line, section headers and separators, `Note:` / `Important:`, traces of the edit ("now", "previously", "added", `v2`), a TODO without an addressee, commented-out code. A comment does not state a rule: the rule lives in `AGENTS.md` or a guide.
 
-Technical decisions (test bench setup, a workaround for a platform limitation, a tool choice, the architecture of a part of the system) are recorded as ADRs in `docs/adr/` with the `create-adr` skill. The repository owner sets the `Accepted` status; the agent creates a `Proposed` draft. A decision that changes a requirement edits sections 1–11 of the PRD.
+Technical decisions (test bench setup, a workaround for a platform limitation, a tool choice, the architecture of a part of the system) are recorded as ADRs in `docs/adr/` with the `create-adr` skill. The repository owner delegated acceptance to the agent: it creates the ADR as `Proposed` and may set `Accepted` itself. Either way, the hand-in carries a summary for a reader without the task context: what was decided, which options were rejected and what changes for the owner, with every code and abbreviation expanded. A decision that changes a requirement edits sections 1–11 of the PRD.
 
 PRD appendix A is closed to new entries: decisions made before ADRs were introduced moved to `docs/adr/`, and the appendix keeps only headings with links to them. Look for decisions in ADRs; do not add to appendix A.
 
@@ -69,14 +69,16 @@ Working notes made during tasks live in `.omc/plans/*`. These files are **not in
 - Do not introduce new abstractions or dependencies if the task can be solved with what the project already has.
 - Keep the user's changes and do not revert them without permission. If a file changed on disk, it is usually intentional; report it instead of restoring your version.
 - Speak plainly about risks, trade-offs and tech debt. Do not embellish the state of the code.
+- Deferred work and a rule violation that is found but not fixed become a GitHub issue with the `techdebt` label, not a line in the reply. The repository is public: device addresses, keys and logs with personal data do not go into an issue.
 - `docs/PRD.md` is the primary source of requirements and decisions. It is edited in the same commit as the change; which change edits what is described in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 ## Commits
 
 Message format, scopes, branches and PRs: [`CONTRIBUTING.md`](./CONTRIBUTING.md). An agent writes the same one-line message as a person, and in addition:
 
-- Commits and pushes only on explicit request. Without it, changes stay in the working tree, and the response lists what was changed.
+- Commits, pushes, opens a PR and merges only on explicit request or when the task was delegated through an orchestrator. Even then, it confirms how far to go: a local branch, a pushed branch, a PR or a merge. Without a request, changes stay in the working tree, and the response lists what was changed.
 - Works on a branch: if the current one is `main`, creates a branch first.
+- Stages files by name, never by directory. Files that were already staged before the task began are not its own: it leaves them out of the commit (`git commit -- <paths>`) and reports them.
 - Before committing, runs the checks of the affected part and quotes the result as is.
 - Keeps one topic per commit. If the diff is mixed, proposes a split and waits for a decision.
 - Does not rewrite history: `amend`, `rebase` and force-push only on direct request.
@@ -101,13 +103,13 @@ Message format, scopes, branches and PRs: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 - Run linters and tests yourself and quote the result as is; do not paraphrase it.
 - A new dependency only when there is no way around it; justify it.
 - Dependency versions are pinned exactly, without `^` and `~`: a range gives different trees on a developer machine and in CI. `saveExact: true` in the root `pnpm-workspace.yaml` enforces this; a range typed by hand is caught by `pnpm install --frozen-lockfile` in CI, because the lockfile stores the specifier and diverges from the manifest. A version update is a separate, deliberate change.
-- `apps/web/src/shared/api/generated.ts` is not edited by hand; the generator is. Writing to it is blocked in `.claude/settings.json`.
+- Generated files are not edited by hand; their generators are: `apps/web/src/shared/api/generated.ts` and `apps/metaboxd/internal/mcp/fields.generated.go` (`make schema`), `apps/web/src/shared/api/daemon.generated.ts` (`make schema-daemon`), `apps/web/src/i18n.generated.d.ts` (`pnpm --filter web gen:i18n`). `.claude/settings.json` blocks Claude's edits to them; for other clients the pre-commit hook and the freshness tests in `make test` catch a hand edit.
 - The repository language is English: code, comments, commit messages, documentation, ADRs, the PRD. README, CONTRIBUTING, docs/Development and docs/Maintaining have Russian copies (`README.ru.md`, `CONTRIBUTING.ru.md`, `docs/Development.ru.md`, `docs/Maintaining.ru.md`), updated in the same commit as the English file. Text shown to users lives in the i18n dictionaries, in English and Russian.
 - Personal settings that are not shared through git go into `AGENTS.local.md` (response formats, your own triggers, aliases). The file is ignored in `.gitignore` by the `*.local.*` pattern.
 
 ## Context hygiene
 
-- Development rules live only in `AGENTS.md`. `.claude/*`, `.codex/*`, `.cursor/*`, `.vscode/*` hold tool settings only: permissions, MCP, formatting, entry points.
+- Adapters, `.vscode/*` included, hold tool settings only; see "Rule sources and their priority".
 - Do not copy repository rules into the agent's global user instructions, or the other way round.
 - Do not duplicate the same list of paths in several configs without need. Claude tool permissions live in `.claude/settings.json`; Codex uses its own sandbox settings in `.codex/config.toml`. Their enforcement differs; see [Development](./docs/Development.md#codex).
 - Connect external plugins only when their features are actually needed; do not describe their behaviour in the canonical sources.

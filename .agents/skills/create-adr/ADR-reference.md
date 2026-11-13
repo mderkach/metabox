@@ -23,7 +23,7 @@ Not needed: a local bug fix, an obvious refactoring without contract changes, fo
 ## Lifecycle
 
 - `Proposed`: a draft is prepared, the decision is not made;
-- `Accepted`: accepted by the repository owner;
+- `Accepted`: the decision holds;
 - `Rejected`: the option was considered but not accepted;
 - `Superseded`: replaced by a new ADR; add a link to the replacing one;
 - `Deprecated`: no longer recommended; there may be no direct replacement.
@@ -32,7 +32,7 @@ An accepted ADR is not rewritten after the fact: a new decision is recorded in a
 
 ## Who makes the decision
 
-The agent studies the code and documentation, identifies constraints, prepares and compares options, writes a `Proposed` draft, checks links and template compliance. The agent does **not** set `Accepted`; the repository owner does.
+The agent studies the code and documentation, identifies constraints, prepares and compares options, writes a `Proposed` draft, checks links and template compliance, and sets `Accepted` once the decision holds. The repository owner delegated acceptance to the agent and reads the summary that comes with the hand-in.
 
 ## Location and naming
 
