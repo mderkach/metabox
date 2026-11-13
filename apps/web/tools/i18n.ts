@@ -118,6 +118,11 @@ ${entries}
 `;
 }
 
+/** The content `gen:i18n` writes into `src/i18n.generated.d.ts` for the dictionaries on disk. */
+export function expectedI18nTypes(projectRoot: string): string {
+  return renderI18nTypes(namespacesOf(collectLocales(path.join(projectRoot, 'src'))));
+}
+
 /**
  * Returns `true` if the file was rewritten. Matching content is not written:
  * otherwise every run updates `mtime` and makes `tsc -b` rebuild
@@ -125,7 +130,7 @@ ${entries}
  */
 export function writeI18nTypes(projectRoot: string): boolean {
   const target = path.join(projectRoot, OUT_FILE);
-  const next = renderI18nTypes(namespacesOf(collectLocales(path.join(projectRoot, 'src'))));
+  const next = expectedI18nTypes(projectRoot);
   const current = existsSync(target) ? readFileSync(target, 'utf8') : '';
 
   if (current === next) {
