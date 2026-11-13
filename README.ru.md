@@ -282,6 +282,7 @@ apk del metaboxd
 
 ## Документация
 
+- [`docs/Recovery.ru.md`](./docs/Recovery.ru.md) — известные ограничения и как вернуть доступ, если пропала сеть
 - [`docs/PRD.md`](./docs/PRD.md) — требования и этапы
 - [`docs/adr/`](./docs/adr/README.md) — архитектурные решения
 - [`docs/Development.ru.md`](./docs/Development.ru.md) — сборка из исходников, стенд, команды

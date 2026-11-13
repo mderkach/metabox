@@ -7,11 +7,13 @@ const JSON_INDENT = 2;
 /**
  * RFC 4180 escaping: commas occur in the chain and the rule, and quotes from
  * sniff occur in domains. Without quotes such a row shifts the columns.
+ * A text that a spreadsheet would run as a formula (a LAN client chooses the host
+ * and the device name) gets a leading `'`; numbers the panel computes stay as they are.
  */
 function toCsvCell(value: string | number): string {
-  const text = String(value);
+  const text = typeof value === 'string' && /^[=+\-@\t\r]/u.test(value) ? `'${value}` : String(value);
 
-  return /[",\n]/u.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+  return /[",\r\n]/u.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
 function toCsv(rows: ConnectionRow[], sourceLabel: ConnectionSourceLabel): string {

@@ -80,6 +80,38 @@ describe('connections export', () => {
     expect(quoted).toContain('"he said ""hi"""');
   });
 
+  it.each(['=', '+', '-', '@', '\t'])('writes a text starting with %j as text, not as a formula', (trigger) => {
+    const [, row] = toExportBody([makeRow({ host: `${trigger}1+1` })], EXPORT_FORMAT.Csv, sourceLabel).split('\n');
+
+    expect(row.startsWith(`'${trigger}1+1`)).toBe(true);
+  });
+
+  it('neutralises a formula in the host and in the device label', () => {
+    const [, row] = toExportBody(
+      [makeRow({ host: '=HYPERLINK("http://x")', source: '+1+1' })],
+      EXPORT_FORMAT.Csv,
+      sourceLabel
+    ).split('\n');
+
+    expect(row).toContain('"\'=HYPERLINK(""http://x"")"');
+    expect(row).toContain(",'+1+1,");
+  });
+
+  it('quotes a cell with a bare carriage return, also after the formula prefix', () => {
+    const [, row] = toExportBody([makeRow({ rule: 'a\rb', chain: ['\rx'] })], EXPORT_FORMAT.Csv, sourceLabel).split(
+      '\n'
+    );
+
+    expect(row).toContain('"a\rb"');
+    expect(row).toContain('"\'\rx"');
+  });
+
+  it('keeps generated numbers unprefixed', () => {
+    const [, row] = toExportBody([makeRow()], EXPORT_FORMAT.Csv, sourceLabel).split('\n');
+
+    expect(row).toContain(',4096,');
+  });
+
   it('an empty list gives one header without rows', () => {
     expect(toExportBody([], EXPORT_FORMAT.Csv, sourceLabel).split('\n')).toHaveLength(1);
   });

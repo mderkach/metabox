@@ -59,6 +59,24 @@ describe('McpAccessSection', () => {
     );
   });
 
+  it('says MCP is on next to a fresh token even when the reread fails', async () => {
+    const user = userEvent.setup();
+    server.use(...createMcpHandlers());
+
+    renderMcp(<McpAccessSection />);
+    await screen.findByRole('heading');
+    expect(screen.getByText(/MCP позволяет ИИ-агентам/)).toBeInTheDocument();
+
+    server.use(
+      http.get(MCP_ENDPOINT.state(), () => HttpResponse.json({ code: 'internal', message: 'boom' }, { status: 500 }))
+    );
+    await user.click(screen.getByRole('button', { name: 'Включить' }));
+
+    expect(await screen.findByLabelText('Токен')).toHaveValue(MCP_TOKEN_FIXTURE[0]);
+    expect(screen.getByText(/Агент подключается по адресу ниже/)).toBeInTheDocument();
+    expect(screen.queryByText(/MCP позволяет ИИ-агентам/)).not.toBeInTheDocument();
+  });
+
   it('clears the token on "Done" and never shows it again', async () => {
     const user = userEvent.setup();
     server.use(...createMcpHandlers());

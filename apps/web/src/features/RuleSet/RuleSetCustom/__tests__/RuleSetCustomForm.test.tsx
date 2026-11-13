@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -128,17 +128,39 @@ describe('custom list', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
-  it('names the unrecognized line and does not write the draft', async () => {
+  it('names the unrecognized value and does not write the draft', async () => {
     const user = userEvent.setup();
 
     render(<RuleSetCustomForm takenTags={[]} />);
 
     await user.type(screen.getByLabelText('Имя списка'), 'my-list');
     await user.click(screen.getByLabelText('Домены и адреса'));
-    await user.paste('so wrong');
+    await user.paste('example.com not_a_domain');
     await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('so wrong');
+    expect(await screen.findByRole('alert')).toHaveTextContent('not_a_domain');
     expect(ConfigDocumentState.getState().draft).toBeNull();
+  });
+
+  it('drops comment lines of a pasted list instead of splitting them into chips', async () => {
+    const user = userEvent.setup();
+
+    render(<RuleSetCustomForm takenTags={[]} />);
+
+    await user.type(screen.getByLabelText('Имя списка'), 'my-list');
+    await user.click(screen.getByLabelText('Домены и адреса'));
+    await user.paste('# ads and trackers\nexample.com\n  # mirrors\n203.0.113.0/24\n');
+
+    expect(
+      within(screen.getByRole('list', { name: 'Домены и адреса: значения' }))
+        .getAllByRole('listitem')
+        .map((item) => item.textContent)
+    ).toEqual(['example.com', '203.0.113.0/24']);
+
+    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
+
+    await waitFor(() => {
+      expect(ConfigDocumentState.getState().draft).toContain('"type": "inline"');
+    });
   });
 });
