@@ -5,12 +5,22 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@shared/lib/utils';
 import { Button, FieldLegend, FieldSet } from '@shared/ui';
 
+import { useHasError } from './ConfigNodeForm.error';
 import { NS } from './ConfigNodeForm.namespace';
 
-/** Disclosure of empty fields. Collapsed fields are not mounted, and form values are not lost. */
-export function ConfigNodeFormAdvancedFields({ count, children }: { count: number; children: ReactNode }) {
+/**
+ * Disclosure of empty fields. Collapsed fields are not mounted, and form values are not lost.
+ * `names` are the form names of the fields inside: a field with a remark keeps the disclosure open.
+ */
+export function ConfigNodeFormAdvancedFields({ names, children }: { names: readonly string[]; children: ReactNode }) {
   const { t } = useTranslation(NS);
   const [open, setOpen] = useState(false);
+  const hasError = useHasError(names);
+
+  if (hasError && !open) {
+    setOpen(true);
+  }
+
   const contentId = useId();
 
   return (
@@ -28,7 +38,7 @@ export function ConfigNodeFormAdvancedFields({ count, children }: { count: numbe
           }}
         >
           <ChevronRight className={cn('transition-transform motion-reduce:transition-none', open && 'rotate-90')} />
-          {t('advanced', { count })}
+          {t('advanced', { count: names.length })}
         </Button>
       </FieldLegend>
       <div id={contentId} hidden={!open} className='flex flex-col gap-5'>

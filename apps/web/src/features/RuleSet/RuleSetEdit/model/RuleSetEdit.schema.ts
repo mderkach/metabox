@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { defaultFormatOf } from '@entities/RuleSet';
 import {
   CUSTOM_PROVIDER,
   makeRuleSetAddSchema,
@@ -59,17 +60,21 @@ export function ruleSetEditDefaults(node: Readonly<Record<string, unknown>>): Ru
 /**
  * Node after the edit: form fields over the source node. An empty value deletes
  * the key (`diffNode`), other node keys, `initial_path`, `http_client`, are not
- * touched.
+ * touched. A format the address contradicts is dropped, as when adding: the
+ * format field is hidden then, and the stale value could not be fixed.
  */
 export function toRuleSetEditNode(
   node: Readonly<Record<string, unknown>>,
   data: RuleSetAddModel
 ): Record<string, unknown> {
+  const url = data.url.trim();
+  const derived = defaultFormatOf(url);
+
   return {
     ...node,
     tag: data.tag.trim(),
-    url: data.url.trim(),
-    format: data.format,
+    url,
+    format: derived === '' || data.format === derived ? data.format : '',
     update_interval: data.updateInterval.trim(),
     download_detour: data.detour.trim(),
   };

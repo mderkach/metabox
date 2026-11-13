@@ -147,6 +147,61 @@ describe('rule set edit form', () => {
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
+  it('drops an explicit format the new address contradicts once focus leaves the form', async () => {
+    const user = userEvent.setup();
+    const own = 'https://lists.example.com/ads';
+
+    ConfigDocumentState.getState().load(
+      `{"route":{"rule_set":[{"type":"local","tag":"own","path":"p"},{"type":"remote","tag":"ads","format":"binary","url":"${own}"}]}}`
+    );
+    render(
+      <RuleSetEditForm
+        index={INDEX}
+        node={{ type: 'remote', tag: 'ads', format: 'binary', url: own }}
+        takenTags={['own', 'ads']}
+        outbounds={['direct']}
+        onDone={vi.fn<() => void>()}
+      />
+    );
+
+    const url = screen.getByRole('textbox', { name: 'url' });
+
+    await user.clear(url);
+    await user.type(url, 'https://lists.example.com/ads.json');
+    await user.click(document.body);
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['route', 'rule_set', INDEX, 'url'])).toBe('https://lists.example.com/ads.json');
+    });
+    expect(findValue(draft(), ['route', 'rule_set', INDEX, 'format'])).toBeUndefined();
+  });
+
+  it('keeps an explicit format the address agrees with', async () => {
+    const user = userEvent.setup();
+    const own = 'https://lists.example.com/ads.srs';
+
+    ConfigDocumentState.getState().load(
+      `{"route":{"rule_set":[{"type":"local","tag":"own","path":"p"},{"type":"remote","tag":"ads","format":"binary","url":"${own}"}]}}`
+    );
+    render(
+      <RuleSetEditForm
+        index={INDEX}
+        node={{ type: 'remote', tag: 'ads', format: 'binary', url: own }}
+        takenTags={['own', 'ads']}
+        outbounds={['direct']}
+        onDone={vi.fn<() => void>()}
+      />
+    );
+
+    await user.type(screen.getByLabelText('Имя сета'), '-2');
+    await user.click(document.body);
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['route', 'rule_set', INDEX, 'tag'])).toBe('ads-2');
+    });
+    expect(findValue(draft(), ['route', 'rule_set', INDEX, 'format'])).toBe('binary');
+  });
+
   it('"Done" closes the form', async () => {
     const user = userEvent.setup();
     const onDone = renderForm();

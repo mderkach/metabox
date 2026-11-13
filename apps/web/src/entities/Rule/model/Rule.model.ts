@@ -70,15 +70,17 @@ export interface NewRulePlace {
 }
 
 /**
- * Before the first unconditional rule that ends the list, to an outbound or
- * `reject`: rules below it never fire. The new rule takes that rule's outbound,
- * or `fallback` before a `reject`; otherwise it goes to the end with
- * `fallback`. `null` means no outbound to give it. `total` counts nodes, not
- * rows.
+ * Before the first recognized unconditional rule that ends the list, to an
+ * outbound or `reject`: rules below it never fire. The new rule takes that
+ * rule's outbound, or `fallback` before a `reject`; otherwise it goes to the
+ * end with `fallback`. `null` means no outbound to give it. `total` counts
+ * nodes, not rows.
  */
 export function newRulePlace(rules: readonly RuleRow[], total: number, fallback: string | null): NewRulePlace | null {
+  // A node the schema rejected may hold conditions the panel does not know:
+  // it is not proven to catch everything.
   const catchAll = rules.find(
-    (rule) => rule.isCatchAll && (rule.targetKind === RULE_TARGET.Outbound || rule.target === REJECT)
+    (rule) => rule.isCatchAll && rule.recognized && (rule.targetKind === RULE_TARGET.Outbound || rule.target === REJECT)
   );
   const index = catchAll?.index ?? total + 1;
   const outbound = catchAll?.targetKind === RULE_TARGET.Outbound ? catchAll.target : fallback;

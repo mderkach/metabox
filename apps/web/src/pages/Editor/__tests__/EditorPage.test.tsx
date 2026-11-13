@@ -963,6 +963,27 @@ describe('rule sets of a rule from the panel', () => {
 });
 
 describe('rule number from the address', () => {
+  beforeEach(() => {
+    ConfigDocumentState.getState().reset();
+    mockVirtualSizes();
+    serveConfig();
+  });
+
+  it('opens the rule from a link followed while the screen is already open', async () => {
+    const { router } = renderWithRouter(EditorPage, { validateSearch: parseRuleSearch });
+
+    await screen.findByRole('table', { name: 'Правила маршрутизации' });
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+
+    await act(async () => {
+      await router.navigate({ to: '/', search: { rule: 2 } });
+    });
+
+    const panel = await screen.findByRole('complementary');
+
+    expect(within(panel).getByText('Правило 2', { selector: 'p' })).toBeInTheDocument();
+  });
+
   it('converts the interface number to a node index', () => {
     expect(toSelectedRuleId(1)).toBe('0');
     expect(toSelectedRuleId(7)).toBe('6');

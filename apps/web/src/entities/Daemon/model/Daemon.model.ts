@@ -239,7 +239,20 @@ export interface UplinkRate {
  */
 export interface TrafficShare {
   link: number;
+  /** Everything that passed through the sing-box process, a direct exit included. */
   proxy: number;
+  split: TrafficSplit;
   /** Observation seconds: they show what window the share is computed over. */
   seconds: number;
+}
+
+/**
+ * The sing-box volume by the outbound of the connection. The daemon takes it from
+ * connection snapshots and spreads the bytes of connections closed between them
+ * over the kinds that moved in the same interval: an estimate, not a per-connection sum.
+ */
+export interface TrafficSplit {
+  proxy: number;
+  direct: number;
+  block: number;
 }

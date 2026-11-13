@@ -4,7 +4,13 @@ import { useId, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { ConfigDocumentState, RULE_SETS_PATH } from '@entities/Config';
+import {
+  ConfigDocumentState,
+  ConfigDocumentStore,
+  readRuleSets,
+  RULE_SETS_PATH,
+  selectConfigCurrent,
+} from '@entities/Config';
 import { showQueryError } from '@shared/api';
 import { Button, Input, Label, Textarea, ToggleGroup, ToggleGroupItem } from '@shared/ui';
 
@@ -31,7 +37,6 @@ export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly s
   const { t } = useTranslation('features/RuleSet/RuleSetCustom');
   const insert = ConfigDocumentState.use.insert();
   const editList = ConfigDocumentState.use.editList();
-  const count = takenTags.length;
   const [added, setAdded] = useState<string | null>(null);
   const tagId = useId();
   const tagErrorId = useId();
@@ -49,8 +54,11 @@ export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly s
 
   const onSubmit = form.handleSubmit((data) => {
     const node = data.storage === LIST_STORAGE.File ? toLocalRuleSet(data) : toInlineRuleSet(data);
+    // The end of the list is read from the draft text: sets without a tag are
+    // not in `takenTags`, and counting by them would insert in the middle.
+    const end = readRuleSets(selectConfigCurrent(ConfigDocumentStore.getState()) ?? '').length;
 
-    if (!insert([...RULE_SETS_PATH, count], node)) {
+    if (!insert([...RULE_SETS_PATH, end], node)) {
       showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
 
       return;
@@ -77,9 +85,11 @@ export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly s
           <div className='flex flex-col gap-1.5'>
             <Label htmlFor={tagId}>{t('field.tag.label')}</Label>
             <Input
+              ref={field.ref}
               id={tagId}
               value={field.value}
               onChange={field.onChange}
+              onBlur={field.onBlur}
               placeholder={t('field.tag.placeholder')}
               autoComplete='off'
               spellCheck={false}
@@ -133,9 +143,11 @@ export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly s
           <div className='flex flex-col gap-1.5'>
             <Label htmlFor={entriesId}>{t('field.entries.label')}</Label>
             <Textarea
+              ref={field.ref}
               id={entriesId}
               value={field.value}
               onChange={field.onChange}
+              onBlur={field.onBlur}
               placeholder={t('field.entries.placeholder')}
               spellCheck={false}
               className='min-h-40 resize-none font-mono text-xs'

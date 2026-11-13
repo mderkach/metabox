@@ -239,7 +239,8 @@ func run(log *slog.Logger, s settings) error {
 	}
 
 	deviceHistory := history.NewDevice(historyStepSeconds/int(systemInterval/time.Second), historyStepSeconds, historyPoints)
-	sysinfo := device.New(device.Options{Port: clashPort(store), History: deviceHistory})
+	volume := &history.Volume{}
+	sysinfo := device.New(device.Options{Port: clashPort(store), History: deviceHistory, Split: volume})
 
 	source := events.NewClashSource(
 		clashSettings(store),
@@ -280,6 +281,7 @@ func run(log *slog.Logger, s settings) error {
 		Retry:     streamRetryInterval,
 		Sizes:     connectionSizes,
 		Snapshots: hub.PublishConnections,
+		Volumes:   volume,
 	})
 	hits.Start()
 	defer hits.Close()

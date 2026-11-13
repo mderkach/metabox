@@ -22,9 +22,11 @@ export function RuleSetAddTagField() {
         <div className='flex flex-col gap-1.5'>
           <Label htmlFor={id}>{t('field.tag.label')}</Label>
           <Input
+            ref={field.ref}
             id={id}
             value={field.value}
             onChange={field.onChange}
+            onBlur={field.onBlur}
             placeholder={t('field.tag.placeholder')}
             autoComplete='off'
             spellCheck={false}

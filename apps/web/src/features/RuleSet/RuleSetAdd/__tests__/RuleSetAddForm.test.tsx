@@ -1,8 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { ConfigDocumentState } from '@entities/Config';
+import { ConfigDocumentState, findValue } from '@entities/Config';
 import { toRuleSetCatalog } from '@entities/RuleSet';
 import { RULE_SET_CATALOG_FIXTURE } from '@entities/RuleSet/__tests__/RuleSet.fixture';
 
@@ -112,5 +112,40 @@ describe('rule set add form', () => {
     const options = await screen.findAllByRole('option');
 
     expect(options.map((option) => option.textContent)).toEqual(['proxy', 'proxy-fi']);
+  });
+
+  it('adds the rule set to the end of the list, past rule sets without a tag', async () => {
+    const user = userEvent.setup();
+
+    ConfigDocumentState.getState().load(
+      '{"route":{"rule_set":[{"type":"inline","rules":[]},{"type":"inline","tag":"a","rules":[]}]}}'
+    );
+    render(<RuleSetAddForm catalog={CATALOG} takenTags={['a']} outbounds={[]} />);
+
+    await user.type(screen.getByLabelText('Адрес сета'), 'https://example.com/list.srs');
+    await user.type(screen.getByLabelText('Имя сета'), 'mine');
+    await user.click(screen.getByRole('button', { name: 'Подключить' }));
+
+    await waitFor(() => {
+      expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rule_set', 2, 'tag'])).toBe('mine');
+    });
+  });
+
+  it('checks the address when focus leaves it and moves focus to it on submit', async () => {
+    const user = userEvent.setup();
+
+    renderForm();
+
+    await user.click(screen.getByLabelText('Адрес сета'));
+    await user.type(screen.getByLabelText('Адрес сета'), 'ftp://x');
+    await user.tab();
+
+    expect(await screen.findByText('адрес начинается с http:// или https://')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Подключить' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Адрес сета')).toHaveFocus();
+    });
   });
 });

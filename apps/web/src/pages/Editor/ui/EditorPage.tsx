@@ -27,9 +27,8 @@ export function EditorPage() {
   const filter = useRuleFilter(editor.rules);
   const marks = useRuleMarks(editor);
   const asSheet = usePanelAsSheet();
-  // The rule number from the address is the initial selection: the connections screen leads here to
-  // the node that hit. After that the screen owns the selection, otherwise a closed panel
-  // would reopen on every render.
+  // The rule number from the address selects the rule: the connections screen and the Apply summary
+  // lead here to the node.
   const { rule } = useSearch({ strict: false });
   const selection = useRuleSelection(toSelectedRuleId(rule), editor.rules);
   const createRule = useCreateRule();

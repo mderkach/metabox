@@ -303,6 +303,34 @@ func TestShareCountsWithoutReads(t *testing.T) {
 	}
 }
 
+// The split by outbound is read from the volume counter on every snapshot, next to the
+// whole sing-box volume that stays for an older panel.
+func TestShareCarriesSplit(t *testing.T) {
+	fs := newTree(t)
+	fs.listener(t, clashPortHex, socketInode)
+
+	volume := &history.Volume{}
+	volume.Observe(0, nil)
+	volume.Observe(900, []history.Flow{
+		{ID: "a", Kind: history.KindProxy, Bytes: 600},
+		{ID: "b", Kind: history.KindDirect, Bytes: 300},
+	})
+
+	reader := device.New(device.Options{
+		Proc:  fs.proc,
+		Sys:   fs.sys,
+		Port:  func(context.Context) (int, error) { return clashPort, nil },
+		Split: volume,
+	})
+	reader.AddProxy(900)
+
+	stat, _ := reader.Read(t.Context())
+
+	if want := (history.Split{Proxy: 600, Direct: 300}); stat.Share.Split != want || stat.Share.Proxy != 900 {
+		t.Errorf("share: got %+v, want split %+v and proxy 900", stat.Share, want)
+	}
+}
+
 // A leak is looked for in the sing-box process memory over days of work, not in the board memory:
 // the history must accumulate it together with the other readings.
 func TestSampleDeviceRecordsProcessMemory(t *testing.T) {

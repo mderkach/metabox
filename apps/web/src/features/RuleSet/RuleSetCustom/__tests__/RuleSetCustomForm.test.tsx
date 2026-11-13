@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { selectConfigCurrent, ConfigDocumentState } from '@entities/Config';
+import { selectConfigCurrent, ConfigDocumentState, findValue } from '@entities/Config';
 
 import { RuleSetCustomForm } from '../ui/RuleSetCustomForm';
 
@@ -38,6 +38,47 @@ describe('custom list', () => {
     expect(draft).toContain('"domain_suffix"');
     expect(draft).toContain('"ip_cidr"');
     expect(screen.getByRole('status')).toHaveTextContent('my-list');
+  });
+
+  it('goes to the end of the list, past rule sets without a tag', async () => {
+    const user = userEvent.setup();
+
+    ConfigDocumentState.getState().load(
+      '{"route":{"rule_set":[{"type":"inline","rules":[]},{"type":"inline","tag":"a","rules":[]}]}}'
+    );
+    render(<RuleSetCustomForm takenTags={['a']} />);
+
+    await user.type(screen.getByLabelText('Имя списка'), 'my-list');
+    await user.click(screen.getByLabelText('Домены и адреса'));
+    await user.paste('example.com');
+    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
+
+    await waitFor(() => {
+      expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rule_set', 2, 'tag'])).toBe('my-list');
+    });
+  });
+
+  it('checks a field when focus leaves it', async () => {
+    const user = userEvent.setup();
+
+    render(<RuleSetCustomForm takenTags={[]} />);
+
+    await user.click(screen.getByLabelText('Имя списка'));
+    await user.tab();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Назовите список');
+  });
+
+  it('moves focus to the first failed field on submit', async () => {
+    const user = userEvent.setup();
+
+    render(<RuleSetCustomForm takenTags={[]} />);
+
+    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Имя списка')).toHaveFocus();
+    });
   });
 
   it('as a file: the local node and the file go into the draft together', async () => {

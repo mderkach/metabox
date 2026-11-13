@@ -46,8 +46,9 @@ type Hits struct {
 // Works for the whole daemon lifetime, whether the panel is open or not: the second exception
 // to the rule "no background polling without a consumer", after traffic accounting:
 // a connection not noticed in time is not restored retroactively.
-// The price at idle is one connections snapshot per interval and the rule list, when
-// a rule is met that is not in the remembered list. The runtime stream reads this same snapshot
+// The price at idle is one connections snapshot per interval, the rule list when
+// a rule is met that is not in the remembered list, and the outbound list when the
+// volume split meets an outbound tag it does not know. The runtime stream reads this same snapshot
 // through Snapshots: the daemon has no second `/connections` poll.
 //
 // The count is kept by the rule conditions and action, not by number: after an
@@ -59,6 +60,8 @@ type Counter struct {
 
 	seen  map[string]struct{}
 	rules []Rule
+	// outbounds is the outbound type by tag from `/proxies`, read for the volume split.
+	outbounds map[string]string
 
 	mu      sync.Mutex
 	started time.Time
@@ -90,6 +93,9 @@ type CounterOptions struct {
 	// stream gets connections without its own trip to the Clash API.
 	// nil means not needed.
 	Snapshots func(json.RawMessage)
+	// Volumes accepts the bytes of each snapshot split by outbound kind; nil means
+	// not needed, and then `/proxies` is not read either.
+	Volumes VolumeRecorder
 }
 
 // NewCounter assembles the counter. It starts no polling: Start brings it up.
@@ -179,6 +185,10 @@ func (c *Counter) observe(ctx context.Context) error {
 
 	if c.opts.Snapshots != nil {
 		c.opts.Snapshots(body)
+	}
+
+	if c.opts.Volumes != nil {
+		c.recordVolumes(ctx, snapshot)
 	}
 
 	// seen and rules are touched only by the polling goroutine, under the mutex lies only

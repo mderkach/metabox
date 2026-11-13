@@ -196,19 +196,31 @@ export interface RuleSelection extends RuleSelectionState {
  * `startTransition`: the store updates synchronously, and inside a Transition there would be a frame
  * where the selection points to the old position while a neighboring node is already under it, and the panel
  * would show someone else's rule.
+ *
+ * `requestedId` is the rule from the address: it opens when it changes, and
+ * otherwise the screen owns the selection, so a closed panel stays closed.
  */
-export function useRuleSelection(initialId: string | null, rules: readonly RuleRow[]): RuleSelection {
+export function useRuleSelection(requestedId: string | null, rules: readonly RuleRow[]): RuleSelection {
   const [selection, setSelection] = useState<RuleSelectionState>({
-    id: initialId,
+    id: requestedId,
     key: 0,
     pending: null,
     created: null,
   });
+  const [requested, setRequested] = useState(requestedId);
 
   const { created } = selection;
 
   if (created !== null && rules.some((row) => row.id === created.id)) {
     setSelection({ ...selection, created: null });
+  }
+
+  if (requested !== requestedId) {
+    setRequested(requestedId);
+
+    if (requestedId !== null) {
+      setSelection({ id: requestedId, key: selection.key + 1, pending: null, created: null });
+    }
   }
 
   const select = useCallback((id: string) => {
