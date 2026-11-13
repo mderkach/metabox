@@ -9,7 +9,7 @@ import { AppSidebarMore } from './AppSidebarMore';
 
 /** Height 56px: the touch target is at least 44px both in height and in column width. */
 const ITEM_CLASS =
-  'relative flex h-14 w-full flex-col items-center justify-center gap-1 px-1 text-[11px] transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none focus-visible:ring-inset';
+  'relative flex h-14 w-full flex-col items-center justify-center gap-1 px-1 text-xs transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none focus-visible:ring-inset';
 
 const IDLE_CLASS = 'text-muted-foreground hover:text-foreground';
 
