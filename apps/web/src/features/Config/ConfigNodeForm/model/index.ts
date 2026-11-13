@@ -9,7 +9,6 @@ export {
   parseNumber,
   parseScalar,
   splitByPresence,
-  textToList,
   toFieldName,
   toInputText,
   toNodeFormResolver,

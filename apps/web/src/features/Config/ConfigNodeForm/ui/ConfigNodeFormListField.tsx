@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, Textarea } from '@shared/ui';
 
-import { secretMaskOf, textToList, type ConfigNodeFormModel } from '../model';
+import { secretMaskOf, type ConfigNodeFormModel } from '../model';
 import { maskedListText } from '../model/ConfigNodeForm.mask';
 import { NodeRegistryContext } from './ConfigNodeForm.context';
 import { errorText } from './ConfigNodeForm.error';
@@ -15,7 +15,7 @@ import { NS } from './ConfigNodeForm.namespace';
 import { ConfigNodeFormFieldRow } from './ConfigNodeFormFieldRow';
 import { ConfigNodeFormListInput } from './ConfigNodeFormListInput';
 
-/** List of strings: one value per line. */
+/** List of strings: each value is a chip. */
 export function ConfigNodeFormListField({ field, name }: NodeFieldProps) {
   const { t } = useTranslation(NS);
   const label = useFieldLabel(name) ?? field.key;
@@ -72,11 +72,12 @@ export function ConfigNodeFormListField({ field, name }: NodeFieldProps) {
             ) : (
               <ConfigNodeFormListInput
                 id={id}
+                label={label}
                 value={input.value}
+                listable={field.listable === true}
                 invalid={fieldState.invalid}
                 describedBy={describedBy}
                 onBlur={input.onBlur}
-                onChange={(text) => textToList(text, field.listable === true)}
                 onValue={input.onChange}
               />
             )}

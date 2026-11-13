@@ -153,9 +153,13 @@ describe('node form by schema', () => {
 
     const alpn = screen.getByRole('textbox', { name: 'Протоколы ALPN' });
 
-    expect(alpn).toHaveValue('h2');
+    expect(
+      within(screen.getByRole('list', { name: 'Протоколы ALPN: значения' }))
+        .getAllByRole('listitem')
+        .map((item) => item.textContent)
+    ).toEqual(['h2']);
 
-    await user.clear(alpn);
+    await user.click(screen.getByRole('button', { name: 'Убрать h2' }));
     await user.type(alpn, 'http/1.1');
 
     await waitFor(() => {
@@ -506,10 +510,8 @@ describe('JSON text field with secrets', () => {
 
     render(<NodeFromStore registry={NODE_REGISTRY.Endpoint} path={WIREGUARD} />);
 
-    const address = screen.getByRole('textbox', { name: 'address' });
-
-    await user.clear(address);
-    await user.type(address, '10.0.0.3/32');
+    await user.click(screen.getByRole('button', { name: 'Убрать 10.0.0.2/32' }));
+    await user.type(screen.getByRole('textbox', { name: 'address' }), '10.0.0.3/32');
 
     await waitFor(() => {
       expect(findValue(draft(), [...WIREGUARD, 'address'])).toBe('10.0.0.3/32');
