@@ -22,6 +22,23 @@ describe('connection age', () => {
   });
 });
 
+describe('bytes', () => {
+  it('keeps the unit while the rounded amount stays below the step', () => {
+    expect(formatBytes(1023)).toBe('1023 Б');
+    expect(formatBytes(1024)).toBe('1.0 кБ');
+  });
+
+  it('moves to the next unit when rounding reaches the step', () => {
+    expect(formatBytes(1_048_575)).toBe('1.0 МБ');
+    expect(formatBytes(1_073_741_823)).toBe('1.0 ГБ');
+    expect(formatBytes(1_099_511_627_775)).toBe('1.0 ТБ');
+  });
+
+  it('does not move on before the amount rounds up', () => {
+    expect(formatBytes(1_048_575 - 52)).toBe('1023.9 кБ');
+  });
+});
+
 describe('rate', () => {
   it('joins the unit to the slash so it does not break after it', () => {
     expect(formatRate(2048)).toContain('/\u2060с');
