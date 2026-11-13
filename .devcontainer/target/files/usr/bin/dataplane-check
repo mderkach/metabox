@@ -184,8 +184,10 @@ dataplane)
 forget-state) rm -f /var/run/metabox/dataplane.state ;;
 stop) /etc/init.d/$SERVICE stop ;;
 start) /etc/init.d/$SERVICE start ;;
+service-check) /etc/init.d/$SERVICE dataplane_check ;;
+route-break) ip route flush table "$(uci -q get metabox.dataplane.route_table || echo 100)" ;;
 *)
-	echo "usage: $0 state|expect-up|expect-down|counter <chain> <pattern>|singbox-pid|wait|log-has <a> <b>|acl all|listed|exclude <subnet> <ip> <mac>|exclude-off <subnet>|router-tcp|router-udp|foreign-mark-up|foreign-mark-counter <mark>|foreign-mark-down|snapshot|apply|kill|foreign-up|foreign-down|foreign-present|dataplane 0|1|forget-state|stop|start" >&2
+	echo "usage: $0 state|expect-up|expect-down|counter <chain> <pattern>|singbox-pid|wait|log-has <a> <b>|acl all|listed|exclude <subnet> <ip> <mac>|exclude-off <subnet>|router-tcp|router-udp|foreign-mark-up|foreign-mark-counter <mark>|foreign-mark-down|snapshot|apply|kill|foreign-up|foreign-down|foreign-present|dataplane 0|1|forget-state|stop|start|service-check|route-break" >&2
 	exit 2
 	;;
 esac
