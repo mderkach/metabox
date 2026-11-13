@@ -27,13 +27,21 @@ After a passed check the panel asks to confirm the change within a confirmation 
 
 Changes of interception settings and of the device list on the Devices screen go through the same window and roll back to the previous settings.
 
-The transaction is kept in `/etc/metabox/apply.json` on persistent storage. If the router reboots or the daemon restarts during an Apply, the daemon finishes the transaction on start: an unfinished Apply is rolled back, and an open window starts again in full.
+The transaction is kept in `apply.json` in the daemon state directory (`/etc/metabox` by default) on persistent storage. If the router reboots or the daemon restarts during an Apply, the daemon finishes the transaction on start: an unfinished Apply is rolled back, and an open window starts again in full.
 
 The automatic rollback does not help when the config was already broken before the Apply, when the config was changed by hand, or when the rollback finds no previous config.
 
 ## Getting back without the panel
 
 Connect to the router over SSH by its IP address (`ssh root@<router IP>`). SSH does not depend on sing-box: it works while the LAN is up, even when DNS and the internet are not.
+
+The sing-box config is `/etc/sing-box/config.json` and the daemon state is in `/etc/metabox` by default; the `main` section of `/etc/config/metabox` can move them (`config_dir`, `config_name`, `state_dir`). Read the actual paths first; the commands below use these variables, so run them in the same SSH session:
+
+```sh
+dir=$(uci -q get metabox.main.config_dir || echo /etc/sing-box)
+config="$dir/$(uci -q get metabox.main.config_name || echo config.json)"
+state=$(uci -q get metabox.main.state_dir || echo /etc/metabox)
+```
 
 ### See what is wrong
 
@@ -46,7 +54,7 @@ logread -e sing-box
 `logread` shows the reason sing-box stopped. Check the config with the same command the daemon uses:
 
 ```sh
-sing-box check -c /etc/sing-box/config.json -D /etc/sing-box
+sing-box check -c "$config" -D "$dir"
 ```
 
 ### Stop interception now
@@ -78,22 +86,22 @@ The service removes the rules on start when interception is off.
 
 ### Restore an earlier config
 
-The daemon keeps the last ten configs that an Apply replaced in `/etc/metabox/versions/`, as files named by a six-digit number (`000001`, `000002`, …); the highest number is the newest. Each file is the config as it was, byte for byte. The panel restores them from its version history through a normal Apply. Over SSH:
+The daemon keeps the last ten configs that an Apply replaced in `$state/versions/`, as files named by a six-digit number (`000001`, `000002`, …); the highest number is the newest. Each file is the config as it was, byte for byte. The panel restores them from its version history through a normal Apply. Over SSH:
 
 ```sh
-ls -l /etc/metabox/versions/
-sing-box check -c /etc/metabox/versions/<number> -D /etc/sing-box
-cp /etc/sing-box/config.json /root/config.json.broken
-cp /etc/metabox/versions/<number> /etc/sing-box/config.json
+ls -l "$state/versions/"
+sing-box check -c "$state/versions/<number>" -D "$dir"
+cp "$config" /root/config.json.broken
+cp "$state/versions/<number>" "$config"
 /etc/init.d/metabox-singbox restart
 ```
 
-Do not put copies of a config into `/etc/sing-box/`: sing-box loads every `.json` file in that directory. A neighbouring `<number>.rule-sets/` directory holds the rule-set files of that version; copying the config alone does not restore them. After a change by hand, the panel reports an outside edit and refuses the next Apply until it rereads the file.
+Do not put copies of a config into `$dir`: sing-box loads every `.json` file in that directory. A neighbouring `<number>.rule-sets/` directory holds the rule-set files of that version; copying the config alone does not restore them. After a change by hand, the panel reports an outside edit and refuses the next Apply until it rereads the file.
 
 ### Reset the panel password
 
 ```sh
-rm /etc/metabox/auth.json && /etc/init.d/metaboxd restart
+rm "$state/auth.json" && /etc/init.d/metaboxd restart
 ```
 
 ### Remove metabox
@@ -108,7 +116,7 @@ The package has no removal scripts, so stop the services first:
 apk del metaboxd
 ```
 
-LAN traffic then goes out directly. `/etc/config/metabox` and `/etc/sing-box/config.json` stay on the router. The `sing-box-extended` package stays too; remove it with `apk del sing-box-extended` if you do not need it. The install script also added the signing key `/etc/apk/keys/metabox-release.pem` and the package feed `/etc/apk/repositories.d/metabox.list`; delete them to stop using the metabox repository.
+LAN traffic then goes out directly. `/etc/config/metabox` and the sing-box config stay on the router. The `sing-box-extended` package stays too; remove it with `apk del sing-box-extended` if you do not need it. The install script also added the signing key `/etc/apk/keys/metabox-release.pem` and the package feed `/etc/apk/repositories.d/metabox.list`; delete them to stop using the metabox repository.
 
 ## Known limitations
 
