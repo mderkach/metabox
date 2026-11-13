@@ -18,7 +18,7 @@ Go through it before handing in a change to the Go part. The checklist items are
 - [ ] A new exclusion in [`.golangci.yml`](../../../../.golangci.yml) states a reason and does not just silence a noisy rule.
 - [ ] `context.Context` is the first argument and is not stored in structs.
 - [ ] Only what is used outside the package is exported.
-- [ ] Comments follow the "Placement of technical knowledge" rule in [AGENTS.md](../../../../AGENTS.md): godoc covers what is not visible from the signature, without retelling the code.
+- [ ] Comments follow the "Where technical knowledge lives" section of [AGENTS.md](../../../../AGENTS.md): godoc covers what is not visible from the signature, without retelling the code.
 - [ ] There is no diff unrelated to the task: renames, reformatting, refactoring along the way.
 
 ## Errors

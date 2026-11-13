@@ -18,7 +18,7 @@ Each project owns its folder: code, manifest, `AGENTS.md` and guides. A project'
 
 ## Rule sources and their priority
 
-The canonical sources are this file, the projects' `AGENTS.md`, `docs/PRD.md` and the project guides. `CLAUDE.md`, `.claude/*`, `.codex/*`, `.cursor/*` and files of other AI products are **adapters only**: tool settings, access permissions, entry points. Do not put separate development rules in them and do not duplicate the text of the canonical sources.
+The canonical sources are this file, the projects' `AGENTS.md`, `docs/PRD.md` and the project guides. `CLAUDE.md`, `.claude/*`, `.codex/*`, `.cursor/*`, `.vscode/*` and files of other AI products are **adapters only**: tool settings, access permissions, entry points. Do not put separate development rules in them and do not duplicate the text of the canonical sources.
 
 On conflict, apply in this order:
 
@@ -111,7 +111,6 @@ Message format, scopes, branches and PRs: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 
 ## Context hygiene
 
-- Adapters, `.vscode/*` included, hold tool settings only; see "Rule sources and their priority".
 - Do not copy repository rules into the agent's global user instructions, or the other way round.
 - Do not duplicate the same list of paths in several configs without need. Claude tool permissions live in `.claude/settings.json`; Codex uses its own sandbox settings in `.codex/config.toml`. Their enforcement differs; see [Development](./docs/Development.md#codex).
 - Connect external plugins only when their features are actually needed; do not describe their behaviour in the canonical sources.

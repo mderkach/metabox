@@ -1,6 +1,6 @@
 # ADR-0075. Run end-to-end scenarios with Playwright Test on the mock stand and the live daemon
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-13
 - Deciders: repository owner
 
@@ -53,7 +53,7 @@ Playwright Test (`@playwright/test`, pinned to the installed `playwright` versio
 Each scenario is tagged with every stand it holds on, `@mock` and `@live`; a run picks its stand with `--grep` on the command line.
 
 - **Mock stand, every PR.** `webServer` starts Vite on its own port with `METABOX_MOCK=all`; the msw state lives in each browser context, so tests are isolated and run in parallel. CI runs `pnpm --filter web test:e2e --grep @mock` in the `web-browser` job after the Vitest browser project: the job already installs the Chromium headless shell with `--with-deps`, and both runners use that one download. The browser is not cached ([Playwright CI guide](https://playwright.dev/docs/ci): restoring the cache takes about as long as the download). On CI a failed test is retried once to record a trace, a test that passes only on the retry still fails the run (`failOnFlakyTests`), `test.only` fails the run, and the HTML report is uploaded as an artifact on failure.
-- **Live daemon, `integration` job.** The scenarios tagged `@live` run against the bench daemon: Vite without mocks proxies `/api` to it, one worker because the daemon state is shared, after the dataplane check so an applied edit does not change the fixture the earlier checks use. This run checks what the mocks cannot, such as an applied edit surviving a reload. It needs Node and Chromium in that job and is tracked in [#226](https://github.com/mderkach/metabox/issues/226).
+- **Live daemon, `integration` job.** The scenarios tagged `@live` run against the bench daemon: Vite without mocks proxies `/api` to it, one worker because the daemon state is shared, after the dataplane check so an applied edit does not change the fixture the earlier checks use. This run checks what the mocks cannot, such as an applied edit surviving a reload. `METABOX_E2E_STAND=live` selects this stand in `playwright.config.ts`; the job installs Node, pnpm and the Chromium headless shell after the dataplane check and uploads the HTML report as `playwright-report-live` on failure.
 
 ### Place in the pyramid
 
@@ -74,7 +74,6 @@ Non-goals: a browser matrix, visual snapshots, e2e in the pre-push hook.
 - A third test style next to jsdom and Vitest browser tests: different runner, fixtures and `expect`.
 - Scenarios depend on dictionary keys: a renamed key breaks the scenario that uses it, though a reworded text does not.
 - The mock stand is only as true as the mocks: the dev config handler is static, so on mocks an applied edit reverts after confirmation, and the scenario cannot check that it stayed.
-- Until [#226](https://github.com/mderkach/metabox/issues/226) lands, nothing runs a browser scenario against a real daemon.
 - Any install that rewrites the lockfile also moves `react-doctor`, which `react-scan` requests as `latest`; adding `@playwright/test` moved it from 0.9.18 to 0.9.22.
 
 ### Neutral or deferred
@@ -92,8 +91,8 @@ No product behaviour changes, and nothing from `e2e/` reaches the bundle. Rollba
 - `--grep` with a tag no scenario carries fails with `No tests found`.
 - `pnpm --filter web build` type-checks `e2e/` and `playwright.config.ts` through `tsconfig.node.json`; `pnpm lint` covers them.
 - The `web-browser` job runs the e2e step and `checks` fails when it fails.
-- The live run: the checks listed in [#226](https://github.com/mderkach/metabox/issues/226).
-- `.github/workflows/ci.yml`: the `web-browser` job runs the e2e scenarios on the mock stand.
+- The `integration` job runs `METABOX_E2E_STAND=live pnpm --filter web test:e2e --grep @live` after `Dataplane check`; `e2e/ruleApply.e2e.test.ts` renames the DNS hijack rule of the bench config, confirms the Apply and sees the new name after a reload.
+- `.github/workflows/ci.yml`: the `web-browser` job runs the e2e scenarios on the mock stand, the `integration` job on the live daemon.
 
 ## Links
 

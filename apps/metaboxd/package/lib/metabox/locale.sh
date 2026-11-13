@@ -23,6 +23,13 @@ mb_text() {
 	"fw4 reload failed") printf '%s' "fw4 reload не прошёл" ;;
 	"metabox_ sets were not reloaded") printf '%s' "наборы metabox_ не перезагружены" ;;
 	"dnsmasq section not found in /etc/config/dhcp") printf '%s' "секция dnsmasq в /etc/config/dhcp не найдена" ;;
+	"ip rule fwmark %s table %s was not added") printf '%s' "ip rule fwmark %s table %s не добавлено" ;;
+	"local route in table %s was not set") printf '%s' "локальный маршрут в таблице %s не задан" ;;
+	"state file %s was not written") printf '%s' "файл состояния %s не записан" ;;
+	"dnsmasq fragment %s was not installed") printf '%s' "фрагмент dnsmasq %s не установлен" ;;
+	"no ip rule fwmark %s table %s") printf '%s' "нет ip rule fwmark %s table %s" ;;
+	"no local route in table %s") printf '%s' "нет локального маршрута в таблице %s" ;;
+	"dnsmasq fragment %s does not point to port %s") printf '%s' "фрагмент dnsmasq %s не указывает на порт %s" ;;
 	*) printf '%s' "$1" ;;
 	esac
 }

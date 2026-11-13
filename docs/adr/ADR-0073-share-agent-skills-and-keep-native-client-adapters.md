@@ -1,6 +1,6 @@
 # ADR-0073. Share agent skills and keep native client adapters
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-02
 - Deciders: Repository owner
 

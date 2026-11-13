@@ -568,7 +568,10 @@ describe('section screen', () => {
       http.get(DAEMON_ENDPOINT.status(), () => {
         statusServed = true;
 
-        return HttpResponse.json({ ...DAEMON_STATUS_FIXTURE, singbox_build: { tags: ['with_utls'] } });
+        return HttpResponse.json({
+          ...DAEMON_STATUS_FIXTURE,
+          core: { ...DAEMON_STATUS_FIXTURE.core, build: { tags: ['with_utls'] } },
+        });
       })
     );
 

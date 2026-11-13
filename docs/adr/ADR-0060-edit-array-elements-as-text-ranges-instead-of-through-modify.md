@@ -1,6 +1,6 @@
 # ADR-0060. Edit array elements as text ranges instead of through `modify`
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-24
 - Deciders: repository owner
 

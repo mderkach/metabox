@@ -1,6 +1,6 @@
 # ADR-0068. Persist the verified release bundle before publication
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-25
 - Deciders: repository owner
 

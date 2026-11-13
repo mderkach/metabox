@@ -110,7 +110,7 @@ Impact on existing data, configs and clients; migration stages; support for the 
 
 ## Validation
 
-How to check compliance and the result: commands (`make test`, `make apply-check`, `pnpm -C web lint`), tests, linter constraints, observable signs at runtime, manual acceptance scenarios. Name the files the decision governs: code does not name the ADR, so this is the only link between them.
+How to check compliance and the result: commands (`make test`, `make apply-check`, `pnpm lint`), tests, linter constraints, observable signs at runtime, manual acceptance scenarios. Name the files the decision governs: code does not name the ADR, so this is the only link between them.
 
 ## Links
 

@@ -105,6 +105,19 @@ type Build struct {
 	Tags []string
 }
 
+// CoreType is the core family the package manages.
+const CoreType = "sing-box"
+
+// Variant returns the build line a version belongs to: "extended" for the sing-box-extended
+// fork (`1.14.1-extended-2.7.2`), empty for an upstream version or an unknown one.
+func Variant(version string) string {
+	if strings.Contains(version, "-extended-") {
+		return "extended"
+	}
+
+	return ""
+}
+
 // Build reads the version and the build composition of the binary.
 //
 // The value is meant for a single read at daemon start: launching a process
@@ -174,6 +187,13 @@ func (c *Client) Restart(ctx context.Context) error {
 // are touched only if what concerns them changed.
 func (c *Client) Reload(ctx context.Context) error {
 	return c.service(ctx, "reload")
+}
+
+// CheckDataplane checks through the init script what nft chains do not show: the fwmark
+// rule, the local route in the dataplane table and the dnsmasq fragment. A disabled or
+// unreadable model passes: the service leaves the dataplane as is then.
+func (c *Client) CheckDataplane(ctx context.Context) error {
+	return c.service(ctx, "dataplane_check")
 }
 
 // Start brings the service up. An already running service is a regular path: the procd

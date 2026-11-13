@@ -25,7 +25,7 @@ After updating a branch, check ADR number uniqueness, skill link resolution and 
 
 Open the repository or its worktree in Codex, or run `codex` from its root. Codex reads the root and project `AGENTS.md` files directly. Trust the project to load [`.codex/config.toml`](../.codex/config.toml); personal model and plugin choices remain in your user configuration.
 
-The project config registers the same development MCP servers as [`.mcp.json`](../.mcp.json): Playwright, Context7 and Chrome DevTools. It preserves their existing launch arguments, including the unpinned Chrome DevTools `@latest` tag. Node.js and `npx` must be available. Chrome DevTools expects a browser with remote debugging already listening on `127.0.0.1:9222`.
+The project config registers the same development MCP servers as [`.mcp.json`](../.mcp.json): Playwright, Context7 and Chrome DevTools. It preserves their launch arguments; the npx packages are pinned to exact versions. Node.js and `npx` must be available. Chrome DevTools expects a browser with remote debugging already listening on `127.0.0.1:9222`.
 
 Provide `CONTEXT7_API_KEY` through the environment of the Codex process, using a local secret manager or an interactive shell before launching `codex`. For the desktop app, the variable must be available to the app process; a terminal export does not update an already running app. Codex does not read Claude's `settings.local.json`. Never put the key in a committed file.
 

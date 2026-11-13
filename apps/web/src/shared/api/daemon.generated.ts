@@ -179,10 +179,22 @@ export const HealthSchema = z.object({
   version: z.string(),
 })
 
-/** SingboxBuild is what the sing-box binary on the device is built with. */
-export const SingboxBuildSchema = z.object({
+/** CoreBuild is what the core binary on the device is built with. */
+export const CoreBuildSchema = z.object({
   /** Tags are the build tags from `sing-box version`. An empty list means a build without tags: node types gated by a tag will be refused by such a binary. */
   tags: z.array(z.string()),
+})
+
+/** Core describes the runtime the daemon manages. Clients tell cores apart by these values, not by field names, so another core keeps the contract shape. */
+export const CoreSchema = z.object({
+  /** Type is the core family, such as "sing-box". */
+  type: z.string(),
+  /** Variant is the build line inside the family, such as "extended" for the sing-box-extended fork. Empty means the upstream build or a version that was not read. */
+  variant: z.string().optional(),
+  /** Version is the binary version as the binary prints it. Empty means the binary was not read. */
+  version: z.string().optional(),
+  /** Build is the binary build composition. No field means the binary was not read, and the panel has nothing to judge which node types are missing in it by. */
+  build: CoreBuildSchema.optional(),
 })
 
 /** Runtime is the runtime sources in `GET /api/status`. The fields answer what the daemon can read, not whether sing-box answers now: process liveness goes through `GET /api/service` and the `service` stream topic, and no second truth about it is introduced here. */
@@ -215,13 +227,16 @@ export const TransactionSchema = z.object({
 
 /** Status is the response of `GET /api/status`. */
 export const StatusSchema = z.object({
-  /** Version is the daemon version; the sing-box binary version is a separate field. */
+  /** Version is the daemon version; the core version is in Core. */
   version: z.string(),
   /** Instance is random for each daemon process. After a restart the panel tells by it that a new process answers, not the old one that has not stopped yet. */
   instance: z.string(),
+  /** Core is the runtime the daemon manages. */
+  core: CoreSchema,
+  /** SingboxVersion repeats Core.Version. Deprecated: read Core.Version. The field is removed in the first release after the one that added Core: the panel ships in the same binary, only outside clients may still read it. */
   singbox_version: z.string().optional(),
-  /** SingboxBuild is the binary build composition. No field means the binary was not read, and the panel has nothing to judge which node types are missing in it by. */
-  singbox_build: SingboxBuildSchema.optional(),
+  /** SingboxBuild repeats Core.Build. Deprecated: read Core.Build; removed together with SingboxVersion. */
+  singbox_build: CoreBuildSchema.optional(),
   /** ConfigPath is the file the daemon owns: the path is set by start flags, and the panel side cannot compute it. */
   config_path: z.string().optional(),
   /** ConfirmWindowSeconds is how long an apply waits for confirmation before the rollback, from the `-confirm-window` start flag. */
@@ -745,6 +760,8 @@ export type CheckDetailsWire = z.infer<typeof CheckDetailsSchema>
 export type CheckWire = z.infer<typeof CheckSchema>
 export type ConnectionWire = z.infer<typeof ConnectionSchema>
 export type ConnectionsSnapshotWire = z.infer<typeof ConnectionsSnapshotSchema>
+export type CoreBuildWire = z.infer<typeof CoreBuildSchema>
+export type CoreWire = z.infer<typeof CoreSchema>
 export type DaemonWire = z.infer<typeof DaemonSchema>
 export type DataplaneChangeWire = z.infer<typeof DataplaneChangeSchema>
 export type DataplaneDetailsWire = z.infer<typeof DataplaneDetailsSchema>
@@ -785,7 +802,6 @@ export type RuleWire = z.infer<typeof RuleSchema>
 export type RuntimeWire = z.infer<typeof RuntimeSchema>
 export type ServiceWire = z.infer<typeof ServiceSchema>
 export type ShareWire = z.infer<typeof ShareSchema>
-export type SingboxBuildWire = z.infer<typeof SingboxBuildSchema>
 export type SplitWire = z.infer<typeof SplitSchema>
 export type StatWire = z.infer<typeof StatSchema>
 export type StatusWire = z.infer<typeof StatusSchema>

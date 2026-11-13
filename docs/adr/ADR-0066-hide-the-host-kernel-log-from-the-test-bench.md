@@ -1,6 +1,6 @@
 # ADR-0066. Hide the host kernel log from the test bench
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-25
 - Deciders: repository owner
 

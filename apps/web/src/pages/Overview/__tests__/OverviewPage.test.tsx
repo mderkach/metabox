@@ -32,7 +32,7 @@ function serveStatus(configPath?: string, singboxVersion = SCHEMA_VERSION) {
     http.get(DAEMON_ENDPOINT.status(), () =>
       HttpResponse.json({
         ...DAEMON_STATUS_FIXTURE,
-        singbox_version: singboxVersion,
+        core: { ...DAEMON_STATUS_FIXTURE.core, version: singboxVersion },
         config_path: configPath,
       })
     ),

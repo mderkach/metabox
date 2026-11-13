@@ -1,6 +1,6 @@
 # ADR-0053. Write form and JSON edits to the draft as they are typed
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-20
 - Deciders: repository owner
 

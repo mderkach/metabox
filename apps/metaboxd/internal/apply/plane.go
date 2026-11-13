@@ -34,6 +34,7 @@ type PlaneEditor interface {
 // PlaneService is the service that brings the dataplane to the model.
 type PlaneService interface {
 	Reload(ctx context.Context) error
+	CheckDataplane(ctx context.Context) error
 }
 
 // PlaneStore is the applied config in which dns-in is looked up, and the state file
@@ -260,7 +261,8 @@ func (p *Plane) cycle(
 }
 
 // apply writes the model, makes the service reread it and checks the result: the interception
-// chains stand exactly when the model is enabled, and on a dns-in port change
+// chains stand exactly when the model is enabled, with it enabled the service finds its
+// fwmark rule, route and dnsmasq fragment in place, and on a dns-in port change
 // or dataplane enabling, dnsmasq got an answer from dns-in on the new port.
 func (p *Plane) apply(ctx context.Context, log *slog.Logger, previous dataplane.Snapshot, next dataplane.Model) error {
 	ctx, cancel := context.WithTimeout(ctx, p.opts.CycleTimeout)
@@ -276,6 +278,12 @@ func (p *Plane) apply(ctx context.Context, log *slog.Logger, previous dataplane.
 
 	if err := p.checkChains(ctx, log, next.Enabled); err != nil {
 		return err
+	}
+
+	if next.Enabled {
+		if err := p.service.CheckDataplane(ctx); err != nil {
+			return stepFailed(ReasonInterceptionMissing, err)
+		}
 	}
 
 	prev, err := previous.Model()
