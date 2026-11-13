@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web-mock",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "web", "exec", "vite", "--port", "5199", "--strictPort"],
+      "env": { "METABOX_MOCK": "all" },
+      "port": 5199
+    },
+    {
+      "name": "web-live",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "web", "exec", "vite", "--port", "5198", "--strictPort"],
+      "port": 5198
+    }
+  ]
+}
