@@ -12,9 +12,11 @@ import {
   selectConfigCurrent,
 } from '@entities/Config';
 import { showQueryError } from '@shared/api';
-import { Button, Input, Label, Textarea, ToggleGroup, ToggleGroupItem } from '@shared/ui';
+import { Button, Input, Label, ToggleGroup, ToggleGroupItem, TokenInput } from '@shared/ui';
 
 import {
+  entryLines,
+  isListEntry,
   LIST_STORAGE,
   listFileName,
   makeRuleSetCustomSchema,
@@ -142,15 +144,20 @@ export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly s
         render={({ field, fieldState }) => (
           <div className='flex flex-col gap-1.5'>
             <Label htmlFor={entriesId}>{t('field.entries.label')}</Label>
-            <Textarea
+            <TokenInput
               ref={field.ref}
               id={entriesId}
-              value={field.value}
-              onChange={field.onChange}
+              label={t('field.entries.label')}
+              value={entryLines(field.value)}
+              onValueChange={(values) => {
+                field.onChange(values.join('\n'));
+              }}
               onBlur={field.onBlur}
+              isValid={isListEntry}
               placeholder={t('field.entries.placeholder')}
               spellCheck={false}
-              className='min-h-40 resize-none font-mono text-xs'
+              autoCapitalize='off'
+              autoComplete='off'
               aria-invalid={fieldState.error !== undefined}
               aria-describedby={fieldState.error === undefined ? entriesHintId : `${entriesHintId} ${entriesErrorId}`}
             />

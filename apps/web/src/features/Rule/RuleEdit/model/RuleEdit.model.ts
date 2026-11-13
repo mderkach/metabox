@@ -8,6 +8,7 @@ import {
   ruleNodePath,
   toElementName,
 } from '@entities/Config';
+import type { Device, DeviceIndex } from '@entities/Device';
 import {
   RULE_SET_MATCHER,
   RULE_TARGET,
@@ -206,4 +207,37 @@ function isFormAction(action: string): action is RuleEditModel['action'] {
 
 function isKnownAction(rule: RuleRow): rule is RuleRow & { target: RuleEditModel['action'] } {
   return rule.targetKind === RULE_TARGET.Action && isFormAction(rule.target);
+}
+
+/** Mask of one address: a rule by device is a rule by its whole address. */
+const HOST_PREFIX = { V4: '/32', V6: '/128' } as const;
+
+export function toHostCidr(ip: string): string {
+  return `${ip}${ip.includes(':') ? HOST_PREFIX.V6 : HOST_PREFIX.V4}`;
+}
+
+/** Device a source condition value points at: exactly one host; a subnet does not count as a device. */
+export function deviceOfSource(value: string, devices: DeviceIndex): Device | undefined {
+  const ip =
+    value.endsWith(HOST_PREFIX.V4) || value.endsWith(HOST_PREFIX.V6) ? value.slice(0, value.lastIndexOf('/')) : value;
+
+  return devices.get(ip);
+}
+
+/** Device name for a source condition chip; a device known only by its address has none. */
+export function sourceDeviceName(value: string, devices: DeviceIndex): string | undefined {
+  const device = deviceOfSource(value, devices);
+
+  return device === undefined || device.label === device.ip ? undefined : device.label;
+}
+
+/** Names of the source devices whose dynamic lease may move them to another address. */
+export function dynamicSourceNames(values: readonly string[], devices: DeviceIndex): string[] {
+  const names = values.flatMap((value) => {
+    const device = deviceOfSource(value, devices);
+
+    return device === undefined || device.static ? [] : [device.label];
+  });
+
+  return [...new Set(names)];
 }

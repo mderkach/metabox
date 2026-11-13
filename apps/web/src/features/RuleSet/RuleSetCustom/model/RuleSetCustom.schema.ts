@@ -14,6 +14,11 @@ const AddressEntrySchema = z.union([z.ipv4(), z.ipv6(), z.cidrv4(), z.cidrv6()])
 /** Domain: ASCII labels separated by dots, no leading hyphen; IDN is entered as punycode. */
 const DOMAIN_ENTRY = /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z][a-z0-9-]*$/i;
 
+/** Field values as the chip input shows them: the text being typed is the last one, untrimmed. */
+export function entryLines(text: string): string[] {
+  return text.split('\n').filter((line) => line !== '');
+}
+
 /** List lines: empty ones and `#` comments are skipped. */
 export function listEntries(text: string): string[] {
   return text
@@ -32,6 +37,11 @@ function classifyEntry(entry: string): keyof CustomListRules | null {
   }
 
   return null;
+}
+
+/** A value the list takes: a domain, an address, a subnet or a `#` comment. */
+export function isListEntry(entry: string): boolean {
+  return entry.startsWith('#') || classifyEntry(entry) !== null;
 }
 
 /**

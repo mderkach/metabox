@@ -146,4 +146,36 @@ describe('rule conditions', () => {
       expect(result.error?.issues[0]?.path).toEqual(['conditions', 'port']);
     }
   });
+
+  it('accepts an address or a subnet in both address conditions', () => {
+    const result = RuleEditAdapterSchema.safeParse({
+      name: '',
+      action: RULE_ACTION.Route,
+      outbound: 'proxy',
+      ruleSet: [],
+      conditions: {
+        ...NO_CONDITIONS,
+        ip_cidr: '10.0.0.0/8\nfd00::/8\n1.1.1.1',
+        source_ip_cidr: '192.168.1.60/32\n::1',
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('does not accept an address condition that is neither an address nor a subnet', () => {
+    for (const condition of ['ip_cidr', 'source_ip_cidr'] as const) {
+      for (const value of ['example.com', '10.0.0.0/33', '300.1.1.1']) {
+        const result = RuleEditAdapterSchema.safeParse({
+          name: '',
+          action: RULE_ACTION.Route,
+          outbound: 'proxy',
+          ruleSet: [],
+          conditions: { ...NO_CONDITIONS, [condition]: value },
+        });
+
+        expect(result.error?.issues[0]?.path).toEqual(['conditions', condition]);
+      }
+    }
+  });
 });

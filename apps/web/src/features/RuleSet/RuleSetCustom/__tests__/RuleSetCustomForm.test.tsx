@@ -128,17 +128,17 @@ describe('custom list', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
-  it('names the unrecognized line and does not write the draft', async () => {
+  it('names the unrecognized value and does not write the draft', async () => {
     const user = userEvent.setup();
 
     render(<RuleSetCustomForm takenTags={[]} />);
 
     await user.type(screen.getByLabelText('Имя списка'), 'my-list');
     await user.click(screen.getByLabelText('Домены и адреса'));
-    await user.paste('so wrong');
+    await user.paste('example.com not_a_domain');
     await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('so wrong');
+    expect(await screen.findByRole('alert')).toHaveTextContent('not_a_domain');
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 });

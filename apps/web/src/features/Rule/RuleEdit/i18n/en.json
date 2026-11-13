@@ -30,12 +30,13 @@
   },
   "error": {
     "outboundRequired": "choose an outbound",
-    "portInvalid": "A port is a number from 0 to 65535"
+    "portInvalid": "A port is a number from 0 to 65535",
+    "cidrInvalid": "An address is an IP or a subnet: 192.168.1.10, 10.0.0.0/8, fd00::/8"
   },
   "device": {
     "pick": "Pick a device",
-    "chosen": "Devices in the condition",
-    "dynamic": "Dynamic lease, the address may change"
+    "dynamicList": "Devices with a dynamic lease",
+    "dynamic": "{{name}}: dynamic lease, the address may change"
   },
   "warning": {
     "catchAll": "Without conditions the rule takes all traffic, and the rules below never run."

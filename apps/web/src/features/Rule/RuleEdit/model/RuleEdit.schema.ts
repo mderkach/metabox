@@ -15,6 +15,7 @@ export const RULE_ACTION = {
 export const RULE_EDIT_ERROR = {
   OutboundRequired: 'outboundRequired',
   PortInvalid: 'portInvalid',
+  CidrInvalid: 'cidrInvalid',
 } as const;
 
 /**
@@ -55,6 +56,13 @@ function nonEmpty<T>(values: T[]): T[] | undefined {
 
 export function isPort(line: string): boolean {
   return PORT.test(line) && Number(line) <= MAX_PORT;
+}
+
+/** sing-box takes an address condition as a subnet or as a single address. */
+const CidrSchema = z.union([z.ipv4(), z.ipv6(), z.cidrv4(), z.cidrv6()]);
+
+export function isCidr(line: string): boolean {
+  return CidrSchema.safeParse(line).success;
 }
 
 const ConditionsSchema = z.object({
@@ -105,6 +113,14 @@ export const RuleEditAdapterSchema = RuleEditSchema.refine(
   .refine((data) => conditionLines(data.conditions.port).every(isPort), {
     path: ['conditions', RULE_CONDITION.Port],
     message: RULE_EDIT_ERROR.PortInvalid,
+  })
+  .refine((data) => conditionLines(data.conditions.ip_cidr).every(isCidr), {
+    path: ['conditions', RULE_CONDITION.IpCidr],
+    message: RULE_EDIT_ERROR.CidrInvalid,
+  })
+  .refine((data) => conditionLines(data.conditions.source_ip_cidr).every(isCidr), {
+    path: ['conditions', RULE_CONDITION.SourceIpCidr],
+    message: RULE_EDIT_ERROR.CidrInvalid,
   })
   .transform((data) => ({
     action: data.action,
