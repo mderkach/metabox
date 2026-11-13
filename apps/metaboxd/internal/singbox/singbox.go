@@ -105,6 +105,19 @@ type Build struct {
 	Tags []string
 }
 
+// CoreType is the core family the package manages.
+const CoreType = "sing-box"
+
+// Variant returns the build line a version belongs to: "extended" for the sing-box-extended
+// fork (`1.14.1-extended-2.7.2`), empty for an upstream version or an unknown one.
+func Variant(version string) string {
+	if strings.Contains(version, "-extended-") {
+		return "extended"
+	}
+
+	return ""
+}
+
 // Build reads the version and the build composition of the binary.
 //
 // The value is meant for a single read at daemon start: launching a process

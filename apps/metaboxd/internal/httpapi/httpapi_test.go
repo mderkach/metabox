@@ -711,6 +711,54 @@ func TestStatusReportsSingboxVersion(t *testing.T) {
 	}
 }
 
+// The core is described by values, not by field names: another core keeps the contract shape.
+func TestStatusReportsCore(t *testing.T) {
+	tests := []struct {
+		name    string
+		version string
+		tags    []string
+		want    contract.Core
+	}{
+		{"fork", testSingboxVersion, []string{"with_quic"}, contract.Core{
+			Type: "sing-box", Variant: "extended", Version: testSingboxVersion,
+			Build: &contract.CoreBuild{Tags: []string{"with_quic"}},
+		}},
+		{"upstream", "1.14.1", []string{}, contract.Core{
+			Type: "sing-box", Version: "1.14.1", Build: &contract.CoreBuild{Tags: []string{}},
+		}},
+		{"binary not read", "", nil, contract.Core{Type: "sing-box"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := httptest.NewServer(httpapi.NewServer(&fakeApplier{}, nil, testLogger(t), httpapi.Options{
+				Version:        "test",
+				SingboxVersion: tt.version,
+				SingboxTags:    tt.tags,
+			}))
+			t.Cleanup(srv.Close)
+
+			var status struct {
+				Core           contract.Core       `json:"core"`
+				SingboxVersion string              `json:"singbox_version"`
+				SingboxBuild   *contract.CoreBuild `json:"singbox_build"`
+			}
+			request(t, srv, http.MethodGet, "/api/status", "", nil).decode(t, &status)
+
+			got := status.Core
+			if got.Type != tt.want.Type || got.Variant != tt.want.Variant || got.Version != tt.want.Version ||
+				(got.Build == nil) != (tt.want.Build == nil) ||
+				(got.Build != nil && !slices.Equal(got.Build.Tags, tt.want.Build.Tags)) {
+				t.Errorf("core %+v, expected %+v", got, tt.want)
+			}
+
+			if status.SingboxVersion != got.Version || (status.SingboxBuild == nil) != (got.Build == nil) {
+				t.Errorf("deprecated fields %q %v disagree with the core %+v", status.SingboxVersion, status.SingboxBuild, got)
+			}
+		})
+	}
+}
+
 // Without the build composition the panel cannot tell "no such type in the binary" from "the binary was not
 // read", so the second is expressed by a missing field and not an empty list.
 func TestStatusReportsSingboxBuild(t *testing.T) {

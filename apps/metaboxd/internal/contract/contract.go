@@ -24,15 +24,22 @@ type Health struct {
 
 // Status is the response of `GET /api/status`.
 type Status struct {
-	// Version is the daemon version; the sing-box binary version is a separate field.
+	// Version is the daemon version; the core version is in Core.
 	Version string `json:"version"`
 	// Instance is random for each daemon process. After a restart the panel tells by it that
 	// a new process answers, not the old one that has not stopped yet.
-	Instance       string `json:"instance"`
+	Instance string `json:"instance"`
+	// Core is the runtime the daemon manages.
+	Core Core `json:"core"`
+	// SingboxVersion repeats Core.Version.
+	//
+	// Deprecated: read Core.Version. The field is removed in the first release after the one
+	// that added Core: the panel ships in the same binary, only outside clients may still read it.
 	SingboxVersion string `json:"singbox_version,omitempty"`
-	// SingboxBuild is the binary build composition. No field means the binary was not read, and
-	// the panel has nothing to judge which node types are missing in it by.
-	SingboxBuild *SingboxBuild `json:"singbox_build,omitempty"`
+	// SingboxBuild repeats Core.Build.
+	//
+	// Deprecated: read Core.Build; removed together with SingboxVersion.
+	SingboxBuild *CoreBuild `json:"singbox_build,omitempty"`
 	// ConfigPath is the file the daemon owns: the path is set by start flags,
 	// and the panel side cannot compute it.
 	ConfigPath string `json:"config_path,omitempty"`
@@ -56,8 +63,23 @@ type Status struct {
 	DataplaneTransactionHref string `json:"dataplane_transaction_href,omitempty"`
 }
 
-// SingboxBuild is what the sing-box binary on the device is built with.
-type SingboxBuild struct {
+// Core describes the runtime the daemon manages. Clients tell cores apart by these values,
+// not by field names, so another core keeps the contract shape.
+type Core struct {
+	// Type is the core family, such as "sing-box".
+	Type string `json:"type"`
+	// Variant is the build line inside the family, such as "extended" for the sing-box-extended
+	// fork. Empty means the upstream build or a version that was not read.
+	Variant string `json:"variant,omitempty"`
+	// Version is the binary version as the binary prints it. Empty means the binary was not read.
+	Version string `json:"version,omitempty"`
+	// Build is the binary build composition. No field means the binary was not read, and
+	// the panel has nothing to judge which node types are missing in it by.
+	Build *CoreBuild `json:"build,omitempty"`
+}
+
+// CoreBuild is what the core binary on the device is built with.
+type CoreBuild struct {
 	// Tags are the build tags from `sing-box version`. An empty list means a build without
 	// tags: node types gated by a tag will be refused by such a binary.
 	Tags []string `json:"tags"`
