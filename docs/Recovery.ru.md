@@ -51,7 +51,7 @@ logread -e sing-box
 /etc/init.d/metabox-singbox status
 ```
 
-`logread -e sing-box` показывает ошибку, с которой завершился sing-box, в строке с `FATAL`; `logread -e metabox-singbox` показывает ошибки перехвата. `status` выводит `running`, пока sing-box работает. Отсутствие конфига или бинарника sing-box в журнал не пишется: его выводит `/etc/init.d/metabox-singbox restart`. Проверьте конфиг той же командой, что и демон:
+`logread -e sing-box` показывает ошибку, с которой завершился sing-box, в строке с `FATAL`; `logread -e metabox-singbox` показывает ошибки перехвата и отсутствие конфига или бинарника sing-box. `status` выводит `running`, пока sing-box работает. Проверьте конфиг той же командой, что и демон:
 
 ```sh
 sing-box check -c "$config" -D "$dir"

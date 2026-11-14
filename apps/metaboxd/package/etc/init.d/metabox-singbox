@@ -476,12 +476,12 @@ start_service() {
 	config="$config_dir/$config_name"
 
 	[ -x "$singbox" ] || {
-		mb_msg metabox-singbox "%s is missing" "$singbox"
+		dp_fail "%s is missing" "$singbox"
 		return 1
 	}
 
 	[ -f "$config" ] || {
-		mb_msg metabox-singbox "config %s not found" "$config"
+		dp_fail "config %s not found" "$config"
 		return 1
 	}
 

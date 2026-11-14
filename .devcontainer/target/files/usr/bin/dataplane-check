@@ -211,9 +211,20 @@ forget-state) rm -f /var/run/metabox/dataplane.state ;;
 stop) /etc/init.d/$SERVICE stop ;;
 start) /etc/init.d/$SERVICE start ;;
 service-check) /etc/init.d/$SERVICE dataplane_check ;;
+config-missing)
+	# At boot nobody reads the init script's stderr: the reason must be in syslog.
+	config="$(uci -q get metabox.main.config_dir || echo /etc/sing-box)/$(uci -q get metabox.main.config_name || echo config.json)"
+	mv "$config" "$config.hidden"
+	/etc/init.d/$SERVICE start >/dev/null 2>&1 || true
+	pid=$(singbox_pid)
+	mv "$config.hidden" "$config"
+	[ -z "$pid" ] || fail "sing-box started without a config (pid $pid)"
+	logread | grep -F "$SERVICE" | grep -q -F "config $config not found" ||
+		fail "no $SERVICE line about the missing config in syslog"
+	;;
 route-break) ip route flush table "$(uci -q get metabox.dataplane.route_table || echo 100)" ;;
 *)
-	echo "usage: $0 state|expect-up|expect-down|counter <chain> <pattern>|singbox-pid|wait|log-has <a> <b>|acl all|listed|exclude <subnet> <ip> <mac>|exclude-off <subnet>|router-tcp|router-udp|foreign-mark-up|foreign-mark-counter <mark>|foreign-mark-down|src-probe-up <ip>...|src-counter <kind> <ip>|src-probe-down|snapshot|apply|kill|foreign-up|foreign-down|foreign-present|dataplane 0|1|forget-state|stop|start|service-check|route-break" >&2
+	echo "usage: $0 state|expect-up|expect-down|counter <chain> <pattern>|singbox-pid|wait|log-has <a> <b>|acl all|listed|exclude <subnet> <ip> <mac>|exclude-off <subnet>|router-tcp|router-udp|foreign-mark-up|foreign-mark-counter <mark>|foreign-mark-down|src-probe-up <ip>...|src-counter <kind> <ip>|src-probe-down|snapshot|apply|kill|foreign-up|foreign-down|foreign-present|dataplane 0|1|forget-state|stop|start|service-check|config-missing|route-break" >&2
 	exit 2
 	;;
 esac

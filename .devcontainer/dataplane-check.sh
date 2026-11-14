@@ -312,6 +312,13 @@ in_target start
 in_target wait
 in_target expect-up || failed=1
 
+section "17. Start without a config writes the reason to syslog, start with it brings the dataplane back"
+in_target stop
+in_target config-missing || failed=1
+in_target start
+in_target wait
+in_target expect-up || failed=1
+
 echo
 if [ "$failed" = 1 ]; then
 	echo "FAILED: the dataplane does not behave as required" >&2
