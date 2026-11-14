@@ -28,7 +28,12 @@ DOC_REFERENCE = re.compile(rf"\b(?:ADR-\d{{4}}|{ID}|PRD)\b")
 
 # The Markdown lint config names documents as examples of a Markdown style; this script and its
 # test name the requirements document and need requirement IDs in their fixtures.
-NOT_CODE = {".markdownlint.jsonc", ".github/scripts/trace-check.py", ".github/tests/test_trace_check.py"}
+NOT_CODE = {
+    ".markdownlint.jsonc",
+    ".github/scripts/trace-check.py",
+    ".github/tests/test_trace_check.py",
+    "openspec/config.yaml",
+}
 
 KINDS = {"go-test", "bench", "vitest", "e2e", "script", "ci", "make", "manual"}
 # A benchmark reports a number and fails no threshold; a manual check is a scenario for a person.
