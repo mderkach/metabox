@@ -7,11 +7,13 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -659,4 +661,53 @@ func TestEndSessionWhoseWriteFailsIsAnError(t *testing.T) {
 	store.sessionWriteErr = errors.New("flash full")
 
 	wantCode(t, b.do(http.MethodDelete, "/api/auth/sessions/"+id, nil), http.StatusInternalServerError, contract.ErrLogoutNotSaved)
+}
+
+// lockedLog collects log records written by server goroutines while the test reads them.
+type lockedLog struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (l *lockedLog) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	return l.buf.Write(p)
+}
+
+func (l *lockedLog) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	return l.buf.String()
+}
+
+func TestEndingASessionLogsWhoEndedWhichSession(t *testing.T) {
+	guard, err := auth.New(t.Context(), &memoryAuthStore{}, auth.Options{Iterations: 1000})
+	if err != nil {
+		t.Fatalf("guard: %v", err)
+	}
+
+	var logs lockedLog
+	srv := httptest.NewServer(httpapi.NewServer(&fakeApplier{}, fakeReader{}, slog.New(slog.NewTextHandler(&logs, nil)), httpapi.Options{
+		Version: "test",
+		Auth:    guard,
+	}))
+	t.Cleanup(srv.Close)
+
+	b := newBrowser(t, srv)
+	b.setPassword("", panelPassword)
+	newBrowser(t, srv).do(http.MethodPost, "/api/auth/login", contract.Login{Password: panelPassword})
+
+	other := b.sessions()[1]
+	if r := b.do(http.MethodDelete, "/api/auth/sessions/"+other.ID, nil); r.status != http.StatusNoContent {
+		t.Fatalf("end session: %d %s", r.status, r.body)
+	}
+
+	for _, want := range []string{`msg="panel session ended"`, "addr=127.0.0.1", "session_id=" + other.ID, "session_addr=" + other.Addr} {
+		if !strings.Contains(logs.String(), want) {
+			t.Errorf("log lacks %q:\n%s", want, logs.String())
+		}
+	}
 }

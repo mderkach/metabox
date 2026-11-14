@@ -1,1 +1,1 @@
-export { useEndSession } from './AuthSessions.api';
+export { END_SESSION_RESULT, useEndSession } from './AuthSessions.api';

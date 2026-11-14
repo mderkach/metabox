@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useSessions } from '@entities/Auth';
 import { QueryFailure, SkeletonRows } from '@shared/ui';
 
-import { useEndSession } from '../api';
+import { END_SESSION_RESULT, useEndSession } from '../api';
 import { AuthSessionsRow } from './AuthSessionsRow';
 
 const SKELETON_ROWS = 2;
@@ -45,6 +45,9 @@ export function AuthSessionsList() {
         ))}
       </ul>
       {list.every((session) => session.current) && <p className='text-xs text-muted-foreground'>{t('onlyThis')}</p>}
+      <p role='status' className='text-xs text-pretty text-signal-warn empty:hidden'>
+        {endSession.data === END_SESSION_RESULT.NotSaved ? t('notSaved') : null}
+      </p>
     </div>
   );
 }

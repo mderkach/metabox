@@ -1039,8 +1039,13 @@ func TestEndSessionClosesAnotherSession(t *testing.T) {
 		}
 	}
 
-	if err := g.EndSession(t.Context(), token, id); err != nil {
+	addr, err := g.EndSession(t.Context(), token, id)
+	if err != nil {
 		t.Fatalf("end session: %v", err)
+	}
+
+	if addr != stranger {
+		t.Errorf("ended session address %v, want %v", addr, stranger)
 	}
 
 	if _, valid := g.Check(other); valid {
@@ -1072,7 +1077,7 @@ func TestEndSessionRefusesTheCallerAndUnknownIDs(t *testing.T) {
 
 	own := g.Sessions(token)[0].ID
 
-	if err := g.EndSession(t.Context(), token, own); !errors.Is(err, auth.ErrCurrentSession) {
+	if _, err := g.EndSession(t.Context(), token, own); !errors.Is(err, auth.ErrCurrentSession) {
 		t.Errorf("own session: got %v, want ErrCurrentSession", err)
 	}
 
@@ -1080,7 +1085,7 @@ func TestEndSessionRefusesTheCallerAndUnknownIDs(t *testing.T) {
 		t.Error("the caller's session ended")
 	}
 
-	if err := g.EndSession(t.Context(), token, "unknown"); !errors.Is(err, auth.ErrUnknownSession) {
+	if _, err := g.EndSession(t.Context(), token, "unknown"); !errors.Is(err, auth.ErrUnknownSession) {
 		t.Errorf("unknown id: got %v, want ErrUnknownSession", err)
 	}
 }

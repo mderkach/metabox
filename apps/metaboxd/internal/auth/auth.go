@@ -467,10 +467,11 @@ func (g *Guard) Sessions(token string) []Session {
 }
 
 // EndSession closes another session by its identifier from Sessions, and with it the
-// streams opened with that session. The caller's own session is refused with
-// ErrCurrentSession: the caller logs out instead. The session file is written as by
-// Logout.
-func (g *Guard) EndSession(ctx context.Context, token, id string) error {
+// streams opened with that session, and returns the address that session signed in from.
+// The caller's own session is refused with ErrCurrentSession: the caller logs out
+// instead. The session file is written as by Logout; on a write failure the session is
+// already closed and its address is returned with the error.
+func (g *Guard) EndSession(ctx context.Context, token, id string) (netip.Addr, error) {
 	g.mu.Lock()
 
 	var found string
@@ -487,17 +488,18 @@ func (g *Guard) EndSession(ctx context.Context, token, id string) error {
 	case "":
 		g.mu.Unlock()
 
-		return ErrUnknownSession
+		return netip.Addr{}, ErrUnknownSession
 	case tokenKey(token):
 		g.mu.Unlock()
 
-		return ErrCurrentSession
+		return netip.Addr{}, ErrCurrentSession
 	}
 
+	addr := g.sessions[found].addr
 	g.endSession(found)
 	g.mu.Unlock()
 
-	return g.saveRevocation(ctx)
+	return addr, g.saveRevocation(ctx)
 }
 
 // saveRevocation writes the session file after a session was closed, with one more try

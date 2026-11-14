@@ -9,12 +9,18 @@ interface AuthMockState {
   others: SessionWire[];
 }
 
-export const CURRENT_SESSION_ID = 'current';
+export const CURRENT_SESSION_ID = '0c1d2e3f405162738495a6b7c8d9eaf1';
 
 /** Two browsers signed in besides the caller: a phone on the LAN and a session saved before addresses were kept. */
 export const OTHER_SESSIONS_FIXTURE: SessionWire[] = [
-  { id: 'a1b2c3d4e5f60718', addr: '192.168.1.23', age_seconds: 10_800, idle_seconds: 300, current: false },
-  { id: 'f0e1d2c3b4a59687', age_seconds: 172_800, idle_seconds: 18_000, current: false },
+  {
+    id: 'a1b2c3d4e5f60718293a4b5c6d7e8f90',
+    addr: '192.168.1.23',
+    age_seconds: 10_800,
+    idle_seconds: 300,
+    current: false,
+  },
+  { id: 'f0e1d2c3b4a5968778695a4b3c2d1e0f', age_seconds: 172_800, idle_seconds: 18_000, current: false },
 ];
 
 const UNAUTHORIZED = { code: 'unauthorized', message: 'sign-in required' };
@@ -102,6 +108,11 @@ export function createAuthHandlers({
     http.delete(`${AUTH_ENDPOINT.sessions()}/:id`, ({ params }) => {
       if (state.password !== null && !state.session) {
         return HttpResponse.json(UNAUTHORIZED, { status: 401 });
+      }
+
+      // Without a password the daemon's session table is empty: every id is unknown.
+      if (state.password === null) {
+        return HttpResponse.json({ code: 'session_not_found', message: 'session not found' }, { status: 404 });
       }
 
       if (params.id === CURRENT_SESSION_ID) {

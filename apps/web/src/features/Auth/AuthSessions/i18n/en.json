@@ -1,11 +1,12 @@
 {
   "title": "Sessions",
-  "description": "Browsers signed in to the panel. Ending a session signs that browser out and closes its open streams.",
+  "description": "Browsers signed in to the panel. Ending a session signs that browser out and closes its open streams. If you do not recognise a session, change the password: ending it does not stop someone who knows the password.",
   "current": "This browser",
   "unknownAddress": "address unknown",
   "activity": "signed in {{age}} ago, active {{idle}} ago",
   "activityNow": "signed in {{age}} ago, active now",
   "end": "End",
   "endNamed": "End the session from {{name}}",
-  "onlyThis": "No other browser is signed in."
+  "onlyThis": "No other browser is signed in.",
+  "notSaved": "The session is ended, but the router did not save it: it may come back after a daemon restart."
 }

@@ -108,6 +108,25 @@ describe('AuthSessionsSection', () => {
     });
   });
 
+  it('says an unsaved end is still an end, without a failure toast', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.delete(`${AUTH_ENDPOINT.sessions()}/:id`, () =>
+        HttpResponse.json({ code: 'logout_not_saved', message: 'session revocation not saved' }, { status: 500 })
+      ),
+      ...createAuthHandlers({ password: PASSWORD, session: true, others: OTHER_SESSIONS_FIXTURE })
+    );
+
+    renderSessions(<AuthSessionsSection />);
+    await findList();
+    await user.click(screen.getByRole('button', { name: 'Завершить сессию с 192.168.1.23' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Сессия завершена, но роутер этого не сохранил: после перезапуска демона она может вернуться.'
+    );
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
   it('shows a failure block with a retry when the list is not read', async () => {
     server.use(
       http.get(AUTH_ENDPOINT.sessions(), () =>

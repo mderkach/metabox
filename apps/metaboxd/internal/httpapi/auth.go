@@ -31,7 +31,7 @@ type Guard interface {
 	Ended(token string) <-chan struct{}
 	SetPassword(ctx context.Context, addr netip.Addr, token, current, next string) (string, error)
 	Sessions(token string) []auth.Session
-	EndSession(ctx context.Context, token, id string) error
+	EndSession(ctx context.Context, token, id string) (netip.Addr, error)
 }
 
 // requireSession lets a request without a session through only while the panel has no
@@ -256,13 +256,20 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 // handleEndSession ends another session; ending the caller's own one is a logout, so the
 // list cannot sign its user out by a misplaced click.
 func (s *Server) handleEndSession(w http.ResponseWriter, r *http.Request) {
-	if err := s.auth.EndSession(r.Context(), sessionToken(r), r.PathValue("id")); err != nil {
+	id := r.PathValue("id")
+
+	ended, err := s.auth.EndSession(r.Context(), sessionToken(r), id)
+	// A failed session file write still closed the session in memory.
+	if err == nil || errors.Is(err, auth.ErrSessionNotRevoked) {
+		s.log.Info("panel session ended", "addr", clientAddr(r), "session_id", id, "session_addr", ended)
+	}
+
+	if err != nil {
 		fail(s.log, w, r, err)
 
 		return
 	}
 
-	s.log.Info("panel session ended", "addr", clientAddr(r))
 	w.WriteHeader(http.StatusNoContent)
 }
 
