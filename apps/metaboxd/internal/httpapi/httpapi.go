@@ -621,7 +621,7 @@ func (s *Server) handleVersionRestore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lists, err := s.versionLists(r)
+	lists, listsBase, err := s.versionLists(r)
 	if err != nil {
 		fail(s.log, w, r, err)
 
@@ -629,8 +629,10 @@ func (s *Server) handleVersionRestore(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Restoring a version is a deliberate rollback to its bytes, not an edit
-	// over the current file: it has no base to check against.
-	tx, err := s.applier.Start(r.Context(), data, lists, "", "")
+	// over the current file: the config has no base. The lists have the set the
+	// deletions were computed from, otherwise a file added before Apply starts
+	// survives the restore when the daemon remembers no set after a restart.
+	tx, err := s.applier.Start(r.Context(), data, lists, "", listsBase)
 	if err != nil {
 		fail(s.log, w, r, err)
 
@@ -641,28 +643,29 @@ func (s *Server) handleVersionRestore(w http.ResponseWriter, r *http.Request) {
 }
 
 // versionLists builds the list file changes that return them to the version
-// snapshot. A version without a snapshot was saved by a daemon that did not take lists,
-// and its restore does not touch the lists, as before.
-func (s *Server) versionLists(r *http.Request) (apply.Lists, error) {
+// snapshot and the fingerprint of the current set they were computed from. A version
+// without a snapshot was saved by a daemon that did not take lists: its restore does
+// not touch the lists and has no list base.
+func (s *Server) versionLists(r *http.Request) (apply.Lists, string, error) {
 	id, err := pathVersionID(r)
 	if err != nil {
-		return apply.Lists{}, err
+		return apply.Lists{}, "", err
 	}
 
 	snapshot, err := s.reader.ReadVersionLists(r.Context(), id)
 	if errors.Is(err, config.ErrNoVersionLists) {
-		return apply.Lists{}, nil
+		return apply.Lists{}, "", nil
 	}
 	if err != nil {
-		return apply.Lists{}, err
+		return apply.Lists{}, "", err
 	}
 
 	current, err := s.reader.ListSums(r.Context())
 	if err != nil {
-		return apply.Lists{}, err
+		return apply.Lists{}, "", err
 	}
 
-	return apply.SnapshotLists(snapshot, current), nil
+	return apply.SnapshotLists(snapshot, current), config.ListsEtag(current), nil
 }
 
 func (s *Server) readVersion(r *http.Request) ([]byte, error) {

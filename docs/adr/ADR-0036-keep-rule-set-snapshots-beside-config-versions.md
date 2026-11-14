@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-10-04
 - Deciders: repository owner
+- Superseded by: [ADR-0080](./ADR-0080-pass-the-list-set-a-restore-was-computed-from-as-its-base.md), the reconciliation base of restore only
 
 ## Context and problem statement
 

@@ -207,7 +207,9 @@ func TestConfigVersionsCurrentSum(t *testing.T) {
 }
 
 // A version with a snapshot is restored together with the lists: snapshot files
-// are written, current ones beyond the snapshot are deleted, there is no check base.
+// are written, current ones beyond the snapshot are deleted. The list base is the set
+// the deletions were computed from: a file added before Apply starts is refused,
+// not left behind, even when the daemon has restarted and remembers no set.
 func TestConfigVersionRestoreCarriesLists(t *testing.T) {
 	raw := []byte(`{"log":{"level":"warn"}}`)
 	snapshot := map[string][]byte{"my.json": []byte(`{"rules":[]}`)}
@@ -233,8 +235,12 @@ func TestConfigVersionRestoreCarriesLists(t *testing.T) {
 		t.Errorf("deleted %v, expected %v", applier.lists.Remove, want)
 	}
 
-	if applier.base != "" || applier.listsBase != "" {
-		t.Errorf("restore has check bases %q and %q, expected empty", applier.base, applier.listsBase)
+	if applier.base != "" {
+		t.Errorf("restore has config base %q, expected empty", applier.base)
+	}
+
+	if want := config.ListsEtag(reader.listSums); applier.listsBase != want {
+		t.Errorf("restore has list base %q, expected %q", applier.listsBase, want)
 	}
 }
 
@@ -257,6 +263,10 @@ func TestConfigVersionRestoreLegacyKeepsLists(t *testing.T) {
 
 	if applier.lists.Put != nil || applier.lists.Remove != nil {
 		t.Errorf("restoring an old version touched the lists: %+v", applier.lists)
+	}
+
+	if applier.base != "" || applier.listsBase != "" {
+		t.Errorf("restore has check bases %q and %q, expected empty", applier.base, applier.listsBase)
 	}
 
 }
