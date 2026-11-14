@@ -105,6 +105,7 @@ jobs:
       - run: pnpm format:check
       - run: pnpm --filter web test
       - run: pnpm --filter web build
+      - run: pnpm --filter web check:bundle
 
       # Advice, not a check: the rule set belongs to the vendor and changes between
       # minor versions, so a failing step does not fail the build. What the repository

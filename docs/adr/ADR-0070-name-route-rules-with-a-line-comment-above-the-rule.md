@@ -57,7 +57,7 @@ A rule name is the last line comment between the previous element and the rule o
 ### Neutral or deferred
 
 - Names for DNS rules and other comment-addressed lists can reuse `nameElement`; not done here.
-- A rename alone is not reported in the Apply summary and does not mark the row as changed: both compare rule nodes, and the node did not change. The text diff shows the comment line.
+- Rule nodes do not change on a rename, so the Apply summary and the row marks also compare names: `toRuleChanges` takes the names of both sides and reports a matched rule whose name differs as renamed, and the rules list marks such a row as changed while it keeps its hit count. Before 2026-11-14 a rename alone was not reported and the row was not marked; only the text diff showed the comment line.
 
 ## Compatibility, migration and rollback
 
@@ -66,12 +66,13 @@ Not applicable beyond reading: existing configs need no migration, and comments 
 ## Validation
 
 - `pnpm --filter web test -- entities/Config`: the corpus file `named-rules.jsonc` covers what counts as a name, and every corpus file is named and unnamed without changing the parsed document or the other names; `Config.model.test.ts` covers insert, replace, remove, one-line lists, CRLF, refusals and that a name moves and is deleted with its rule.
-- `pnpm --filter web test -- Rule ConfigApply Editor`: derived labels, the form field and the Apply summary labels.
+- `pnpm --filter web test -- Rule ConfigApply Editor`: derived labels, the form field, the Apply summary labels, a rename reported alone (`Rule.changes.test.ts`, `ConfigApplyDiff.test.tsx`) and the row of a renamed rule marked changed (`EditorPage.test.tsx`).
+- `apps/web/e2e/applySummary.e2e.test.ts`: a rename alone is one summary item that leads back to the rule.
 - Manual: name a rule in the panel, reorder it, open the text editor and the Apply summary.
 
 ## Links
 
 - PRD: AC-2, AC-86.
 - [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md), [ADR-0017](./ADR-0017-read-the-config-in-the-dialect-the-binary-accepts.md).
-- `apps/web/src/entities/Config/model/Config.array.ts`, `apps/web/src/entities/Rule/model/Rule.caption.ts`, `apps/web/src/entities/Rule/ui/useRuleTitle.ts`.
-- Issue: mderkach/metabox#137.
+- `apps/web/src/entities/Config/model/Config.array.ts`, `apps/web/src/entities/Rule/model/Rule.caption.ts`, `apps/web/src/entities/Rule/ui/useRuleTitle.ts`, `apps/web/src/entities/Rule/model/Rule.changes.ts`.
+- Issues: mderkach/metabox#137, mderkach/metabox#244.

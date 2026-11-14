@@ -14,6 +14,7 @@ const CHANGE_TEXT = {
   [RULE_CHANGE.Changed]: 'diff.rules.changed',
   [RULE_CHANGE.Target]: 'diff.rules.target',
   [RULE_CHANGE.Moved]: 'diff.rules.moved',
+  [RULE_CHANGE.Renamed]: 'diff.rules.renamed',
 } as const satisfies Record<RuleChange['kind'], string>;
 
 /**
@@ -37,6 +38,15 @@ export function ConfigApplyRuleChanges({ onNavigate }: { onNavigate: () => void 
     return change.kind === RULE_CHANGE.Target ? subject(rule) : title(rule);
   };
 
+  // A rename is told by the name the rule had in the applied config.
+  const previousTitleOf = (change: RuleChange): string | undefined => {
+    if (change.kind !== RULE_CHANGE.Renamed) return undefined;
+
+    const rule = sides.applied.at(change.previous - 1);
+
+    return rule === undefined ? t('rule.numbered', { ns: 'shared', index: change.previous }) : title(rule);
+  };
+
   if (changes.length === 0) return null;
 
   const rest = changes.length - SHOWN_CHANGES;
@@ -51,12 +61,11 @@ export function ConfigApplyRuleChanges({ onNavigate }: { onNavigate: () => void 
             <Trans
               t={t}
               i18nKey={CHANGE_TEXT[change.kind]}
-              values={{ ...change, title: labelOf(change) }}
+              values={{ ...change, title: labelOf(change), previousTitle: previousTitleOf(change) }}
               components={{
                 node: (
                   <ConfigApplySectionLink
-                    link={{ to: '/config' }}
-                    search={{ rule: change.index }}
+                    link={{ to: '/config', search: { rule: change.index } }}
                     onNavigate={onNavigate}
                   />
                 ),

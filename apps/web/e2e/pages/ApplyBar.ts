@@ -10,6 +10,8 @@ export class ApplyBar {
   readonly region: Locator;
   readonly dirty: Locator;
   readonly diff: Locator;
+  readonly ruleChanges: Locator;
+  readonly nodeChanges: Locator;
   readonly keepButton: Locator;
   readonly confirmed: Locator;
 
@@ -18,12 +20,19 @@ export class ApplyBar {
     this.region = page.getByRole('region', { name: translate(CONFIG_APPLY, 'bar.label') });
     this.dirty = this.region.getByText(translate(CONFIG_APPLY, 'bar.dirty'));
     this.diff = page.getByRole('dialog', { name: translate(CONFIG_APPLY, 'diff.title') });
+    this.ruleChanges = this.diff.getByRole('list', { name: translate(CONFIG_APPLY, 'diff.rules.label') });
+    this.nodeChanges = this.diff.getByRole('list', { name: translate(CONFIG_APPLY, 'changes.label') });
     this.keepButton = this.region.getByRole('button', { name: translate(CONFIG_APPLY, 'confirm.submit') });
     this.confirmed = page.getByText(translate('shared', 'toast.apply.confirm.done'));
   }
 
   async apply() {
     await this.region.getByRole('button', { name: translate(CONFIG_APPLY, 'bar.apply'), exact: true }).click();
+  }
+
+  /** Unfolds the line diff under the summary; `lines` is how many changed lines the button counts. */
+  async showChangesText(lines: number) {
+    await this.diff.getByRole('button', { name: translate(CONFIG_APPLY, 'diff.changed', { count: lines }) }).click();
   }
 
   async confirmDiff() {

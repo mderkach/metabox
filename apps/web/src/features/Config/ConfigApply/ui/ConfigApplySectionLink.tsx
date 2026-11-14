@@ -9,12 +9,10 @@ const LINK_CLASS =
 /** Leads from the summary to the screen of the edit; `onNavigate` closes the dialog on the way. */
 export function ConfigApplySectionLink({
   link,
-  search,
   onNavigate,
   children,
 }: {
   link: SectionLink | null;
-  search?: { rule: number };
   onNavigate: () => void;
   children?: ReactNode;
 }) {
@@ -23,7 +21,7 @@ export function ConfigApplySectionLink({
   }
 
   return (
-    <Link {...link} search={search} className={LINK_CLASS} onClick={onNavigate}>
+    <Link {...link} className={LINK_CLASS} onClick={onNavigate}>
       {children}
     </Link>
   );
