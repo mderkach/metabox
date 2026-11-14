@@ -10,6 +10,7 @@ export {
   useApplyTransaction,
   useConfig,
   useConfigLists,
+  useConfigListStats,
   useConfigVersions,
   useSaveApplyTransaction,
 } from './api/Config.query';
@@ -43,6 +44,7 @@ export {
 export type {
   CheckFailure,
   ConfigDocument,
+  ConfigListStat,
   ConfigSection,
   ConfigVersion,
   ConfigVersions,

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { API_FAILURE, ApiError } from '@shared/api';
 
 import { ConfigVersionsSchema } from '../api/Config.schema';
-import { toCheckFailure, toConfigVersions, toWorkdirMismatch } from '../model/Config.adapter';
+import { toCheckFailure, toConfigListStats, toConfigVersions, toWorkdirMismatch } from '../model/Config.adapter';
 
 const VERSIONS_WIRE = {
   versions: [
@@ -132,5 +132,19 @@ describe('toWorkdirMismatch', () => {
     const error = new ApiError(API_FAILURE.Response, 'отказ', { code: 'workdir_mismatch', details: { workdir: 1 } });
 
     expect(toWorkdirMismatch(error)).toBeNull();
+  });
+});
+
+describe('toConfigListStats', () => {
+  // Before NTP sync the router clock starts from the epoch: a zero time is no time.
+  it('keeps the size and drops a time the device clock did not have', () => {
+    const stats = toConfigListStats({
+      files: {},
+      etag: '"lists"',
+      stats: { 'a.json': { size: 10, modified_at: 1_757_000_000 }, 'b.json': { size: 20, modified_at: 0 } },
+    });
+
+    expect(stats.get('a.json')).toEqual({ size: 10, modifiedAt: 1_757_000_000_000 });
+    expect(stats.get('b.json')).toEqual({ size: 20, modifiedAt: null });
   });
 });
