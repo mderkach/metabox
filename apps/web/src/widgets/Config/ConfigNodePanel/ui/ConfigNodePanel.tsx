@@ -6,6 +6,8 @@ import { useFocusReturn } from '@shared/lib/useFocusReturn';
 import { cn } from '@shared/lib/utils';
 import { Button, SECTION_HEADING, SURFACE, SURFACE_HEAD, SheetTitle } from '@shared/ui';
 
+const PANEL_STEP: Readonly<Partial<Record<string, 1 | -1>>> = { ArrowDown: 1, ArrowUp: -1 };
+
 /**
  * Section node panel beside the list: the add form and the picked node open in it,
  * and nodes stay in place and do not shift down. The structure is the same
@@ -17,12 +19,16 @@ import { Button, SECTION_HEADING, SURFACE, SURFACE_HEAD, SheetTitle } from '@sha
  *
  * `sheet` — the panel stands inside a sheet on top of the list: the sheet holds the frame and focus,
  * and the panel title becomes its title.
+ *
+ * `onStep` moves to the neighbouring node with the up and down arrows while the title has focus,
+ * as it has on opening: inside the form the arrows belong to the fields and tabs.
  */
 export function ConfigNodePanel({
   title,
   actions,
   sheet = false,
   onClose,
+  onStep,
   children,
 }: {
   title: string;
@@ -30,6 +36,7 @@ export function ConfigNodePanel({
   actions?: ReactNode;
   sheet?: boolean;
   onClose: () => void;
+  onStep?: (step: 1 | -1) => void;
   /** The add form or the editor of the picked node. */
   children: ReactNode;
 }) {
@@ -39,6 +46,13 @@ export function ConfigNodePanel({
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.key === 'Escape') {
       onClose();
+    }
+
+    const step = PANEL_STEP[event.key];
+
+    if (onStep !== undefined && step !== undefined && event.target === headingRef.current) {
+      event.preventDefault();
+      onStep(step);
     }
   }
 

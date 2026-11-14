@@ -96,20 +96,14 @@ export interface ConfigLoad {
 }
 
 /**
- * Loads the device file and the list files into the store: the draft is
- * compared with them, and Apply takes their fingerprints for `If-Match` and
- * `lists_base`. Off, both requests stay idle.
+ * Loads only the device file into the store, for a screen that edits the config
+ * text and never touches list files. Off, the request stays idle.
  */
-export function useConfigLoad(enabled: boolean): ConfigLoad {
+export function useConfigFileLoad(enabled: boolean) {
   const file = useConfigFile(enabled);
-  const lists = useConfigLists(enabled);
   const load = ConfigDocumentState.use.load();
-  const loadLists = ConfigDocumentState.use.loadLists();
-  const listsDraft = ConfigDocumentState.use.listsDraft();
   const applied = file.data?.text ?? null;
   const etag = file.data?.etag ?? null;
-  const listFiles = lists.data?.files;
-  const listsEtag = lists.data?.etag ?? null;
 
   useEffect(
     function loadDocument() {
@@ -117,6 +111,22 @@ export function useConfigLoad(enabled: boolean): ConfigLoad {
     },
     [applied, etag, load]
   );
+
+  return file;
+}
+
+/**
+ * Loads the device file and the list files into the store: the draft is
+ * compared with them, and Apply takes their fingerprints for `If-Match` and
+ * `lists_base`. Off, both requests stay idle.
+ */
+export function useConfigLoad(enabled: boolean): ConfigLoad {
+  const file = useConfigFileLoad(enabled);
+  const lists = useConfigLists(enabled);
+  const loadLists = ConfigDocumentState.use.loadLists();
+  const listsDraft = ConfigDocumentState.use.listsDraft();
+  const listFiles = lists.data?.files;
+  const listsEtag = lists.data?.etag ?? null;
 
   // List files go into the store the same way as the config text: apply takes
   // both the file changes and the set base from it.

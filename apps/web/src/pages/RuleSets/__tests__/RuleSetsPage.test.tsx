@@ -12,8 +12,16 @@ import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture
 import { RULE_SET_ENDPOINT } from '@entities/RuleSet';
 import { ruleSetHandlers } from '@entities/RuleSet/__tests__/RuleSet.handlers';
 import { PANEL_AS_SHEET } from '@shared/lib/media';
+import { useShortcuts } from '@shared/lib/shortcuts';
 
 import { RuleSetsPage } from '../ui/RuleSetsPage';
+
+/** The shell runs the shortcuts on every screen; here the screen gets them by itself. */
+function RuleSetsWithShortcuts() {
+  useShortcuts();
+
+  return <RuleSetsPage />;
+}
 
 const CONFIG = JSON.stringify(
   {
@@ -275,6 +283,37 @@ describe('rule set panel', () => {
     expect(open).toHaveAttribute('aria-expanded', 'true');
     // The form does not go into the list card: the rows stay in place.
     expect(within(table).queryByLabelText('Категория')).not.toBeInTheDocument();
+  });
+
+  it('Shift+N opens the own list form, N opens the catalog, neither from the search field', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(RuleSetsWithShortcuts);
+
+    await screen.findByRole('table', { name: 'Подключённые сеты' });
+
+    const custom = screen.getByRole('button', { name: 'Свой список' });
+    const catalog = screen.getByRole('button', { name: 'Подключить сет' });
+
+    expect(custom).toHaveAttribute('aria-keyshortcuts', 'Shift+N');
+
+    await user.keyboard('{Shift>}N{/Shift}');
+
+    expect(custom).toHaveAttribute('aria-expanded', 'true');
+    expect(catalog).toHaveAttribute('aria-expanded', 'false');
+
+    const search = screen.getByRole('textbox', { name: 'Поиск по сетам' });
+
+    await user.click(search);
+    await user.keyboard('{Shift>}N{/Shift}');
+
+    expect(search).toHaveValue('N');
+    expect(custom).toHaveAttribute('aria-expanded', 'true');
+
+    await user.click(document.body);
+    await user.keyboard('n');
+
+    expect(catalog).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('Escape closes the panel and returns focus to the button that opened it', async () => {

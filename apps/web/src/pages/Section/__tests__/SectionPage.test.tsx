@@ -154,6 +154,50 @@ describe('section screen', () => {
     });
   });
 
+  it('the arrow keys move between node rows and Enter opens the row in focus', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+
+    (await screen.findByRole('button', { name: 'direct' })).focus();
+    await user.keyboard('{ArrowDown}');
+
+    expect(screen.getByRole('button', { name: 'hk-01' })).toHaveFocus();
+
+    await user.keyboard('{ArrowDown}{ArrowUp}');
+
+    expect(screen.getByRole('button', { name: 'direct' })).toHaveFocus();
+
+    await user.keyboard('{ArrowDown}{Enter}');
+
+    expect(await screen.findByRole('complementary', { name: 'hk-01' })).toBeInTheDocument();
+  });
+
+  it('the arrow keys on the panel title open the neighbouring node, not past the ends', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const user = userEvent.setup();
+
+    renderWithRouter(OutboundsSection);
+    await openNode(user, 'direct');
+
+    await user.keyboard('{ArrowUp}');
+
+    expect(screen.getByRole('complementary', { name: 'direct' })).toBeInTheDocument();
+
+    await user.keyboard('{ArrowDown}');
+
+    const panel = await screen.findByRole('complementary', { name: 'hk-01' });
+
+    expect(within(panel).getByRole('heading', { name: 'hk-01' })).toHaveFocus();
+
+    await user.keyboard('{ArrowDown}');
+
+    expect(screen.getByRole('complementary', { name: 'hk-01' })).toBeInTheDocument();
+  });
+
   it('Escape closes the node panel and returns focus to its row', async () => {
     serveConfig(CONFIG_TEXT);
 

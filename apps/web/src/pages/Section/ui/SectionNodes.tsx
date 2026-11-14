@@ -13,6 +13,7 @@ import {
 } from '@entities/Config';
 import { useDaemonStatus } from '@entities/Daemon';
 import { usePanelAsSheet } from '@shared/lib/media';
+import { moveRowFocus } from '@shared/lib/rowFocus';
 import { cn } from '@shared/lib/utils';
 import {
   Empty,
@@ -85,6 +86,14 @@ export function SectionNodes({ section, requestedNode }: { section: GenericSecti
     setPanel({ open: true, target: { kind: 'node', index } });
   }
 
+  function stepNode(step: 1 | -1) {
+    const next = target.kind === 'node' ? target.index + step : -1;
+
+    if (next >= 0 && next < nodes.length) {
+      openNode(next);
+    }
+  }
+
   function closePanel() {
     setPanel({ ...panel, open: false });
   }
@@ -149,7 +158,9 @@ export function SectionNodes({ section, requestedNode }: { section: GenericSecti
                 <p className='text-sm text-muted-foreground'>{t('list.count', { count: nodes.length })}</p>
                 {addable && <SectionAddButton adding={adding} onAdd={toggleAdding} />}
               </div>
-              <ul className='divide-y divide-border'>
+              {/* The arrow keys move between the row buttons: a list handler, not an interactive list. */}
+              {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- see above */}
+              <ul className='divide-y divide-border' onKeyDown={moveRowFocus}>
                 {nodes.map((node, index) => (
                   <li key={index}>
                     <ConfigNodeRow
@@ -180,6 +191,7 @@ export function SectionNodes({ section, requestedNode }: { section: GenericSecti
               onClose={closePanel}
               onAdded={openAdded}
               onDeleted={closePanel}
+              onStep={stepNode}
             />
           )}
         </SidePanelLayout.Panel>

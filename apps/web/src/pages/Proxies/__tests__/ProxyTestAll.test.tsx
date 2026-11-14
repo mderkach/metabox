@@ -76,4 +76,46 @@ describe('latency batches', () => {
       expect(onTested).toHaveBeenCalledTimes(failed ? 0 : 1);
     });
   });
+
+  // The runtime appends each probe to the history; rereading the list per probe made a large
+  // subscription cost as many list requests as it has nodes.
+  it('rereads the proxy list once per batch, not once per probe', async () => {
+    const listRequested = vi.fn<() => void>();
+    const probed = vi.fn<() => void>();
+
+    server.use(...proxyHandlers);
+    server.use(
+      http.get(PROXY_ENDPOINT.proxies(), () => {
+        listRequested();
+
+        return HttpResponse.json(CLASH_PROXIES_FIXTURE);
+      }),
+      http.get(PROXY_ENDPOINT.proxyDelay('*'), () => {
+        probed();
+
+        return HttpResponse.json({ delay: 100 });
+      })
+    );
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+
+    // The selected-node widget holds the list query, so an invalidation refetches it.
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ProxyTestAll groups={GROUPS} nodes={[]} onTested={() => {}} />
+        <ProxyLatency onTested={() => {}} />
+      </QueryClientProvider>
+    );
+    await waitFor(() => {
+      expect(listRequested).toHaveBeenCalledTimes(1);
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Проверить все' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Проверить все' })).toBeEnabled();
+    });
+    expect(probed.mock.calls.length).toBeGreaterThan(2);
+    expect(listRequested).toHaveBeenCalledTimes(2);
+  });
 });
