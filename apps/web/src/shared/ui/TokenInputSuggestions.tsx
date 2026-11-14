@@ -17,18 +17,24 @@ export function TokenInputSuggestions({
   items,
   highlighted,
   typed,
+  footerId,
   onPick,
+  onHighlight,
 }: {
   id: string;
   label: string;
   items: readonly TokenSuggestion[];
   highlighted: number | null;
   typed: string;
+  /** The footer says what Enter does; the input lists it in `aria-describedby`. */
+  footerId: string;
   onPick: (suggestion: TokenSuggestion) => void;
+  onHighlight: (index: number) => void;
 }) {
   const { t } = useTranslation('shared');
   const popup = useRef<HTMLDivElement | null>(null);
-  const hasFooter = typed !== '';
+  const picked = highlighted === null ? undefined : items.at(highlighted);
+  const hasFooter = typed !== '' || picked !== undefined;
 
   useEffect(
     function bringListIntoView() {
@@ -66,6 +72,9 @@ export function TokenInputSuggestions({
                 suggestion={suggestion}
                 highlighted={index === highlighted}
                 onPick={onPick}
+                onHover={() => {
+                  onHighlight(index);
+                }}
               />
             ))
           ) : (
@@ -83,6 +92,9 @@ export function TokenInputSuggestions({
                   suggestion={suggestion}
                   highlighted={index === highlighted}
                   onPick={onPick}
+                  onHover={() => {
+                    onHighlight(index);
+                  }}
                 />
               ))}
             </div>
@@ -90,11 +102,11 @@ export function TokenInputSuggestions({
         )}
       </div>
       {hasFooter && (
-        <p className='border-t border-border px-3 py-1.5 text-xs text-pretty text-muted-foreground'>
+        <p id={footerId} className='border-t border-border px-3 py-1.5 text-xs text-pretty text-muted-foreground'>
           <Trans
             t={t}
-            i18nKey='tokenInput.enterHint'
-            values={{ value: typed }}
+            i18nKey={picked === undefined ? 'tokenInput.enterHint' : 'tokenInput.enterPick'}
+            values={{ value: picked === undefined ? typed : (picked.label ?? picked.value) }}
             components={{ value: <code className='font-mono text-foreground' /> }}
           />
         </p>

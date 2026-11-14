@@ -234,6 +234,11 @@ export function TokenInput({
             'aria-activedescendant': picked === undefined ? undefined : tokenOptionId(listId, highlighted ?? 0),
           })}
           {...props}
+          aria-describedby={
+            listShown && (draft !== '' || picked !== undefined)
+              ? [props['aria-describedby'], `${listId}-footer`].filter((id) => id !== undefined).join(' ')
+              : props['aria-describedby']
+          }
         />
       </div>
       {description}
@@ -244,7 +249,9 @@ export function TokenInput({
           items={offered}
           highlighted={highlighted}
           typed={draft}
+          footerId={`${listId}-footer`}
           onPick={accept}
+          onHighlight={setHighlighted}
         />
       )}
       {suggestions !== undefined && (

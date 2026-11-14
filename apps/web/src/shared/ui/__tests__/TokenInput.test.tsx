@@ -297,6 +297,19 @@ describe('TokenInput suggestions', () => {
     expect(screen.getByText(/Enter добавит/)).toHaveTextContent('Enter добавит 4 · ↓ — выбрать из списка');
   });
 
+  it('names the highlighted suggestion as what Enter adds and describes the field with it', async () => {
+    const user = userEvent.setup();
+
+    render(<Harness suggestions={PORTS} />);
+    await user.type(field(), '4');
+    await user.keyboard('{ArrowDown}');
+
+    const footer = screen.getByText(/Enter добавит/);
+
+    expect(footer).toHaveTextContent('Enter добавит 443 · Esc — закрыть список');
+    expect(field().getAttribute('aria-describedby')?.split(' ')).toContain(footer.id);
+  });
+
   it('keeps the rest of the page available to assistive tech while the list is open', async () => {
     const user = userEvent.setup();
 
