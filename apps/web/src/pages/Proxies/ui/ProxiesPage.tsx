@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useProxies, useProxyProviders } from '@entities/Proxy';
+import { useProviderNodeChanges, useProxies, useProxyProviders } from '@entities/Proxy';
 import { useLiveRegion } from '@shared/lib/useLiveRegion';
 import { CARD_FLUSH, Card, LiveRegion, QueryFailure, SURFACE, SkeletonRows } from '@shared/ui';
 import { PageHeader } from '@widgets/PageHeader';
@@ -20,6 +20,7 @@ export function ProxiesPage() {
   const groups = proxies.data?.groups ?? [];
   const nodes = proxies.data?.standalone ?? [];
   const subscriptions = providers.data ?? [];
+  const toNodeChange = useProviderNodeChanges(providers.data);
   const now = useMinuteClock();
 
   // The result of an action is visible to the eye — a node mark, a latency number — and
@@ -86,7 +87,7 @@ export function ProxiesPage() {
             <Card className={CARD_FLUSH}>
               <ul className='divide-y divide-border'>
                 {subscriptions.map((provider) => (
-                  <ProxyProviderRow key={provider.name} provider={provider} now={now} />
+                  <ProxyProviderRow key={provider.name} provider={provider} change={toNodeChange(provider)} now={now} />
                 ))}
               </ul>
             </Card>

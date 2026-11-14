@@ -9,6 +9,9 @@ export {
   useProxyProviders,
 } from './api/Proxy.query';
 export { isProbeFailure, toProxyRuntime, withSelectedNode } from './model/Proxy.adapter';
+export { useProviderNodeChanges } from './model/Proxy.hooks';
+export { NODE_DROP } from './model/Proxy.nodeDrop';
+export type { NodeDrop, ProviderNodeChange } from './model/Proxy.nodeDrop';
 export {
   DELAY_FAST,
   DELAY_STATE,

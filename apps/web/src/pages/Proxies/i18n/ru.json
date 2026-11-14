@@ -16,7 +16,14 @@
     "updatedAgo": "обновлена {{age}} назад",
     "usage": "{{used}} из {{total}}",
     "usageUnlimited": "использовано {{used}}",
-    "expires": "до {{date}}"
+    "expires": "до {{date}}",
+    "nodesWas_one": "{{count}} узел, было {{before}}",
+    "nodesWas_few": "{{count}} узла, было {{before}}",
+    "nodesWas_many": "{{count}} узлов, было {{before}}",
+    "dropCollapsed_one": "После последнего обновления осталось {{after}} из {{count}} узла, остальные sing-box уже убрал. Проверьте подписку и обновите её ещё раз.",
+    "dropCollapsed_few": "После последнего обновления осталось {{after}} из {{count}} узлов, остальные sing-box уже убрал. Проверьте подписку и обновите её ещё раз.",
+    "dropCollapsed_many": "После последнего обновления осталось {{after}} из {{count}} узлов, остальные sing-box уже убрал. Проверьте подписку и обновите её ещё раз.",
+    "dropEmpty": "В подписке не осталось узлов. Проверьте подписку и её фильтры <code>include</code> и <code>exclude</code>, затем обновите её ещё раз."
   },
   "announce": {
     "selected": "Группа {{group}}: выбран узел {{node}}",
