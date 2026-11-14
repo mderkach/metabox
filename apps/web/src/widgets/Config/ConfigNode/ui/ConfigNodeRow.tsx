@@ -1,4 +1,5 @@
 import type { GenericSection } from '@entities/Config';
+import { ROW_FOCUS } from '@shared/lib/rowFocus';
 import { cn } from '@shared/lib/utils';
 
 import { ConfigNodeMeta } from './ConfigNodeMeta';
@@ -30,6 +31,7 @@ export function ConfigNodeRow({
     >
       <button
         type='button'
+        {...ROW_FOCUS}
         aria-pressed={selected}
         onClick={onSelect}
         className='min-w-0 truncate rounded-sm font-mono text-sm outline-none after:absolute after:inset-0 focus-visible:after:ring-3 focus-visible:after:ring-ring/50 focus-visible:after:ring-inset pointer-coarse:min-h-11'

@@ -122,12 +122,14 @@ export function RuleSetsPage() {
                 variant='outline'
                 size='sm'
                 aria-expanded={panel.form === RULE_SET_FORM.Custom}
+                aria-keyshortcuts={SHORTCUT.AddCustom}
                 onClick={() => {
                   panel.toggle(RULE_SET_FORM.Custom);
                 }}
               >
                 <Plus data-icon='inline-start' />
                 {t('custom.open')}
+                <ShortcutKbd shortcut={SHORTCUT.AddCustom} />
               </Button>
               {panel.form === RULE_SET_FORM.Custom && (
                 <RuleSetCustomForm takenTags={editor.takenTags} onDone={panel.close} />
@@ -166,12 +168,14 @@ export function RuleSetsPage() {
                     variant='outline'
                     size='sm'
                     aria-expanded={panel.form === RULE_SET_FORM.Custom}
+                    aria-keyshortcuts={SHORTCUT.AddCustom}
                     onClick={() => {
                       panel.toggle(RULE_SET_FORM.Custom);
                     }}
                   >
                     <Plus data-icon='inline-start' />
                     {t('custom.open')}
+                    <ShortcutKbd shortcut={SHORTCUT.AddCustom} />
                   </Button>
                 </>
               }

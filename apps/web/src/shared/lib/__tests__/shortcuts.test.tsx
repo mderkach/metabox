@@ -4,19 +4,23 @@ import { describe, expect, it, vi } from 'vitest';
 import { SHORTCUT, useShortcuts } from '../shortcuts';
 
 function Screen({
+  onHelp,
   onAdd = vi.fn<() => void>(),
+  onAddCustom = vi.fn<() => void>(),
   onApply = vi.fn<() => void>(),
   addDisabled = false,
   applyHidden = false,
   dialog = false,
 }: {
+  onHelp?: () => void;
   onAdd?: () => void;
+  onAddCustom?: () => void;
   onApply?: () => void;
   addDisabled?: boolean;
   applyHidden?: boolean;
   dialog?: boolean;
 }) {
-  useShortcuts();
+  useShortcuts(onHelp);
 
   return (
     <>
@@ -24,6 +28,9 @@ function Screen({
       <input aria-label='Имя' />
       <button type='button' aria-keyshortcuts={SHORTCUT.Add} disabled={addDisabled} onClick={onAdd}>
         Добавить
+      </button>
+      <button type='button' aria-keyshortcuts={SHORTCUT.AddCustom} onClick={onAddCustom}>
+        Свой список
       </button>
       <div hidden={applyHidden}>
         <button type='button' aria-keyshortcuts={SHORTCUT.Apply} onClick={onApply}>
@@ -113,5 +120,64 @@ describe('useShortcuts', () => {
     press({ key: 'n', code: 'KeyN' });
 
     expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it('? opens the shortcut list and does not take the search behind the same key', () => {
+    const onHelp = vi.fn<() => void>();
+
+    render(<Screen onHelp={onHelp} />);
+
+    expect(press({ key: '?', code: 'Slash', shiftKey: true })).toBe(false);
+    press({ key: ',', code: 'Slash', shiftKey: true });
+
+    expect(onHelp).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('textbox', { name: 'Поиск' })).not.toHaveFocus();
+  });
+
+  it('? is a typed character in a text field and does nothing over an open dialog', () => {
+    const onHelp = vi.fn<() => void>();
+
+    const { rerender } = render(<Screen onHelp={onHelp} />);
+    const name = screen.getByRole('textbox', { name: 'Имя' });
+
+    name.focus();
+
+    expect(press({ key: '?', code: 'Slash', shiftKey: true }, name)).toBe(true);
+
+    name.blur();
+    rerender(<Screen onHelp={onHelp} dialog />);
+    press({ key: '?', code: 'Slash', shiftKey: true });
+
+    expect(onHelp).not.toHaveBeenCalled();
+  });
+
+  it('Shift+N clicks its own control and not the one behind N, also on the Russian layout', () => {
+    const onAdd = vi.fn<() => void>();
+    const onAddCustom = vi.fn<() => void>();
+
+    render(<Screen onAdd={onAdd} onAddCustom={onAddCustom} />);
+
+    press({ key: 'N', code: 'KeyN', shiftKey: true });
+    press({ key: 'Т', code: 'KeyN', shiftKey: true });
+
+    expect(onAddCustom).toHaveBeenCalledTimes(2);
+    expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it('Shift+N is a typed letter in a text field and is out of reach behind a dialog', () => {
+    const onAddCustom = vi.fn<() => void>();
+
+    const { rerender } = render(<Screen onAddCustom={onAddCustom} />);
+    const name = screen.getByRole('textbox', { name: 'Имя' });
+
+    name.focus();
+
+    expect(press({ key: 'N', code: 'KeyN', shiftKey: true }, name)).toBe(true);
+
+    name.blur();
+    rerender(<Screen onAddCustom={onAddCustom} dialog />);
+    press({ key: 'N', code: 'KeyN', shiftKey: true });
+
+    expect(onAddCustom).not.toHaveBeenCalled();
   });
 });

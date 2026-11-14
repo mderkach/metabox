@@ -28,6 +28,7 @@ export function SectionPanel({
   onClose,
   onAdded,
   onDeleted,
+  onStep,
 }: {
   section: GenericSection;
   /** `null` means the add form. */
@@ -39,6 +40,8 @@ export function SectionPanel({
   onClose: () => void;
   onAdded: () => void;
   onDeleted: () => void;
+  /** Opens the neighbouring node: the arrow keys on the panel title. */
+  onStep?: (step: 1 | -1) => void;
 }) {
   const { t } = useTranslation('pages/Section');
   const title = picked === null ? t('add.title') : picked.name;
@@ -68,6 +71,7 @@ export function SectionPanel({
         picked === null ? undefined : <SectionPanelActions section={section} picked={picked} onDeleted={onDeleted} />
       }
       onClose={onClose}
+      onStep={picked === null ? undefined : onStep}
     >
       <SectionPanelBody
         section={section}
