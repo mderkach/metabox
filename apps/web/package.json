@@ -17,6 +17,7 @@
     "test:watch": "vitest --project unit --project budget --project tooling",
     "test:browser": "vitest run --project browser",
     "test:e2e": "playwright test",
+    "check:bundle": "node tools/bundleBudget.js",
     "lint:react": "react-doctor --no-telemetry --no-supply-chain"
   },
   "dependencies": {
