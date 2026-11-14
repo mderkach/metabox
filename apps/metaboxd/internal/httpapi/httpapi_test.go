@@ -130,6 +130,8 @@ type fakeReader struct {
 	// versionLists are the version list snapshots; versions without an entry were saved without
 	// a snapshot.
 	versionLists map[int]map[string][]byte
+	// listStats are the size and modification time of the current list files.
+	listStats map[string]config.ListStat
 	// listSums are the sums of the current list files.
 	listSums map[string]string
 	// listSumsErr breaks only reading the current list sums.
@@ -156,6 +158,14 @@ func (r fakeReader) ReadLists(context.Context) (map[string][]byte, error) {
 	}
 
 	return r.lists, nil
+}
+
+func (r fakeReader) ListStats(context.Context) (map[string]config.ListStat, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+
+	return r.listStats, nil
 }
 
 func (r fakeReader) ListSums(context.Context) (map[string]string, error) {

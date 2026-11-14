@@ -10,6 +10,7 @@ export {
   useApplyTransaction,
   useConfig,
   useConfigLists,
+  useConfigListStats,
   useConfigVersions,
   useSaveApplyTransaction,
 } from './api/Config.query';
@@ -23,6 +24,7 @@ export {
   hasRuleSetCache,
   insertValue,
   isGenericSection,
+  parseSectionSearch,
   readRuleNames,
   readRules,
   readRuleSets,
@@ -43,6 +45,7 @@ export {
 export type {
   CheckFailure,
   ConfigDocument,
+  ConfigListStat,
   ConfigSection,
   ConfigVersion,
   ConfigVersions,

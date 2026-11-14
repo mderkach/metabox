@@ -99,7 +99,8 @@ func TestApplyPlainBodyStaysRaw(t *testing.T) {
 // List files are returned with the set fingerprint: the client returns it in lists_base.
 func TestConfigListsServed(t *testing.T) {
 	lists := map[string][]byte{"my.json": []byte(`{"rules":[]}`)}
-	srv := newTestServerWithReader(t, fakeReader{data: []byte("{}"), lists: lists})
+	stats := map[string]config.ListStat{"my.json": {Size: 12, ModifiedAt: 1_700_000_000}}
+	srv := newTestServerWithReader(t, fakeReader{data: []byte("{}"), lists: lists, listStats: stats})
 
 	got := request(t, srv, http.MethodGet, "/api/config/rule-sets", "", nil)
 
@@ -117,5 +118,9 @@ func TestConfigListsServed(t *testing.T) {
 	want := config.ListsEtag(map[string]string{"my.json": config.Sum(lists["my.json"])})
 	if files.Etag != want {
 		t.Errorf("etag %q, expected %q", files.Etag, want)
+	}
+
+	if files.Stats["my.json"] != stats["my.json"] {
+		t.Errorf("file stat returned as %+v, expected %+v", files.Stats["my.json"], stats["my.json"])
 	}
 }

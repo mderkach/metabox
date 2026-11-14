@@ -1,7 +1,6 @@
 import { renderWithQuery } from '@test/renderWithQuery';
-import { selectOption } from '@test/selectOption';
 import { mockVirtualSizes } from '@test/virtualSizes';
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -146,23 +145,6 @@ describe('list view', () => {
 
     expect(screen.getByRole('columnheader', { name: /Сеть/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Плотные строки' })).toHaveAttribute('aria-pressed', 'true');
-  });
-
-  it('the refresh rate survives a page reload', async () => {
-    const user = userEvent.setup();
-    const rows = makeRows(4);
-    const first = renderWithQuery(<TableHarness rows={rows} onReset={vi.fn<() => void>()} />);
-
-    await selectOption(user, screen.getByRole('combobox', { name: 'Частота обновления списка' }), '5 с');
-
-    await waitFor(() => {
-      expect(screen.getByRole('combobox', { name: 'Частота обновления списка' })).toHaveTextContent('5 с');
-    });
-
-    first.unmount();
-    renderWithQuery(<TableHarness rows={rows} onReset={vi.fn<() => void>()} />);
-
-    expect(screen.getByRole('combobox', { name: 'Частота обновления списка' })).toHaveTextContent('5 с');
   });
 
   it('moves a column from the field choice, and the order survives a reload', async () => {

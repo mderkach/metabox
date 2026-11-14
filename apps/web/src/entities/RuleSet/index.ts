@@ -27,6 +27,7 @@ export { filterRuleSets } from './model/RuleSet.filter';
 export { defaultFormatOf, localListFile } from './model/RuleSet.model';
 export type {
   RuleSetCatalog,
+  RuleSetFileStat,
   RuleSetFormat,
   RuleSetList,
   RuleSetListKind,

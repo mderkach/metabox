@@ -9,6 +9,7 @@ import {
   type ModificationOptions,
   type ParseError,
 } from 'jsonc-parser';
+import { z } from 'zod';
 
 import type { Config } from '@shared/api/generated';
 import { detectIndent } from '@shared/lib/jsonc';
@@ -223,6 +224,20 @@ export function isGenericSection(value: string): value is GenericSection {
   return value in GENERIC_SECTIONS;
 }
 
+/** Section screen state in the URL: the node open in the panel, by its number from one. */
+const SectionSearchSchema = z.object({
+  node: z.coerce.number().int().positive().optional(),
+});
+
+export type SectionSearch = z.infer<typeof SectionSearchSchema>;
+
+/** A value that is not understood is dropped: the screen opens with the panel closed. */
+export function parseSectionSearch(search: Record<string, unknown>): SectionSearch {
+  const parsed = SectionSearchSchema.safeParse(search);
+
+  return parsed.success ? parsed.data : {};
+}
+
 /**
  * Section nodes as is, from the text: a node the schema did not accept does not
  * drop out of the list. An object section yields one node; a section that is
@@ -397,6 +412,16 @@ export interface ConfigVersion {
 export interface ConfigVersions {
   versions: ConfigVersion[];
   currentListsUnavailable: boolean;
+}
+
+/** Size and modification time of an own list file on the device. */
+export interface ConfigListStat {
+  size: number;
+  /**
+   * Epoch milliseconds; `null` means there is no timestamp: before NTP sync the router
+   * clock starts from the epoch.
+   */
+  modifiedAt: number | null;
 }
 
 export interface CheckFailure {

@@ -4,6 +4,7 @@ import { FIELD_KIND, type FieldKind } from '@shared/lib/schemaShape';
 
 import type { NodeFieldProps } from './ConfigNodeForm.field';
 import { ConfigNodeFormBooleanField as BooleanField } from './ConfigNodeFormBooleanField';
+import { ConfigNodeFormBooleanGroupField as BooleanGroupField } from './ConfigNodeFormBooleanGroupField';
 import { ConfigNodeFormDurationField as DurationField } from './ConfigNodeFormDurationField';
 import { ConfigNodeFormEnumField as EnumField } from './ConfigNodeFormEnumField';
 import { ConfigNodeFormEnumListField as EnumListField } from './ConfigNodeFormEnumListField';
@@ -31,5 +32,6 @@ export const CONFIG_NODE_FORM_WIDGET: Readonly<Record<FieldKind, ComponentType<N
   [FIELD_KIND.EnumList]: EnumListField,
   [FIELD_KIND.Scalar]: ScalarField,
   [FIELD_KIND.Group]: GroupField,
+  [FIELD_KIND.BooleanGroup]: BooleanGroupField,
   [FIELD_KIND.Raw]: RawField,
 };

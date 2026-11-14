@@ -16,7 +16,7 @@ import { ConfigSchema, type Config } from '@shared/api/generated';
 import { jsonPathLocator, lineOfOffset, parseJsonc } from '@shared/lib/jsonc';
 import { type UnknownField, toUnknownFields } from '@shared/lib/schemaIssues';
 
-import { toConfigVersions } from '../model/Config.adapter';
+import { toConfigListStats, toConfigVersions } from '../model/Config.adapter';
 import { toOutboundTypes } from '../model/Config.model';
 import { getApplyState, getConfig, getConfigLists, getConfigVersions, type ConfigFile } from './Config.api';
 import { ConfigVersionsSchema } from './Config.schema';
@@ -158,6 +158,11 @@ export function getConfigListsOptions() {
 /** Files of its own lists with the set fingerprint: it goes into the apply `lists_base`. */
 export function useConfigLists(enabled: boolean) {
   return useQuery({ ...getConfigListsOptions(), enabled });
+}
+
+/** Size and modification time of the own list files on the device, by file name. */
+export function useConfigListStats() {
+  return useQuery({ ...getConfigListsOptions(), select: toConfigListStats });
 }
 
 /** Type of each outbound of the applied config by its tag. */

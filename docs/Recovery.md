@@ -51,7 +51,7 @@ logread -e sing-box
 /etc/init.d/metabox-singbox status
 ```
 
-`logread` shows the reason sing-box stopped. Check the config with the same command the daemon uses:
+`logread -e sing-box` shows the error sing-box exited with, in a line with `FATAL`; `logread -e metabox-singbox` shows interception errors. `status` prints `running` while sing-box works. A missing config or sing-box binary is not written to the log: `/etc/init.d/metabox-singbox restart` prints it. Check the config with the same command the daemon uses:
 
 ```sh
 sing-box check -c "$config" -D "$dir"
@@ -66,7 +66,7 @@ sing-box check -c "$config" -D "$dir"
 This removes the nftables rules, the `ip rule` and the route table of interception and the dnsmasq fragment, then restarts dnsmasq. LAN traffic and DNS go out directly. Check that nothing is left; each command must print nothing:
 
 ```sh
-nft list ruleset | grep metabox_
+nft list ruleset 2>/dev/null | grep metabox_
 uci -q get firewall.metabox_post
 ```
 
@@ -86,17 +86,28 @@ The service removes the rules on start when interception is off.
 
 ### Restore an earlier config
 
-The daemon keeps the last ten configs that an Apply replaced in `$state/versions/`, as files named by a six-digit number (`000001`, `000002`, …); the highest number is the newest. Each file is the config as it was, byte for byte. The panel restores them from its version history through a normal Apply. Over SSH:
+The daemon keeps the last ten configs that an Apply replaced in `$state/versions/`, as files named by a six-digit number (`000001`, `000002`, …); the highest number is the newest. Each file is the config as it was, byte for byte. The panel restores them from its version history through a normal Apply. Over SSH, list them:
 
 ```sh
 ls -l "$state/versions/"
-sing-box check -c "$state/versions/<number>" -D "$dir"
-cp "$config" /root/config.json.broken
-cp "$state/versions/<number>" "$config"
-/etc/init.d/metabox-singbox restart
 ```
 
-Do not put copies of a config into `$dir`: sing-box loads every `.json` file in that directory. A neighbouring `<number>.rule-sets/` directory holds the rule-set files of that version; copying the config alone does not restore them. After a change by hand, the panel reports an outside edit and refuses the next Apply until it rereads the file.
+A neighbouring `<number>.rule-sets/` directory holds the whole set of rule-set files of that version, the files the config refers to in `$dir/rule-sets/`; it may be empty. A version without it was saved by an older daemon and does not change the rule-set files. Set `v` to the number of the version to restore; the commands keep the current config and rule-set files in `/root`, put the version in place and restart sing-box only if the check passes:
+
+```sh
+v=000002
+cp "$config" /root/config.json.broken
+[ ! -d "$dir/rule-sets" ] || cp -R "$dir/rule-sets" /root/rule-sets.broken
+cp "$state/versions/$v" "$config"
+if [ -d "$state/versions/$v.rule-sets" ]; then
+	mkdir -p "$dir/rule-sets"
+	rm -f "$dir/rule-sets/"*.json
+	cp -R "$state/versions/$v.rule-sets/." "$dir/rule-sets/"
+fi
+sing-box check -c "$config" -D "$dir" && /etc/init.d/metabox-singbox restart
+```
+
+If `sing-box check` fails, the service is not restarted; put the copies from `/root` back. After a change by hand, the panel reports an outside edit and refuses the next Apply until it rereads the config.
 
 ### Reset the panel password
 
@@ -116,7 +127,7 @@ The package has no removal scripts, so stop the services first:
 apk del metaboxd
 ```
 
-LAN traffic then goes out directly. `/etc/config/metabox` and the sing-box config stay on the router. The `sing-box-extended` package stays too; remove it with `apk del sing-box-extended` if you do not need it. The install script also added the signing key `/etc/apk/keys/metabox-release.pem` and the package feed `/etc/apk/repositories.d/metabox.list`; delete them to stop using the metabox repository.
+LAN traffic then goes out directly. apk keeps `/etc/config/metabox` if it was changed after installation, for example by the interception settings of the panel, and deletes it otherwise. The daemon state directory `$state` (version history, panel password) and the sing-box config with its `rule-sets/` directory stay on the router; delete them by hand if you do not need them. The `sing-box-extended` package stays too; remove it with `apk del sing-box-extended` after `apk del metaboxd`. Run earlier, it keeps the package while metaboxd depends on it, but takes it off the list of packages installed on request, and the next `apk del metaboxd` then removes both. The install script also added the signing key `/etc/apk/keys/metabox-release.pem` and the package feed `/etc/apk/repositories.d/metabox.list`; delete them to stop using the metabox repository.
 
 ## Known limitations
 

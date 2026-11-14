@@ -54,6 +54,18 @@ describe('diffNode', () => {
     expect(diffNode(PATH, NODE, { ...NODE, tls: { ...NODE.tls, alpn: 'h2' } })).toEqual([]);
   });
 
+  it('a flag that became an object is replaced by the whole object', () => {
+    expect(diffNode(['dns'], { optimistic: true }, { optimistic: { enabled: true, timeout: '1h' } })).toEqual([
+      { path: ['dns', 'optimistic'], value: { enabled: true, timeout: '1h' } },
+    ]);
+  });
+
+  it('an object that became a flag is replaced by the flag', () => {
+    expect(diffNode(['dns'], { optimistic: { enabled: true, timeout: '1h' } }, { optimistic: true })).toEqual([
+      { path: ['dns', 'optimistic'], value: true },
+    ]);
+  });
+
   it('an array is compared as a whole: a new order is one list edit', () => {
     const before = { ...NODE, network: ['tcp', 'udp'] };
 

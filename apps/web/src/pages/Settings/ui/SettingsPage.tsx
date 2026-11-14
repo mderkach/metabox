@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { AuthPasswordSection } from '@features/Auth/AuthPassword';
+import { AuthSessionsSection } from '@features/Auth/AuthSessions';
 import { McpAccessSection } from '@features/Mcp/McpAccess';
 import { PageHeader } from '@widgets/PageHeader';
 
@@ -22,6 +23,7 @@ export function SettingsPage() {
       <div className='flex min-h-0 grow flex-col gap-6 overflow-y-auto px-4 py-5 *:max-w-4xl *:shrink-0 sm:px-6'>
         <SettingsSection title={t('access.title')}>
           <AuthPasswordSection />
+          <AuthSessionsSection />
         </SettingsSection>
         <SettingsSection title={t('agents.title')}>
           <McpAccessSection />

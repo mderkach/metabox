@@ -42,12 +42,17 @@ interface PanelState {
 
 const CLOSED: PanelState = { open: false, target: { kind: 'add' } };
 
-export function SectionNodes({ section }: { section: GenericSection }) {
+/**
+ * `requestedNode` is the node number from the address, from one: it opens the node when it
+ * changes, and otherwise the screen owns the panel, so a closed panel stays closed.
+ */
+export function SectionNodes({ section, requestedNode }: { section: GenericSection; requestedNode?: number }) {
   const { t } = useTranslation('pages/Section');
   const document = useConfigDocument();
   const status = useDaemonStatus();
   const asSheet = usePanelAsSheet();
   const [panel, setPanel] = useState<PanelState>(CLOSED);
+  const [requested, setRequested] = useState<number | undefined>(undefined);
   // A deleted node is gone from the text, and the sheet still slides away with it, not empty.
   const [held, setHeld] = useState<SectionPanelNode | null>(null);
   const text = document.text;
@@ -57,6 +62,14 @@ export function SectionNodes({ section }: { section: GenericSection }) {
   const shape = GENERIC_SECTIONS[section];
   const addable = shape.kind === 'list' && registryOfSection(section) !== null;
   const loaded = document.query.isSuccess;
+
+  if (requested !== requestedNode) {
+    setRequested(requestedNode);
+
+    if (requestedNode !== undefined) {
+      setPanel({ open: true, target: { kind: 'node', index: requestedNode - 1 } });
+    }
+  }
 
   // A node removed from the text by other means closes its panel.
   const target = panel.target;

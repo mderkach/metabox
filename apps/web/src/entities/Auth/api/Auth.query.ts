@@ -2,12 +2,13 @@ import { queryOptions, useQuery } from '@tanstack/react-query';
 
 import { decodeResponse } from '@shared/api';
 
-import { getAuth } from './Auth.api';
-import { AuthSchema } from './Auth.schema';
+import { getAuth, getSessions } from './Auth.api';
+import { AuthSchema, SessionsSchema } from './Auth.schema';
 
 export const AUTH_QUERY = {
   all: ['auth'] as const,
   state: () => [...AUTH_QUERY.all, 'state'] as const,
+  sessions: () => [...AUTH_QUERY.all, 'sessions'] as const,
 } as const;
 
 /**
@@ -27,4 +28,17 @@ export function getAuthOptions() {
 
 export function useAuth() {
   return useQuery(getAuthOptions());
+}
+
+/** The live panel sessions, the caller's first. Durations are counted by the router clock at the answer. */
+export function getSessionsOptions() {
+  return queryOptions({
+    queryKey: AUTH_QUERY.sessions(),
+    queryFn: async (context) => decodeResponse(SessionsSchema, await getSessions(context), 'sessions'),
+    meta: { showError: true, errorMessageKey: 'source.sessions' },
+  });
+}
+
+export function useSessions() {
+  return useQuery(getSessionsOptions());
 }

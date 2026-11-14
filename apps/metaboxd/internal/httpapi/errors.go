@@ -223,6 +223,10 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 		return http.StatusConflict, contract.ErrAuthDisabled
 	case isLocked(err):
 		return http.StatusTooManyRequests, contract.ErrLoginLocked
+	case errors.Is(err, auth.ErrUnknownSession):
+		return http.StatusNotFound, contract.ErrSessionNotFound
+	case errors.Is(err, auth.ErrCurrentSession):
+		return http.StatusConflict, contract.ErrSessionCurrent
 	case errors.Is(err, auth.ErrSessionNotRevoked):
 		return http.StatusInternalServerError, contract.ErrLogoutNotSaved
 	case errors.As(err, &tooLarge):

@@ -46,12 +46,13 @@ const SETTING_SECTION = new Map<unknown, ConfigSection>([
 
 /**
  * A config edit outside routing rules, which have their own summary. `name` is
- * the node tag, or its number from one when the node has no tag; `fields` are
- * the top-level keys that changed.
+ * the node tag, or its number from one when the node has no tag; `index` is the
+ * number of the node in the draft, from one; `fields` are the top-level keys that changed.
  */
 export type ConfigChange =
-  | { kind: typeof CONFIG_CHANGE.Added | typeof CONFIG_CHANGE.Removed; section: NodeListSection; name: string }
-  | { kind: typeof CONFIG_CHANGE.Changed; section: NodeListSection; name: string; fields: string[] }
+  | { kind: typeof CONFIG_CHANGE.Added; section: NodeListSection; name: string; index: number }
+  | { kind: typeof CONFIG_CHANGE.Removed; section: NodeListSection; name: string }
+  | { kind: typeof CONFIG_CHANGE.Changed; section: NodeListSection; name: string; index: number; fields: string[] }
   /** A value outside node lists; `from` and `to` are `undefined` when the key is absent. */
   | { kind: typeof CONFIG_CHANGE.Setting; section: ConfigSection | null; path: string; from: unknown; to: unknown };
 
@@ -82,14 +83,16 @@ function toNodeChanges(section: NodeListSection, applied: unknown, draft: unknow
   const after = toNamedNodes(draft);
   const kept = new Set(after.map((item) => item.name));
 
-  const changes = after.flatMap(({ name, node }): ConfigChange[] => {
+  const changes = after.flatMap(({ name, node }, position): ConfigChange[] => {
+    const index = position + 1;
+
     if (!before.has(name)) {
-      return [{ kind: CONFIG_CHANGE.Added, section, name }];
+      return [{ kind: CONFIG_CHANGE.Added, section, name, index }];
     }
 
     const fields = [...new Set(diffNode([], before.get(name), node).map((edit) => String(edit.path[0] ?? '')))];
 
-    return fields.length === 0 ? [] : [{ kind: CONFIG_CHANGE.Changed, section, name, fields }];
+    return fields.length === 0 ? [] : [{ kind: CONFIG_CHANGE.Changed, section, name, index, fields }];
   });
 
   const removed = [...before.keys()]
