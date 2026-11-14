@@ -711,3 +711,9 @@ func TestEndingASessionLogsWhoEndedWhichSession(t *testing.T) {
 		}
 	}
 }
+
+func TestEndingASessionWithoutPasswordIsNotFound(t *testing.T) {
+	b := newAuthServer(t)
+
+	wantCode(t, b.do(http.MethodDelete, "/api/auth/sessions/any", nil), http.StatusNotFound, contract.ErrSessionNotFound)
+}

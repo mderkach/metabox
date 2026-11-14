@@ -59,6 +59,14 @@ describe('AuthSessionsSection', () => {
     expect(screen.getByRole('button', { name: 'Завершить сессию с 192.168.1.23' })).toBeInTheDocument();
   });
 
+  it('tells the user to change the password when a session is unfamiliar', async () => {
+    server.use(...createAuthHandlers({ password: PASSWORD, session: true }));
+
+    renderSessions(<AuthSessionsSection />);
+
+    expect(await screen.findByText(/Если сессия незнакома, смените пароль/)).toBeInTheDocument();
+  });
+
   it('ends another session, rereads the list and keeps focus in it', async () => {
     const user = userEvent.setup();
     server.use(...createAuthHandlers({ password: PASSWORD, session: true, others: OTHER_SESSIONS_FIXTURE }));
