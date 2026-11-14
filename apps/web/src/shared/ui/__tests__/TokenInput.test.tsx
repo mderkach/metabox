@@ -35,7 +35,7 @@ function Harness({
       isValid={isValid}
       separator={lines ? /\n/ : undefined}
       distinct={!lines}
-      suggestions={suggestions}
+      suggestions={suggestions === undefined ? undefined : () => suggestions}
       onValueChange={(next) => {
         setValue(next);
         onChange(next);
@@ -179,7 +179,7 @@ describe('TokenInput suggestions', () => {
     await user.click(field());
 
     expect(field()).toHaveAttribute('aria-expanded', 'true');
-    expect(offered()).toEqual(['443HTTPS', '80HTTP', '853DNS over TLS']);
+    expect(offered()).toEqual(['443 HTTPS', '80 HTTP', '853 DNS over TLS']);
   });
 
   it('narrows the list by the value or its hint as you type', async () => {
@@ -188,7 +188,7 @@ describe('TokenInput suggestions', () => {
     render(<Harness suggestions={PORTS} />);
     await user.type(field(), 'dns');
 
-    expect(offered()).toEqual(['853DNS over TLS']);
+    expect(offered()).toEqual(['853 DNS over TLS']);
   });
 
   it('does not offer a value that is already a chip', async () => {
@@ -197,7 +197,7 @@ describe('TokenInput suggestions', () => {
     render(<Harness initial={['443']} suggestions={PORTS} />);
     await user.click(field());
 
-    expect(offered()).toEqual(['80HTTP', '853DNS over TLS']);
+    expect(offered()).toEqual(['80 HTTP', '853 DNS over TLS']);
   });
 
   it('takes the highlighted suggestion on Enter and keeps focus for the next value', async () => {
@@ -247,7 +247,7 @@ describe('TokenInput suggestions', () => {
     const onChange = vi.fn<(value: string[]) => void>();
 
     render(<Harness suggestions={PORTS} onChange={onChange} />);
-    await user.type(field(), '44{Enter}8080,22 {Escape}');
+    await user.type(field(), '44{Enter}8080,22 ');
 
     expect(chips()).toEqual(['44', '8080', '22']);
     expect(onChange).toHaveBeenLastCalledWith(['44', '8080', '22']);
@@ -274,5 +274,87 @@ describe('TokenInput suggestions', () => {
 
     expect(chips()).toEqual(['443', '8080']);
     expect(field()).toHaveValue('22');
+  });
+
+  it('opens on ArrowDown after Escape and highlights the first suggestion', async () => {
+    const user = userEvent.setup();
+
+    render(<Harness suggestions={PORTS} />);
+    await user.click(field());
+    await user.keyboard('{Escape}{ArrowDown}');
+
+    expect(field()).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('option', { name: '443 HTTPS' })).toHaveAttribute('aria-selected', 'true');
+    expect(field()).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: '443 HTTPS' }).id);
+  });
+
+  it('says under the list that Enter adds the typed text', async () => {
+    const user = userEvent.setup();
+
+    render(<Harness suggestions={PORTS} />);
+    await user.type(field(), '4');
+
+    expect(screen.getByText(/Enter добавит/)).toHaveTextContent('Enter добавит 4 · ↓ — выбрать из списка');
+  });
+
+  it('keeps the rest of the page available to assistive tech while the list is open', async () => {
+    const user = userEvent.setup();
+
+    render(<Harness initial={['22']} suggestions={PORTS} />);
+    await user.click(field());
+
+    expect(field()).toHaveAttribute('aria-expanded', 'true');
+    expect(chips()).toEqual(['22']);
+    expect(screen.getByText('3 подсказки')).toHaveAttribute('aria-live', 'polite');
+  });
+
+  it('closes the list on Escape without letting the key reach the dialog around the field', async () => {
+    const user = userEvent.setup();
+    const onDialogKey = vi.fn<(key: string) => void>();
+
+    render(
+      // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- stands for a dialog that closes on Escape
+      <div
+        onKeyDown={(event) => {
+          onDialogKey(event.key);
+        }}
+      >
+        <Harness suggestions={PORTS} />
+      </div>
+    );
+    await user.click(field());
+    await user.keyboard('{Escape}');
+
+    expect(onDialogKey).not.toHaveBeenCalledWith('Escape');
+
+    await user.keyboard('{Escape}');
+
+    expect(onDialogKey).toHaveBeenCalledWith('Escape');
+  });
+
+  it('lists suggestions under their group headings, a name before its address', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Harness
+        suggestions={[
+          { value: '192.168.1.60/32', label: 'Ноутбук', hint: '192.168.1.60', group: 'Устройства' },
+          { value: '192.168.1.0/24', hint: 'локальная сеть', group: 'Сети' },
+        ]}
+      />
+    );
+    await user.click(field());
+
+    expect(within(screen.getByRole('group', { name: 'Устройства' })).getByRole('option')).toHaveTextContent(
+      'Ноутбук 192.168.1.60'
+    );
+    expect(within(screen.getByRole('group', { name: 'Сети' })).getByRole('option')).toHaveTextContent(
+      '192.168.1.0/24 локальная сеть'
+    );
+
+    await user.click(screen.getByRole('option', { name: /Ноутбук/ }));
+
+    expect(chips()).toEqual(['192.168.1.60/32']);
+    expect(field()).toHaveFocus();
   });
 });

@@ -8,7 +8,8 @@ import {
   ruleNodePath,
   toElementName,
 } from '@entities/Config';
-import { deviceLabel, type DeviceIndex } from '@entities/Device';
+import { cidrContains, parseIpv4Cidr, type Ipv4Cidr } from '@entities/Dataplane';
+import { deviceLabel, type Device, type DeviceIndex } from '@entities/Device';
 import {
   RULE_SET_MATCHER,
   RULE_TARGET,
@@ -276,4 +277,29 @@ export function lanSubnets(devices: DeviceIndex): LanSubnet[] {
   return [...counts]
     .map(([cidr, count]) => ({ cidr, devices: count }))
     .sort((left, right) => left.cidr.localeCompare(right.cidr, undefined, { numeric: true }));
+}
+
+export interface SourceSuggestions {
+  devices: Device[];
+  networks: LanSubnet[];
+}
+
+/**
+ * What the source field offers next to its chips: devices and local networks
+ * that do not overlap a chip. A network around a device chip, or a device
+ * inside a network chip, would add nothing to the rule.
+ */
+export function sourceSuggestions(devices: DeviceIndex, chips: readonly string[]): SourceSuggestions {
+  const taken = chips.map(parseIpv4Cidr).filter((cidr) => cidr !== null);
+  const free = (cidr: Ipv4Cidr | null) => cidr !== null && !taken.some((chip) => overlaps(chip, cidr));
+
+  return {
+    devices: [...devices.values()].filter((device) => free(parseIpv4Cidr(device.ip))),
+    networks: lanSubnets(devices).filter((subnet) => free(parseIpv4Cidr(subnet.cidr))),
+  };
+}
+
+/** Two subnets overlap only when one contains the other. */
+function overlaps(left: Ipv4Cidr, right: Ipv4Cidr): boolean {
+  return cidrContains(left, right.address) || cidrContains(right, left.address);
 }

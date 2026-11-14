@@ -364,6 +364,7 @@
     "invalid": ", invalid",
     "suggestions": "{{label}}: suggestions",
     "suggestionCount_one": "{{count}} suggestion",
-    "suggestionCount_other": "{{count}} suggestions"
+    "suggestionCount_other": "{{count}} suggestions",
+    "enterHint": "Enter adds <value>{{value}}</value> · ↓ to pick from the list"
   }
 }

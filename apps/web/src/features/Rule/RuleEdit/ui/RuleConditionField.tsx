@@ -17,6 +17,7 @@ import {
   type RuleCondition,
   type RuleEditModel,
 } from '../model/RuleEdit.schema';
+import { RuleConditionHint } from './RuleConditionHint';
 import { RuleSourceDevices } from './RuleSourceDevices';
 
 const ERROR_KEY: Readonly<Record<string, ParseKeys<'features/Rule/RuleEdit'> | undefined>> = {
@@ -24,7 +25,7 @@ const ERROR_KEY: Readonly<Record<string, ParseKeys<'features/Rule/RuleEdit'> | u
   [RULE_EDIT_ERROR.CidrInvalid]: 'error.cidrInvalid',
 };
 
-/** Helper under a condition field: the value is still edited as text, the helper appends to it. */
+/** What a condition field shows under itself besides the hint. */
 const CONDITION_HELPER: Readonly<Partial<Record<RuleCondition, ComponentType>>> = {
   [RULE_CONDITION.SourceIpCidr]: RuleSourceDevices,
 };
@@ -89,6 +90,7 @@ export function RuleConditionField({ condition, focusOnMount }: { condition: Rul
               isValid={CONDITION_VALID[condition]}
               tokenLabel={tokenLabel}
               suggestions={suggestions}
+              description={<RuleConditionHint id={hintId} error={errorKey} helper={Helper} />}
               value={conditionLines(field.value)}
               onValueChange={(values) => {
                 field.onChange(values.join('\n'));
@@ -101,16 +103,6 @@ export function RuleConditionField({ condition, focusOnMount }: { condition: Rul
                 input.current = element;
               }}
             />
-            {errorKey === undefined ? (
-              <p id={hintId} className='text-xs text-muted-foreground'>
-                {t('field.conditions.hint')}
-              </p>
-            ) : (
-              <p id={hintId} role='alert' className='text-xs text-destructive'>
-                {t(errorKey)}
-              </p>
-            )}
-            {Helper !== undefined && <Helper />}
           </div>
         );
       }}

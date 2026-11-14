@@ -1,11 +1,10 @@
-import { Autocomplete as AutocompletePrimitive } from '@base-ui/react/autocomplete';
 import { XIcon } from 'lucide-react';
-import { useRef, useState, type ComponentProps } from 'react';
+import { useId, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { Badge } from './shadcn/badge';
-import { offeredSuggestions, type TokenSuggestion } from './TokenInput.lib';
+import { movedHighlight, offeredSuggestions, tokenOptionId, type TokenSuggestion } from './TokenInput.lib';
 import { TokenInputSuggestions } from './TokenInputSuggestions';
 
 const SEPARATOR = /[\s,]+/;
@@ -18,10 +17,10 @@ const SEPARATOR = /[\s,]+/;
  * on change does not wait for Enter, and a value left unclosed is not lost.
  * Backspace in an empty field takes the last chip back into the field for editing.
  *
- * With `suggestions` the field offers values in a list that opens on focus and
- * narrows as you type: arrows move the highlight, Enter or Tab takes it as a
- * chip, Escape closes the list. Nothing is highlighted until an arrow is pressed,
- * so Enter after free typing still closes the typed value.
+ * With `suggestions` the field is a combobox: a list opens on focus and narrows
+ * as you type, arrows move the highlight, Enter or Tab take it as a chip,
+ * Escape closes the list. Nothing is highlighted until an arrow is pressed, so
+ * Enter after free typing still closes the typed value.
  */
 export function TokenInput({
   value,
@@ -31,6 +30,7 @@ export function TokenInput({
   tokenLabel,
   pasteFilter,
   suggestions,
+  description,
   separator = SEPARATOR,
   distinct = true,
   ref,
@@ -50,8 +50,10 @@ export function TokenInput({
   tokenLabel?: (token: string) => string | undefined;
   /** Pasted text before it splits into chips, such as a list without its comment lines. */
   pasteFilter?: (text: string) => string;
-  /** Values offered while typing; a value already on a chip is not offered. */
-  suggestions?: readonly TokenSuggestion[];
+  /** Text under the field, such as its hint or error: the suggestion list opens below it, not over it. */
+  description?: ReactNode;
+  /** Values to offer for the closed chips; one that is already a chip is not offered either way. */
+  suggestions?: (tokens: readonly string[]) => readonly TokenSuggestion[];
   /** What closes a value when typed or pasted; Enter always closes it. */
   separator?: RegExp;
   /** A repeated value is dropped. */
@@ -60,16 +62,16 @@ export function TokenInput({
   const { t } = useTranslation('shared');
   const [typed, setTyped] = useState('');
   const input = useRef<HTMLInputElement | null>(null);
-  const frame = useRef<HTMLDivElement | null>(null);
+  const listId = useId();
   const [listOpen, setListOpen] = useState(false);
-  const [highlighted, setHighlighted] = useState<TokenSuggestion | null>(null);
+  const [highlighted, setHighlighted] = useState<number | null>(null);
   // The typed text is recognized by being the last value; a value set from
   // outside, such as a picked device, closes it.
   const draft = typed !== '' && value.at(-1) === typed ? typed : '';
   const tokens = draft === '' ? value : value.slice(0, -1);
-  const offered = suggestions === undefined ? [] : offeredSuggestions(suggestions, tokens, draft);
-  const picking = listOpen && offered.length > 0 && highlighted !== null;
-  const Field = suggestions === undefined ? 'input' : AutocompletePrimitive.Input;
+  const offered = suggestions === undefined ? [] : offeredSuggestions(suggestions(tokens), tokens, draft);
+  const listShown = listOpen && offered.length > 0;
+  const picked = listShown && highlighted !== null ? offered.at(highlighted) : undefined;
 
   const unique = (values: readonly string[]) => (distinct ? [...new Set(values)] : [...values]);
 
@@ -89,6 +91,8 @@ export function TokenInput({
     const closed = unique([...tokens, ...parts.filter((part) => part.length > 0)]);
 
     setTyped(tail);
+    setHighlighted(null);
+    setListOpen(true);
     onValueChange(tail === '' ? closed : [...closed, tail]);
   };
 
@@ -102,10 +106,15 @@ export function TokenInput({
     }
   };
 
-  const accept = (suggestion: string) => {
+  const accept = (suggestion: TokenSuggestion) => {
     setTyped('');
     setHighlighted(null);
-    onValueChange(unique([...tokens, suggestion]));
+    onValueChange(unique([...tokens, suggestion.value]));
+  };
+
+  const closeList = () => {
+    setListOpen(false);
+    setHighlighted(null);
   };
 
   const remove = (index: number) => {
@@ -114,18 +123,8 @@ export function TokenInput({
   };
 
   return (
-    <TokenInputSuggestions
-      items={suggestions === undefined ? undefined : offered}
-      label={label}
-      typed={draft}
-      open={listOpen}
-      onOpenChange={setListOpen}
-      onAccept={accept}
-      onHighlight={setHighlighted}
-      anchor={frame}
-    >
+    <div className='relative flex w-full min-w-0 flex-col gap-1.5'>
       <div
-        ref={frame}
         className={cn(
           'flex min-h-8 w-full min-w-0 flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent px-1 py-1 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 has-[input[aria-invalid=true]]:border-destructive has-[input[aria-invalid=true]]:ring-3 has-[input[aria-invalid=true]]:ring-destructive/20 dark:bg-input/30 dark:has-[input[aria-invalid=true]]:border-destructive/50',
           className
@@ -175,7 +174,7 @@ export function TokenInput({
             })}
           </ul>
         )}
-        <Field
+        <input
           ref={setRef}
           value={draft}
           placeholder={tokens.length === 0 ? placeholder : undefined}
@@ -196,10 +195,21 @@ export function TokenInput({
             );
           }}
           onKeyDown={(event) => {
-            if (event.key === 'Tab' && !event.shiftKey && picking) {
+            if (suggestions !== undefined && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
               event.preventDefault();
-              accept(highlighted.value);
-            } else if (event.key === 'Enter' && draft !== '' && !picking) {
+              setListOpen(true);
+              setHighlighted(
+                movedHighlight(listShown ? highlighted : null, event.key === 'ArrowDown' ? 1 : -1, offered.length)
+              );
+            } else if (picked !== undefined && (event.key === 'Enter' || (event.key === 'Tab' && !event.shiftKey))) {
+              event.preventDefault();
+              accept(picked);
+            } else if (event.key === 'Escape' && listShown) {
+              // The list closes first; the next Escape reaches the sheet the field is in.
+              event.preventDefault();
+              event.stopPropagation();
+              closeList();
+            } else if (event.key === 'Enter' && draft !== '') {
               event.preventDefault();
               close();
             } else if (event.key === 'Backspace' && draft === '' && tokens.length > 0) {
@@ -212,13 +222,36 @@ export function TokenInput({
             onFocus?.(event);
           }}
           onBlur={(event) => {
-            setListOpen(false);
+            closeList();
             close();
             onBlur?.(event);
           }}
+          {...(suggestions !== undefined && {
+            role: 'combobox',
+            'aria-autocomplete': 'list' as const,
+            'aria-expanded': listShown,
+            'aria-controls': listShown ? listId : undefined,
+            'aria-activedescendant': picked === undefined ? undefined : tokenOptionId(listId, highlighted ?? 0),
+          })}
           {...props}
         />
       </div>
-    </TokenInputSuggestions>
+      {description}
+      {listShown && (
+        <TokenInputSuggestions
+          id={listId}
+          label={label}
+          items={offered}
+          highlighted={highlighted}
+          typed={draft}
+          onPick={accept}
+        />
+      )}
+      {suggestions !== undefined && (
+        <div aria-live='polite' className='sr-only'>
+          {listShown ? t('tokenInput.suggestionCount', { count: offered.length }) : ''}
+        </div>
+      )}
+    </div>
   );
 }

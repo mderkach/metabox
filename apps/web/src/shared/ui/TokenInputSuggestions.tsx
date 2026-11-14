@@ -1,96 +1,104 @@
-import { Autocomplete as AutocompletePrimitive } from '@base-ui/react/autocomplete';
-import type { ReactNode, RefObject } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useEffect, useRef } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 
-import type { TokenSuggestion } from './TokenInput.lib';
+import { groupSuggestions, tokenOptionId, type TokenSuggestion } from './TokenInput.lib';
+import { TokenInputOption } from './TokenInputOption';
 
 /**
- * The suggestion list of `TokenInput`. It wraps the chip frame: the input inside
- * becomes the list's combobox, and the list opens under the whole frame, not
- * under the input, so it never covers the chips.
- *
- * Without `items` the field is rendered as is, a plain input without a list.
- *
- * Only a picked suggestion reaches `onAccept`: the field keeps its own typing,
- * and Escape on a closed list does not clear the typed text.
+ * The suggestion list of `TokenInput`, the listbox of its combobox. It opens
+ * under the chip frame inside the field's own box, so it never covers the
+ * label above; it brings itself into view inside the scroll container instead
+ * of flipping. The list is not modal: the rest of the page stays available to
+ * assistive tech, and the keyboard stays in the input.
  */
 export function TokenInputSuggestions({
-  items,
+  id,
   label,
+  items,
+  highlighted,
   typed,
-  open,
-  onOpenChange,
-  onAccept,
-  onHighlight,
-  anchor,
-  children,
+  onPick,
 }: {
-  items: readonly TokenSuggestion[] | undefined;
+  id: string;
   label: string;
+  items: readonly TokenSuggestion[];
+  highlighted: number | null;
   typed: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onAccept: (value: string) => void;
-  onHighlight: (suggestion: TokenSuggestion | null) => void;
-  anchor: RefObject<HTMLElement | null>;
-  children: ReactNode;
+  onPick: (suggestion: TokenSuggestion) => void;
 }) {
   const { t } = useTranslation('shared');
+  const popup = useRef<HTMLDivElement | null>(null);
+  const hasFooter = typed !== '';
 
-  if (items === undefined) {
-    return <>{children}</>;
-  }
+  useEffect(
+    function bringListIntoView() {
+      popup.current?.scrollIntoView({ block: 'nearest' });
+    },
+    [items.length, hasFooter]
+  );
+
+  useEffect(
+    function followHighlight() {
+      if (highlighted !== null) {
+        document.getElementById(tokenOptionId(id, highlighted))?.scrollIntoView({ block: 'nearest' });
+      }
+    },
+    [id, highlighted]
+  );
 
   return (
-    <AutocompletePrimitive.Root
-      items={items}
-      filter={null}
-      itemToStringValue={(item: TokenSuggestion) => item.value}
-      value={typed}
-      onValueChange={(next, details) => {
-        if (details.reason === 'item-press') {
-          onAccept(next);
-        }
-      }}
-      open={open && items.length > 0}
-      onOpenChange={(next, details) => {
-        // The next value is picked from the same list: it stays open after a pick.
-        if (next || details.reason !== 'item-press') {
-          onOpenChange(next);
-        }
-      }}
-      onItemHighlighted={(item: TokenSuggestion | undefined) => {
-        onHighlight(item ?? null);
-      }}
+    <div
+      ref={popup}
+      className='absolute inset-x-0 top-full z-50 mt-1 flex max-h-72 animate-in flex-col overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 fade-in-0 motion-reduce:animate-none'
     >
-      {children}
-      <AutocompletePrimitive.Portal>
-        <AutocompletePrimitive.Positioner
-          anchor={anchor}
-          sideOffset={4}
-          align='start'
-          collisionPadding={8}
-          className='isolate z-50'
-        >
-          <AutocompletePrimitive.Popup className='max-h-[min(18rem,var(--available-height))] w-(--anchor-width) origin-(--transform-origin) overflow-y-auto overscroll-contain rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 motion-reduce:animate-none data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0'>
-            <AutocompletePrimitive.Status className='sr-only'>
-              {t('tokenInput.suggestionCount', { count: items.length })}
-            </AutocompletePrimitive.Status>
-            <AutocompletePrimitive.List aria-label={t('tokenInput.suggestions', { label })}>
-              {(item: TokenSuggestion) => (
-                <AutocompletePrimitive.Item
-                  key={item.value}
-                  value={item}
-                  className='flex min-h-8 w-full min-w-0 cursor-default items-center justify-between gap-3 rounded-md px-2 py-1 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground pointer-coarse:min-h-11'
-                >
-                  <span className='min-w-0 truncate font-mono'>{item.value}</span>
-                  <span className='shrink-0 text-xs text-muted-foreground'>{item.hint}</span>
-                </AutocompletePrimitive.Item>
-              )}
-            </AutocompletePrimitive.List>
-          </AutocompletePrimitive.Popup>
-        </AutocompletePrimitive.Positioner>
-      </AutocompletePrimitive.Portal>
-    </AutocompletePrimitive.Root>
+      <div
+        id={id}
+        role='listbox'
+        aria-label={t('tokenInput.suggestions', { label })}
+        className='overflow-y-auto overscroll-contain p-1'
+      >
+        {groupSuggestions(items).map((group, groupIndex) =>
+          group.label === undefined ? (
+            group.items.map(({ suggestion, index }) => (
+              <TokenInputOption
+                key={suggestion.value}
+                id={tokenOptionId(id, index)}
+                suggestion={suggestion}
+                highlighted={index === highlighted}
+                onPick={onPick}
+              />
+            ))
+          ) : (
+            <div key={group.label} role='group' aria-labelledby={`${id}-group-${String(groupIndex)}`}>
+              <div
+                id={`${id}-group-${String(groupIndex)}`}
+                className='px-2 pt-1.5 pb-1 text-xs font-medium text-muted-foreground'
+              >
+                {group.label}
+              </div>
+              {group.items.map(({ suggestion, index }) => (
+                <TokenInputOption
+                  key={suggestion.value}
+                  id={tokenOptionId(id, index)}
+                  suggestion={suggestion}
+                  highlighted={index === highlighted}
+                  onPick={onPick}
+                />
+              ))}
+            </div>
+          )
+        )}
+      </div>
+      {hasFooter && (
+        <p className='border-t border-border px-3 py-1.5 text-xs text-pretty text-muted-foreground'>
+          <Trans
+            t={t}
+            i18nKey='tokenInput.enterHint'
+            values={{ value: typed }}
+            components={{ value: <code className='font-mono text-foreground' /> }}
+          />
+        </p>
+      )}
+    </div>
   );
 }

@@ -374,6 +374,7 @@
     "suggestions": "{{label}}: подсказки",
     "suggestionCount_one": "{{count}} подсказка",
     "suggestionCount_few": "{{count}} подсказки",
-    "suggestionCount_many": "{{count}} подсказок"
+    "suggestionCount_many": "{{count}} подсказок",
+    "enterHint": "Enter добавит <value>{{value}}</value> · ↓ — выбрать из списка"
   }
 }
