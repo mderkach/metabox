@@ -1,4 +1,7 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
+
+import { PROXY_QUERY } from '@entities/Proxy';
 
 import { useTestProxyDelay } from '../api/ProxyDelay.api';
 
@@ -9,7 +12,9 @@ import { useTestProxyDelay } from '../api/ProxyDelay.api';
  */
 const PROBE_CONCURRENCY = 4;
 
+/** Probes a set of nodes and rereads the proxy list once, after the last probe. */
 export function useTestProxyDelays() {
+  const queryClient = useQueryClient();
   const delay = useTestProxyDelay();
   const [isPending, setPending] = useState(false);
   const running = useRef(false);
@@ -39,11 +44,12 @@ export function useTestProxyDelays() {
 
         return success;
       } finally {
+        await queryClient.invalidateQueries({ queryKey: PROXY_QUERY.list() });
         running.current = false;
         setPending(false);
       }
     },
-    [mutateAsync]
+    [mutateAsync, queryClient]
   );
 
   return { test, isPending };
