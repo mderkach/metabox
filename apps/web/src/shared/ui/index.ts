@@ -42,6 +42,7 @@ export { ShortcutKbd } from './ShortcutKbd';
 export * as SidePanelLayout from './SidePanelLayout';
 export { SkeletonRows } from './SkeletonRows';
 export { TokenInput } from './TokenInput';
+export type { TokenSuggestion } from './TokenInput.lib';
 export {
   CARD_TITLE,
   SECTION_HEADING,

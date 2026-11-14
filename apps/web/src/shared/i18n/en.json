@@ -361,6 +361,11 @@
   "tokenInput": {
     "values": "{{label}}: values",
     "remove": "Remove {{value}}",
-    "invalid": ", invalid"
+    "invalid": ", invalid",
+    "suggestions": "{{label}}: suggestions",
+    "suggestionCount_one": "{{count}} suggestion",
+    "suggestionCount_other": "{{count}} suggestions",
+    "enterHint": "Enter adds <value>{{value}}</value> · ↓ to pick from the list",
+    "enterPick": "Enter adds <value>{{value}}</value> · Esc to close the list"
   }
 }

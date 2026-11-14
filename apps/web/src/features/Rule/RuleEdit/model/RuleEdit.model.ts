@@ -8,7 +8,8 @@ import {
   ruleNodePath,
   toElementName,
 } from '@entities/Config';
-import { deviceLabel, type DeviceIndex } from '@entities/Device';
+import { cidrContains, parseIpv4Cidr, type Ipv4Cidr } from '@entities/Dataplane';
+import { deviceLabel, type Device, type DeviceIndex } from '@entities/Device';
 import {
   RULE_SET_MATCHER,
   RULE_TARGET,
@@ -241,4 +242,64 @@ export function dynamicSourceNames(values: readonly string[], devices: DeviceInd
   });
 
   return [...new Set(names)];
+}
+
+/** Ports of a port condition worth offering: what a rule by port is usually about. */
+export const COMMON_PORTS = ['443', '80', '853'] as const;
+
+/** A home router serves a `/24`; a wider network still contains each of these subnets. */
+const LAN_PREFIX = 24;
+const IPV4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\d{1,3}$/;
+
+export interface LanSubnet {
+  cidr: string;
+  /** Devices of the router that have an address in it. */
+  devices: number;
+}
+
+/**
+ * Local network subnets by the addresses of its devices, in address order. The
+ * daemon does not serve the router interfaces, so the prefix is assumed, not read.
+ */
+export function lanSubnets(devices: DeviceIndex): LanSubnet[] {
+  const counts = new Map<string, number>();
+
+  for (const ip of devices.keys()) {
+    const match = IPV4.exec(ip);
+
+    if (match !== null) {
+      const cidr = `${match[1]}.${match[2]}.${match[3]}.0/${String(LAN_PREFIX)}`;
+
+      counts.set(cidr, (counts.get(cidr) ?? 0) + 1);
+    }
+  }
+
+  return [...counts]
+    .map(([cidr, count]) => ({ cidr, devices: count }))
+    .sort((left, right) => left.cidr.localeCompare(right.cidr, undefined, { numeric: true }));
+}
+
+export interface SourceSuggestions {
+  devices: Device[];
+  networks: LanSubnet[];
+}
+
+/**
+ * What the source field offers next to its chips: devices and local networks
+ * that do not overlap a chip. A network around a device chip, or a device
+ * inside a network chip, would add nothing to the rule.
+ */
+export function sourceSuggestions(devices: DeviceIndex, chips: readonly string[]): SourceSuggestions {
+  const taken = chips.map(parseIpv4Cidr).filter((cidr) => cidr !== null);
+  const free = (cidr: Ipv4Cidr | null) => cidr !== null && !taken.some((chip) => overlaps(chip, cidr));
+
+  return {
+    devices: [...devices.values()].filter((device) => free(parseIpv4Cidr(device.ip))),
+    networks: lanSubnets(devices).filter((subnet) => free(parseIpv4Cidr(subnet.cidr))),
+  };
+}
+
+/** Two subnets overlap only when one contains the other. */
+function overlaps(left: Ipv4Cidr, right: Ipv4Cidr): boolean {
+  return cidrContains(left, right.address) || cidrContains(right, left.address);
 }

@@ -214,7 +214,7 @@ describe('rule edit form picked with the mouse', () => {
     });
   });
 
-  it('a device from the list lands in the condition as a source address and warns about a dynamic lease', async () => {
+  it('a device picked from the suggestions lands in the condition as a source address and warns about a dynamic lease', async () => {
     ConfigDocumentState.getState().reset();
     ConfigDocumentState.getState().load(CONFIG);
     worker.use(...createDeviceHandlers());
@@ -222,7 +222,11 @@ describe('rule edit form picked with the mouse', () => {
     renderWithQuery(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     await pick(screen.getByRole('combobox', { name: 'Добавить условие' }), 'Устройство или адрес источника');
-    await pick(await screen.findByRole('combobox', { name: 'Выбрать устройство' }), 'iphone-guest · 192.168.1.120');
+    await userEvent.click(
+      await within(await screen.findByRole('group', { name: 'Устройства' })).findByRole('option', {
+        name: 'iphone-guest 192.168.1.120',
+      })
+    );
 
     expect(
       within(
@@ -231,6 +235,9 @@ describe('rule edit form picked with the mouse', () => {
         })
       ).getByRole('listitem')
     ).toHaveTextContent('iphone-guest 192.168.1.120/32');
+    // The local network around the picked device would add nothing to the rule.
+    expect(screen.getByRole('group', { name: 'Устройства' })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Сети' })).not.toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Устройства с динамической арендой' })).toHaveTextContent(
       'iphone-guest: аренда динамическая, адрес может смениться'
     );
@@ -248,7 +255,11 @@ describe('rule edit form picked with the mouse', () => {
     renderWithQuery(<RuleEditForm rule={RULE} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
     await pick(screen.getByRole('combobox', { name: 'Добавить условие' }), 'Устройство или адрес источника');
-    await pick(await screen.findByRole('combobox', { name: 'Выбрать устройство' }), 'Ноутбук · 192.168.1.60');
+    await userEvent.click(
+      await within(await screen.findByRole('group', { name: 'Устройства' })).findByRole('option', {
+        name: 'Ноутбук 192.168.1.60',
+      })
+    );
 
     expect(
       within(

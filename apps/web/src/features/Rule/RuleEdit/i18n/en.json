@@ -34,7 +34,6 @@
     "cidrInvalid": "An address is an IP or a subnet: 192.168.1.10, 10.0.0.0/8, fd00::/8"
   },
   "device": {
-    "pick": "Pick a device",
     "dynamicList": "Devices with a dynamic lease",
     "dynamic": "{{name}}: dynamic lease, the address may change"
   },
@@ -65,6 +64,19 @@
     "port": {
       "label": "Port",
       "placeholder": "443"
+    }
+  },
+  "suggestion": {
+    "lan_one": "local network · {{count}} device",
+    "lan_other": "local network · {{count}} devices",
+    "port": {
+      "443": "HTTPS",
+      "80": "HTTP",
+      "853": "DNS over TLS"
+    },
+    "group": {
+      "devices": "Devices",
+      "networks": "Networks"
     }
   }
 }

@@ -370,6 +370,12 @@
   "tokenInput": {
     "values": "{{label}}: значения",
     "remove": "Убрать {{value}}",
-    "invalid": ", ошибка"
+    "invalid": ", ошибка",
+    "suggestions": "{{label}}: подсказки",
+    "suggestionCount_one": "{{count}} подсказка",
+    "suggestionCount_few": "{{count}} подсказки",
+    "suggestionCount_many": "{{count}} подсказок",
+    "enterHint": "Enter добавит <value>{{value}}</value> · ↓ — выбрать из списка",
+    "enterPick": "Enter добавит <value>{{value}}</value> · Esc — закрыть список"
   }
 }

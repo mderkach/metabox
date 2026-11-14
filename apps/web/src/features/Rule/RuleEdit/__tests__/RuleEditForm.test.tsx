@@ -54,6 +54,10 @@ describe('rule sets of a rule in the form', () => {
 });
 
 describe('rule conditions in the form', () => {
+  beforeEach(() => {
+    server.use(...createDeviceHandlers());
+  });
+
   it('opens on the rule conditions, and a cleared condition removes the field', async () => {
     const user = userEvent.setup();
     const rule = loadRule({
@@ -81,7 +85,7 @@ describe('rule conditions in the form', () => {
 
     renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
-    await user.type(screen.getByRole('textbox', { name: 'Порт' }), 'https');
+    await user.type(screen.getByRole('combobox', { name: 'Порт' }), 'https');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Порт — число от 0 до 65535');
 
