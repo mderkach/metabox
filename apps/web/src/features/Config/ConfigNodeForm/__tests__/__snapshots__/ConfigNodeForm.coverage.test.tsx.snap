@@ -67,7 +67,6 @@ exports[`schema registry walk > lists the fields that fell to raw 1`] = `
   ],
   "endpoint/tailscale": [
     "domain_resolver",
-    "ssh_server",
   ],
   "endpoint/vpn-client": [
     "outbound",
@@ -275,7 +274,6 @@ exports[`schema registry walk > lists the fields that fell to raw 1`] = `
   "outbound/naive": [
     "domain_resolver",
     "extra_headers",
-    "udp_over_tcp",
   ],
   "outbound/parser": [
     "domain_resolver",
@@ -289,7 +287,6 @@ exports[`schema registry walk > lists the fields that fell to raw 1`] = `
   "outbound/selector": [],
   "outbound/shadowsocks": [
     "domain_resolver",
-    "udp_over_tcp",
   ],
   "outbound/shadowtls": [
     "domain_resolver",
@@ -299,7 +296,6 @@ exports[`schema registry walk > lists the fields that fell to raw 1`] = `
   ],
   "outbound/socks": [
     "domain_resolver",
-    "udp_over_tcp",
   ],
   "outbound/ssh": [
     "domain_resolver",
