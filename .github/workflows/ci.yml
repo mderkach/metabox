@@ -103,6 +103,7 @@ jobs:
 
       - run: pnpm lint
       - run: pnpm format:check
+      - run: pnpm --filter web check:design
       - run: pnpm --filter web test
       - run: pnpm --filter web build
       - run: pnpm --filter web check:bundle

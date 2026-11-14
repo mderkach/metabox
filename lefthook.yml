@@ -57,6 +57,9 @@ pre-push:
     - name: format
       run: pnpm format:check
 
+    - name: design
+      run: pnpm --filter web check:design
+
     - name: tests
       run: make test
 
