@@ -103,7 +103,7 @@ Backward compatible: a new tool; existing tools, the panel and the REST API do n
 
 ## Links
 
-- [`../PRD.md`](../PRD.md): section 5, "MCP server", AC-71…AC-73, AC-76;
+- [`openspec/specs/mcp/spec.md`](../../openspec/specs/mcp/spec.md): AC-71…AC-73, AC-76;
 - [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md), [ADR-0038](./ADR-0038-target-the-sing-box-extended-fork-schema-only.md), [ADR-0055](./ADR-0055-embed-a-read-only-mcp-server-in-the-daemon-with-the-official-go-sdk.md), [ADR-0062](./ADR-0062-translate-operator-texts-with-an-english-keyed-catalogue-chosen-in-uci.md);
 - [`../../tools/schemagen/fieldref.go`](../../tools/schemagen/fieldref.go), [`../../apps/metaboxd/internal/mcp/fields.go`](../../apps/metaboxd/internal/mcp/fields.go), [`../../apps/metaboxd/internal/mcp/fieldnotes.json`](../../apps/metaboxd/internal/mcp/fieldnotes.json);
 - [`../../apps/metaboxd/docs/guides/HTTPAPI.md`](../../apps/metaboxd/docs/guides/HTTPAPI.md), section "MCP";

@@ -15,11 +15,13 @@ make dev-mock
 
 ## Shared agent harness
 
-Rules and requirements are shared across clients: root and project `AGENTS.md` files, `docs/PRD.md` and project guides. Portable skills live in `.agents/skills/`; `.claude/skills/` contains links to shared skills and workflows that require Claude. `CLAUDE.md` imports the adjacent `AGENTS.md`, while Codex reads it directly.
+Rules and requirements are shared across clients: root and project `AGENTS.md` files, `docs/PRD.md`, the behaviour specs in `openspec/specs/` and project guides. Portable skills live in `.agents/skills/`; `.claude/skills/` contains links to shared skills and workflows that require Claude. `CLAUDE.md` imports the adjacent `AGENTS.md`, while Codex reads it directly.
 
 For frontend work, use the condition table in [`apps/web/AGENTS.md`](../apps/web/AGENTS.md), which routes to the design system and relevant guides. Lint-rule tests run in the Node `tooling` project; ordinary `pnpm --filter web test` already includes it. For work on those rules alone, run `pnpm --filter web exec vitest run --project tooling`.
 
 After updating a branch, check ADR number uniqueness, skill link resolution and MCP launch settings in both adapters. Permissions, authentication and hooks remain client-specific; matching MCP declarations do not prove server connectivity. Plugin installation and personal configuration changes are outside the shared harness.
+
+OpenSpec, the tool that keeps the specs and the changes in progress, is a dev dependency: run it as `pnpm --silent openspec <command>`. The script turns off its anonymous usage telemetry, which is on by default; CI turns it off by itself. To turn it off for calls that bypass the script, run `pnpm --silent openspec config set telemetry.enabled false` once: the setting is stored in the user's OpenSpec config, not in the repository.
 
 ## Codex
 

@@ -14,6 +14,23 @@ This file is the process: how to send a change, commit format, checks, PR. Build
 
 The first PR from a fork waits until the maintainer approves its CI run. This is a GitHub rule for new contributors.
 
+## Working by specs
+
+Behaviour is specified before code. The tool is OpenSpec ([ADR-0081](./docs/adr/ADR-0081-keep-behaviour-specs-and-changes-in-openspec.md)); the rules for its artifacts are in [`openspec/config.yaml`](./openspec/config.yaml). In Claude Code the commands are `/os:<name>`, in Codex the skills are `$openspec-<name>`.
+
+| What you do                                    | Path                                                                                                                                                                                                                                                                              |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| look into a problem, compare options           | `/os:explore`. Nothing is written to `openspec/`. The result is an issue, a proposal or an ADR                                                                                                                                                                                    |
+| add or change behaviour                        | `/os:propose` creates `openspec/changes/<name>/`: proposal, delta specs, design, tasks. The pull request with the proposal is the approval; it is not approved while its open questions are not empty. Then `/os:apply`, task by task, and `/os:archive` in the last pull request |
+| take one of the open proposals                 | `/os:update` to answer its open questions and finish the design and the tasks, then the same path                                                                                                                                                                                 |
+| fix a bug that breaks specified behaviour      | no change folder: the issue is the contract. The fix comes with a test, and the requirement gets a row in `docs/Verification.md` if it had none                                                                                                                                   |
+| the requirement itself is wrong or out of date | a change with a MODIFIED delta; the spec is not edited in place                                                                                                                                                                                                                   |
+| refactor, tooling, documentation               | an ordinary pull request, no change folder                                                                                                                                                                                                                                        |
+| a technical decision                           | an ADR in `docs/adr/`; the design of a change links to it                                                                                                                                                                                                                         |
+| a new screen or block of the panel             | the design brief goes into the design of the change; see [the panel rules](./apps/web/AGENTS.md)                                                                                                                                                                                  |
+
+One session holds one change. `openspec/specs/` holds only what is built: a requirement gets there when its change is archived, and `make trace-check` fails when it has no row in `docs/Verification.md`.
+
 ## Commit format
 
 Commits follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/). commitlint checks them; the rules are in `commitlint.config.mjs`.
@@ -97,6 +114,7 @@ If a commit mixes unrelated changes, split it. Moving or renaming files and chan
 | Frontend browser tests   | `pnpm --filter web test:browser`    |
 | Frontend e2e scenarios   | `pnpm --filter web test:e2e`        |
 | Requirement links        | `make trace-check`                  |
+| Specs and changes        | `pnpm spec:check`                   |
 | Everything               | `make test`                         |
 
 Run commands from the repository root. The exception is the daemon tests: there is no Go module at the root, so `go test ./...` works only from `apps/metaboxd`. `pnpm lint` works only from the root: the Tailwind plugin looks for the frontend config relative to the current directory.
@@ -109,11 +127,11 @@ The browser tests need Chromium (`pnpm --filter web exec playwright install --on
 
 `pnpm install` installs the git hooks (lefthook, config in `lefthook.yml`); `make hooks` reinstalls them.
 
-| Hook         | What it does                                                                                                                                                                      |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pre-commit` | gofmt, lint and format of the staged files; `go vet` if there are Go files; generated files only with their source                                                                |
-| `commit-msg` | commitlint                                                                                                                                                                        |
-| `pre-push`   | the whole repository: `pnpm lint`, `make lint`, `pnpm format:check`, the design detector on the panel sources, `make test`, frontend build with type checking, `make trace-check` |
+| Hook         | What it does                                                                                                                                                                                         |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pre-commit` | gofmt, lint and format of the staged files; `go vet` if there are Go files; generated files only with their source                                                                                   |
+| `commit-msg` | commitlint                                                                                                                                                                                           |
+| `pre-push`   | the whole repository: `pnpm lint`, `make lint`, `pnpm format:check`, the design detector on the panel sources, `make test`, frontend build with type checking, `make trace-check`, `pnpm spec:check` |
 
 A commit checks only what went into it and is fast. A push checks everything, because a change in one file can break types in another.
 
@@ -123,13 +141,13 @@ Use `git commit --no-verify` only when a change cannot pass a check, and explain
 
 Documents change in the same commit as the code:
 
-| What changes in the commit                           | What is edited                                                                                                                                   |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| an acceptance criterion is met                       | the AC checkbox in section 5 of the PRD is ticked, and the check that confirms it gets a row in [`docs/Verification.md`](./docs/Verification.md) |
-| a new technical decision is made                     | an ADR in `docs/adr/`; the PRD is edited only if a requirement changes                                                                           |
-| a file or directory mentioned in documents has moved | the paths in the documents                                                                                                                       |
+| What changes in the commit                           | What is edited                                                                                                          |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| a change in `openspec/changes/` ships                | the change is archived into `openspec/specs/`, and each requirement it delivers gets its rows in `docs/Verification.md` |
+| a new technical decision is made                     | an ADR in `docs/adr/`; the PRD is edited only if a requirement changes                                                  |
+| a file or directory mentioned in documents has moved | the paths in the documents                                                                                              |
 
-Tick an AC (acceptance criterion) checkbox only when a run confirms it: a test, CI or a measurement. The row in `docs/Verification.md` names that run; `make trace-check` fails when the row points at a test, job or file that does not exist, and when code names a document instead ([ADR-0076](./docs/adr/ADR-0076-link-requirements-to-their-checks-not-code-to-documents.md)).
+Archive a change into `openspec/specs/` only when a run confirms each AC (acceptance criterion) it delivers: a test, CI or a measurement. The row in `docs/Verification.md` names that run; `make trace-check` fails when the row points at a test, job or file that does not exist, and when code names a document instead ([ADR-0076](./docs/adr/ADR-0076-link-requirements-to-their-checks-not-code-to-documents.md)).
 
 Technical decisions are recorded as ADRs (architecture decision records) in [`docs/adr/`](./docs/adr/README.md). PRD appendix A is closed to new entries.
 
@@ -151,7 +169,7 @@ Stacked PRs: before merging a PR whose branch is the base of another open PR (`g
 
 ## Project specifics
 
-**Daemon (`apps/metaboxd/`).** Owns the config files and the Apply cycle. A change to the API or the storage format is breaking: mark it with `!` and edit the PRD. Before editing, read the guide from the table in [`apps/metaboxd/AGENTS.md`](./apps/metaboxd/AGENTS.md). Before handing in, go through the [review checklist](./apps/metaboxd/docs/guides/ReviewChecklist.md).
+**Daemon (`apps/metaboxd/`).** Owns the config files and the Apply cycle. A change to the API or the storage format is breaking: mark it with `!` and edit the PRD or the spec in `openspec/`. Before editing, read the guide from the table in [`apps/metaboxd/AGENTS.md`](./apps/metaboxd/AGENTS.md). Before handing in, go through the [review checklist](./apps/metaboxd/docs/guides/ReviewChecklist.md).
 
 **Schema (`tools/schemagen`).** The generator is the source. `apps/web/src/shared/api/generated.ts` and `apps/metaboxd/internal/mcp/fields.generated.go` are built from it. Commit the generator change together with the rebuilt files.
 

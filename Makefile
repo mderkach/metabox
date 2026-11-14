@@ -93,7 +93,7 @@ singbox-pin-check:
 # Requirements point at their checks in docs/Verification.md, and code does not name documents.
 # Coverage of the ticked criteria is reported, not enforced, until the table is filled.
 trace-check:
-	python3 -I .github/scripts/trace-check.py
+	python3 -I .github/scripts/trace-check.py --strict-coverage
 
 GOLANGCI = go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 

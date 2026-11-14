@@ -26,6 +26,7 @@
       "Edit(./apps/web/src/shared/api/daemon.generated.ts)",
       "Edit(./apps/web/src/i18n.generated.d.ts)",
       "Edit(./apps/metaboxd/internal/mcp/fields.generated.go)",
+      "Edit(./.agents/skills/openspec-*/**)",
       "Edit(./pnpm-lock.yaml)",
       "Edit(./dist/**)",
       "Edit(./apps/web/dist/**)"

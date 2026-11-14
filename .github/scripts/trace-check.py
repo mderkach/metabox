@@ -14,10 +14,14 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 PRD = "docs/PRD.md"
 INDEX = "docs/Verification.md"
+# A requirement in the main specs is built; one in a change's delta is still in progress.
+SPECS = "openspec/specs"
+CHANGES = "openspec/changes"
 
 ID = r"(?:AC|NFR|UX)-\d+"
 AC_LINE = re.compile(r"^- \[( |x)\] \*\*(AC-\d+)\.\*\*")
 TABLE_ID = re.compile(r"^\| ((?:NFR|UX)-\d+) +\|")
+SPEC_REQUIREMENT = re.compile(rf"^### Requirement: ({ID})\b")
 ROW = re.compile(rf"^\| *({ID}) *\|")
 CODE = re.compile(r"`([^`]+)`")
 DOC_REFERENCE = re.compile(rf"\b(?:ADR-\d{{4}}|{ID}|PRD)\b")
@@ -43,18 +47,45 @@ class Report:
         self.warnings.append(message)
 
 
-def read_requirements(root):
+def spec_files(root, folder):
+    return sorted(p for p in (root / folder).rglob("*.md") if "archive" not in p.relative_to(root / folder).parts)
+
+
+def read_requirements(root, report):
     ticked, known = set(), set()
     nfr = []
-    for line in (root / PRD).read_text(encoding="utf-8").splitlines():
+    homes = {}
+
+    def define(requirement, where):
+        if requirement in homes:
+            report.error(where, f"{requirement} is already defined in {homes[requirement]}", "give the new requirement the next free ID")
+            return
+        homes[requirement] = where
+        known.add(requirement)
+
+    for number, line in enumerate((root / PRD).read_text(encoding="utf-8").splitlines(), 1):
         if match := AC_LINE.match(line):
-            known.add(match[2])
+            define(match[2], f"{PRD}:{number}")
             if match[1] == "x":
                 ticked.add(match[2])
         elif match := TABLE_ID.match(line):
-            known.add(match[1])
+            define(match[1], f"{PRD}:{number}")
             if match[1].startswith("NFR-"):
                 nfr.append(match[1])
+    for folder, built in ((SPECS, True), (CHANGES, False)):
+        for path in spec_files(root, folder):
+            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                if match := SPEC_REQUIREMENT.match(line):
+                    where = f"{path.relative_to(root)}:{number}"
+                    # A delta that modifies a built requirement repeats its header on purpose.
+                    if not built and match[1] in homes and homes[match[1]].startswith(SPECS):
+                        continue
+                    define(match[1], where)
+                    if built:
+                        if match[1].startswith("NFR-"):
+                            nfr.append(match[1])
+                        else:
+                            ticked.add(match[1])
     return known, ticked, nfr
 
 
@@ -94,7 +125,7 @@ def check_rows(root, rows, known, report):
             continue
         requirement, kind, file_cell, check = cells
         if requirement not in known:
-            report.error(where, f"{requirement} is not defined in {PRD}", "fix the ID or remove the row")
+            report.error(where, f"{requirement} is not defined in {PRD} or {SPECS}", "fix the ID or remove the row")
             continue
         if kind not in KINDS:
             report.error(where, f"unknown kind {kind!r}", f"use one of {', '.join(sorted(KINDS))}")
@@ -159,7 +190,7 @@ def main():
     args = parser.parse_args()
 
     report = Report()
-    known, ticked, nfr = read_requirements(args.root)
+    known, ticked, nfr = read_requirements(args.root, report)
     covered, gated = check_rows(args.root, read_rows(args.root), known, report)
     missing = check_coverage(covered, gated, ticked, nfr, report)
     check_code(args.root, report)

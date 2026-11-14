@@ -4,6 +4,7 @@
 - Date: 2026-08-30
 - Deciders: repository owner
 - Supersedes: section A.3 of [`../PRD.md`](../PRD.md)
+- Superseded by (as to the init script the service is managed through): [ADR-0069](./ADR-0069-manage-only-the-metabox-singbox-service.md)
 
 ## Context and problem statement
 

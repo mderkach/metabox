@@ -128,7 +128,9 @@ Backward compatible: MCP is off by default, the panel API and its middleware do 
 
 ## Links
 
-- [`../PRD.md`](../PRD.md): sections 4 and 5 (MCP criteria), AC-19, AC-34, AC-36, AC-66, AC-68, AC-69, section 8, the roadmap after v1;
+- [`../PRD.md`](../PRD.md): section 4, section 8, the roadmap after v1; the MCP criteria AC-19, AC-34, AC-36, AC-66, AC-68, AC-69 are in [`openspec/specs/`](../../openspec/specs/);
+- [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md): the rule that a request without `Origin` is rejected, superseded for `/mcp`;
+- [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md): the rule of `go.mod` without `require`, superseded;
 - [ADR-0041](./ADR-0041-run-v1-without-authentication-behind-network-and-origin-checks.md): the `Origin` and `Host` checks;
 - [ADR-0052](./ADR-0052-protect-the-panel-with-an-optional-password-and-a-cookie-session.md): the optional panel password and the daemon service directory;
 - [`../../apps/metaboxd/internal/httpapi/middleware.go`](../../apps/metaboxd/internal/httpapi/middleware.go): `checkHost`, `checkOrigin`, `originAllowed`;

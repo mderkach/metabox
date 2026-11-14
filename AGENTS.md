@@ -4,7 +4,7 @@
 
 A GUI editor for sing-box configs on OpenWrt: a Go daemon (`apps/metaboxd`) serves an embedded SPA (`apps/web`) and owns the config files. The config schema is generated from the sing-box fork by reflection (`tools/schemagen`).
 
-Requirements: [`docs/PRD.md`](./docs/PRD.md). A mismatch between code and the PRD is treated as a code bug until the PRD is changed explicitly.
+Requirements: [`docs/PRD.md`](./docs/PRD.md) for the product, [`openspec/specs/`](./openspec/specs/) for built behaviour, [`openspec/changes/`](./openspec/changes/) for behaviour that is not built yet. A mismatch between code and a requirement is treated as a code bug until the requirement is changed explicitly.
 
 ## Projects
 
@@ -43,13 +43,14 @@ If a document disagrees with the actual code, config or linter rule, report the 
 
 One fact, one home; everywhere else, a link. The layer is chosen by the cost of the knowledge in context:
 
-| Layer     | Where it lives                                                       | Cost                             | What goes there                                                     |
-| --------- | -------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------- |
-| Contract  | types, signatures, schemas, tests; TSDoc/godoc                       | always at hand, next to the code | behaviour and constraints that cannot be derived from the signature |
-| Rule      | this file and the projects' `AGENTS.md`                              | always in context                | a standing requirement for the repository or a part of it           |
-| Document  | guides in each project's `docs/`                                     | by condition from the table      | large topical rules                                                 |
-| Decision  | `docs/adr/*`; requirements and decisions already made: `docs/PRD.md` | by link                          | why the system is built this way, which options were rejected       |
-| Procedure | `.agents/skills/*`; client-specific skills in `.claude/skills/*`     | by trigger                       | a repeatable scenario that is not always needed                     |
+| Layer     | Where it lives                                                            | Cost                             | What goes there                                                     |
+| --------- | ------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------- |
+| Contract  | types, signatures, schemas, tests; TSDoc/godoc                            | always at hand, next to the code | behaviour and constraints that cannot be derived from the signature |
+| Rule      | this file and the projects' `AGENTS.md`                                   | always in context                | a standing requirement for the repository or a part of it           |
+| Document  | guides in each project's `docs/`                                          | by condition from the table      | large topical rules                                                 |
+| Decision  | `docs/adr/*`; requirements and decisions already made: `docs/PRD.md`      | by link                          | why the system is built this way, which options were rejected       |
+| Spec      | `openspec/specs/*` built behaviour; `openspec/changes/*` work in progress | by link, per domain              | what the system does, with scenarios; the contract of a change      |
+| Procedure | `.agents/skills/*`; client-specific skills in `.claude/skills/*`          | by trigger                       | a repeatable scenario that is not always needed                     |
 
 TSDoc and godoc do not retell the implementation line by line, only what the signature does not show.
 
@@ -57,7 +58,7 @@ A code comment is written in two cases only: a contract the signature does not s
 
 Links go from documents to code, not back. Code, comments included, does not name an ADR, a requirement ID (`AC-N`, `NFR-N`, `UX-N`) or the PRD: it says what breaks and why. A requirement names the check that confirms it in [`docs/Verification.md`](./docs/Verification.md), a decision names the code it governs in the "Validation" section of its ADR. `make trace-check` enforces both on pre-push and in CI ([ADR-0076](./docs/adr/ADR-0076-link-requirements-to-their-checks-not-code-to-documents.md)).
 
-Technical decisions (test bench setup, a workaround for a platform limitation, a tool choice, the architecture of a part of the system) are recorded as ADRs in `docs/adr/` with the `create-adr` skill. The repository owner delegated acceptance to the agent: it creates the ADR as `Proposed` and may set `Accepted` itself. Either way, the hand-in carries a summary for a reader without the task context: what was decided, which options were rejected and what changes for the owner, with every code and abbreviation expanded. A decision that changes a requirement edits sections 1–11 of the PRD.
+Technical decisions (test bench setup, a workaround for a platform limitation, a tool choice, the architecture of a part of the system) are recorded as ADRs in `docs/adr/` with the `create-adr` skill. The repository owner delegated acceptance to the agent: it creates the ADR as `Proposed` and may set `Accepted` itself. Either way, the hand-in carries a summary for a reader without the task context: what was decided, which options were rejected and what changes for the owner, with every code and abbreviation expanded. A decision that changes a requirement edits the PRD for the product sections, or goes through an OpenSpec change for behaviour.
 
 PRD appendix A is closed to new entries: decisions made before ADRs were introduced moved to `docs/adr/`, and the appendix keeps only headings with links to them. Look for decisions in ADRs; do not add to appendix A.
 
@@ -72,7 +73,8 @@ Working notes made during tasks live in `.omc/plans/*`. These files are **not in
 - Keep the user's changes and do not revert them without permission. If a file changed on disk, it is usually intentional; report it instead of restoring your version.
 - Speak plainly about risks, trade-offs and tech debt. Do not embellish the state of the code.
 - Deferred work and a rule violation that is found but not fixed become a GitHub issue with the `techdebt` label, not a line in the reply. The repository is public: device addresses, keys and logs with personal data do not go into an issue.
-- `docs/PRD.md` is the primary source of requirements and decisions. It is edited in the same commit as the change; which change edits what is described in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+- `docs/PRD.md` is the primary source of product requirements, `openspec/` of behaviour requirements. They are edited in the same commit as the change; which change edits what is described in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+- Work that changes behaviour starts as an OpenSpec change (`/os:propose` in Claude Code, `$openspec-propose` in Codex), not with code; the paths for a feature, a bug fix and research are in [`CONTRIBUTING.md`](./CONTRIBUTING.md#working-by-specs); the rules for its artifacts are in [`openspec/config.yaml`](./openspec/config.yaml). Plans kept by agent plugins outside git do not replace it. The decision: [ADR-0081](./docs/adr/ADR-0081-keep-behaviour-specs-and-changes-in-openspec.md).
 
 ## Commits
 
@@ -105,8 +107,8 @@ Message format, scopes, branches and PRs: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 - Run linters and tests yourself and quote the result as is; do not paraphrase it.
 - A new dependency only when there is no way around it; justify it.
 - Dependency versions are pinned exactly, without `^` and `~`: a range gives different trees on a developer machine and in CI. `saveExact: true` in the root `pnpm-workspace.yaml` enforces this; a range typed by hand is caught by `pnpm install --frozen-lockfile` in CI, because the lockfile stores the specifier and diverges from the manifest. A version update is a separate, deliberate change.
-- Generated files are not edited by hand; their generators are: `apps/web/src/shared/api/generated.ts` and `apps/metaboxd/internal/mcp/fields.generated.go` (`make schema`), `apps/web/src/shared/api/daemon.generated.ts` (`make schema-daemon`), `apps/web/src/i18n.generated.d.ts` (`pnpm --filter web gen:i18n`). `.claude/settings.json` blocks Claude's edits to them; for other clients the pre-commit hook and the freshness tests in `make test` catch a hand edit.
-- The repository language is English: code, comments, commit messages, documentation, ADRs, the PRD. README, CONTRIBUTING, docs/Development and docs/Maintaining have Russian copies (`README.ru.md`, `CONTRIBUTING.ru.md`, `docs/Development.ru.md`, `docs/Maintaining.ru.md`), updated in the same commit as the English file. Text shown to users lives in the i18n dictionaries, in English and Russian.
+- Generated files are not edited by hand; their generators are: `apps/web/src/shared/api/generated.ts` and `apps/metaboxd/internal/mcp/fields.generated.go` (`make schema`), `apps/web/src/shared/api/daemon.generated.ts` (`make schema-daemon`), `apps/web/src/i18n.generated.d.ts` (`pnpm --filter web gen:i18n`), `.agents/skills/openspec-*` (`pnpm openspec update`). `.claude/settings.json` blocks Claude's edits to them; for other clients the pre-commit hook and the freshness tests in `make test` catch a hand edit.
+- The repository language is English: code, comments, commit messages, documentation, ADRs, the PRD. README, CONTRIBUTING, docs/Development, docs/Maintaining and docs/Recovery have Russian copies (`README.ru.md`, `CONTRIBUTING.ru.md`, `docs/Development.ru.md`, `docs/Maintaining.ru.md`, `docs/Recovery.ru.md`), updated in the same commit as the English file. Text shown to users lives in the i18n dictionaries, in English and Russian.
 - Personal settings that are not shared through git go into `AGENTS.local.md` (response formats, your own triggers, aliases). The file is ignored in `.gitignore` by the `*.local.*` pattern.
 
 ## Context hygiene

@@ -283,7 +283,8 @@ Stopping `metabox-singbox` removes interception: the nftables rules, the `ip rul
 ## Documentation
 
 - [`docs/Recovery.md`](./docs/Recovery.md): known limitations and getting access back when the network stops
-- [`docs/PRD.md`](./docs/PRD.md): requirements and milestones
+- [`docs/PRD.md`](./docs/PRD.md): product requirements and milestones
+- [`openspec/`](./openspec/): behaviour specs and proposed changes
 - [`docs/adr/`](./docs/adr/README.md): architecture decisions
 - [`docs/Development.md`](./docs/Development.md): build from source, test bench, commands
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md): how to send a change

@@ -1,6 +1,6 @@
 # Measuring performance
 
-How to check a performance claim about the panel. The thresholds are in `docs/PRD.md`, NFR-2 (responsiveness under load): up to 5000 live connections and 500 rules, no main thread block longer than 100 ms.
+How to check a performance claim about the panel. The thresholds are in `openspec/specs/non-functional/spec.md`, NFR-2 (responsiveness under load): up to 5000 live connections and 500 rules, no main thread block longer than 100 ms.
 
 ## Measure before naming a cause
 

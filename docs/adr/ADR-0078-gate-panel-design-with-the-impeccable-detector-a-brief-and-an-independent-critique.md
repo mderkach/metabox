@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-11-14
 - Deciders: repository owner
+- Superseded by: [ADR-0081](./ADR-0081-keep-behaviour-specs-and-changes-in-openspec.md), where the design brief is posted and approved only: the `design.md` of an OpenSpec change instead of the issue; the detector and the critique stay in force
 
 ## Summary
 

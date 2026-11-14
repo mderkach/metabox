@@ -12,7 +12,7 @@ An ADR is not: a transcript of research; a product specification; an implementat
 
 `docs/PRD.md` is the source of **requirements**. Appendix A held the decisions made before ADRs were introduced; its sections moved to `docs/adr/`, and the PRD keeps headings with links. A decision already recorded in an ADR is not recorded again: a new ADR links to it.
 
-An ADR is created for decisions that are not requirements: test bench setup, a workaround for a platform limitation, a tool choice, an implementation convention. If a decision changes a requirement, the PRD is edited instead of writing an ADR.
+An ADR is created for decisions that are not requirements: test bench setup, a workaround for a platform limitation, a tool choice, an implementation convention. If a decision changes a requirement, the PRD or the spec in `openspec/` is edited instead of writing an ADR.
 
 ## When it is needed
 
@@ -62,7 +62,7 @@ Current state, the problem and the boundaries of the decision: why the decision 
 
 ## Decision drivers
 
-Criteria that matter for the decision: compliance with PRD requirements; fit with the architecture; complexity of implementation and maintenance; reproducibility; reliability and observability; testability; backward compatibility; migration cost and the possibility of rollback. Keep only the applicable ones.
+Criteria that matter for the decision: compliance with PRD and `openspec/` requirements; fit with the architecture; complexity of implementation and maintenance; reproducibility; reliability and observability; testability; backward compatibility; migration cost and the possibility of rollback. Keep only the applicable ones.
 
 ## Considered options
 
@@ -114,7 +114,7 @@ How to check compliance and the result: commands (`make test`, `make apply-check
 
 ## Links
 
-- <PRD and relevant ACs>;
+- <PRD and the relevant requirements in `openspec/`>;
 - <related ADRs>;
 - <key implementation files>;
 - <external sources: documentation, issue, release>.

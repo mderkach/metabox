@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-11-13
 - Deciders: repository owner
+- Superseded by: [ADR-0081](./ADR-0081-keep-behaviour-specs-and-changes-in-openspec.md), where requirements are defined and what counts as built: `openspec/specs/` replaces the PRD tick boxes and coverage is strict; the ban on document references in code and the `docs/Verification.md` rows stay in force
 
 ## Summary
 
@@ -84,7 +85,7 @@ The 50 existing references are rewritten in the same change: a comment keeps its
 
 ## Links
 
-- [`docs/Verification.md`](../Verification.md), [`docs/PRD.md`](../PRD.md) sections 5–7.
+- [`docs/Verification.md`](../Verification.md), [`docs/PRD.md`](../PRD.md) sections 5–7 (the criteria and non-functional requirements moved to [`openspec/specs/`](../../openspec/specs/)).
 - [`.github/scripts/trace-check.py`](../../.github/scripts/trace-check.py), [`.github/tests/test_trace_check.py`](../../.github/tests/test_trace_check.py).
 - Root [`AGENTS.md`](../../AGENTS.md), section "Where technical knowledge lives".
 - B. Böckeler, [Understanding Spec-Driven-Development: Kiro, spec-kit, and Tessl](https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html): spec-first, spec-anchored and spec-as-source.

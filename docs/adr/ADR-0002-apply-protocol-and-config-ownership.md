@@ -4,7 +4,7 @@
 - Date: 2026-09-08
 - Deciders: repository owner
 - Supersedes: section A.4 of [`../PRD.md`](../PRD.md)
-- Superseded by (as to the subject of validation): [ADR-0046](./ADR-0046-check-the-candidate-the-way-the-service-runs.md)
+- Superseded by (as to the subject of validation): [ADR-0046](./ADR-0046-check-the-candidate-the-way-the-service-runs.md); (as to rejecting a request without `Origin`, on `/mcp` only): [ADR-0055](./ADR-0055-embed-a-read-only-mcp-server-in-the-daemon-with-the-official-go-sdk.md)
 
 ## Context and problem statement
 
@@ -142,7 +142,7 @@ The AC-13, AC-14 and AC-27 checkboxes stay unchecked until the UI appears: their
 
 ## Links
 
-- [`../PRD.md`](../PRD.md): section 5 (AC-2, AC-3, AC-13…AC-16, AC-19, AC-29, AC-31, AC-32), section A.4, appendix C (`ApplyTransaction`, `ConfigVersion`);
+- [`openspec/specs/`](../../openspec/specs/): AC-2, AC-3, AC-13…AC-16, AC-19, AC-29, AC-31, AC-32; [`../PRD.md`](../PRD.md): section A.4, appendix C (`ApplyTransaction`, `ConfigVersion`);
 - [`ADR-0001`](./ADR-0001-generate-schema-from-fork-registries.md): the schema the frontend config model works on;
 - [`../../.devcontainer/target/files/usr/bin/apply-cycle-check`](../../.devcontainer/target/files/usr/bin/apply-cycle-check): the existing cycle check on the test bench;
 - `experimental/clashapi/server.go` of the fork `v1.13.18-extended-2.6.5`: authorization behaviour with an empty secret.
