@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": ["src/shared/ui/shadcn/**"],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "geist",
+        "createdAt": "2026-11-14T13:52:06.713Z",
+        "reason": "Committed woff2 subsets cut for Cyrillic; replacement is tracked in issue 241"
+      }
+    ]
+  }
+}

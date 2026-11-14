@@ -30,7 +30,12 @@ apps/metaboxd/internal/webui/static/*
 # same for the contract generator: `go build ./cmd/...` puts it next to the module
 /apps/metaboxd/contractgen
 .playwright-mcp
-.impeccable
+# Impeccable: critique history, live-mode sessions, the generated design sidecar and personal
+# overrides stay local; `.impeccable/config.json` holds the shared detector exceptions.
+**/.impeccable/critique/
+**/.impeccable/live/
+**/.impeccable/design.json
+**/.impeccable/config.local.json
 
 # Owner's working documents: implementation status, debt, interviews and the runbook
 # of the owner's router. They sit next to the rest of the documentation and are not part of the repository.

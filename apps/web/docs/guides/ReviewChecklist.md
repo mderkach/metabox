@@ -98,6 +98,12 @@ Only what a human checks. Layer boundaries, file and folder naming, `any`, unsaf
 - [ ] Images are responsive
 - [ ] No new `.css` files appeared
 
+## Design
+
+- [ ] A new screen, block or redesign follows a brief the repository owner approved ([`AGENTS.md`](../../AGENTS.md))
+- [ ] A new or changed form, component or interaction was critiqued by someone who did not write it, and the findings are in the PR
+- [ ] A detector exception has a reason in `.impeccable/config.json`
+
 ## Tests
 
 - [ ] The test checks behaviour, not implementation

@@ -109,11 +109,11 @@ The browser tests need Chromium (`pnpm --filter web exec playwright install --on
 
 `pnpm install` installs the git hooks (lefthook, config in `lefthook.yml`); `make hooks` reinstalls them.
 
-| Hook         | What it does                                                                                                                            |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `pre-commit` | gofmt, lint and format of the staged files; `go vet` if there are Go files; generated files only with their source                      |
-| `commit-msg` | commitlint                                                                                                                              |
-| `pre-push`   | the whole repository: `pnpm lint`, `make lint`, `pnpm format:check`, `make test`, frontend build with type checking, `make trace-check` |
+| Hook         | What it does                                                                                                                                                                      |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pre-commit` | gofmt, lint and format of the staged files; `go vet` if there are Go files; generated files only with their source                                                                |
+| `commit-msg` | commitlint                                                                                                                                                                        |
+| `pre-push`   | the whole repository: `pnpm lint`, `make lint`, `pnpm format:check`, the design detector on the panel sources, `make test`, frontend build with type checking, `make trace-check` |
 
 A commit checks only what went into it and is fast. A push checks everything, because a change in one file can break types in another.
 
