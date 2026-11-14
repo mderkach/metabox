@@ -51,7 +51,7 @@ logread -e sing-box
 /etc/init.d/metabox-singbox status
 ```
 
-`logread -e sing-box` shows the error sing-box exited with, in a line with `FATAL`; `logread -e metabox-singbox` shows interception errors. `status` prints `running` while sing-box works. A missing config or sing-box binary is not written to the log: `/etc/init.d/metabox-singbox restart` prints it. Check the config with the same command the daemon uses:
+`logread -e sing-box` shows the error sing-box exited with, in a line with `FATAL`; `logread -e metabox-singbox` shows interception errors and a missing config or sing-box binary. `status` prints `running` while sing-box works. Check the config with the same command the daemon uses:
 
 ```sh
 sing-box check -c "$config" -D "$dir"
