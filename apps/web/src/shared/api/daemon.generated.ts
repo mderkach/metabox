@@ -347,12 +347,22 @@ export const WorkdirDetailsSchema = z.object({
   config_dir: z.string(),
 })
 
+/** ListStat is what the disk says about a list file. */
+export const ListStatSchema = z.object({
+  /** Size is the size in bytes. */
+  size: z.int(),
+  /** ModifiedAt is the file modification time, Unix seconds. Informational: shows the device clock at the time of the write and lies if it was not synchronized. */
+  modified_at: z.int(),
+})
+
 /** RuleSetFiles are the own list files from the rule-sets subdirectory of the config directory, as GET /api/config/rule-sets returns them. */
 export const RuleSetFilesSchema = z.object({
   /** Files is the file name → content byte for byte. */
   files: z.record(z.string(), z.string()),
   /** Etag is the set fingerprint; the client returns it in lists_base of the apply. */
   etag: z.string(),
+  /** Stats is the file name → size and modification time on disk. A file missing here was removed between the two reads; no field means there are no files. */
+  stats: z.record(z.string(), ListStatSchema).optional(),
 })
 
 /** ApplyEnvelope is a config apply together with the list files of the rule-sets subdirectory. Goes in POST /api/apply with Content-Type application/vnd.metabox.apply+json; a body without this type the daemon reads as bare config bytes. */
@@ -779,6 +789,7 @@ export type HealthWire = z.infer<typeof HealthSchema>
 export type HistoryWire = z.infer<typeof HistorySchema>
 export type HitsWire = z.infer<typeof HitsSchema>
 export type LinkWire = z.infer<typeof LinkSchema>
+export type ListStatWire = z.infer<typeof ListStatSchema>
 export type ListWire = z.infer<typeof ListSchema>
 export type LoadWire = z.infer<typeof LoadSchema>
 export type LogEventWire = z.infer<typeof LogEventSchema>
