@@ -1,6 +1,6 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 
-import { isProbeFailure, PROXY_MUTATION, PROXY_QUERY, testProxyDelay, type ProbeOutcome } from '@entities/Proxy';
+import { isProbeFailure, PROXY_MUTATION, testProxyDelay, type ProbeOutcome } from '@entities/Proxy';
 import { CACHE_TIME } from '@shared/api';
 
 /**
@@ -11,15 +11,14 @@ const FAILED_PROBE_MEMORY_MINUTES = 5;
 const FAILED_PROBE_MEMORY = FAILED_PROBE_MEMORY_MINUTES * CACHE_TIME.Minute;
 
 /**
- * Node latency probe: the runtime appends it to the history, so the list is reread.
+ * Node latency probe. The runtime appends it to the history, but the list is not reread
+ * here: a batch of probes would reread it once per node.
  *
  * A node that did not answer is a result, not a panel failure: the mutation resolves
  * with `failed`, and the outcome stays in the mutation cache for `useProxies`, since
  * the fork keeps no trace of it. Other errors reject and show a toast.
  */
 export function useTestProxyDelay() {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationKey: PROXY_MUTATION.delay(),
     mutationFn: async function requestProxyDelay(name: string): Promise<ProbeOutcome> {
@@ -37,6 +36,5 @@ export function useTestProxyDelay() {
     },
     gcTime: FAILED_PROBE_MEMORY,
     meta: { showError: true, errorMessageKey: 'toast.proxy.delay.failed' },
-    onSettled: async () => queryClient.invalidateQueries({ queryKey: PROXY_QUERY.list() }),
   });
 }

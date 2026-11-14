@@ -26,6 +26,7 @@
   },
   "node": {
     "title": "Node",
+    "noGroups": "The config has no groups: rules send traffic straight to outbounds.",
     "none": "No group has a manual choice: groups pick their nodes by latency. Add one on the Proxies screen.",
     "select": "Node of the {{group}} group",
     "selected": "{{group}}: node {{node}} selected"
