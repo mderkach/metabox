@@ -20,6 +20,8 @@ export function TokenInput({
   onValueChange,
   label,
   isValid,
+  tokenLabel,
+  pasteFilter,
   separator = SEPARATOR,
   distinct = true,
   ref,
@@ -34,6 +36,10 @@ export function TokenInput({
   label: string;
   /** A chip that fails it is marked as an error; the form says why. */
   isValid?: (token: string) => boolean;
+  /** A name shown on the chip before its value, such as a device for its address. */
+  tokenLabel?: (token: string) => string | undefined;
+  /** Pasted text before it splits into chips, such as a list without its comment lines. */
+  pasteFilter?: (text: string) => string;
   /** What closes a value when typed or pasted; Enter always closes it. */
   separator?: RegExp;
   /** A repeated value is dropped. */
@@ -95,6 +101,7 @@ export function TokenInput({
         <ul role='list' aria-label={t('tokenInput.values', { label })} className='contents'>
           {tokens.map((token, index) => {
             const invalid = isValid?.(token) === false;
+            const name = tokenLabel?.(token);
 
             return (
               <li key={`${String(index)}:${token}`} className='max-w-full min-w-0'>
@@ -103,7 +110,14 @@ export function TokenInput({
                   aria-invalid={invalid || undefined}
                   className='h-6 max-w-full gap-0.5 pr-0.5 font-mono pointer-coarse:h-8'
                 >
-                  <span className='min-w-0 truncate' title={token}>
+                  {name !== undefined && (
+                    <>
+                      <span className='mr-0.5 min-w-0 truncate font-sans' title={name}>
+                        {name}
+                      </span>{' '}
+                    </>
+                  )}
+                  <span className={cn('min-w-0 truncate', name !== undefined && 'text-muted-foreground')} title={token}>
                     {token}
                   </span>
                   {invalid && <span className='sr-only'>{t('tokenInput.invalid')}</span>}
@@ -134,7 +148,8 @@ export function TokenInput({
         // A one-line field drops line breaks from pasted text, and a list
         // copied one value per line would glue into one value.
         onPaste={(event) => {
-          const pasted = event.clipboardData.getData('text');
+          const text = event.clipboardData.getData('text');
+          const pasted = pasteFilter === undefined ? text : pasteFilter(text);
           const { selectionStart, selectionEnd } = event.currentTarget;
 
           event.preventDefault();

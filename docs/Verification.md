@@ -37,6 +37,8 @@ File and Check are written in backticks, except a manual scenario.
 | AC-21 | script | `.devcontainer/target/files/usr/bin/apply-cycle-check`                                    | `The Apply cycle passed completely`                                                      |
 | AC-22 | ci     | `.github/workflows/ci.yml`                                                                | `integration`                                                                            |
 | AC-47 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.model.test.ts`        | `marks a type whose tag is not in the build, and does not mark a type without a gate`    |
+| AC-86 | vitest | `apps/web/src/features/Config/ConfigApply/__tests__/ConfigApplyDiff.test.tsx`             | `names a rename alone as one change that leads to the rule`                              |
+| AC-86 | e2e    | `apps/web/e2e/applySummary.e2e.test.ts`                                                   | `a rename alone is one summary item that leads back to the rule`                         |
 | AC-77 | vitest | `apps/web/src/pages/Settings/__tests__/SettingsPage.test.tsx`                             | `shows access, agents and system as sections of one screen`                              |
 | AC-77 | vitest | `apps/web/src/widgets/AppSidebar/__tests__/AppSidebar.test.tsx`                           | `leads to the settings screen instead of keeping password and MCP buttons in the footer` |
 | AC-90 | vitest | `apps/web/src/shared/lib/__tests__/shortcuts.test.tsx`                                    | `? opens the shortcut list and does not take the search behind the same key`             |

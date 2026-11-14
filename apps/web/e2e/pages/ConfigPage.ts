@@ -28,6 +28,13 @@ export class ConfigPage {
     return this.rules.getByRole('button', { name, exact: true });
   }
 
+  /** The row of a rule the draft changed: its name says so after the number. */
+  editedRuleRow(title: string, index: number): Locator {
+    const name = `${translate(RULE_TABLE, 'row.label', { title, index })}, ${translate(RULE_TABLE, 'row.edited')}`;
+
+    return this.rules.getByRole('button', { name, exact: true });
+  }
+
   async openRule(title: string, index: number) {
     await this.ruleRow(title, index).click();
   }

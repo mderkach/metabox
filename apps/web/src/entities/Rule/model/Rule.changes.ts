@@ -9,6 +9,7 @@ export const RULE_CHANGE = {
   Changed: 'changed',
   Target: 'target',
   Moved: 'moved',
+  Renamed: 'renamed',
 } as const;
 
 /**
@@ -20,7 +21,15 @@ export type RuleChange =
   /** Conditions are the same, where the rule sends traffic changed: the outbound or the action. */
   | { kind: typeof RULE_CHANGE.Target; index: number; from: string; to: string }
   /** The node did not change, but stands in another place, and order in sing-box is the logic. */
-  | { kind: typeof RULE_CHANGE.Moved; index: number; previous: number };
+  | { kind: typeof RULE_CHANGE.Moved; index: number; previous: number }
+  /** The name, the comment above the node, changed; `previous` is the number in the applied config. */
+  | { kind: typeof RULE_CHANGE.Renamed; index: number; previous: number };
+
+/** Rule names of both sides, one per node; `null` means no name. */
+export interface RuleNames {
+  applied: readonly (string | null)[];
+  draft: readonly (string | null)[];
+}
 
 /** Outbound and action fields: without them only the conditions remain of the node. */
 const TARGET_FIELDS = new Set([
@@ -38,6 +47,12 @@ interface Side {
 interface Block {
   removed: Side[];
   added: Side[];
+}
+
+interface Comparison {
+  blocks: Block[];
+  /** Numbers of the nodes that did not change, draft number to applied number. */
+  same: Map<number, number>;
 }
 
 function conditionsKey(node: unknown): string {
@@ -64,17 +79,20 @@ function toPair(before: Side, after: Side): RuleChange {
  * compared whole, so a moved rule looks deleted in one place and added in
  * another, and `toRuleChanges` sorts that out.
  */
-function toBlocks(applied: readonly unknown[], draft: readonly unknown[]): Block[] {
+function toBlocks(applied: readonly unknown[], draft: readonly unknown[]): Comparison {
   const lines = diffLines(
     applied.map((node) => JSON.stringify(node)).join('\n'),
     draft.map((node) => JSON.stringify(node)).join('\n')
   );
   const blocks: Block[] = [];
+  const same = new Map<number, number>();
   let open: Block | null = null;
 
   for (const line of lines) {
     if (line.kind === DIFF_KIND.Same) {
       open = null;
+
+      if (line.before !== null && line.after !== null) same.set(line.after, line.before);
 
       continue;
     }
@@ -93,7 +111,25 @@ function toBlocks(applied: readonly unknown[], draft: readonly unknown[]): Block
     }
   }
 
-  return blocks;
+  return { blocks, same };
+}
+
+/** Puts each rename right after the change of the same rule, or where its number falls in the draft order. */
+function withRenames(changes: readonly RuleChange[], renames: readonly RuleChange[]): RuleChange[] {
+  const merged: RuleChange[] = [];
+  let next = 0;
+
+  for (const change of changes) {
+    const inDraft = change.kind !== RULE_CHANGE.Removed;
+
+    while (inDraft && next < renames.length && renames[next].index < change.index) merged.push(renames[next++]);
+
+    merged.push(change);
+
+    if (inDraft && next < renames.length && renames[next].index === change.index) merged.push(renames[next++]);
+  }
+
+  return [...merged, ...renames.slice(next)];
 }
 
 /**
@@ -105,14 +141,17 @@ function toBlocks(applied: readonly unknown[], draft: readonly unknown[]): Block
  * conditions are matched within a chunk of differences, then across the whole
  * list, so that a moved and edited rule does not fall apart into a deletion and
  * an addition, and only then the remaining ones in order within the chunk.
+ *
+ * With `names`, a rule whose name differs from the one of its match is also
+ * reported as renamed: the name is a comment, so the node alone does not show it.
  */
-export function toRuleChanges(applied: readonly unknown[], draft: readonly unknown[]): RuleChange[] {
+export function toRuleChanges(applied: readonly unknown[], draft: readonly unknown[], names?: RuleNames): RuleChange[] {
   // On an empty list a line-by-line diff would see one empty line.
   if (applied.length === 0) return draft.map((_, index) => ({ kind: RULE_CHANGE.Added, index: index + 1 }));
 
   if (draft.length === 0) return applied.map((_, index) => ({ kind: RULE_CHANGE.Removed, index: index + 1 }));
 
-  const blocks = toBlocks(applied, draft);
+  const { blocks, same } = toBlocks(applied, draft);
   const loose = new Map<string, Side[]>();
 
   for (const side of blocks.flatMap((block) => block.removed)) {
@@ -184,5 +223,20 @@ export function toRuleChanges(applied: readonly unknown[], draft: readonly unkno
     }
   }
 
-  return changes;
+  if (names === undefined) return changes;
+
+  const matched = new Map(same);
+
+  for (const after of blocks.flatMap((block) => block.added)) {
+    const origin = moved.get(after) ?? pairs.get(after);
+
+    if (origin !== undefined) matched.set(after.index, origin.index);
+  }
+
+  const renames = [...matched]
+    .filter(([index, previous]) => (names.draft.at(index - 1) ?? null) !== (names.applied.at(previous - 1) ?? null))
+    .sort(([left], [right]) => left - right)
+    .map(([index, previous]): RuleChange => ({ kind: RULE_CHANGE.Renamed, index, previous }));
+
+  return withRenames(changes, renames);
 }

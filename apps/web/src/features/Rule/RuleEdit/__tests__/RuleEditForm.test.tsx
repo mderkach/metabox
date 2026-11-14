@@ -317,6 +317,24 @@ describe('rule conditions in the form', () => {
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
+  it('marks a value that is not an address and names the error under the field', async () => {
+    const user = userEvent.setup();
+    const rule = loadRule({ ip_cidr: ['10.0.0.0/8'], outbound: 'proxy' });
+
+    renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
+
+    await user.type(screen.getByRole('textbox', { name: 'IP или подсеть' }), 'example.com ');
+
+    const [subnet, word] = within(screen.getByRole('list', { name: 'IP или подсеть: значения' })).getAllByRole(
+      'listitem'
+    );
+
+    expect(subnet).not.toHaveTextContent('ошибка');
+    expect(word).toHaveTextContent('example.com, ошибка');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Адрес — это IP или подсеть');
+    expect(ConfigDocumentState.getState().draft).toBeNull();
+  });
+
   it('after removing all conditions, warns that the rule will take all traffic', async () => {
     const user = userEvent.setup();
     const rule = loadRule({ domain: ['a.example'], outbound: 'proxy' });
@@ -348,15 +366,11 @@ describe('rule conditions in the form', () => {
     );
 
     expect(
-      within(screen.getByRole('list', { name: 'Устройство или адрес источника: значения' })).getByText(
-        '192.168.1.120/32'
-      )
-    ).toBeInTheDocument();
-
-    const chosen = screen.getByRole('list', { name: 'Устройства в условии' });
-
-    expect(within(chosen).getByText('iphone-guest')).toBeInTheDocument();
-    expect(within(chosen).getByText('Аренда динамическая, адрес может смениться')).toBeInTheDocument();
+      within(screen.getByRole('list', { name: 'Устройство или адрес источника: значения' })).getByRole('listitem')
+    ).toHaveTextContent('iphone-guest 192.168.1.120/32');
+    expect(screen.getByRole('list', { name: 'Устройства с динамической арендой' })).toHaveTextContent(
+      'iphone-guest: аренда динамическая, адрес может смениться'
+    );
 
     expect(draftRule()).toEqual({ rule_set: ['github'], outbound: 'proxy', source_ip_cidr: ['192.168.1.120/32'] });
   });
@@ -378,10 +392,10 @@ describe('rule conditions in the form', () => {
       'Ноутбук · 192.168.1.60'
     );
 
-    const chosen = screen.getByRole('list', { name: 'Устройства в условии' });
-
-    expect(within(chosen).getByText('Ноутбук')).toBeInTheDocument();
-    expect(within(chosen).queryByText('Аренда динамическая, адрес может смениться')).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('list', { name: 'Устройство или адрес источника: значения' })).getByRole('listitem')
+    ).toHaveTextContent('Ноутбук 192.168.1.60/32');
+    expect(screen.queryByRole('list', { name: 'Устройства с динамической арендой' })).not.toBeInTheDocument();
   });
 });
 

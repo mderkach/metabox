@@ -3,10 +3,13 @@ import { useEffect, useId, useRef, type ComponentType } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { useDeviceIndex } from '@entities/Device';
 import { Label, TokenInput } from '@shared/ui';
 
+import { sourceDeviceName } from '../model/RuleEdit.model';
 import {
   conditionLines,
+  isCidr,
   isPort,
   RULE_CONDITION,
   RULE_EDIT_ERROR,
@@ -17,6 +20,7 @@ import { RuleSourceDevices } from './RuleSourceDevices';
 
 const ERROR_KEY: Readonly<Record<string, ParseKeys<'features/Rule/RuleEdit'> | undefined>> = {
   [RULE_EDIT_ERROR.PortInvalid]: 'error.portInvalid',
+  [RULE_EDIT_ERROR.CidrInvalid]: 'error.cidrInvalid',
 };
 
 /** Helper under a condition field: the value is still edited as text, the helper appends to it. */
@@ -25,6 +29,8 @@ const CONDITION_HELPER: Readonly<Partial<Record<RuleCondition, ComponentType>>> 
 };
 
 const CONDITION_VALID: Readonly<Partial<Record<RuleCondition, (value: string) => boolean>>> = {
+  [RULE_CONDITION.IpCidr]: isCidr,
+  [RULE_CONDITION.SourceIpCidr]: isCidr,
   [RULE_CONDITION.Port]: isPort,
 };
 
@@ -35,6 +41,10 @@ export function RuleConditionField({ condition, focusOnMount }: { condition: Rul
   const hintId = useId();
   const Helper = CONDITION_HELPER[condition];
   const input = useRef<HTMLInputElement | null>(null);
+  // The index is a shared cache: the device helper under the source field polls it.
+  const devices = useDeviceIndex();
+  const tokenLabel =
+    condition === RULE_CONDITION.SourceIpCidr ? (token: string) => sourceDeviceName(token, devices) : undefined;
 
   // A condition just picked from the list is typed into next. The frame waits
   // for the closing list, which gives focus back to its trigger.
@@ -75,6 +85,7 @@ export function RuleConditionField({ condition, focusOnMount }: { condition: Rul
               aria-invalid={errorKey !== undefined}
               placeholder={t(`condition.${condition}.placeholder`)}
               isValid={CONDITION_VALID[condition]}
+              tokenLabel={tokenLabel}
               value={conditionLines(field.value)}
               onValueChange={(values) => {
                 field.onChange(values.join('\n'));

@@ -3,45 +3,18 @@ import { useId } from 'react';
 import { useController, useFormContext, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { deviceLabel, useDeviceIndex, type DeviceIndex } from '@entities/Device';
+import { useDeviceIndex } from '@entities/Device';
 import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
+import { dynamicSourceNames, toHostCidr } from '../model/RuleEdit.model';
 import { conditionLines, RULE_CONDITION, type RuleEditModel } from '../model/RuleEdit.schema';
 
 const FIELD = `conditions.${RULE_CONDITION.SourceIpCidr}` as const;
 
-/** Mask of one address: a rule by device is a rule by its whole address. */
-const HOST_PREFIX = { V4: '/32', V6: '/128' } as const;
-
-function toHostCidr(ip: string): string {
-  return `${ip}${ip.includes(':') ? HOST_PREFIX.V6 : HOST_PREFIX.V4}`;
-}
-
-/** Address of a condition line if the line is exactly one host; a subnet does not count as a device. */
-function toHostIp(line: string): string {
-  return line.endsWith(HOST_PREFIX.V4) || line.endsWith(HOST_PREFIX.V6) ? line.slice(0, line.lastIndexOf('/')) : line;
-}
-
-interface SourceLine {
-  line: string;
-  label: string;
-  /** The address was issued by a dynamic lease and may change. */
-  dynamic: boolean;
-}
-
-function toSourceLines(text: string, devices: DeviceIndex): SourceLine[] {
-  return conditionLines(text).flatMap((line) => {
-    const ip = toHostIp(line);
-    const device = devices.get(ip);
-
-    return device === undefined ? [] : [{ line, label: deviceLabel(ip, devices), dynamic: !device.static }];
-  });
-}
-
 /**
  * Device choice for a source condition. sing-box matches the source by address,
  * so `source_ip_cidr` with the device address goes into the node, while the
- * name stays a label in the form. A device with a dynamic lease may get another
+ * name is shown on its chip. A device with a dynamic lease may get another
  * address, and the rule will stop recognizing it: the form warns about this.
  */
 export function RuleSourceDevices() {
@@ -53,10 +26,10 @@ export function RuleSourceDevices() {
   const { field } = useController({ control, name: FIELD });
   const devices = useDeviceIndex({ poll: true });
   const pickId = useId();
-  const lines = toSourceLines(text, devices);
+  const dynamic = dynamicSourceNames(conditionLines(text), devices);
   const options = [...devices.values()];
 
-  if (options.length === 0 && lines.length === 0) {
+  if (options.length === 0 && dynamic.length === 0) {
     return null;
   }
 
@@ -96,19 +69,12 @@ export function RuleSourceDevices() {
         </>
       )}
 
-      {lines.length > 0 && (
-        <ul aria-label={t('device.chosen')} className='flex flex-col gap-1 text-xs'>
-          {lines.map(({ line, label, dynamic }) => (
-            <li key={line} className='flex flex-col gap-0.5'>
-              <span>
-                {label} <span className='font-mono text-muted-foreground'>{line}</span>
-              </span>
-              {dynamic && (
-                <span className='flex items-start gap-1.5 text-pretty text-signal-warn'>
-                  <TriangleAlert className='mt-px size-3.5 shrink-0' aria-hidden='true' />
-                  {t('device.dynamic')}
-                </span>
-              )}
+      {dynamic.length > 0 && (
+        <ul aria-label={t('device.dynamicList')} className='flex flex-col gap-1 text-xs'>
+          {dynamic.map((name) => (
+            <li key={name} className='flex items-start gap-1.5 text-pretty text-signal-warn'>
+              <TriangleAlert className='mt-px size-3.5 shrink-0' aria-hidden='true' />
+              {t('device.dynamic', { name })}
             </li>
           ))}
         </ul>

@@ -733,7 +733,7 @@ describe('rule list editing', () => {
     expect(screen.queryByText('изменено в черновике', { exact: false })).not.toBeInTheDocument();
   });
 
-  it('the name field writes a comment above the rule, and an empty field removes it', async () => {
+  it('the name field writes a comment above the rule and marks the row changed, and an empty field removes it', async () => {
     const user = userEvent.setup();
 
     renderWithRouter(EditorPage);
@@ -752,7 +752,9 @@ describe('rule list editing', () => {
     });
     expect(draftRules()).toEqual(EDIT_RULES);
     expect(within(panel).getByRole('heading', { name: 'Work sites' })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Work sites, правило 3' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: 'Work sites, правило 3, изменено в черновике' })
+    ).toBeInTheDocument();
 
     await user.clear(name);
 
