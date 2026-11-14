@@ -28,7 +28,8 @@ export function OverviewNode({ onSelected }: { onSelected: (message: string) => 
   const { t } = useTranslation('pages/Overview');
   const proxies = useProxies();
   const select = useSelectProxy();
-  const groups = (proxies.data?.groups ?? []).filter((group) => group.selectable && !SERVICE_GROUPS.has(group.name));
+  const configGroups = (proxies.data?.groups ?? []).filter((group) => !SERVICE_GROUPS.has(group.name));
+  const groups = configGroups.filter((group) => group.selectable);
 
   return (
     <div className='flex flex-col gap-3'>
@@ -45,7 +46,9 @@ export function OverviewNode({ onSelected }: { onSelected: (message: string) => 
       {proxies.isPending && <SkeletonRows rows={1} className='p-0' />}
       {proxies.isLoadingError && <QueryFailure messageKey='source.proxies' query={proxies} />}
       {proxies.isSuccess && groups.length === 0 && (
-        <p className='text-sm text-pretty text-muted-foreground'>{t('node.none')}</p>
+        <p className='text-sm text-pretty text-muted-foreground'>
+          {t(configGroups.length === 0 ? 'node.noGroups' : 'node.none')}
+        </p>
       )}
 
       {groups.length > 0 && (
