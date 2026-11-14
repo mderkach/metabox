@@ -91,6 +91,7 @@ Rollback: revert the change; the options and flags return with their previous de
 - [PRD](../PRD.md): AC-36, AC-48, AC-56, AC-57;
 - [ADR-0009](./ADR-0009-read-service-state-from-procd.md): the service state from procd, control through the init script;
 - [ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md): the working directory check for list files;
+- [ADR-0038](./ADR-0038-target-the-sing-box-extended-fork-schema-only.md), [ADR-0040](./ADR-0040-ship-the-panel-as-one-go-daemon-with-an-embedded-spa.md): the fork package's `/etc/init.d/sing-box` as the managed service, superseded;
 - [ADR-0046](./ADR-0046-check-the-candidate-the-way-the-service-runs.md): the check mode and the `launch_mismatch` refusal, superseded in part;
 - [ADR-0047](./ADR-0047-set-up-lan-interception-in-the-singbox-init-script.md): the dataplane in the `metabox-singbox` init script;
 - [ADR-0067](./ADR-0067-test-http-apply-on-the-disposable-ci-bench.md): the HTTP Apply suite and its restart barrier;

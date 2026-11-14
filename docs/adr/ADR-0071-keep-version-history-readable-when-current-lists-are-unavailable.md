@@ -12,7 +12,7 @@ Simply omitting `current_lists_sum` is ambiguous: the panel also accepts respons
 
 ## Decision drivers
 
-- Keep readable history accessible under the failure described by [AC-15](../PRD.md#5-functional-requirements-acceptance-criteria).
+- Keep readable history accessible under the failure described by [AC-15](../../openspec/specs/apply/spec.md).
 - Distinguish unavailable current lists from an older daemon and from an empty, readable list set.
 - Avoid a false current-version badge or a promise that restore will succeed.
 - Preserve cancellation, other request failures and the Apply safety boundary.

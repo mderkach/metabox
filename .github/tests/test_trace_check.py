@@ -134,6 +134,37 @@ class TraceCheckTest(unittest.TestCase):
         result = self.run_check()
         self.assertEqual(result.returncode, 0, result.stdout)
 
+    def test_a_requirement_in_the_main_specs_is_built(self):
+        self.write("openspec/specs/dataplane/spec.md", "### Requirement: AC-5 Interception\n")
+        result = self.run_check()
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("without a check: AC-5", result.stdout)
+        self.assertEqual(self.run_check("--strict-coverage").returncode, 1)
+
+    def test_a_requirement_in_a_change_is_known_but_not_required(self):
+        self.write("openspec/changes/add-wizard/specs/setup/spec.md", "## ADDED Requirements\n\n### Requirement: AC-6 Wizard\n")
+        self.write("docs/Verification.md", ROWS + "| AC-6 | manual | | run the wizard |\n")
+        result = self.run_check("--strict-coverage")
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_a_modified_delta_repeats_a_built_requirement(self):
+        self.write("openspec/specs/dataplane/spec.md", "### Requirement: AC-5 Interception\n")
+        self.write("openspec/changes/tune/specs/dataplane/spec.md", "## MODIFIED Requirements\n\n### Requirement: AC-5 Interception\n")
+        result = self.run_check()
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_archived_changes_are_not_read(self):
+        self.write("openspec/specs/dataplane/spec.md", "### Requirement: AC-5 Interception\n")
+        self.write("openspec/changes/archive/2026-11-14-x/specs/dataplane/spec.md", "## ADDED Requirements\n\n### Requirement: AC-5 Interception\n")
+        result = self.run_check()
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_fails_when_two_places_define_one_id(self):
+        self.write("openspec/specs/dataplane/spec.md", "### Requirement: AC-1 Interception\n")
+        result = self.run_check()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("AC-1 is already defined in docs/PRD.md:1", result.stdout)
+
     def test_untracked_files_are_not_checked(self):
         subprocess.run(["git", "init", "-q"], cwd=self.root, check=True)
         subprocess.run(["git", "add", "-A"], cwd=self.root, check=True)

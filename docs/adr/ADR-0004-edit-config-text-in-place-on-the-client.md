@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-09-10
 - Deciders: repository owner
+- Superseded by (as to the way array elements are inserted, removed and moved): [ADR-0060](./ADR-0060-edit-array-elements-as-text-ranges-instead-of-through-modify.md)
 
 ## Context and problem statement
 

@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-09-11
 - Deciders: repository owner
+- Superseded by (as to no polling without a reader): [ADR-0015](./ADR-0015-keep-traffic-history-in-the-daemon.md) for the `/traffic` accounting, [ADR-0029](./ADR-0029-count-rule-hits-in-the-daemon-from-connection-snapshots.md) for the `/connections` rule hit counter
 
 ## Context and problem statement
 

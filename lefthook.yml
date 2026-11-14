@@ -68,3 +68,6 @@ pre-push:
 
     - name: trace
       run: make trace-check
+
+    - name: specs
+      run: pnpm spec:check

@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-09-11
 - Deciders: repository owner
+- Superseded by (as to the rule of `apps/metaboxd/go.mod` without `require`): [ADR-0055](./ADR-0055-embed-a-read-only-mcp-server-in-the-daemon-with-the-official-go-sdk.md)
 
 ## Context and problem statement
 

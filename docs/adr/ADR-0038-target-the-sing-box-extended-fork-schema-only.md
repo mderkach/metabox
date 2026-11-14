@@ -4,6 +4,7 @@
 - Date: 2026-08-30
 - Deciders: repository owner
 - Supersedes: section A.1 of [`../PRD.md`](../PRD.md)
+- Superseded by (as to the init script and UCI section the daemon relies on, and the choice of the check mode): [ADR-0069](./ADR-0069-manage-only-the-metabox-singbox-service.md)
 
 ## Context and problem statement
 

@@ -4,6 +4,7 @@
 - Date: 2026-09-07
 - Deciders: repository owner
 - Supersedes: section A.2.1 of [`../PRD.md`](../PRD.md)
+- Superseded by (as to printing objects as `z.looseObject`): [ADR-0018](./ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md)
 
 ## Context and problem statement
 

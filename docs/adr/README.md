@@ -2,7 +2,7 @@
 
 This directory holds ADRs: records of significant technical and infrastructure decisions, why the system is built this way and which trade-offs were accepted.
 
-Requirements live in [`../PRD.md`](../PRD.md). Appendix A of the PRD holds decisions made before ADRs were introduced: it is closed to new entries, and all its sections moved here. The appendix keeps the headings with links, so old references to A.\* lead to the new place.
+Requirements live in [`../PRD.md`](../PRD.md) and, for behaviour, in [`../../openspec/specs/`](../../openspec/specs/). Appendix A of the PRD holds decisions made before ADRs were introduced: it is closed to new entries, and all its sections moved here. The appendix keeps the headings with links, so old references to A.\* lead to the new place.
 
 ADRs are created and updated with the `create-adr` skill. The template, statuses and quality checklist are in [the shared ADR reference](../../.agents/skills/create-adr/ADR-reference.md).
 
@@ -91,3 +91,4 @@ The `Accepted` status is set by the agent: the repository owner delegated accept
 | [0078](./ADR-0078-gate-panel-design-with-the-impeccable-detector-a-brief-and-an-independent-critique.md)  | Gate panel design with the Impeccable detector, a brief and an independent critique                                                | Accepted |
 | [0079](./ADR-0079-warn-about-a-shrunk-subscription-in-the-panel-and-leave-the-core-update-as-is.md)       | Warn about a shrunk subscription in the panel and leave the core update as is                                                      | Accepted |
 | [0080](./ADR-0080-pass-the-list-set-a-restore-was-computed-from-as-its-base.md)                           | Pass the list set a restore was computed from as its base                                                                          | Accepted |
+| [0081](./ADR-0081-keep-behaviour-specs-and-changes-in-openspec.md)                                        | Keep behaviour specs and changes in OpenSpec                                                                                       | Accepted |

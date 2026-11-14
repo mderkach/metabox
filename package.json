@@ -8,11 +8,14 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",
-    "format:check": "oxfmt --check"
+    "format:check": "oxfmt --check",
+    "openspec": "OPENSPEC_TELEMETRY=0 openspec",
+    "spec:check": "OPENSPEC_TELEMETRY=0 openspec validate --specs --no-interactive && OPENSPEC_TELEMETRY=0 openspec validate --changes --no-interactive"
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.2",
     "@commitlint/config-conventional": "21.2.2",
+    "@fission-ai/openspec": "2.0.0",
     "lefthook": "2.1.14",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",

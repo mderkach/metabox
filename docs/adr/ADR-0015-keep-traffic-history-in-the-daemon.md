@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-09-13
 - Deciders: repository owner
+- Supersedes (as to no polling without a reader, for the `/traffic` accounting): [ADR-0010](./ADR-0010-stream-runtime-to-the-panel-over-sse.md)
 
 ## Context and problem statement
 

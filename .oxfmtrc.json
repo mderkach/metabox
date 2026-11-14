@@ -12,7 +12,8 @@
     "apps/web/src/shared/api/daemon.generated.ts",
     ".claude",
     ".omc",
-    ".devcontainer/target"
+    ".devcontainer/target",
+    ".agents/skills/openspec-*"
   ],
   "overrides": [
     {

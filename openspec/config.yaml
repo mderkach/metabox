@@ -1,0 +1,50 @@
+schema: spec-driven
+
+context: |
+  Run the CLI as `pnpm --silent openspec <command>`: it is a pinned dev dependency, not a global
+  tool, the script turns its usage telemetry off, and `--silent` keeps `--json` output clean.
+  Language: every artifact is written in English. Translations of the specs are derived files
+  of the documentation site, never edited here.
+  Rules of the repository: AGENTS.md at the root and in the project folder a change touches.
+  Product context (personas, goals, scope, non-goals, constraints): docs/PRD.md sections 1-4 and 8-11.
+  Interface principles UX-1..UX-8: docs/PRD.md section 7. They are not specs; a requirement
+  that applies one names it.
+  Proposals that carry a criterion moved from the product document say so in their open
+  questions; write their design and tasks before starting the work.
+  Requirement IDs: every requirement header starts with its ID, `### Requirement: AC-<N> <name>`
+  or `NFR-<N>`. A new requirement takes the next free number above the highest one in
+  openspec/specs, openspec/changes and docs/PRD.md; `make trace-check` fails on a duplicate.
+  Checks: docs/Verification.md maps a requirement ID to the test, CI job, bench script line or
+  manual scenario that confirms it. Code never names a requirement, a decision record or the
+  product document; `make trace-check` enforces this.
+  Decisions that outlive a change are architecture decision records in docs/adr/ (the
+  create-adr skill); design.md links to them instead of repeating them.
+  Panel work: the design system is apps/web/DESIGN.md and the product context for design is
+  apps/web/PRODUCT.md. Read them before writing a proposal or design that touches apps/web.
+
+rules:
+  proposal:
+    - 'Name the issue the change comes from.'
+    - 'Keep an explicit Out of scope list: what the change does not touch and where that work goes.'
+    - 'End with Open questions; the change is not approved while the list is not empty.'
+  specs:
+    - 'Start every requirement header with its ID: `### Requirement: AC-<N> <name>`.'
+    - 'A requirement moved from the product document keeps its text word for word, except that the main verb of its first sentence takes SHALL; only scenarios are added.'
+    - 'Write a scenario for each case a check in docs/Verification.md confirms, named after the case.'
+  design:
+    - 'For a new screen, a new block of a screen or a redesign of the panel, add a `## Design brief` section produced with `/impeccable shape`: the user question the block answers, the content, the states. The owner approves it together with the proposal.'
+    - 'Link the decision records the change relies on or creates.'
+  tasks:
+    - 'Each task names the requirement IDs it delivers and the command that verifies it.'
+    - 'A task that delivers a requirement adds its rows to docs/Verification.md in the same task.'
+    - 'A task that changes a form, a component or an interaction of the panel is verified by `pnpm --filter web check:design` and an Impeccable critique by someone who did not write it.'
+    - 'When the change alters behaviour a user sees, the last group updates the user documentation in English and Russian and the derived Russian translation of every spec the change touches.'
+    - 'Keep one change per session; unfinished work is handed over in a draft pull request.'
+
+operations:
+  apply:
+    guidance:
+      - 'Run the checks of the affected project before ticking a task: `make test` for the daemon, `pnpm --filter web test` for the panel.'
+  archive:
+    guidance:
+      - 'Archive in the last pull request of the change, after every task is ticked and `make trace-check` reports no error.'
