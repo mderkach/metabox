@@ -16,7 +16,12 @@
     "updatedAgo": "updated {{age}} ago",
     "usage": "{{used}} of {{total}}",
     "usageUnlimited": "{{used}} used",
-    "expires": "until {{date}}"
+    "expires": "until {{date}}",
+    "nodesWas_one": "{{count}} node, was {{before}}",
+    "nodesWas_other": "{{count}} nodes, was {{before}}",
+    "dropCollapsed_one": "Only {{after}} of {{count}} node left after the last update; sing-box has dropped the rest. Check the subscription and update it again.",
+    "dropCollapsed_other": "Only {{after}} of {{count}} nodes left after the last update; sing-box has dropped the rest. Check the subscription and update it again.",
+    "dropEmpty": "No nodes left in the subscription. Check the subscription and its <code>include</code> and <code>exclude</code> filters, then update it again."
   },
   "announce": {
     "selected": "Group {{group}}: node {{node}} selected",

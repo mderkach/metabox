@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw';
 
 import { PROXY_ENDPOINT } from '../api/Proxy.endpoints';
-import type { ClashProxiesWire } from '../api/Proxy.schema';
+import type { ClashProvidersWire, ClashProxiesWire } from '../api/Proxy.schema';
 import { CLASH_DELAY_FIXTURE, CLASH_PROVIDERS_FIXTURE, CLASH_PROXIES_FIXTURE } from './Proxy.fixture';
 
 /**
@@ -30,18 +30,23 @@ function toChosenNode(body: unknown): string | null {
   return typeof body.name === 'string' ? body.name : null;
 }
 
+/**
+ * What a manual update leaves in the dev mock, so the shrunk-set warning can be
+ * seen: as the fork does, an update replaces the set even when the filters left
+ * nothing. A subscription not listed keeps its nodes and gets a new update time.
+ */
+const UPDATED_NODES: Readonly<Record<string, number>> = { 'sub-nl': 1, 'sub-us': 0 };
+
 /** Handlers that do not depend on state: both mock builds take them as is. */
 function readOnlyHandlers() {
-  return [
-    http.get(PROXY_ENDPOINT.providers(), () => HttpResponse.json(CLASH_PROVIDERS_FIXTURE)),
-    http.get(PROXY_ENDPOINT.proxyDelay(NODE_PATTERN), () => HttpResponse.json(CLASH_DELAY_FIXTURE)),
-    http.put(PROXY_ENDPOINT.provider(NODE_PATTERN), () => new HttpResponse(null, { status: 204 })),
-  ];
+  return [http.get(PROXY_ENDPOINT.proxyDelay(NODE_PATTERN), () => HttpResponse.json(CLASH_DELAY_FIXTURE))];
 }
 
 /** Proxy handlers the daemon does not have yet: shapes taken from the device. */
 export const proxyHandlers = [
   http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(CLASH_PROXIES_FIXTURE)),
+  http.get(PROXY_ENDPOINT.providers(), () => HttpResponse.json(CLASH_PROVIDERS_FIXTURE)),
+  http.put(PROXY_ENDPOINT.provider(NODE_PATTERN), () => new HttpResponse(null, { status: 204 })),
   ...readOnlyHandlers(),
 
   // The runtime answers a node selection with an empty body: the panel takes the new state
@@ -60,6 +65,8 @@ export const proxyHandlers = [
 export function createStatefulProxyHandlers() {
   const chosen = new Map<string, string>();
   const silent = new Set<string>();
+  /** Subscription → the time of its last manual update. */
+  const updated = new Map<string, string>();
 
   // The mock answers in the wire shape, so the selection is set right in it:
   // the model `withSelectedNode` works with groups that do not exist here yet.
@@ -79,8 +86,29 @@ export function createStatefulProxyHandlers() {
     return { proxies };
   }
 
+  function providers(): ClashProvidersWire {
+    const result = { ...CLASH_PROVIDERS_FIXTURE.providers };
+
+    for (const [name, updatedAt] of updated) {
+      if (Object.hasOwn(result, name)) {
+        const provider = result[name];
+        const nodes = UPDATED_NODES[name] ?? provider.proxies.length;
+
+        result[name] = { ...provider, updatedAt, proxies: provider.proxies.slice(0, nodes) };
+      }
+    }
+
+    return { providers: result };
+  }
+
   return [
     http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(snapshot())),
+    http.get(PROXY_ENDPOINT.providers(), () => HttpResponse.json(providers())),
+    http.put(PROXY_ENDPOINT.provider(NODE_PATTERN), function rememberUpdate({ request }) {
+      updated.set(toGroupName(request.url), new Date().toISOString());
+
+      return new HttpResponse(null, { status: 204 });
+    }),
 
     // One node never answers, as the fork reports it: an error status, and the history is dropped.
     http.get(PROXY_ENDPOINT.proxyDelay(SILENT_NODE), () => {

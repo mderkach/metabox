@@ -47,6 +47,7 @@ function serveProxyList(proxies: typeof CLASH_PROXIES_FIXTURE.proxies) {
 describe('proxies screen', () => {
   afterEach(() => {
     ConfigDocumentStore.getState().reset();
+    localStorage.clear();
   });
 
   it('shows config groups and does not show service ones', async () => {
@@ -427,6 +428,85 @@ describe('proxies screen', () => {
       await user.click(screen.getByRole('button', { name: 'Обновить подписку sub-eu' }));
 
       expect(await screen.findByText('обновлена только что')).toBeInTheDocument();
+    });
+  });
+
+  describe('node count after a subscription update', () => {
+    const SUB = CLASH_PROVIDERS_FIXTURE.providers['sub-eu'];
+    const NODE = SUB.proxies[0];
+
+    /** A subscription of six nodes whose update leaves `left` of them, as the fork does. */
+    function serveShrinkingSubscription(left: number) {
+      let proxies = Array.from({ length: 6 }, (_, index) => ({ ...NODE, name: `sub-eu/node-${index}` }));
+      let updatedAt = SUB.updatedAt;
+
+      serveProxies();
+      server.use(
+        http.get(PROXY_ENDPOINT.providers(), () =>
+          HttpResponse.json({ providers: { 'sub-eu': { ...SUB, updatedAt, proxies } } })
+        ),
+        http.put(PROXY_ENDPOINT.provider('sub-eu'), () => {
+          proxies = proxies.slice(0, left);
+          updatedAt = '2026-09-11T12:00:00Z';
+
+          return new HttpResponse(null, { status: 204 });
+        })
+      );
+    }
+
+    it('shows the previous count and warns when the set collapses', async () => {
+      serveShrinkingSubscription(1);
+      const user = userEvent.setup();
+
+      renderWithQuery(<ProxiesPage />);
+
+      expect(await screen.findByText('6 узлов')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Обновить подписку sub-eu' }));
+
+      expect(await screen.findByText('1 узел, было 6')).toBeInTheDocument();
+      // A status region, so the drop is announced after the update, not only drawn.
+      expect(
+        screen.getAllByRole('status').filter((region) => /осталось 1 из 6 узлов/.test(region.textContent))
+      ).toHaveLength(1);
+    });
+
+    it('warns when the update leaves no nodes', async () => {
+      serveShrinkingSubscription(0);
+      const user = userEvent.setup();
+
+      renderWithQuery(<ProxiesPage />);
+
+      await user.click(await screen.findByRole('button', { name: 'Обновить подписку sub-eu' }));
+
+      expect(await screen.findByText('0 узлов, было 6')).toBeInTheDocument();
+      expect(screen.getByText(/В подписке не осталось узлов/)).toBeInTheDocument();
+    });
+
+    it('shows the previous count without a warning on a moderate change', async () => {
+      serveShrinkingSubscription(4);
+      const user = userEvent.setup();
+
+      renderWithQuery(<ProxiesPage />);
+
+      await user.click(await screen.findByRole('button', { name: 'Обновить подписку sub-eu' }));
+
+      expect(await screen.findByText('4 узла, было 6')).toBeInTheDocument();
+      expect(screen.queryByText(/осталось/)).not.toBeInTheDocument();
+    });
+
+    it('notices a drop the core made while the panel was closed', async () => {
+      localStorage.setItem(
+        'metabox.proxy.providers',
+        JSON.stringify({ 'sub-eu': { nodes: 12, updatedAt: '2026-09-09T12:00:00Z', previous: null } })
+      );
+      serveProxies();
+      server.use(http.get(PROXY_ENDPOINT.providers(), () => HttpResponse.json({ providers: { 'sub-eu': SUB } })));
+
+      renderWithQuery(<ProxiesPage />);
+
+      expect(await screen.findByText('2 узла, было 12')).toBeInTheDocument();
+      expect(screen.getByText(/осталось 2 из 12 узлов/)).toBeInTheDocument();
     });
   });
 
