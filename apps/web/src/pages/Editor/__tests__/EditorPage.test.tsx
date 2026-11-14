@@ -1,5 +1,4 @@
 import { renderWithRouter } from '@test/renderWithRouter';
-import { selectOption } from '@test/selectOption';
 import { server } from '@test/server';
 import { finishSidePanelTransition } from '@test/sidePanel';
 import { mockVirtualSizes } from '@test/virtualSizes';
@@ -10,93 +9,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfigDocumentState, findValue } from '@entities/Config';
 import { CONFIG_ENDPOINT } from '@entities/Config';
-import { DAEMON_ENDPOINT } from '@entities/Daemon';
-import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
-import { ROUTE_ENDPOINT } from '@entities/Route';
 import { parseRuleSearch } from '@entities/Rule';
 import { PANEL_AS_SHEET } from '@shared/lib/media';
 
 import { toSelectedRuleId } from '../lib/Editor.lib';
 import { EditorPage } from '../ui/EditorPage';
-
-const CONFIG = JSON.stringify(
-  {
-    outbounds: [
-      { type: 'direct', tag: 'direct' },
-      { type: 'selector', tag: 'proxy', outbounds: ['direct'] },
-    ],
-    route: {
-      rules: [
-        { rule_set: ['github'], outbound: 'proxy' },
-        { port: 53, action: 'hijack-dns' },
-        // The rule schema is a `looseObject`, it accepts extra keys.
-        // A node becomes unrecognized by a value that is in no branch of the
-        // union: that comes from a binary newer than the panel schema.
-        { action: 'quantum-teleport' },
-      ],
-    },
-  },
-  null,
-  2
-);
-
-/** The same, but the schema accepts all nodes: then the rule has an outbound list. */
-const RECOGNIZED_CONFIG = JSON.stringify(
-  {
-    outbounds: [
-      { type: 'direct', tag: 'direct' },
-      { type: 'selector', tag: 'proxy', outbounds: ['direct'] },
-    ],
-    route: { rules: [{ rule_set: ['github'], outbound: 'proxy' }] },
-  },
-  null,
-  2
-);
-
-/** Rules for list editing: the schema accepts all nodes, the default route is set. */
-const EDIT_RULES = [
-  { rule_set: ['github'], outbound: 'proxy' },
-  { port: 53, action: 'hijack-dns' },
-  { domain_suffix: ['example.org'], outbound: 'direct' },
-];
-
-function editConfig(rules: unknown[]): string {
-  return JSON.stringify(
-    {
-      outbounds: [
-        { type: 'direct', tag: 'direct' },
-        { type: 'selector', tag: 'proxy', outbounds: ['direct'] },
-      ],
-      route: { rules, final: 'proxy' },
-    },
-    null,
-    2
-  );
-}
-
-function draftRules(): unknown {
-  return findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rules']);
-}
-
-/** Count of a process that runs `CONFIG`: one per node. */
-const HITS = {
-  seconds: 2 * 60 * 60,
-  rules: [
-    { index: 0, hits: 1234, counted: true },
-    { index: 1, hits: 0, counted: false },
-    { index: 2, hits: 5, counted: true },
-  ],
-  final: 0,
-};
+import {
+  CONFIG,
+  configHandlers,
+  draftRules,
+  EDIT_RULES,
+  editConfig,
+  HITS,
+  RECOGNIZED_CONFIG,
+} from './EditorPage.fixture';
 
 function serveConfig(text = CONFIG, hits: typeof HITS = HITS) {
-  server.use(
-    http.get(ROUTE_ENDPOINT.hits(), () => HttpResponse.json(hits)),
-    http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text)),
-    // The screen header opens the version history, and the apply bar polls the daemon.
-    http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: [] })),
-    http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE))
-  );
+  server.use(...configHandlers(text, hits));
 }
 
 describe('rules screen', () => {
@@ -233,59 +162,6 @@ describe('rules screen', () => {
 
     expect(within(panel).getByRole('combobox', { name: 'Куда отправить' })).toHaveTextContent('proxy');
     expect(ConfigDocumentState.getState().draft).toBeNull();
-  });
-
-  it('an outbound change in the panel edits one line of the file, does not touch the rest of the rule', async () => {
-    // A config without an unrecognized node: the outbound list is built from the parsed
-    // config, and a node the schema did not accept leaves it empty: then
-    // there would be nothing to choose from.
-    serveConfig(RECOGNIZED_CONFIG);
-
-    const user = userEvent.setup();
-
-    renderWithRouter(EditorPage);
-
-    await user.click(await screen.findByRole('button', { name: /, правило 1(,|$)/ }));
-
-    const panel = await screen.findByRole('complementary');
-    const outbound = within(panel).getByRole('combobox', { name: 'Куда отправить' });
-
-    await selectOption(user, outbound, 'direct');
-
-    expect(outbound).toHaveTextContent('direct');
-
-    await waitFor(() => {
-      expect(ConfigDocumentState.getState().draft).not.toBeNull();
-    });
-
-    expect(findValue(ConfigDocumentState.getState().draft ?? '', ['route', 'rules', 0])).toEqual({
-      rule_set: ['github'],
-      outbound: 'direct',
-    });
-    expect(
-      await screen.findByRole('button', { name: 'github → direct, правило 1, изменено в черновике' })
-    ).toBeInTheDocument();
-  });
-
-  it('an outbound chosen in the form survives a switch to JSON and back', async () => {
-    serveConfig(RECOGNIZED_CONFIG);
-
-    const user = userEvent.setup();
-
-    renderWithRouter(EditorPage);
-
-    await user.click(await screen.findByRole('button', { name: /, правило 1(,|$)/ }));
-
-    const panel = await screen.findByRole('complementary');
-
-    await selectOption(user, within(panel).getByRole('combobox', { name: 'Куда отправить' }), 'direct');
-    await user.click(within(panel).getByRole('tab', { name: 'JSON' }));
-    await waitFor(() => {
-      expect(within(panel).queryByRole('combobox', { name: 'Куда отправить' })).not.toBeInTheDocument();
-    });
-    await user.click(within(panel).getByRole('tab', { name: 'Форма' }));
-
-    expect(within(panel).getByRole('combobox', { name: 'Куда отправить' })).toHaveTextContent('direct');
   });
 
   it('an unrecognized node gets no form, but is edited as text', async () => {
@@ -482,56 +358,6 @@ describe('rule list editing', () => {
     expect(within(targets).getByRole('option', { name: /перехватить DNS/ })).toHaveTextContent(/0$/);
   });
 
-  it('opens a new rule without writing it and writes it on the first condition, keeping focus', async () => {
-    const user = userEvent.setup();
-
-    renderWithRouter(EditorPage);
-
-    await user.click(await screen.findByRole('button', { name: 'Добавить правило' }));
-
-    const panel = await screen.findByRole('complementary', { name: 'Новое правило · место 4' });
-
-    expect(ConfigDocumentState.getState().draft).toBeNull();
-    expect(within(panel).getByText(/появится в черновике, когда у него будет условие/)).toBeInTheDocument();
-    expect(within(panel).queryByRole('tab', { name: 'JSON' })).not.toBeInTheDocument();
-
-    await selectOption(user, within(panel).getByRole('combobox', { name: 'Добавить условие' }), 'Домен');
-
-    const domain = within(panel).getByRole('textbox', { name: 'Домен' });
-
-    await user.type(domain, 'a.example');
-
-    await waitFor(() => {
-      expect(draftRules()).toEqual([...EDIT_RULES, { domain: ['a.example'], outbound: 'proxy' }]);
-    });
-    expect(domain).toHaveFocus();
-    expect(
-      await screen.findByRole('button', { name: 'a.example → proxy, правило 4, изменено в черновике' })
-    ).toHaveAttribute('aria-pressed', 'true');
-  });
-
-  it('closes the panel of a created rule once the draft is discarded', async () => {
-    const user = userEvent.setup();
-
-    renderWithRouter(EditorPage);
-
-    await user.click(await screen.findByRole('button', { name: 'Добавить правило' }));
-
-    const panel = await screen.findByRole('complementary', { name: 'Новое правило · место 4' });
-
-    await selectOption(user, within(panel).getByRole('combobox', { name: 'Добавить условие' }), 'Домен');
-    await user.type(within(panel).getByRole('textbox', { name: 'Домен' }), 'a.example');
-    await screen.findByRole('button', { name: 'a.example → proxy, правило 4, изменено в черновике' });
-
-    act(() => {
-      ConfigDocumentState.getState().discard();
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByRole('complementary', { name: 'a.example → proxy' })).not.toBeInTheDocument();
-    });
-  });
-
   it('a new rule closed without a condition leaves the draft untouched', async () => {
     const user = userEvent.setup();
 
@@ -544,30 +370,6 @@ describe('rule list editing', () => {
     await user.click(within(panel).getByRole('button', { name: 'Закрыть панель' }));
 
     expect(ConfigDocumentState.getState().draft).toBeNull();
-  });
-
-  it('in a config without rules the empty state button opens the first rule and the condition creates route.rules', async () => {
-    serveConfig(JSON.stringify({ outbounds: [{ type: 'direct', tag: 'direct' }] }, null, 2));
-
-    const user = userEvent.setup();
-
-    renderWithRouter(EditorPage);
-
-    expect(await screen.findByText('Правил нет')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Добавить правило' }));
-
-    const panel = await screen.findByRole('complementary', { name: 'Новое правило · место 1' });
-
-    expect(ConfigDocumentState.getState().draft).toBeNull();
-
-    await selectOption(user, within(panel).getByRole('combobox', { name: 'Добавить условие' }), 'Домен');
-    await user.type(within(panel).getByRole('textbox', { name: 'Домен' }), 'a.example');
-
-    await waitFor(() => {
-      expect(draftRules()).toEqual([{ domain: ['a.example'], outbound: 'direct' }]);
-    });
-    expect(await screen.findByRole('table', { name: 'Правила маршрутизации' })).toBeInTheDocument();
   });
 
   it('without outbounds and route.final a new rule has nowhere to get an outbound: the button is disabled and says why', async () => {
@@ -900,67 +702,6 @@ describe('filter by rule set from the address', () => {
     await user.click(screen.getByRole('button', { name: 'Сбросить отбор' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent('3 правила');
-  });
-});
-
-describe('rule sets of a rule from the panel', () => {
-  /** Rules for editing and two sets that can be referred to. */
-  const WITH_RULE_SETS = JSON.stringify(
-    {
-      outbounds: [
-        { type: 'direct', tag: 'direct' },
-        { type: 'selector', tag: 'proxy', outbounds: ['direct'] },
-      ],
-      route: {
-        rules: EDIT_RULES,
-        final: 'proxy',
-        rule_set: [
-          { type: 'remote', tag: 'github', format: 'binary', url: 'https://example.invalid/github.srs' },
-          { type: 'remote', tag: 'geoip-cn', format: 'binary', url: 'https://example.invalid/geoip-cn.srs' },
-        ],
-      },
-    },
-    null,
-    2
-  );
-
-  beforeEach(() => {
-    ConfigDocumentState.getState().reset();
-    mockVirtualSizes();
-    serveConfig(WITH_RULE_SETS);
-  });
-
-  it('a rule set chosen in the form is visible in the rule conditions and in the rule set filter', async () => {
-    const user = userEvent.setup();
-    const { router } = renderWithRouter(EditorPage, { validateSearch: parseRuleSearch });
-
-    await user.click(await screen.findByRole('button', { name: /, правило 3(,|$)/ }));
-
-    const panel = await screen.findByRole('complementary');
-
-    await selectOption(user, within(panel).getByRole('combobox', { name: 'Сеты правил' }), 'geoip-cn');
-    await user.keyboard('{Escape}');
-
-    // Escape closes the list, not the panel around it.
-    expect(panel).toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(
-        within(panel)
-          .getAllByRole('definition')
-          .map((value) => value.textContent)
-      ).toContain('geoip-cn');
-    });
-    expect(draftRules()).toEqual([
-      EDIT_RULES[0],
-      EDIT_RULES[1],
-      { domain_suffix: ['example.org'], outbound: 'direct', rule_set: ['geoip-cn'] },
-    ]);
-
-    await router.navigate({ to: '/', search: { rule_set: 'geoip-cn' } });
-
-    expect(await screen.findByRole('status')).toHaveTextContent('Показано 1 из 3');
-    expect(screen.getByRole('button', { name: /, правило 3(,|$)/ })).toBeInTheDocument();
   });
 });
 

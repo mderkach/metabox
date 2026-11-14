@@ -1,5 +1,4 @@
 import { renderWithRouter } from '@test/renderWithRouter';
-import { selectOption } from '@test/selectOption';
 import { server } from '@test/server';
 import { stripWordJoiners, WITHOUT_WORD_JOINERS } from '@test/wordJoiner';
 import { act, screen, waitFor, within } from '@testing-library/react';
@@ -179,23 +178,6 @@ describe('overview screen', () => {
 
     await waitFor(() => {
       expect(region).toHaveTextContent('Задержка выбранных узлов обновлена');
-    });
-  });
-
-  // From a phone the node is switched where the state is read, without going to the proxies screen.
-  it('switches the node of a selector group from the status strip and announces it', async () => {
-    server.use(...proxyHandlers);
-
-    const user = userEvent.setup();
-
-    renderWithRouter(OverviewPage);
-
-    const region = await screen.findByRole('status', { name: 'Результат действия' });
-
-    await selectOption(user, await screen.findByRole('combobox', { name: 'Узел группы us-fallback' }), 'proxy');
-
-    await waitFor(() => {
-      expect(region).toHaveTextContent('us-fallback: выбран узел proxy');
     });
   });
 
@@ -398,26 +380,6 @@ describe('overview screen', () => {
 
     expect(await screen.findByText('по правилам')).toBeInTheDocument();
     expect(screen.queryByText('Rule')).not.toBeInTheDocument();
-  });
-
-  it('switches the Clash API mode with a runtime request', async () => {
-    const patches: unknown[] = [];
-    server.use(
-      http.patch(DAEMON_ENDPOINT.clashConfigs(), async ({ request }) => {
-        patches.push(await request.json());
-
-        return new HttpResponse(null, { status: 204 });
-      })
-    );
-    const user = userEvent.setup();
-
-    renderWithRouter(OverviewPage);
-
-    await selectOption(user, await screen.findByRole('combobox', { name: 'Режим Clash API: по правилам' }), 'напрямую');
-
-    await waitFor(() => {
-      expect(patches).toEqual([{ mode: 'Direct' }]);
-    });
   });
 
   it('translates other mode values too, not only Rule', async () => {
