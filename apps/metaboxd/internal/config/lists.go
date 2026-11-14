@@ -94,6 +94,57 @@ func (s *Store) readLists() (map[string][]byte, error) {
 	return files, nil
 }
 
+// ListStat is what the disk says about a list file.
+type ListStat struct {
+	// Size is the size in bytes.
+	Size int64 `json:"size"`
+	// ModifiedAt is the file modification time, Unix seconds. Informational: shows the
+	// device clock at the time of the write and lies if it was not synchronized.
+	ModifiedAt int64 `json:"modified_at"`
+}
+
+// ListStats returns the size and modification time of each list file, with the same name
+// filter as ReadLists. A missing subdirectory is an empty set.
+func (s *Store) ListStats(ctx context.Context) (map[string]ListStat, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	root, err := s.listsRoot(false)
+	if errors.Is(err, errNoLists) {
+		return map[string]ListStat{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = root.Close() }()
+
+	entries, err := fs.ReadDir(root.FS(), ".")
+	if err != nil {
+		return nil, fmt.Errorf("read list directory %s: %w", s.ListsPath(), err)
+	}
+
+	stats := make(map[string]ListStat, len(entries))
+
+	for _, entry := range entries {
+		if entry.IsDir() || !ValidListName(entry.Name()) {
+			continue
+		}
+
+		info, err := entry.Info()
+		if err != nil {
+			return nil, fmt.Errorf("stat list %s: %w", entry.Name(), err)
+		}
+
+		stats[entry.Name()] = ListStat{Size: info.Size(), ModifiedAt: info.ModTime().Unix()}
+	}
+
+	return stats, nil
+}
+
 // ListSums returns the sha256 of each list file: they catch an edit of files
 // outside metabox and the replay of a broken write.
 func (s *Store) ListSums(ctx context.Context) (map[string]string, error) {

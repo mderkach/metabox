@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { countRuleSetUsage, defaultFormatOf, describeURL, toRuleSetCatalog, toRuleSetRowsFromNodes } from '../model';
+import type { RuleSetFileStat } from '../model';
 import { RULE_SET_CATALOG_FIXTURE } from './RuleSet.fixture';
 
 const CATALOG = toRuleSetCatalog(RULE_SET_CATALOG_FIXTURE);
+const NO_FILES = new Map<string, RuleSetFileStat>();
 
 const GEOSITE_GOOGLE = 'https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-google.srs';
 
@@ -12,7 +14,8 @@ describe('toRuleSetRowsFromNodes', () => {
     const [row] = toRuleSetRowsFromNodes(
       [{ type: 'remote', tag: 'geosite-google', url: GEOSITE_GOOGLE }],
       new Map(),
-      CATALOG
+      CATALOG,
+      NO_FILES
     );
 
     expect(row.source).toEqual({ providerId: 'v2fly', providerName: 'v2fly', kind: 'geosite', category: 'google' });
@@ -22,7 +25,8 @@ describe('toRuleSetRowsFromNodes', () => {
     const [row] = toRuleSetRowsFromNodes(
       [{ type: 'remote', tag: 'own', url: 'https://example.com/own.srs' }],
       new Map(),
-      CATALOG
+      CATALOG,
+      NO_FILES
     );
 
     expect(row.source.providerId).toBeNull();
@@ -32,7 +36,7 @@ describe('toRuleSetRowsFromNodes', () => {
   // A rule set without `type` is read by the core as remote, and the list must read it the same way:
   // otherwise the panel would show it as local and hide the address.
   it('reads a rule set without a type as remote', () => {
-    const [row] = toRuleSetRowsFromNodes([{ tag: 'no-type', url: GEOSITE_GOOGLE }], new Map(), CATALOG);
+    const [row] = toRuleSetRowsFromNodes([{ tag: 'no-type', url: GEOSITE_GOOGLE }], new Map(), CATALOG, NO_FILES);
 
     expect(row.type).toBe('remote');
     expect(row.location).toBe(GEOSITE_GOOGLE);
@@ -45,7 +49,8 @@ describe('toRuleSetRowsFromNodes', () => {
         { type: 'remote', tag: 'b', url: GEOSITE_GOOGLE, http_client: { detour: 'warp' } },
       ],
       new Map(),
-      CATALOG
+      CATALOG,
+      NO_FILES
     );
 
     expect(rows[0].detour).toBe('proxy');
@@ -57,7 +62,8 @@ describe('toRuleSetRowsFromNodes', () => {
     const rows = toRuleSetRowsFromNodes(
       ['мусор', { type: 'remote', tag: 'second', url: GEOSITE_GOOGLE }],
       new Map(),
-      CATALOG
+      CATALOG,
+      NO_FILES
     );
 
     expect(rows).toHaveLength(1);
@@ -68,10 +74,32 @@ describe('toRuleSetRowsFromNodes', () => {
     const [row] = toRuleSetRowsFromNodes(
       [{ type: 'remote', tag: 'geosite-google', url: GEOSITE_GOOGLE }],
       new Map([['geosite-google', 2]]),
-      CATALOG
+      CATALOG,
+      NO_FILES
     );
 
     expect(row.usedBy).toBe(2);
+  });
+
+  // Only the daemon's own list files are visible on disk: a remote set and a path outside
+  // `rule-sets/` stay unknown even when a file of the same name is there.
+  it('takes the file stat only for an own list file', () => {
+    const stat: RuleSetFileStat = { size: 512, modifiedAt: 1_700_000_000_000 };
+    const files = new Map([['home.json', stat]]);
+
+    const rows = toRuleSetRowsFromNodes(
+      [
+        { type: 'local', tag: 'home', format: 'source', path: 'rule-sets/home.json' },
+        { type: 'local', tag: 'foreign', format: 'source', path: '/etc/home.json' },
+        { type: 'local', tag: 'draft', format: 'source', path: 'rule-sets/draft.json' },
+        { type: 'remote', tag: 'remote', url: GEOSITE_GOOGLE },
+      ],
+      new Map(),
+      CATALOG,
+      files
+    );
+
+    expect(rows.map((row) => row.file)).toEqual([stat, null, null, null]);
   });
 });
 

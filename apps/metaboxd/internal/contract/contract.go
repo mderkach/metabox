@@ -301,6 +301,9 @@ type RuleSetFiles struct {
 	Files map[string]string `json:"files"`
 	// Etag is the set fingerprint; the client returns it in lists_base of the apply.
 	Etag string `json:"etag"`
+	// Stats is the file name → size and modification time on disk. A file missing here
+	// was removed between the two reads; no field means there are no files.
+	Stats map[string]config.ListStat `json:"stats,omitempty"`
 }
 
 // Devices is the response of `GET /api/devices` and `PUT /api/devices/{mac}`: LAN

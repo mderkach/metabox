@@ -1,4 +1,5 @@
 import { ApiError } from '@shared/api';
+import type { RuleSetFilesWire } from '@shared/api/daemon.generated';
 import { MS_IN_SECOND } from '@shared/lib/time';
 
 import {
@@ -7,7 +8,7 @@ import {
   type ConfigVersionsWire,
   type ConfigVersionWire,
 } from '../api/Config.schema';
-import type { CheckFailure, ConfigVersion, ConfigVersions, WorkdirMismatch } from './Config.model';
+import type { CheckFailure, ConfigListStat, ConfigVersion, ConfigVersions, WorkdirMismatch } from './Config.model';
 
 /**
  * A version matches the device when both the config and the list file set
@@ -44,6 +45,16 @@ export function toConfigVersions(wire: ConfigVersionsWire): ConfigVersions {
       .map((version) => toConfigVersion(version, wire)),
     currentListsUnavailable: wire.current_lists_unavailable === true,
   };
+}
+
+/** Own list files on the device by name: size and modification time. */
+export function toConfigListStats(wire: RuleSetFilesWire): ReadonlyMap<string, ConfigListStat> {
+  return new Map(
+    Object.entries(wire.stats ?? {}).map(([name, stat]) => [
+      name,
+      { size: stat.size, modifiedAt: stat.modified_at > 0 ? stat.modified_at * MS_IN_SECOND : null },
+    ])
+  );
 }
 
 /** Daemon failure code whose `details` holds the binary output. */

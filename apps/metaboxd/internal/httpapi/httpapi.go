@@ -87,6 +87,7 @@ type EventStream interface {
 type ConfigReader interface {
 	Read(ctx context.Context) ([]byte, error)
 	ReadLists(ctx context.Context) (map[string][]byte, error)
+	ListStats(ctx context.Context) (map[string]config.ListStat, error)
 	ListSums(ctx context.Context) (map[string]string, error)
 	History(ctx context.Context) ([]config.Version, []config.SkippedVersion, error)
 	ReadVersion(ctx context.Context, id int) ([]byte, error)
@@ -533,6 +534,13 @@ func (s *Server) handleConfigLists(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out.Etag = config.ListsEtag(sums)
+
+	out.Stats, err = s.reader.ListStats(r.Context())
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
 
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(s.log, w, http.StatusOK, out)
