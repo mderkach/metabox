@@ -372,6 +372,8 @@ func (s *Server) routes() http.Handler {
 		mux.HandleFunc("POST /api/auth/login", noStore(s.handleLogin))
 		mux.HandleFunc("POST /api/auth/logout", noStore(s.handleLogout))
 		mux.HandleFunc("PUT /api/auth/password", noStore(s.handlePassword))
+		mux.HandleFunc("GET /api/auth/sessions", noStore(s.handleSessions))
+		mux.HandleFunc("DELETE /api/auth/sessions/{id}", noStore(s.handleEndSession))
 	}
 
 	mux.HandleFunc(mcpPath, s.handleMCP)

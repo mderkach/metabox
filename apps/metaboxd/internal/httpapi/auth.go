@@ -30,6 +30,8 @@ type Guard interface {
 	Logout(ctx context.Context, token string) error
 	Ended(token string) <-chan struct{}
 	SetPassword(ctx context.Context, addr netip.Addr, token, current, next string) (string, error)
+	Sessions(token string) []auth.Session
+	EndSession(ctx context.Context, token, id string) (netip.Addr, error)
 }
 
 // requireSession lets a request without a session through only while the panel has no
@@ -224,6 +226,48 @@ func (s *Server) handlePassword(w http.ResponseWriter, r *http.Request) {
 	default:
 		s.log.Info("panel password set", "addr", addr)
 		setSession(w, r, token)
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
+	live := s.auth.Sessions(sessionToken(r))
+	list := contract.Sessions{Sessions: make([]contract.Session, 0, len(live))}
+
+	for _, session := range live {
+		item := contract.Session{
+			ID:          session.ID,
+			AgeSeconds:  int64(session.Age.Seconds()),
+			IdleSeconds: int64(session.Idle.Seconds()),
+			Current:     session.Current,
+		}
+
+		if session.Addr.IsValid() {
+			item.Addr = session.Addr.String()
+		}
+
+		list.Sessions = append(list.Sessions, item)
+	}
+
+	writeJSON(s.log, w, http.StatusOK, list)
+}
+
+// handleEndSession ends another session; ending the caller's own one is a logout, so the
+// list cannot sign its user out by a misplaced click.
+func (s *Server) handleEndSession(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	ended, err := s.auth.EndSession(r.Context(), sessionToken(r), id)
+	// A failed session file write still closed the session in memory.
+	if err == nil || errors.Is(err, auth.ErrSessionNotRevoked) {
+		s.log.Info("panel session ended", "addr", clientAddr(r), "session_id", id, "session_addr", ended)
+	}
+
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)

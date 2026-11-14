@@ -63,6 +63,8 @@ export const ERROR_CODE = [
   'login_locked',
   'auth_disabled',
   'logout_not_saved',
+  'session_not_found',
+  'session_current',
   'check_failed',
   'internal',
 ] as const
@@ -512,6 +514,25 @@ export const PasswordChangeSchema = z.object({
   password: z.string(),
 })
 
+/** Session is a live panel session. Durations are counted by the router clock, which may run behind the real time, so the list carries them instead of moments. */
+export const SessionSchema = z.object({
+  /** ID is what `DELETE /api/auth/sessions/{id}` takes; it does not open the panel. */
+  id: z.string(),
+  /** Addr is the client address at login; empty for a session saved before addresses were kept. */
+  addr: z.string().optional(),
+  /** AgeSeconds is the time since login. */
+  age_seconds: z.int(),
+  /** IdleSeconds is the time since the last request. */
+  idle_seconds: z.int(),
+  /** Current means the session belongs to the caller: it is ended by logout. */
+  current: z.boolean(),
+})
+
+/** Sessions is the response of `GET /api/auth/sessions`: the live panel sessions, the caller's first, then by the last request. Empty while the panel has no password. */
+export const SessionsSchema = z.object({
+  sessions: z.array(SessionSchema),
+})
+
 /** MCP is the response of `GET /api/mcp`. */
 export const MCPSchema = z.object({
   /** Enabled means the endpoint serves a request with the token. While false it answers 404, as an unknown path. */
@@ -801,6 +822,8 @@ export type RuleSetFilesWire = z.infer<typeof RuleSetFilesSchema>
 export type RuleWire = z.infer<typeof RuleSchema>
 export type RuntimeWire = z.infer<typeof RuntimeSchema>
 export type ServiceWire = z.infer<typeof ServiceSchema>
+export type SessionWire = z.infer<typeof SessionSchema>
+export type SessionsWire = z.infer<typeof SessionsSchema>
 export type ShareWire = z.infer<typeof ShareSchema>
 export type SplitWire = z.infer<typeof SplitSchema>
 export type StatWire = z.infer<typeof StatSchema>

@@ -29,19 +29,30 @@ File and Check are written in backticks, except a manual scenario.
 
 ## Checks
 
-| ID    | Kind   | File                                                                                      | Check                                                                                    |
-| ----- | ------ | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| AC-6  | vitest | `apps/web/src/features/Config/ConfigNodeForm/__tests__/ConfigNodeForm.overrides.test.tsx` | `a node from the add form and the node form with a rule passes the config schema`        |
-| AC-8  | script | `.devcontainer/target/files/usr/bin/apply-cycle-check`                                    | `List as a file: local rule-set from rule-sets/`                                         |
-| AC-17 | ci     | `.github/workflows/ci.yml`                                                                | `web`                                                                                    |
-| AC-21 | script | `.devcontainer/target/files/usr/bin/apply-cycle-check`                                    | `The Apply cycle passed completely`                                                      |
-| AC-22 | ci     | `.github/workflows/ci.yml`                                                                | `integration`                                                                            |
-| AC-47 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.model.test.ts`        | `marks a type whose tag is not in the build, and does not mark a type without a gate`    |
-| AC-86 | vitest | `apps/web/src/features/Config/ConfigApply/__tests__/ConfigApplyDiff.test.tsx`             | `names a rename alone as one change that leads to the rule`                              |
-| AC-86 | e2e    | `apps/web/e2e/applySummary.e2e.test.ts`                                                   | `a rename alone is one summary item that leads back to the rule`                         |
-| AC-77 | vitest | `apps/web/src/pages/Settings/__tests__/SettingsPage.test.tsx`                             | `shows access, agents and system as sections of one screen`                              |
-| AC-77 | vitest | `apps/web/src/widgets/AppSidebar/__tests__/AppSidebar.test.tsx`                           | `leads to the settings screen instead of keeping password and MCP buttons in the footer` |
-| NFR-2 | vitest | `apps/web/src/pages/Connections/__tests__/ConnectionsPage.budget.test.tsx`                | `a snapshot tick of 5000 connections fits the budget while closed ones are hidden`       |
-| NFR-2 | vitest | `apps/web/src/widgets/ConnectionTable/__tests__/ConnectionTable.budget.test.ts`           | `parses a snapshot of 5000 connections within the budget`                                |
-| NFR-2 | bench  | `apps/metaboxd/internal/events/connections_test.go`                                       | `BenchmarkConnectionsSnapshot5000`                                                       |
-| NFR-2 | bench  | `apps/metaboxd/internal/route/hits_test.go`                                               | `BenchmarkCounterObserve5000`                                                            |
+| ID    | Kind    | File                                                                                      | Check                                                                                    |
+| ----- | ------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| AC-6  | vitest  | `apps/web/src/features/Config/ConfigNodeForm/__tests__/ConfigNodeForm.overrides.test.tsx` | `a node from the add form and the node form with a rule passes the config schema`        |
+| AC-8  | script  | `.devcontainer/target/files/usr/bin/apply-cycle-check`                                    | `List as a file: local rule-set from rule-sets/`                                         |
+| AC-17 | ci      | `.github/workflows/ci.yml`                                                                | `web`                                                                                    |
+| AC-21 | script  | `.devcontainer/target/files/usr/bin/apply-cycle-check`                                    | `The Apply cycle passed completely`                                                      |
+| AC-22 | ci      | `.github/workflows/ci.yml`                                                                | `integration`                                                                            |
+| AC-47 | vitest  | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.model.test.ts`        | `marks a type whose tag is not in the build, and does not mark a type without a gate`    |
+| AC-86 | vitest  | `apps/web/src/features/Config/ConfigApply/__tests__/ConfigApplyDiff.test.tsx`             | `names a rename alone as one change that leads to the rule`                              |
+| AC-86 | e2e     | `apps/web/e2e/applySummary.e2e.test.ts`                                                   | `a rename alone is one summary item that leads back to the rule`                         |
+| AC-77 | vitest  | `apps/web/src/pages/Settings/__tests__/SettingsPage.test.tsx`                             | `shows access, agents and system as sections of one screen`                              |
+| AC-77 | vitest  | `apps/web/src/widgets/AppSidebar/__tests__/AppSidebar.test.tsx`                           | `leads to the settings screen instead of keeping password and MCP buttons in the footer` |
+| AC-77 | go-test | `apps/metaboxd/internal/auth/auth_test.go`                                                | `TestSessionsListTheCallerFirstWithoutTokens`                                            |
+| AC-77 | vitest  | `apps/web/src/features/Auth/AuthSessions/__tests__/AuthSessions.test.tsx`                 | `lists this browser first, without an end button, and the others with one`               |
+| AC-77 | go-test | `apps/metaboxd/internal/httpapi/auth_test.go`                                             | `TestEndingAnotherSessionClosesItsStreams`                                               |
+| AC-77 | go-test | `apps/metaboxd/internal/httpapi/auth_test.go`                                             | `TestTheCurrentSessionIsNotEndedFromTheList`                                             |
+| AC-77 | e2e     | `apps/web/e2e/settingsSessions.e2e.test.ts`                                               | `ends another panel session from the settings screen`                                    |
+| AC-77 | go-test | `apps/metaboxd/internal/httpapi/auth_test.go`                                             | `TestEndingASessionLogsWhoEndedWhichSession`                                             |
+| AC-77 | go-test | `apps/metaboxd/internal/httpapi/auth_test.go`                                             | `TestSessionListWithoutPasswordIsEmpty`                                                  |
+| AC-77 | go-test | `apps/metaboxd/internal/httpapi/auth_test.go`                                             | `TestEndingASessionWithoutPasswordIsNotFound`                                            |
+| AC-77 | go-test | `apps/metaboxd/internal/httpapi/auth_test.go`                                             | `TestEndSessionWhoseWriteFailsIsAnError`                                                 |
+| AC-77 | vitest  | `apps/web/src/features/Auth/AuthSessions/__tests__/AuthSessions.test.tsx`                 | `says an unsaved end is still an end, without a failure toast`                           |
+| AC-77 | vitest  | `apps/web/src/features/Auth/AuthSessions/__tests__/AuthSessions.test.tsx`                 | `tells the user to change the password when a session is unfamiliar`                     |
+| NFR-2 | vitest  | `apps/web/src/pages/Connections/__tests__/ConnectionsPage.budget.test.tsx`                | `a snapshot tick of 5000 connections fits the budget while closed ones are hidden`       |
+| NFR-2 | vitest  | `apps/web/src/widgets/ConnectionTable/__tests__/ConnectionTable.budget.test.ts`           | `parses a snapshot of 5000 connections within the budget`                                |
+| NFR-2 | bench   | `apps/metaboxd/internal/events/connections_test.go`                                       | `BenchmarkConnectionsSnapshot5000`                                                       |
+| NFR-2 | bench   | `apps/metaboxd/internal/route/hits_test.go`                                               | `BenchmarkCounterObserve5000`                                                            |
