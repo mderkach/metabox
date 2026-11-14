@@ -38,3 +38,31 @@ test('moves through the list and the node panel from the keyboard', { tag: E2E_T
     await expect(sectionPage.panel(FIRST)).toBeVisible();
   });
 });
+
+test(
+  'Shift+N opens the own list form and N the catalog on the Rule sets screen',
+  { tag: E2E_TAG.Mock },
+  async ({ page }) => {
+    const custom = page.getByRole('button', { name: translate('pages/RuleSets', 'custom.open'), exact: true });
+    const catalog = page.getByRole('button', { name: translate('pages/RuleSets', 'add.open'), exact: true });
+
+    await page.goto('/config/rule-set');
+    await expect(custom).toBeVisible();
+
+    await test.step('Shift+N opens the own list form', async () => {
+      await page.keyboard.press('Shift+N');
+
+      await expect(
+        page.getByRole('complementary', { name: translate('pages/RuleSets', 'custom.title') })
+      ).toBeVisible();
+      await expect(custom).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    await test.step('after Escape, N opens the catalog', async () => {
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('N');
+
+      await expect(catalog).toHaveAttribute('aria-expanded', 'true');
+    });
+  }
+);

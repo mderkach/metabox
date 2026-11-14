@@ -10,6 +10,8 @@ import { isTextEntryFocused } from './focus';
 export const SHORTCUT = {
   Search: '/',
   Add: 'N',
+  /** The second way to add where there are two: a custom rule set beside the catalog. */
+  AddCustom: 'Shift+N',
   Apply: 'Control+S Meta+S',
   Help: '?',
 } as const;
@@ -24,6 +26,7 @@ const MODIFIERS = [
   ['Control', 'ctrlKey'],
   ['Alt', 'altKey'],
   ['Meta', 'metaKey'],
+  ['Shift', 'shiftKey'],
 ] as const;
 
 /** Physical keys whose character other layouts move: on the Russian one N types «т». */
@@ -158,11 +161,13 @@ export function isApplePlatform(): boolean {
   return /Mac|iPhone|iPad/.test(navigator.platform);
 }
 
-/** `Control+S Meta+S` → `⌘S` on Apple keyboards, `Ctrl S` elsewhere. */
+/** `Control+S Meta+S` → `⌘S` on Apple keyboards, `Ctrl S` elsewhere; `Shift+N` → `⇧N` or `Shift N`. */
 export function toShortcutLabel(shortcuts: string): string {
   const apple = isApplePlatform();
   const shortcut =
     shortcuts.split(' ').find((one) => (apple ? !one.startsWith('Control+') : !one.startsWith('Meta+'))) ?? shortcuts;
 
-  return apple ? shortcut.replace('Meta+', '⌘') : shortcut.replace('Control+', 'Ctrl ');
+  return apple
+    ? shortcut.replace('Meta+', '⌘').replace('Shift+', '⇧')
+    : shortcut.replace('Control+', 'Ctrl ').replace('Shift+', 'Shift ');
 }

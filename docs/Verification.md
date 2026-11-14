@@ -45,6 +45,8 @@ File and Check are written in backticks, except a manual scenario.
 | AC-90 | vitest | `apps/web/src/pages/Section/__tests__/SectionPage.test.tsx`                               | `the arrow keys move between node rows and Enter opens the row in focus`                 |
 | AC-90 | vitest | `apps/web/src/pages/Editor/__tests__/EditorPage.test.tsx`                                 | `the arrow keys move between rule rows and Enter opens the rule in focus`                |
 | AC-90 | e2e    | `apps/web/e2e/keyboard.e2e.test.ts`                                                       | `moves through the list and the node panel from the keyboard`                            |
+| AC-90 | vitest | `apps/web/src/pages/RuleSets/__tests__/RuleSetsPage.test.tsx`                             | `Shift+N opens the own list form, N opens the catalog, neither from the search field`    |
+| AC-90 | e2e    | `apps/web/e2e/keyboard.e2e.test.ts`                                                       | `Shift+N opens the own list form and N the catalog on the Rule sets screen`              |
 | NFR-2 | vitest | `apps/web/src/pages/Connections/__tests__/ConnectionsPage.budget.test.tsx`                | `a snapshot tick of 5000 connections fits the budget while closed ones are hidden`       |
 | NFR-2 | vitest | `apps/web/src/widgets/ConnectionTable/__tests__/ConnectionTable.budget.test.ts`           | `parses a snapshot of 5000 connections within the budget`                                |
 | NFR-2 | bench  | `apps/metaboxd/internal/events/connections_test.go`                                       | `BenchmarkConnectionsSnapshot5000`                                                       |

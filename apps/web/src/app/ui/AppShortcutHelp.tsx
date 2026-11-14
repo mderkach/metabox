@@ -17,6 +17,7 @@ import {
 const HELP_ROWS = [
   { keys: [SHORTCUT.Search], text: 'search' },
   { keys: [SHORTCUT.Add], text: 'add' },
+  { keys: [SHORTCUT.AddCustom], text: 'addCustom' },
   { keys: [SHORTCUT.Apply], text: 'apply' },
   { keys: ['↑', '↓'], text: 'rows' },
   { keys: ['↑', '↓'], text: 'nodes' },

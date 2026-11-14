@@ -33,6 +33,7 @@
     "keys": {
       "search": "Search the list on screen",
       "add": "Add an item: a rule, a rule set, a node",
+      "addCustom": "Rule sets: add your own list",
       "apply": "Open the summary of changes before Apply",
       "rows": "Move between list rows",
       "nodes": "On the title of an open node: the neighbouring node",
