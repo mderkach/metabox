@@ -235,7 +235,7 @@ describe('proxies screen', () => {
       providers: ['sub-a', 'sub-c'],
     });
     expect(outbounds).toContainEqual(expect.objectContaining({ type: 'urltest', tag: 'proxy-auto' }));
-    expect(screen.getByText(/Ручной выбор добавлен в черновик/)).toBeInTheDocument();
+    expect(screen.getByText(/Ручной выбор добавлен в черновик/)).toHaveFocus();
     expect(screen.queryByRole('button', { name: 'Добавить ручной выбор для группы proxy' })).not.toBeInTheDocument();
   });
 
