@@ -130,7 +130,34 @@ describe('ConfigApplyDiff', () => {
       within(summary)
         .getAllByRole('listitem')
         .map((item) => item.textContent)
-    ).toEqual(['TV through VPN (правило 2): proxy → direct']);
+    ).toEqual([
+      'TV through VPN (правило 2): proxy → direct',
+      'Переименовано из «site-1.example → proxy» в «TV through VPN» (правило 2)',
+    ]);
+  });
+
+  it('names a rename alone as one change that leads to the rule', async () => {
+    const applied = toText(RULES.slice(0, 2)).replace(
+      '      {\n        "domain_suffix": "site-1',
+      '      // TV\n      {\n        "domain_suffix": "site-1'
+    );
+
+    ConfigDocumentState.getState().load(applied);
+    ConfigDocumentState.getState().replace(applied.replace('// TV\n', '// TV through VPN\n'));
+    await renderScreen(function Screen() {
+      return <ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />;
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
+
+    const summary = await screen.findByRole('list', { name: 'Изменения правил маршрутизации' });
+
+    expect(
+      within(summary)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent)
+    ).toEqual(['Переименовано из «TV» в «TV through VPN» (правило 2)']);
+    expect(within(summary).getByRole('link', { name: 'TV through VPN' })).toHaveAttribute('href', '/config?rule=2');
   });
 
   it('truncates a long summary and says how many remain', async () => {
@@ -169,7 +196,7 @@ describe('ConfigApplyDiff', () => {
         .getAllByRole('listitem')
         .map((item) => item.textContent)
     ).toEqual(['Добавлено: аутбаунд NL test', 'Параметр route.default_mark: 100 → 7']);
-    expect(within(summary).getByRole('link', { name: 'NL test' })).toHaveAttribute('href', '/config/outbounds');
+    expect(within(summary).getByRole('link', { name: 'NL test' })).toHaveAttribute('href', '/config/outbounds?node=2');
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: /Текст изменений/ }));

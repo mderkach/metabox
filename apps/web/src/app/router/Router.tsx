@@ -8,7 +8,7 @@ import {
   type RouterHistory,
 } from '@tanstack/react-router';
 
-import { getConfigOptions, isGenericSection } from '@entities/Config';
+import { getConfigOptions, isGenericSection, parseSectionSearch } from '@entities/Config';
 import { parseConnectionSearch } from '@entities/Connection';
 import { getTrafficHistoryOptions } from '@entities/Daemon';
 import { getDataplaneOptions } from '@entities/Dataplane';
@@ -125,6 +125,7 @@ const rawConfigRoute = createRoute({
 const configSectionRoute = createRoute({
   getParentRoute: () => configLayoutRoute,
   path: '$section',
+  validateSearch: parseSectionSearch,
   beforeLoad: ({ params }) => {
     if (!isGenericSection(params.section)) {
       throw notFound();

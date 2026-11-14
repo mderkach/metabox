@@ -16,7 +16,7 @@ const APPLIED = {
 };
 
 describe('toConfigChanges', () => {
-  it('names nodes by tag: added, removed and changed with the keys that changed', () => {
+  it('names nodes by tag and numbers them in the draft: added, removed and changed with the keys that changed', () => {
     const draft = {
       ...APPLIED,
       outbounds: [
@@ -27,8 +27,8 @@ describe('toConfigChanges', () => {
     };
 
     expect(toConfigChanges(toText(APPLIED), toText(draft))).toEqual([
-      { kind: 'changed', section: 'outbounds', name: 'proxy', fields: ['server', 'server_port'] },
-      { kind: 'added', section: 'outbounds', name: 'NL test' },
+      { kind: 'changed', section: 'outbounds', name: 'proxy', index: 2, fields: ['server', 'server_port'] },
+      { kind: 'added', section: 'outbounds', name: 'NL test', index: 3 },
       { kind: 'removed', section: 'outbounds', name: 'old' },
     ]);
   });
@@ -53,21 +53,23 @@ describe('toConfigChanges', () => {
     const draft = { dns: { rules: [{ domain: ['b.example'], server: 'local' }] } };
 
     expect(toConfigChanges(toText(applied), toText(draft))).toEqual([
-      { kind: 'changed', section: 'dnsRules', name: '1', fields: ['domain'] },
+      { kind: 'changed', section: 'dnsRules', name: '1', index: 1, fields: ['domain'] },
     ]);
   });
 
   it('names a section that did not exist once, by its nodes', () => {
     const draft = { ...APPLIED, dns: { servers: [{ type: 'local', tag: 'local' }] } };
 
-    expect(toConfigChanges(toText(APPLIED), toText(draft))).toEqual([{ kind: 'added', section: 'dns', name: 'local' }]);
+    expect(toConfigChanges(toText(APPLIED), toText(draft))).toEqual([
+      { kind: 'added', section: 'dns', name: 'local', index: 1 },
+    ]);
   });
 
   it('keeps the parameters of a new section beside its nodes', () => {
     const draft = { ...APPLIED, dns: { servers: [{ type: 'local', tag: 'local' }], final: 'local' } };
 
     expect(toConfigChanges(toText(APPLIED), toText(draft))).toEqual([
-      { kind: 'added', section: 'dns', name: 'local' },
+      { kind: 'added', section: 'dns', name: 'local', index: 1 },
       { kind: 'setting', section: 'dns', path: 'dns', from: undefined, to: { final: 'local' } },
     ]);
   });
