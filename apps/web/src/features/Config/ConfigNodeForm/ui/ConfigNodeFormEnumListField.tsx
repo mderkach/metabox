@@ -32,6 +32,7 @@ export function ConfigNodeFormEnumListField({ field, name }: NodeFieldProps) {
           <ToggleGroup
             multiple
             spacing={1}
+            className='flex-wrap'
             aria-labelledby={labelId}
             aria-describedby={fieldState.invalid ? errorId : undefined}
             value={unpackList(input.value)}

@@ -607,6 +607,12 @@ export const CONFIG_FIXTURE: Config = {
         download_detour: 'proxy',
         update_interval: '24h',
       },
+      {
+        type: 'local',
+        tag: 'home-lan',
+        format: 'source',
+        path: 'rule-sets/home-lan.json',
+      },
     ],
     default_domain_resolver: 'dns-direct',
     default_mark: 100,

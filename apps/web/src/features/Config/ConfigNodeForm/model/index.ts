@@ -1,6 +1,9 @@
 export {
   arrangePlan,
+  booleanGroupDetails,
   countFilled,
+  isBooleanGroupOn,
+  isBooleanGroupUnset,
   isFilledGroup,
   isSameValue,
   isUnset,
@@ -9,6 +12,8 @@ export {
   parseNumber,
   parseScalar,
   splitByPresence,
+  switchBooleanGroup,
+  toBooleanGroupObject,
   toFieldName,
   toInputText,
   toNodeFormResolver,
@@ -16,7 +21,7 @@ export {
   unpackList,
 } from './ConfigNodeForm.model';
 export type { ConfigNodeFormModel } from './ConfigNodeForm.model';
-export { splitFieldsSinceOpen, writeNodeForm } from './ConfigNodeForm.draft';
+export { packBooleanGroups, splitFieldsSinceOpen, writeNodeForm } from './ConfigNodeForm.draft';
 export {
   hasNodeOverride,
   NODE_OVERRIDE_ERROR,

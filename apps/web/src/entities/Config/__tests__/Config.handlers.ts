@@ -16,6 +16,14 @@ const VERSIONS_FIXTURE = [
 
 const CONFIG_TEXT = JSON.stringify(CONFIG_FIXTURE, null, JSON_INDENT);
 
+/** The own list file the local `home-lan` set of the fixture points to. */
+const LIST_FILE = 'home-lan.json';
+const LIST_TEXT = JSON.stringify(
+  { version: 3, rules: [{ ip_cidr: ['192.168.1.0/24'] }, { domain_suffix: ['lan', 'home.arpa'] }] },
+  null,
+  JSON_INDENT
+);
+
 /** The daemon serves the file fingerprint in `ETag`, in quotes; the panel returns it in `If-Match`. */
 const CONFIG_ETAG = `"${'c'.repeat(SUM_LENGTH)}"`;
 
@@ -25,7 +33,13 @@ const CONFIG_ETAG = `"${'c'.repeat(SUM_LENGTH)}"`;
  */
 export const configHandlers = [
   http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG_TEXT, { headers: { ETag: CONFIG_ETAG } })),
-  http.get(CONFIG_ENDPOINT.ruleSetFiles(), () => HttpResponse.json({ files: {}, etag: `"${'d'.repeat(SUM_LENGTH)}"` })),
+  http.get(CONFIG_ENDPOINT.ruleSetFiles(), () =>
+    HttpResponse.json({
+      files: { [LIST_FILE]: LIST_TEXT },
+      etag: `"${'d'.repeat(SUM_LENGTH)}"`,
+      stats: { [LIST_FILE]: { size: new TextEncoder().encode(LIST_TEXT).length, modified_at: 1_757_550_000 } },
+    })
+  ),
   http.get(CONFIG_ENDPOINT.versions(), () =>
     HttpResponse.json({ versions: VERSIONS_FIXTURE, current_sum: VERSIONS_FIXTURE[1].sum })
   ),

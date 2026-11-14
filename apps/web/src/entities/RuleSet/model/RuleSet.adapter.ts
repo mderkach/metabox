@@ -4,8 +4,10 @@ import { MS_IN_SECOND } from '@shared/lib/time';
 import { LIST_KIND, LIST_SOURCE, type RuleSetCatalogWire, type RuleSetListWire } from '../api/RuleSet.schema';
 import { describeURL } from './RuleSet.catalog';
 import { RULE_SET_LIST_SOURCE, RULE_SET_TYPE } from './RuleSet.constants';
+import { localListFile } from './RuleSet.model';
 import type {
   RuleSetCatalog,
+  RuleSetFileStat,
   RuleSetList,
   RuleSetListKind,
   RuleSetListSource,
@@ -118,17 +120,24 @@ export function isRuleSetRecognized(node: unknown): boolean {
   return RuleSetSchema.safeParse(node).success;
 }
 
+function toFileStat(node: object, files: ReadonlyMap<string, RuleSetFileStat>): RuleSetFileStat | null {
+  const name = localListFile(node);
+
+  return name === null ? null : (files.get(name) ?? null);
+}
+
 /**
  * Expands `route.rule_set` into list rows.
  *
  * How many rules refer to a set is counted outside and arrives as a map: the
  * sets slice itself knows nothing about rules, and the screen needs this in one
- * pass.
+ * pass. The same goes for `files`, the own list files on the device by name.
  */
 export function toRuleSetRowsFromNodes(
   nodes: readonly unknown[],
   usage: ReadonlyMap<string, number>,
-  catalog: RuleSetCatalog
+  catalog: RuleSetCatalog,
+  files: ReadonlyMap<string, RuleSetFileStat>
 ): RuleSetRow[] {
   const rows: RuleSetRow[] = [];
 
@@ -156,6 +165,7 @@ export function toRuleSetRowsFromNodes(
       detour: toDetour(node),
       usedBy: usage.get(tag) ?? 0,
       recognized: isRuleSetRecognized(node),
+      file: toFileStat(node, files),
     });
   }
 

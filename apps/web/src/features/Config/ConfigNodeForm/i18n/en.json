@@ -3,6 +3,10 @@
     "unset": "not set",
     "reset": "Reset {{name}}"
   },
+  "booleanGroup": {
+    "details": "Details",
+    "detailsOf": "Details: {{name}}"
+  },
   "enum": {
     "unset": "not set"
   },

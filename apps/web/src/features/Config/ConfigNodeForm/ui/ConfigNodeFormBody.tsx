@@ -36,7 +36,8 @@ export function ConfigNodeFormBody({
 }) {
   const editMany = ConfigDocumentState.use.editMany();
   const revision = ConfigDocumentState.use.revision();
-  const layout = useMemo(() => arrangePlan(toFieldPlan(schema), override), [schema, override]);
+  const plan = useMemo(() => toFieldPlan(schema), [schema]);
+  const layout = useMemo(() => arrangePlan(plan, override), [plan, override]);
   const [openedNode] = useState(node);
   const resolver = useMemo(() => toNodeFormResolver(schema, override), [schema, override]);
   const [failures] = useState(() => new Map<string, unknown>());
@@ -87,7 +88,7 @@ export function ConfigNodeFormBody({
         form.setError(name, { type: RAW_PARSE_ERROR });
       }
 
-      return unparsed.length === 0 && writeNodeForm(editMany, path, node, form.getValues(), withRemovals);
+      return unparsed.length === 0 && writeNodeForm(editMany, path, plan, node, form.getValues(), withRemovals);
     },
     () => ConfigDocumentStore.getState().revision !== revision
   );

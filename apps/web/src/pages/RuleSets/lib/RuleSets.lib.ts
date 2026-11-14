@@ -6,7 +6,9 @@ import {
   readRuleSets,
   toOutboundTags,
   useConfigDocument,
+  useConfigListStats,
   type ConfigDocumentView,
+  type ConfigListStat,
 } from '@entities/Config';
 import {
   countRuleSetUsage,
@@ -19,6 +21,7 @@ import {
 } from '@entities/RuleSet';
 
 const EMPTY_CATALOG: RuleSetCatalog = { providers: [] };
+const NO_FILES: ReadonlyMap<string, ConfigListStat> = new Map();
 
 export interface RuleSetEditorState {
   /** Config request: a source failure is a screen state of its own, not an empty list. */
@@ -49,6 +52,8 @@ export function useRuleSetEditor(): RuleSetEditorState {
   const document = useConfigDocument();
   const catalogQuery = useRuleSetCatalog();
   const catalog = catalogQuery.data ?? EMPTY_CATALOG;
+  // A failed or pending read leaves the columns unknown: the list itself does not wait for it.
+  const files = useConfigListStats().data ?? NO_FILES;
   const text = document.text;
 
   const nodes = useMemo(() => (text === null ? [] : readRuleSets(text)), [text]);
@@ -58,7 +63,7 @@ export function useRuleSetEditor(): RuleSetEditorState {
   // at least as much as a direct one.
   const usage = useMemo(() => countRuleSetUsage(text === null ? [] : readRules(text)), [text]);
 
-  const sets = useMemo(() => toRuleSetRowsFromNodes(nodes, usage, catalog), [nodes, usage, catalog]);
+  const sets = useMemo(() => toRuleSetRowsFromNodes(nodes, usage, catalog, files), [nodes, usage, catalog, files]);
 
   const needsCache = useMemo(() => {
     if (text === null) {

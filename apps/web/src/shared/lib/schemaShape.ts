@@ -17,6 +17,7 @@ export const FIELD_KIND = {
   EnumList: 'enumList',
   Scalar: 'scalar',
   Group: 'group',
+  BooleanGroup: 'booleanGroup',
   Raw: 'raw',
 } as const;
 
@@ -31,7 +32,7 @@ export interface FieldPlan {
   kind: FieldKind;
   /** `enum` and `enumList` values; for `literal` its single value. */
   options?: string[];
-  /** Group fields. */
+  /** Group fields; for `booleanGroup` the object's fields without its flag. */
   children?: FieldPlan[];
   /** A list the schema also accepts as a single value: `"a"` instead of `["a"]`. */
   listable?: boolean;
@@ -57,6 +58,9 @@ const MAX_DEPTH = 4;
  * not arbitrary text: the field gets a format hint by it.
  */
 const DURATION_SOURCE = String.raw`^-?(?:\d+(?:\.\d+)?(?:ns|us|µs|ms|s|m|h|d|w))+$`;
+
+/** Key of the flag in the object form of a `booleanGroup` field: `true` means `{ enabled: true }`. */
+export const BOOLEAN_GROUP_FLAG = 'enabled';
 
 /** Formats of `z.int()` and its kin: an integer, not an arbitrary number. */
 const INT_FORMATS: ReadonlySet<string> = new Set(['safeint', 'int32', 'uint32']);
@@ -161,6 +165,28 @@ function isScalarUnion(schema: z.core.$ZodType): boolean {
   });
 }
 
+/**
+ * Object of a union of a flag and an object with that flag (`OptimisticDNSOptions`,
+ * `UDPOverTCPOptions`): the object form adds details to the flag. `null` for any other union.
+ */
+function booleanGroupObject(schema: z.core.$ZodType): z.core.$ZodObject | null {
+  if (!(schema instanceof z.core.$ZodUnion) || schema instanceof z.core.$ZodDiscriminatedUnion) {
+    return null;
+  }
+
+  const [first, second, ...rest] = schema._zod.def.options.map(unwrap);
+  const object = first instanceof z.core.$ZodObject ? first : second;
+  const flag = object === first ? second : first;
+
+  if (rest.length > 0 || !(object instanceof z.core.$ZodObject) || !(flag instanceof z.core.$ZodBoolean)) {
+    return null;
+  }
+
+  const enabled = Object.entries(object._zod.def.shape).find(([key]) => key === BOOLEAN_GROUP_FLAG)?.[1];
+
+  return enabled !== undefined && unwrap(enabled) instanceof z.core.$ZodBoolean ? object : null;
+}
+
 function planField(key: string, path: string[], schema: z.core.$ZodType): FieldPlan {
   const inner = unwrap(schema);
   const value = valueKind(inner);
@@ -184,6 +210,14 @@ function planField(key: string, path: string[], schema: z.core.$ZodType): FieldP
 
   if (isScalarUnion(inner)) {
     return { key, path, kind: FIELD_KIND.Scalar };
+  }
+
+  const toggled = booleanGroupObject(inner);
+
+  if (toggled !== null && path.length < MAX_DEPTH) {
+    const children = planShape(toggled, path).filter((child) => child.key !== BOOLEAN_GROUP_FLAG);
+
+    return { key, path, kind: FIELD_KIND.BooleanGroup, children };
   }
 
   if (inner instanceof z.core.$ZodObject && path.length < MAX_DEPTH) {

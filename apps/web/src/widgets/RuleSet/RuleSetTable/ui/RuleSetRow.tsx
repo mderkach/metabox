@@ -2,21 +2,25 @@ import { Pencil } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { RULE_SET_TYPE, type RuleSetRow as RuleSetRowModel } from '@entities/RuleSet';
-import { Badge, Button, Separator } from '@shared/ui';
+import type { RuleSetRow as RuleSetRowModel } from '@entities/RuleSet';
+import { cn } from '@shared/lib/utils';
+import { Button, Separator } from '@shared/ui';
 
 import { isEditable } from '../model/RuleSetTable.model';
-import { RULE_SET_COLUMN } from './RuleSetColumns';
-import { formatUpdateInterval } from './RuleSetInterval';
+import { CELL } from './RuleSetCells';
+import { RULE_SET_COLUMN, RULE_SET_COLUMNS } from './RuleSetColumns';
 import { RuleSetRemove } from './RuleSetRemove';
-import { RuleSetUsageMark } from './RuleSetUsageMark';
 
 /**
  * Rule set row.
  *
  * The rule set name is the first thing read: rules reference it. Below
- * comes the origin — whose list the route trusts — and on the right what the
- * rule set was attached for in the first place: how many rules use it.
+ * comes the origin — whose list the route trusts — then what the device knows
+ * about the file, and on the right what the rule set was attached for in the
+ * first place: how many rules use it.
+ *
+ * Below `md` the row is a card, and a cell without a value folds away there: a column
+ * of dashes under every remote set would only repeat that the source is silent.
  */
 function RuleSetRowProto({
   set,
@@ -31,59 +35,23 @@ function RuleSetRowProto({
   onRemove: (index: number) => void;
 }) {
   const { t } = useTranslation('widgets/RuleSet/RuleSetTable');
-  const { providerName, kind, category } = set.source;
 
   return (
     <div role='row' aria-rowindex={rowIndex} className={RULE_SET_COLUMN.Row}>
-      <span role='cell' className={RULE_SET_COLUMN.Tag}>
-        <span className='flex flex-wrap items-center gap-x-2 gap-y-1'>
-          <span className='font-mono text-sm break-all'>{set.tag === '' ? t('row.untagged') : set.tag}</span>
+      {RULE_SET_COLUMNS.map((def, position) => {
+        const Cell = CELL[def.id];
 
-          {set.type !== RULE_SET_TYPE.Remote && <Badge variant='secondary'>{t(`type.${set.type}`)}</Badge>}
-
-          {!set.recognized && <Badge variant='outline'>{t('rule.uncovered', { ns: 'shared' })}</Badge>}
-        </span>
-
-        {set.location !== '' && (
-          <span className='truncate font-mono text-xs text-muted-foreground' title={set.location}>
-            {set.location}
+        return (
+          <span
+            key={def.id}
+            role='cell'
+            className={cn(def.meta.className, def.accessorFn(set, position) === null && 'max-md:hidden')}
+          >
+            <Cell set={set} />
           </span>
-        )}
-      </span>
+        );
+      })}
 
-      <span role='cell' className={RULE_SET_COLUMN.Source}>
-        <span className='flex flex-wrap items-center gap-x-1.5 gap-y-0.5'>
-          <span>{providerName ?? t('ruleSet.ownSource', { ns: 'shared' })}</span>
-          {kind !== null && (
-            <>
-              <span aria-hidden='true'>·</span>
-              <span className='font-mono'>{kind}</span>
-            </>
-          )}
-          {category !== null && (
-            <>
-              <span aria-hidden='true'>·</span>
-              <span className='font-mono'>{category}</span>
-            </>
-          )}
-          {set.updateInterval !== null && (
-            <>
-              <span aria-hidden='true'>·</span>
-              <span>{t('row.interval', { interval: formatUpdateInterval(set.updateInterval) })}</span>
-            </>
-          )}
-          {set.detour !== null && (
-            <>
-              <span aria-hidden='true'>·</span>
-              <span>{t('row.detour', { detour: set.detour })}</span>
-            </>
-          )}
-        </span>
-      </span>
-
-      <span role='cell' className={RULE_SET_COLUMN.Usage}>
-        <RuleSetUsageMark tag={set.tag} usedBy={set.usedBy} />
-      </span>
       <span role='cell' className={RULE_SET_COLUMN.RowActions}>
         <Separator orientation='vertical' className='h-5' />
 

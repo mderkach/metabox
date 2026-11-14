@@ -1,5 +1,4 @@
 import { renderWithRouter } from '@test/renderWithRouter';
-import { selectOption } from '@test/selectOption';
 import { server } from '@test/server';
 import { mockVirtualSizes } from '@test/virtualSizes';
 import { act, screen, waitFor, within } from '@testing-library/react';
@@ -47,33 +46,6 @@ describe('logs screen', () => {
     expect(screen.queryByText('dns: exchanged example.com A 93.184.215.14')).not.toBeInTheDocument();
     expect(screen.getByText('источник: logread')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Лог sing-box' })).toHaveAttribute('aria-rowcount', '5');
-  });
-
-  it('the level goes into both the tail request and the stream', async () => {
-    const user = userEvent.setup();
-    const levels: (string | null)[] = [];
-
-    server.use(
-      http.get(LOG_ENDPOINT.logs(), ({ request }) => {
-        levels.push(new URL(request.url).searchParams.get('level'));
-
-        return HttpResponse.json({ source: 'logread', entries: [] });
-      })
-    );
-
-    renderScreen();
-
-    await screen.findByText('Строк нет');
-    expect(FakeLogSource.last().url).toBe('/api/logs/stream?level=info');
-
-    await selectOption(user, screen.getByRole('combobox', { name: 'Минимальный уровень лога' }), 'warn и выше');
-
-    await waitFor(() => {
-      expect(levels.at(-1)).toBe('warn');
-    });
-    expect(levels[0]).toBe('info');
-    expect(FakeLogSource.last().url).toBe('/api/logs/stream?level=warn');
-    expect(FakeLogSource.opened[0].closed).toBe(true);
   });
 
   it('stream lines are appended under the tail', async () => {

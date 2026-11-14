@@ -248,7 +248,7 @@ describe('proxies screen', () => {
       http.get(CONFIG_ENDPOINT.ruleSetFiles(), () => {
         listsRequested();
 
-        return HttpResponse.json({ files: {}, etag: null });
+        return HttpResponse.json({ files: {}, etag: '"lists"' });
       })
     );
 

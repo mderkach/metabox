@@ -56,6 +56,14 @@ export interface RuleSetSource {
   category: string | null;
 }
 
+/** What the device disk says about a rule set file. */
+export interface RuleSetFileStat {
+  /** Size in bytes. */
+  size: number;
+  /** Modification time, epoch milliseconds; `null` means the device clock was not set at the write. */
+  modifiedAt: number | null;
+}
+
 export interface RuleSetRow {
   /** Position in `route.rule_set`: sets have no identifier of their own. */
   id: string;
@@ -77,6 +85,11 @@ export interface RuleSetRow {
    * and takes memory without affecting anything.
    */
   usedBy: number;
+  /**
+   * The file on the device. `null` means unknown: only the daemon's own list files in
+   * `rule-sets/` are visible to it, a remote set lives in the sing-box cache.
+   */
+  file: RuleSetFileStat | null;
   /**
    * The node is accepted by the schema. False means it has a field the schema
    * does not know: it is shown incompletely and edited as text.

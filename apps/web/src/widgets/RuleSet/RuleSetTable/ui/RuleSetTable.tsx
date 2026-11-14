@@ -1,10 +1,12 @@
-import type { ReactNode } from 'react';
+import { useTable } from '@tanstack/react-table';
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { RuleSetRow as RuleSetRowModel } from '@entities/RuleSet';
 import { cn } from '@shared/lib/utils';
 import { SURFACE } from '@shared/ui';
 
+import { RULE_SET_COLUMNS, RULE_SET_TABLE_FEATURES } from './RuleSetColumns';
 import { RuleSetRow } from './RuleSetRow';
 import { RuleSetTableHeader } from './RuleSetTableHeader';
 
@@ -44,6 +46,9 @@ export function RuleSetTable({
   onRemove: (index: number) => void;
 }) {
   const { t } = useTranslation('widgets/RuleSet/RuleSetTable');
+  const table = useTable({ features: RULE_SET_TABLE_FEATURES, columns: RULE_SET_COLUMNS, data: sets });
+  const rows = table.getRowModel().rows;
+  const shown = useMemo(() => rows.map((row) => row.original), [rows]);
 
   return (
     <section className={cn('flex min-w-0 grow flex-col overflow-hidden', SURFACE)}>
@@ -61,7 +66,7 @@ export function RuleSetTable({
           <RuleSetTableHeader />
 
           <div role='rowgroup'>
-            {sets.map((set, position) => (
+            {shown.map((set, position) => (
               <RuleSetRow
                 key={set.id}
                 set={set}
