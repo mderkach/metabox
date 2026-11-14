@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ConfigDocumentStore, readSectionNodes, selectConfigCurrent } from '@entities/Config';
+import { CONFIG_ENDPOINT, ConfigDocumentStore, readSectionNodes, selectConfigCurrent } from '@entities/Config';
 import { configHandlers } from '@entities/Config/__tests__/Config.handlers';
 import { PROXY_ENDPOINT } from '@entities/Proxy';
 import { CLASH_PROVIDERS_FIXTURE, CLASH_PROXIES_FIXTURE } from '@entities/Proxy/__tests__/Proxy.fixture';
@@ -237,6 +237,25 @@ describe('proxies screen', () => {
     expect(outbounds).toContainEqual(expect.objectContaining({ type: 'urltest', tag: 'proxy-auto' }));
     expect(screen.getByText(/Ручной выбор добавлен в черновик/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Добавить ручной выбор для группы proxy' })).not.toBeInTheDocument();
+  });
+
+  // Manual choice reads only the config text; list files matter to Apply, and the apply bar loads them once a draft exists.
+  it('loads the config file for manual choice, not the rule-set list files', async () => {
+    serveProxies();
+    const listsRequested = vi.fn<() => void>();
+
+    server.use(
+      http.get(CONFIG_ENDPOINT.ruleSetFiles(), () => {
+        listsRequested();
+
+        return HttpResponse.json({ files: {}, etag: null });
+      })
+    );
+
+    renderWithQuery(<ProxiesPage />);
+
+    expect(await screen.findByRole('button', { name: 'Добавить ручной выбор для группы proxy' })).toBeInTheDocument();
+    expect(listsRequested).not.toHaveBeenCalled();
   });
 
   it('a URL-test node is not clickable: sing-box makes the choice there', async () => {

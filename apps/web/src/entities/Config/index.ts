@@ -80,7 +80,7 @@ export {
 } from './model/Config.registry';
 export type { NodeRegistry } from './model/Config.registry';
 export type { UnbuiltNode, UnbuiltOption } from './model/Config.build';
-export { useConfigDocument, useConfigLoad } from './model/Config.document';
+export { useConfigDocument, useConfigFileLoad, useConfigLoad } from './model/Config.document';
 export type { ConfigDocumentView } from './model/Config.document';
 export { ConfigDocumentState, ConfigDocumentStore } from './model/Config.store';
 export {

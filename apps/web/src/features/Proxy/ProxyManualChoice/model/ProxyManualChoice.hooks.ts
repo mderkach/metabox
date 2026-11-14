@@ -5,7 +5,7 @@ import {
   ConfigDocumentStore,
   selectConfigCurrent,
   useConfigCurrent,
-  useConfigLoad,
+  useConfigFileLoad,
 } from '@entities/Config';
 
 import {
@@ -18,10 +18,11 @@ import {
 /**
  * Manual choice over an automatic group, written into the editor draft. Nothing is
  * applied: the draft goes to the device by the usual Apply. The device file is loaded
- * here because the proxies screen does not load the document by itself.
+ * here because the proxies screen does not load the document by itself; list files are
+ * not, the apply bar loads them once a draft exists.
  */
 export function useManualChoice(group: string): { status: ManualChoiceStatus; add: () => boolean } {
-  useConfigLoad(true);
+  useConfigFileLoad(true);
 
   const text = useConfigCurrent();
   const insert = ConfigDocumentState.use.insert();
