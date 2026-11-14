@@ -242,3 +242,38 @@ export function dynamicSourceNames(values: readonly string[], devices: DeviceInd
 
   return [...new Set(names)];
 }
+
+/** Ports of a port condition worth offering: what a rule by port is usually about. */
+export const COMMON_PORTS = ['443', '80', '853'] as const;
+
+/** A home router serves a `/24`; a wider network still contains each of these subnets. */
+const LAN_PREFIX = 24;
+const IPV4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\d{1,3}$/;
+
+export interface LanSubnet {
+  cidr: string;
+  /** Devices of the router that have an address in it. */
+  devices: number;
+}
+
+/**
+ * Local network subnets by the addresses of its devices, in address order. The
+ * daemon does not serve the router interfaces, so the prefix is assumed, not read.
+ */
+export function lanSubnets(devices: DeviceIndex): LanSubnet[] {
+  const counts = new Map<string, number>();
+
+  for (const ip of devices.keys()) {
+    const match = IPV4.exec(ip);
+
+    if (match !== null) {
+      const cidr = `${match[1]}.${match[2]}.${match[3]}.0/${String(LAN_PREFIX)}`;
+
+      counts.set(cidr, (counts.get(cidr) ?? 0) + 1);
+    }
+  }
+
+  return [...counts]
+    .map(([cidr, count]) => ({ cidr, devices: count }))
+    .sort((left, right) => left.cidr.localeCompare(right.cidr, undefined, { numeric: true }));
+}

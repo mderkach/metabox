@@ -66,5 +66,15 @@
       "label": "Порт",
       "placeholder": "443"
     }
+  },
+  "suggestion": {
+    "lan_one": "локальная сеть · {{count}} устройство",
+    "lan_few": "локальная сеть · {{count}} устройства",
+    "lan_many": "локальная сеть · {{count}} устройств",
+    "port": {
+      "443": "HTTPS",
+      "80": "HTTP",
+      "853": "DNS over TLS"
+    }
   }
 }

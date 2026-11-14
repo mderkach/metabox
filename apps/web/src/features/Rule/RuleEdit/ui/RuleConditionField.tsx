@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useDeviceIndex } from '@entities/Device';
 import { Label, TokenInput } from '@shared/ui';
 
+import { useConditionSuggestions } from '../lib/RuleEdit.suggestions';
 import { sourceDeviceName } from '../model/RuleEdit.model';
 import {
   conditionLines,
@@ -45,6 +46,7 @@ export function RuleConditionField({ condition, focusOnMount }: { condition: Rul
   const devices = useDeviceIndex();
   const tokenLabel =
     condition === RULE_CONDITION.SourceIpCidr ? (token: string) => sourceDeviceName(token, devices) : undefined;
+  const suggestions = useConditionSuggestions(condition, devices);
 
   // A condition just picked from the list is typed into next. The frame waits
   // for the closing list, which gives focus back to its trigger.
@@ -86,6 +88,7 @@ export function RuleConditionField({ condition, focusOnMount }: { condition: Rul
               placeholder={t(`condition.${condition}.placeholder`)}
               isValid={CONDITION_VALID[condition]}
               tokenLabel={tokenLabel}
+              suggestions={suggestions}
               value={conditionLines(field.value)}
               onValueChange={(values) => {
                 field.onChange(values.join('\n'));

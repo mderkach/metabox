@@ -310,7 +310,7 @@ describe('rule conditions in the form', () => {
 
     renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
-    await user.type(screen.getByRole('textbox', { name: 'Порт' }), 'https');
+    await user.type(screen.getByRole('combobox', { name: 'Порт' }), 'https');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Порт — число от 0 до 65535');
 
@@ -323,7 +323,7 @@ describe('rule conditions in the form', () => {
 
     renderWithQuery(<RuleEditForm rule={rule} outbounds={['direct', 'proxy']} ruleSets={RULE_SETS} />);
 
-    await user.type(screen.getByRole('textbox', { name: 'IP или подсеть' }), 'example.com ');
+    await user.type(screen.getByRole('combobox', { name: 'IP или подсеть' }), 'example.com ');
 
     const [subnet, word] = within(screen.getByRole('list', { name: 'IP или подсеть: значения' })).getAllByRole(
       'listitem'

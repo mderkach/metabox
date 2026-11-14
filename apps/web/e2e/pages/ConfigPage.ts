@@ -31,4 +31,21 @@ export class ConfigPage {
   async openRule(title: string, index: number) {
     await this.ruleRow(title, index).click();
   }
+
+  /** The chip field of a rule condition by its key, such as `source_ip_cidr`. */
+  conditionField(condition: string): Locator {
+    return this.page.getByRole('combobox', { name: translate(RULE_EDIT, `condition.${condition}.label`), exact: true });
+  }
+
+  conditionSuggestions(condition: string): Locator {
+    const label = translate(RULE_EDIT, `condition.${condition}.label`);
+
+    return this.page.getByRole('listbox', { name: translate('shared', 'tokenInput.suggestions', { label }) });
+  }
+
+  conditionChips(condition: string): Locator {
+    const label = translate(RULE_EDIT, `condition.${condition}.label`);
+
+    return this.page.getByRole('list', { name: translate('shared', 'tokenInput.values', { label }) });
+  }
 }

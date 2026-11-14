@@ -355,6 +355,9 @@
   "tokenInput": {
     "values": "{{label}}: values",
     "remove": "Remove {{value}}",
-    "invalid": ", invalid"
+    "invalid": ", invalid",
+    "suggestions": "{{label}}: suggestions",
+    "suggestionCount_one": "{{count}} suggestion",
+    "suggestionCount_other": "{{count}} suggestions"
   }
 }

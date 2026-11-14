@@ -66,5 +66,14 @@
       "label": "Port",
       "placeholder": "443"
     }
+  },
+  "suggestion": {
+    "lan_one": "local network · {{count}} device",
+    "lan_other": "local network · {{count}} devices",
+    "port": {
+      "443": "HTTPS",
+      "80": "HTTP",
+      "853": "DNS over TLS"
+    }
   }
 }
