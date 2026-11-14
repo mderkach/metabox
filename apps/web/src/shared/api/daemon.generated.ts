@@ -63,6 +63,8 @@ export const ERROR_CODE = [
   'login_locked',
   'auth_disabled',
   'logout_not_saved',
+  'session_not_found',
+  'session_current',
   'check_failed',
   'internal',
 ] as const
@@ -347,12 +349,22 @@ export const WorkdirDetailsSchema = z.object({
   config_dir: z.string(),
 })
 
+/** ListStat is what the disk says about a list file. */
+export const ListStatSchema = z.object({
+  /** Size is the size in bytes. */
+  size: z.int(),
+  /** ModifiedAt is the file modification time, Unix seconds. Informational: shows the device clock at the time of the write and lies if it was not synchronized. */
+  modified_at: z.int(),
+})
+
 /** RuleSetFiles are the own list files from the rule-sets subdirectory of the config directory, as GET /api/config/rule-sets returns them. */
 export const RuleSetFilesSchema = z.object({
   /** Files is the file name → content byte for byte. */
   files: z.record(z.string(), z.string()),
   /** Etag is the set fingerprint; the client returns it in lists_base of the apply. */
   etag: z.string(),
+  /** Stats is the file name → size and modification time on disk. A file missing here was removed between the two reads; no field means there are no files. */
+  stats: z.record(z.string(), ListStatSchema).optional(),
 })
 
 /** ApplyEnvelope is a config apply together with the list files of the rule-sets subdirectory. Goes in POST /api/apply with Content-Type application/vnd.metabox.apply+json; a body without this type the daemon reads as bare config bytes. */
@@ -510,6 +522,25 @@ export const PasswordChangeSchema = z.object({
   current: z.string(),
   /** Password is the new password, 8 to 128 characters. Empty removes the password. */
   password: z.string(),
+})
+
+/** Session is a live panel session. Durations are counted by the router clock, which may run behind the real time, so the list carries them instead of moments. */
+export const SessionSchema = z.object({
+  /** ID is what `DELETE /api/auth/sessions/{id}` takes; it does not open the panel. */
+  id: z.string(),
+  /** Addr is the client address at login; empty for a session saved before addresses were kept. */
+  addr: z.string().optional(),
+  /** AgeSeconds is the time since login. */
+  age_seconds: z.int(),
+  /** IdleSeconds is the time since the last request. */
+  idle_seconds: z.int(),
+  /** Current means the session belongs to the caller: it is ended by logout. */
+  current: z.boolean(),
+})
+
+/** Sessions is the response of `GET /api/auth/sessions`: the live panel sessions, the caller's first, then by the last request. Empty while the panel has no password. */
+export const SessionsSchema = z.object({
+  sessions: z.array(SessionSchema),
 })
 
 /** MCP is the response of `GET /api/mcp`. */
@@ -779,6 +810,7 @@ export type HealthWire = z.infer<typeof HealthSchema>
 export type HistoryWire = z.infer<typeof HistorySchema>
 export type HitsWire = z.infer<typeof HitsSchema>
 export type LinkWire = z.infer<typeof LinkSchema>
+export type ListStatWire = z.infer<typeof ListStatSchema>
 export type ListWire = z.infer<typeof ListSchema>
 export type LoadWire = z.infer<typeof LoadSchema>
 export type LogEventWire = z.infer<typeof LogEventSchema>
@@ -801,6 +833,8 @@ export type RuleSetFilesWire = z.infer<typeof RuleSetFilesSchema>
 export type RuleWire = z.infer<typeof RuleSchema>
 export type RuntimeWire = z.infer<typeof RuntimeSchema>
 export type ServiceWire = z.infer<typeof ServiceSchema>
+export type SessionWire = z.infer<typeof SessionSchema>
+export type SessionsWire = z.infer<typeof SessionsSchema>
 export type ShareWire = z.infer<typeof ShareSchema>
 export type SplitWire = z.infer<typeof SplitSchema>
 export type StatWire = z.infer<typeof StatSchema>

@@ -414,6 +414,16 @@ export interface ConfigVersions {
   currentListsUnavailable: boolean;
 }
 
+/** Size and modification time of an own list file on the device. */
+export interface ConfigListStat {
+  size: number;
+  /**
+   * Epoch milliseconds; `null` means there is no timestamp: before NTP sync the router
+   * clock starts from the epoch.
+   */
+  modifiedAt: number | null;
+}
+
 export interface CheckFailure {
   stdout: string;
   stderr: string;

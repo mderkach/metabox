@@ -3,7 +3,7 @@ import { get, set, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
 
 import { compactNode } from '@entities/Config';
-import type { FieldPlan } from '@shared/lib/schemaShape';
+import { BOOLEAN_GROUP_FLAG, type FieldPlan } from '@shared/lib/schemaShape';
 
 import { overrideIssues, type NodeOverride } from './ConfigNodeForm.overrides';
 
@@ -160,6 +160,37 @@ function isSetValue(value: unknown): boolean {
   }
 
   return typeof value !== 'object' || isFilledGroup(value);
+}
+
+/** Details of a flag-or-object field: its object form without the flag; `null` while it is a flag or unset. */
+export function booleanGroupDetails(value: unknown): ConfigNodeFormModel | null {
+  return isRecord(value)
+    ? Object.fromEntries(Object.entries(value).filter(([key]) => key !== BOOLEAN_GROUP_FLAG))
+    : null;
+}
+
+/** A flag-or-object field without a value: unset, or its object form with nothing set yet. */
+export function isBooleanGroupUnset(value: unknown): boolean {
+  return isUnset(value) || (isRecord(value) && countFilled(value) === 0);
+}
+
+/** Whether a flag-or-object field is on: `true` or an object with the flag on. */
+export function isBooleanGroupOn(value: unknown): boolean {
+  return isRecord(value) ? value[BOOLEAN_GROUP_FLAG] === true : value === true;
+}
+
+/** A flag-or-object value with the flag switched: an object keeps its details and key order. */
+export function switchBooleanGroup(value: unknown, checked: boolean): boolean | ConfigNodeFormModel {
+  return isRecord(value) ? { ...value, [BOOLEAN_GROUP_FLAG]: checked } : checked;
+}
+
+/** The object form of a flag-or-object value: `true` is `{ enabled: true }`, unset is an empty object. */
+export function toBooleanGroupObject(value: unknown): ConfigNodeFormModel {
+  if (isRecord(value)) {
+    return value;
+  }
+
+  return isUnset(value) ? {} : { [BOOLEAN_GROUP_FLAG]: value };
 }
 
 /** Set fields of a group, its own level only: a nested group counts as one when anything in it is set. */

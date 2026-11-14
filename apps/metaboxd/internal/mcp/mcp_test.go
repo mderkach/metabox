@@ -120,6 +120,10 @@ func (fakeConfig) ReadLists(context.Context) (map[string][]byte, error) {
 	return map[string][]byte{}, nil
 }
 
+func (fakeConfig) ListStats(context.Context) (map[string]config.ListStat, error) {
+	return map[string]config.ListStat{}, nil
+}
+
 func (fakeConfig) ListSums(context.Context) (map[string]string, error) {
 	return map[string]string{}, nil
 }

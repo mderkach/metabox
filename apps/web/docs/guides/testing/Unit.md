@@ -144,7 +144,8 @@ The `browser` project runs the test file in headless Chromium through `@vitest/b
 - Clicks and typing go through `userEvent` from `vitest/browser`: it drives Playwright, so the click is a real mouse click. `@testing-library/user-event` dispatches synthetic events and is not used here. A dropdown is opened by a click on the trigger and an option is picked by a click on it (`ConfigNodeAddManual.browser.test.tsx`), without `selectOption`.
 - Queries are the same Testing Library `screen` queries; matchers are the browser mode's own, `@testing-library/jest-dom` is not loaded.
 - `src/test/browserSetup.ts` loads the panel styles and the test dictionary. The jsdom stubs and `msw/node` from `setup.ts` are not there.
-- The network is mocked by the msw service worker (`msw/browser`); the browser project serves its script the same way the dev server does with mocks.
+- The network is mocked by the msw service worker (`msw/browser`); the browser project serves its script the same way the dev server does with mocks. `worker` from `@test/browserWorker` starts it for a file and resets its handlers after each test; a test adds handlers with `worker.use(...)`, as jsdom tests do with `server.use(...)`.
+- The browser mode's `toHaveTextContent` compares the whole text and a select trigger carries its arrow glyph, so a trigger's value is checked as `within(trigger).getByText(value)`.
 - The WCAG 2.2 AA check is `App.axe.browser.test.tsx`: axe-core runs in the page over Overview, Editor, Rule sets, Connections and Proxies in both themes, with the dev mock data (`createMissingHandlers`). A violation that is not fixed yet is listed in its `KNOWN_VIOLATIONS` with the number of failing elements; the test fails on any other set, so a fix also removes its line.
 
 ## Autorenderer

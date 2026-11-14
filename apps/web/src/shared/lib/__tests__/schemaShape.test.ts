@@ -22,6 +22,13 @@ const NodeSchema = z.strictObject({
   ports: z.array(z.int()).optional(),
   domain_resolver: z.union([z.string(), z.strictObject({ server: z.string().optional() })]).optional(),
   headers: z.record(z.string(), z.string()).optional(),
+  optimistic: z
+    .union([
+      z.boolean(),
+      z.strictObject({ enabled: z.boolean().optional(), timeout: z.string().regex(DURATION).optional() }),
+    ])
+    .optional(),
+  bypass: z.union([z.boolean(), z.strictObject({ timeout: z.string().optional() })]).optional(),
   get tls() {
     return z
       .strictObject({
@@ -55,6 +62,8 @@ describe('toFieldPlan', () => {
     ['network', FIELD_KIND.EnumList],
     ['outbounds', FIELD_KIND.List],
     ['tls', FIELD_KIND.Group],
+    ['optimistic', FIELD_KIND.BooleanGroup],
+    ['bypass', FIELD_KIND.Raw],
   ])('field %s gets kind %s', (key, kind) => {
     expect(fieldOf(key)?.kind).toBe(kind);
   });
@@ -92,6 +101,12 @@ describe('toFieldPlan', () => {
     expect(reality?.kind).toBe(FIELD_KIND.Group);
     expect(reality?.children).toEqual([
       { key: 'public_key', path: ['tls', 'reality', 'public_key'], kind: FIELD_KIND.String },
+    ]);
+  });
+
+  it('a flag-or-object field details the object without its flag', () => {
+    expect(fieldOf('optimistic')?.children).toEqual([
+      { key: 'timeout', path: ['optimistic', 'timeout'], kind: FIELD_KIND.Duration },
     ]);
   });
 

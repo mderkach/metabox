@@ -111,7 +111,33 @@ describe('rule sets screen', () => {
       within(table)
         .getAllByRole('columnheader')
         .map((cell) => cell.textContent)
-    ).toEqual(['Сет', 'Источник', 'Использование', 'Действия над строкой']);
+    ).toEqual(['Сет', 'Источник', 'Обновлён', 'Размер', 'Использование', 'Действия над строкой']);
+  });
+
+  // The device knows the time and size only of the daemon's own list files: a remote set lives in
+  // the sing-box cache, an inline one has no file at all.
+  it('shows the update time and size of an own list file and leaves the rest unknown', async () => {
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG_WITHOUT_REMOTE)),
+      http.get(CONFIG_ENDPOINT.ruleSetFiles(), () =>
+        HttpResponse.json({
+          files: { 'big-list.json': '{}' },
+          etag: '"lists"',
+          stats: { 'big-list.json': { size: 2048, modified_at: 1_757_550_000 } },
+        })
+      )
+    );
+
+    renderWithRouter(RuleSetsPage);
+
+    const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
+    const [inline, local] = within(table).getAllByRole('row').slice(HEADER_ROWS);
+
+    await waitFor(() => {
+      expect(within(local).getByText('2.0 кБ')).toBeInTheDocument();
+    });
+    expect(within(local).getByRole('time')).toHaveAttribute('dateTime', new Date(1_757_550_000_000).toISOString());
+    expect(within(inline).getAllByText('неизвестно')).toHaveLength(2);
   });
 
   it('names the provider and list kind by the daemon catalog', async () => {

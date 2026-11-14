@@ -156,20 +156,21 @@ The entity knows the registries: `entities/Config` reads the generated unions an
 
 ### Field kind → widget
 
-| Kind       | Schema                                                                         | Widget                                                        |
-| ---------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------- |
-| `string`   | `z.string()`                                                                   | input field                                                   |
-| `duration` | `z.string().regex(…)` with the Go duration pattern from the generator          | input field with a format example `10s`, `1m30s`              |
-| `int`      | `z.int()`                                                                      | number field; empty means no key                              |
-| `number`   | `z.number()`                                                                   | number field; empty means no key                              |
-| `boolean`  | `z.boolean()`                                                                  | switch and a "reset" button («сбросить») that removes the key |
-| `enum`     | `z.enum()`                                                                     | select; the empty item means no key                           |
-| `literal`  | `z.literal()`: the `type` discriminator                                        | not drawn: the type changes only with a new node              |
-| `list`     | `z.array(z.string())` or listable `z.union([X, z.array(X)])`                   | chips (`TokenInput`): Enter or a pasted line closes a value   |
-| `enumList` | the same over `z.enum()`                                                       | group of switches with multiple selection                     |
-| `scalar`   | union of string and integer (`FwMark`, `UDPTimeoutCompat`)                     | input field; an entry of digits only is written as a number   |
-| `group`    | `z.strictObject()` no deeper than `MAX_DEPTH`                                  | `FieldSet` with `FieldLegend`, collapsed while empty          |
-| `raw`      | everything else: union of string and object, array of objects, nested registry | JSON text of the subnode; secrets masked until shown          |
+| Kind           | Schema                                                                         | Widget                                                                                                                                                          |
+| -------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `string`       | `z.string()`                                                                   | input field                                                                                                                                                     |
+| `duration`     | `z.string().regex(…)` with the Go duration pattern from the generator          | input field with a format example `10s`, `1m30s`                                                                                                                |
+| `int`          | `z.int()`                                                                      | number field; empty means no key                                                                                                                                |
+| `number`       | `z.number()`                                                                   | number field; empty means no key                                                                                                                                |
+| `boolean`      | `z.boolean()`                                                                  | switch and a "reset" button («сбросить») that removes the key                                                                                                   |
+| `enum`         | `z.enum()`                                                                     | select; the empty item means no key                                                                                                                             |
+| `literal`      | `z.literal()`: the `type` discriminator                                        | not drawn: the type changes only with a new node                                                                                                                |
+| `list`         | `z.array(z.string())` or listable `z.union([X, z.array(X)])`                   | chips (`TokenInput`): Enter or a pasted line closes a value                                                                                                     |
+| `enumList`     | the same over `z.enum()`                                                       | group of switches with multiple selection                                                                                                                       |
+| `scalar`       | union of string and integer (`FwMark`, `UDPTimeoutCompat`)                     | input field; an entry of digits only is written as a number                                                                                                     |
+| `group`        | `z.strictObject()` no deeper than `MAX_DEPTH`                                  | `FieldSet` with `FieldLegend`, collapsed while empty                                                                                                            |
+| `booleanGroup` | union of `z.boolean()` and an object with an `enabled` flag (`dns.optimistic`) | switch with a reset and a «Подробнее» disclosure with the object's other fields; an object holding only the flag is written as the flag over a flag in the file |
+| `raw`          | everything else: union of string and object, array of objects, nested registry | JSON text of the subnode; secrets masked until shown                                                                                                            |
 
 - The "kind → widget" table is a `Record<FieldKind, Widget>` in the `ui` of the renderer slice; a new kind is added by an entry, not by an `if` branch. A kind unknown to recognition goes to `raw`: the field is not lost and does not break the form.
 - Fields that went to `raw` across all registry types are listed in a snapshot of the walk test (`ConfigNodeForm.coverage.test.tsx`): growth of the list is visible in the diff.

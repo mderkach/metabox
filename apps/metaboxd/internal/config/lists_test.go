@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"metabox/internal/config"
 )
@@ -46,6 +48,45 @@ func TestListsRoundTrip(t *testing.T) {
 	}
 	if len(files) != 0 {
 		t.Errorf("files remained after deletion: %v", files)
+	}
+}
+
+// The stat covers only the files the daemon manages and reports what the disk holds.
+func TestListStats(t *testing.T) {
+	store, cfgDir := newStore(t)
+	writeConfig(t, cfgDir, configName, []byte("{}"), 0o600)
+
+	stats, err := store.ListStats(t.Context())
+	if err != nil {
+		t.Fatalf("stat without a directory: %v", err)
+	}
+	if len(stats) != 0 {
+		t.Errorf("stat without a directory returned %v", stats)
+	}
+
+	put := map[string][]byte{"my.json": []byte(`{"rules":[]}`)}
+	if err := store.WriteLists(t.Context(), put, nil); err != nil {
+		t.Fatalf("writing lists: %v", err)
+	}
+
+	foreign := filepath.Join(store.ListsPath(), "notes.srs")
+	if err := os.WriteFile(foreign, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	modified := time.Unix(1_700_000_000, 0)
+	if err := os.Chtimes(filepath.Join(store.ListsPath(), "my.json"), modified, modified); err != nil {
+		t.Fatal(err)
+	}
+
+	stats, err = store.ListStats(t.Context())
+	if err != nil {
+		t.Fatalf("stat of lists: %v", err)
+	}
+
+	want := map[string]config.ListStat{"my.json": {Size: int64(len(put["my.json"])), ModifiedAt: modified.Unix()}}
+	if !maps.Equal(stats, want) {
+		t.Errorf("stat %v, expected %v", stats, want)
 	}
 }
 

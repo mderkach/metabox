@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io/fs"
 	"net/netip"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -982,5 +983,126 @@ func TestFailedSaveAfterAChangeDoesNotBringSessionsBack(t *testing.T) {
 
 	if _, valid := restarted.Check(token); valid {
 		t.Error("a session closed by the password change came back from a stale session file")
+	}
+}
+
+func TestSessionsListTheCallerFirstWithoutTokens(t *testing.T) {
+	g, c, _, token := protected(t)
+
+	c.advance(time.Hour)
+
+	other, err := g.Login(t.Context(), stranger, password)
+	if err != nil {
+		t.Fatalf("second login: %v", err)
+	}
+
+	c.advance(time.Minute)
+
+	list := g.Sessions(token)
+	if len(list) != 2 {
+		t.Fatalf("got %d sessions, want 2", len(list))
+	}
+
+	if !list[0].Current || list[1].Current {
+		t.Errorf("current flags %v, %v: want the caller first", list[0].Current, list[1].Current)
+	}
+
+	if list[0].Addr != owner || list[1].Addr != stranger {
+		t.Errorf("addresses %v, %v, want %v, %v", list[0].Addr, list[1].Addr, owner, stranger)
+	}
+
+	if list[0].Age != time.Hour+time.Minute || list[1].Age != time.Minute || list[1].Idle != time.Minute {
+		t.Errorf("durations %+v, %+v", list[0], list[1])
+	}
+
+	for _, s := range list {
+		if s.ID == "" || strings.Contains(token+other, s.ID) {
+			t.Errorf("identifier %q is empty or part of a token", s.ID)
+		}
+	}
+}
+
+func TestEndSessionClosesAnotherSession(t *testing.T) {
+	g, _, store, token := protected(t)
+
+	other, err := g.Login(t.Context(), stranger, password)
+	if err != nil {
+		t.Fatalf("second login: %v", err)
+	}
+
+	ended := g.Ended(other)
+
+	var id string
+	for _, s := range g.Sessions(token) {
+		if !s.Current {
+			id = s.ID
+		}
+	}
+
+	addr, err := g.EndSession(t.Context(), token, id)
+	if err != nil {
+		t.Fatalf("end session: %v", err)
+	}
+
+	if addr != stranger {
+		t.Errorf("ended session address %v, want %v", addr, stranger)
+	}
+
+	if _, valid := g.Check(other); valid {
+		t.Error("ended session is still valid")
+	}
+
+	select {
+	case <-ended:
+	default:
+		t.Error("ended channel did not close")
+	}
+
+	if _, valid := g.Check(token); !valid {
+		t.Error("the caller's session ended too")
+	}
+
+	restarted, err := auth.New(t.Context(), store, auth.Options{Iterations: 1000})
+	if err != nil {
+		t.Fatalf("restart: %v", err)
+	}
+
+	if _, valid := restarted.Check(other); valid {
+		t.Error("ended session came back after restart")
+	}
+}
+
+func TestEndSessionRefusesTheCallerAndUnknownIDs(t *testing.T) {
+	g, _, _, token := protected(t)
+
+	own := g.Sessions(token)[0].ID
+
+	if _, err := g.EndSession(t.Context(), token, own); !errors.Is(err, auth.ErrCurrentSession) {
+		t.Errorf("own session: got %v, want ErrCurrentSession", err)
+	}
+
+	if _, valid := g.Check(token); !valid {
+		t.Error("the caller's session ended")
+	}
+
+	if _, err := g.EndSession(t.Context(), token, "unknown"); !errors.Is(err, auth.ErrUnknownSession) {
+		t.Errorf("unknown id: got %v, want ErrUnknownSession", err)
+	}
+}
+
+func TestSessionAddressAndAgeSurviveRestart(t *testing.T) {
+	g, c, store, token := protected(t)
+
+	before := g.Sessions(token)[0]
+	c.advance(time.Hour)
+
+	restarted, err := auth.New(t.Context(), store, auth.Options{Now: c.now, Iterations: 1000})
+	if err != nil {
+		t.Fatalf("restart: %v", err)
+	}
+
+	after := restarted.Sessions(token)
+	if len(after) != 1 || after[0].ID != before.ID || after[0].Addr != owner || after[0].Age != time.Hour {
+		t.Errorf("after restart %+v, before %+v", after, before)
 	}
 }

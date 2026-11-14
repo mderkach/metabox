@@ -102,3 +102,102 @@ describe('section scalars form', () => {
     expect(findValue(draft(), ['route'])).toEqual({});
   });
 });
+
+describe('dns.optimistic, a flag or an object', () => {
+  const FLAG = `{
+  "dns": {
+    "servers": [{ "type": "local", "tag": "local" }],
+    // отдавать устаревший ответ, пока идёт новый запрос
+    "optimistic": true,
+    "final": "local",
+  },
+}`;
+
+  const OBJECT = `{
+  "dns": {
+    "optimistic": {
+      // кэш дольше часа не отдаём
+      "enabled": true,
+      "timeout": "1h",
+    },
+    "final": "local",
+  },
+}`;
+
+  function load(text: string) {
+    ConfigDocumentState.getState().reset();
+    ConfigDocumentState.getState().load(text);
+  }
+
+  it('edits without JSON: a detail turns the flag into the object in place', async () => {
+    load(FLAG);
+    const user = userEvent.setup();
+
+    render(<SettingsFromStore section={CONFIG_SECTION.Dns} />);
+
+    expect(screen.getByRole('switch', { name: 'optimistic' })).toBeChecked();
+    expect(screen.queryByRole('textbox', { name: 'optimistic' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Подробнее: optimistic' }));
+
+    expect(findValue(draft() || FLAG, ['dns', 'optimistic'])).toBe(true);
+
+    await user.type(screen.getByRole('textbox', { name: 'timeout' }), '1h');
+    await user.tab();
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['dns', 'optimistic'])).toEqual({ enabled: true, timeout: '1h' });
+    });
+    expect(draft()).toContain('// отдавать устаревший ответ, пока идёт новый запрос');
+    expect(findValue(draft(), ['dns', 'final'])).toBe('local');
+  });
+
+  it('switching off over the open details writes the flag, not an object', async () => {
+    load(FLAG);
+    const user = userEvent.setup();
+
+    render(<SettingsFromStore section={CONFIG_SECTION.Dns} />);
+    await user.click(screen.getByRole('button', { name: 'Подробнее: optimistic' }));
+    await user.click(screen.getByRole('switch', { name: 'optimistic' }));
+
+    await waitFor(() => {
+      expect(changedLines(FLAG, draft())).toEqual(['    "optimistic": false,']);
+    });
+  });
+
+  it('an object in the file opens with its details and is edited by keys, keeping its comment', async () => {
+    load(OBJECT);
+    const user = userEvent.setup();
+
+    render(<SettingsFromStore section={CONFIG_SECTION.Dns} />);
+
+    expect(screen.getByRole('textbox', { name: 'timeout' })).toHaveValue('1h');
+
+    await user.click(screen.getByRole('switch', { name: 'optimistic' }));
+
+    await waitFor(() => {
+      expect(changedLines(OBJECT, draft())).toEqual(['      "enabled": false,']);
+    });
+
+    await user.clear(screen.getByRole('textbox', { name: 'timeout' }));
+    await user.tab();
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['dns', 'optimistic'])).toEqual({ enabled: false });
+    });
+    expect(draft()).toContain('// кэш дольше часа не отдаём');
+  });
+
+  it('a reset removes the key whatever its form', async () => {
+    load(OBJECT);
+    const user = userEvent.setup();
+
+    render(<SettingsFromStore section={CONFIG_SECTION.Dns} />);
+    await user.click(screen.getByRole('button', { name: 'Сбросить optimistic' }));
+    await user.tab();
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['dns'])).toEqual({ final: 'local' });
+    });
+  });
+});

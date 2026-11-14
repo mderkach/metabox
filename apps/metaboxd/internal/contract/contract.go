@@ -265,6 +265,12 @@ const (
 	// session file: after a daemon restart the session comes back. The cookie is cleared
 	// anyway.
 	ErrLogoutNotSaved ErrorCode = "logout_not_saved"
+	// ErrSessionNotFound means no live session has the identifier from the session list:
+	// it ended or expired since the list was read.
+	ErrSessionNotFound ErrorCode = "session_not_found"
+	// ErrSessionCurrent means the session list was asked to end the caller's own session;
+	// the caller logs out instead.
+	ErrSessionCurrent ErrorCode = "session_current"
 	// ErrCheckFailed means `sing-box check` rejected the config; the binary output is in Details.
 	ErrCheckFailed ErrorCode = "check_failed"
 	// ErrInternal is a failure there is nothing to say outside about: details are in the log.
@@ -295,6 +301,9 @@ type RuleSetFiles struct {
 	Files map[string]string `json:"files"`
 	// Etag is the set fingerprint; the client returns it in lists_base of the apply.
 	Etag string `json:"etag"`
+	// Stats is the file name → size and modification time on disk. A file missing here
+	// was removed between the two reads; no field means there are no files.
+	Stats map[string]config.ListStat `json:"stats,omitempty"`
 }
 
 // Devices is the response of `GET /api/devices` and `PUT /api/devices/{mac}`: LAN
@@ -333,6 +342,28 @@ type PasswordChange struct {
 	Current string `json:"current"`
 	// Password is the new password, 8 to 128 characters. Empty removes the password.
 	Password string `json:"password"`
+}
+
+// Sessions is the response of `GET /api/auth/sessions`: the live panel sessions, the
+// caller's first, then by the last request. Empty while the panel has no password.
+type Sessions struct {
+	Sessions []Session `json:"sessions"`
+}
+
+// Session is a live panel session. Durations are counted by the router clock, which may
+// run behind the real time, so the list carries them instead of moments.
+type Session struct {
+	// ID is what `DELETE /api/auth/sessions/{id}` takes; it does not open the panel.
+	ID string `json:"id"`
+	// Addr is the client address at login; empty for a session saved before addresses
+	// were kept.
+	Addr string `json:"addr,omitempty"`
+	// AgeSeconds is the time since login.
+	AgeSeconds int64 `json:"age_seconds"`
+	// IdleSeconds is the time since the last request.
+	IdleSeconds int64 `json:"idle_seconds"`
+	// Current means the session belongs to the caller: it is ended by logout.
+	Current bool `json:"current"`
 }
 
 // MCPPermission is what an MCP access token allows. The set is closed: a tool exists in
