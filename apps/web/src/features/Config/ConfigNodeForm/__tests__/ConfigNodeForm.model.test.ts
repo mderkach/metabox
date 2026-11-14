@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { NODE_REGISTRY } from '@entities/Config';
 import { SECRET_FIELD_KEYS } from '@shared/api/generated';
+import { FIELD_KIND, type FieldPlan } from '@shared/lib/schemaShape';
 
 import {
   countFilled,
   listToText,
+  packBooleanGroups,
   packList,
   parseNumber,
   parseScalar,
@@ -114,5 +116,41 @@ describe('group fill count', () => {
 
   it('counts nothing for a group that is not set', () => {
     expect(countFilled(undefined)).toBe(0);
+  });
+});
+
+describe('flag-or-object write', () => {
+  const PLAN: FieldPlan[] = [
+    {
+      key: 'optimistic',
+      path: ['optimistic'],
+      kind: FIELD_KIND.BooleanGroup,
+      children: [{ key: 'timeout', path: ['optimistic', 'timeout'], kind: FIELD_KIND.Duration }],
+    },
+  ];
+
+  it.each([
+    ['a flag', true, true],
+    ['nothing', undefined, true],
+  ])('an object with only the flag over %s is written as the flag', (_, before, written) => {
+    expect(packBooleanGroups(PLAN, { optimistic: before }, { optimistic: { enabled: true, timeout: null } })).toEqual({
+      optimistic: written,
+    });
+  });
+
+  it('an object with details is written as an object', () => {
+    const data = { optimistic: { enabled: true, timeout: '1h' } };
+
+    expect(packBooleanGroups(PLAN, { optimistic: true }, data)).toEqual(data);
+  });
+
+  it('an object in the document stays an object, compared by keys', () => {
+    const data = { optimistic: { enabled: true, timeout: null } };
+
+    expect(packBooleanGroups(PLAN, { optimistic: { enabled: true, timeout: '1h' } }, data)).toEqual(data);
+  });
+
+  it('an empty object form over nothing writes nothing', () => {
+    expect(packBooleanGroups(PLAN, {}, { optimistic: {} })).toEqual({ optimistic: {} });
   });
 });

@@ -3,6 +3,10 @@
     "unset": "не задано",
     "reset": "Сбросить {{name}}"
   },
+  "booleanGroup": {
+    "details": "Подробнее",
+    "detailsOf": "Подробнее: {{name}}"
+  },
   "enum": {
     "unset": "не задано"
   },
