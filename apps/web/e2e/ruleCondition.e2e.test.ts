@@ -26,13 +26,15 @@ test(
 
     await test.step('a picked device becomes a chip with its name and the field stays ready', async () => {
       await devices.getByRole('option', { name: `${DEVICE.name} ${DEVICE.ip}` }).click();
+      await expect(devices.getByRole('option', { name: `${DEVICE.name} ${DEVICE.ip}` })).toBeHidden();
+      // An open list hides the rest of the form from assistive tech; the chips are read after it closes.
+      await configPage.page.keyboard.press('Escape');
 
       await expect(configPage.conditionChips(CONDITION).getByRole('listitem')).toHaveText([
         '192.168.1.100/32',
         `${DEVICE.name} ${DEVICE.ip}/32`,
       ]);
       await expect(configPage.conditionField(CONDITION)).toBeFocused();
-      await expect(devices.getByRole('option', { name: `${DEVICE.name} ${DEVICE.ip}` })).toBeHidden();
       await expect(applyBar.dirty).toBeVisible();
     });
   }

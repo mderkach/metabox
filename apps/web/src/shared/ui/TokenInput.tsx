@@ -1,10 +1,11 @@
+import { Autocomplete as AutocompletePrimitive } from '@base-ui/react/autocomplete';
 import { XIcon } from 'lucide-react';
 import { useId, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '../lib/utils';
 import { Badge } from './shadcn/badge';
-import { movedHighlight, offeredSuggestions, tokenOptionId, type TokenSuggestion } from './TokenInput.lib';
+import { offeredSuggestions, type TokenSuggestion } from './TokenInput.lib';
 import { TokenInputSuggestions } from './TokenInputSuggestions';
 
 const SEPARATOR = /[\s,]+/;
@@ -62,16 +63,18 @@ export function TokenInput({
   const { t } = useTranslation('shared');
   const [typed, setTyped] = useState('');
   const input = useRef<HTMLInputElement | null>(null);
-  const listId = useId();
+  const footerId = useId();
+  const field = useRef<HTMLDivElement | null>(null);
   const [listOpen, setListOpen] = useState(false);
-  const [highlighted, setHighlighted] = useState<number | null>(null);
+  const [highlighted, setHighlighted] = useState<TokenSuggestion | null>(null);
   // The typed text is recognized by being the last value; a value set from
   // outside, such as a picked device, closes it.
   const draft = typed !== '' && value.at(-1) === typed ? typed : '';
   const tokens = draft === '' ? value : value.slice(0, -1);
   const offered = suggestions === undefined ? [] : offeredSuggestions(suggestions(tokens), tokens, draft);
   const listShown = listOpen && offered.length > 0;
-  const picked = listShown && highlighted !== null ? offered.at(highlighted) : undefined;
+  const picked = listShown ? (highlighted ?? undefined) : undefined;
+  const Field = suggestions === undefined ? 'input' : AutocompletePrimitive.Input;
 
   const unique = (values: readonly string[]) => (distinct ? [...new Set(values)] : [...values]);
 
@@ -91,8 +94,6 @@ export function TokenInput({
     const closed = unique([...tokens, ...parts.filter((part) => part.length > 0)]);
 
     setTyped(tail);
-    setHighlighted(null);
-    setListOpen(true);
     onValueChange(tail === '' ? closed : [...closed, tail]);
   };
 
@@ -106,15 +107,10 @@ export function TokenInput({
     }
   };
 
-  const accept = (suggestion: TokenSuggestion) => {
+  const accept = (suggestion: string) => {
     setTyped('');
     setHighlighted(null);
-    onValueChange(unique([...tokens, suggestion.value]));
-  };
-
-  const closeList = () => {
-    setListOpen(false);
-    setHighlighted(null);
+    onValueChange(unique([...tokens, suggestion]));
   };
 
   const remove = (index: number) => {
@@ -123,142 +119,122 @@ export function TokenInput({
   };
 
   return (
-    <div className='relative flex w-full min-w-0 flex-col gap-1.5'>
-      <div
-        className={cn(
-          'flex min-h-8 w-full min-w-0 flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent px-1 py-1 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 has-[input[aria-invalid=true]]:border-destructive has-[input[aria-invalid=true]]:ring-3 has-[input[aria-invalid=true]]:ring-destructive/20 dark:bg-input/30 dark:has-[input[aria-invalid=true]]:border-destructive/50',
-          className
-        )}
-      >
-        {tokens.length > 0 && (
-          // oxlint-disable-next-line jsx-a11y/no-redundant-roles -- `display: contents` drops the implicit list role in Safari
-          <ul role='list' aria-label={t('tokenInput.values', { label })} className='contents'>
-            {tokens.map((token, index) => {
-              const invalid = isValid?.(token) === false;
-              const name = tokenLabel?.(token);
+    <TokenInputSuggestions
+      items={suggestions === undefined ? undefined : offered}
+      label={label}
+      typed={draft}
+      open={listOpen}
+      highlighted={picked ?? null}
+      footerId={footerId}
+      onOpenChange={setListOpen}
+      onAccept={accept}
+      onHighlight={(suggestion) => {
+        setHighlighted((current) => (current?.value === suggestion?.value ? current : suggestion));
+      }}
+      anchor={field}
+    >
+      <div ref={field} className='flex w-full min-w-0 flex-col gap-1.5'>
+        <div
+          className={cn(
+            'flex min-h-8 w-full min-w-0 flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent px-1 py-1 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 has-[input[aria-invalid=true]]:border-destructive has-[input[aria-invalid=true]]:ring-3 has-[input[aria-invalid=true]]:ring-destructive/20 dark:bg-input/30 dark:has-[input[aria-invalid=true]]:border-destructive/50',
+            className
+          )}
+        >
+          {tokens.length > 0 && (
+            // oxlint-disable-next-line jsx-a11y/no-redundant-roles -- `display: contents` drops the implicit list role in Safari
+            <ul role='list' aria-label={t('tokenInput.values', { label })} className='contents'>
+              {tokens.map((token, index) => {
+                const invalid = isValid?.(token) === false;
+                const name = tokenLabel?.(token);
 
-              return (
-                <li key={`${String(index)}:${token}`} className='max-w-full min-w-0'>
-                  <Badge
-                    variant='secondary'
-                    aria-invalid={invalid || undefined}
-                    className='h-6 max-w-full gap-0.5 pr-0.5 font-mono pointer-coarse:h-8'
-                  >
-                    {name !== undefined && (
-                      <>
-                        <span className='mr-0.5 min-w-0 truncate font-sans' title={name}>
-                          {name}
-                        </span>{' '}
-                      </>
-                    )}
-                    <span
-                      className={cn('min-w-0 truncate', name !== undefined && 'text-muted-foreground')}
-                      title={token}
+                return (
+                  <li key={`${String(index)}:${token}`} className='max-w-full min-w-0'>
+                    <Badge
+                      variant='secondary'
+                      aria-invalid={invalid || undefined}
+                      className='h-6 max-w-full gap-0.5 pr-0.5 font-mono pointer-coarse:h-8'
                     >
-                      {token}
-                    </span>
-                    {invalid && <span className='sr-only'>{t('tokenInput.invalid')}</span>}
-                    <button
-                      type='button'
-                      aria-label={t('tokenInput.remove', { value: token })}
-                      className='inline-flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none pointer-coarse:size-7'
-                      onClick={() => {
-                        remove(index);
-                      }}
-                    >
-                      <XIcon className='size-3' aria-hidden='true' />
-                    </button>
-                  </Badge>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        <input
-          ref={setRef}
-          value={draft}
-          placeholder={tokens.length === 0 ? placeholder : undefined}
-          className='h-6 min-w-24 flex-1 bg-transparent px-1.5 font-mono text-base outline-none placeholder:text-muted-foreground md:text-sm'
-          onChange={(event) => {
-            type(event.target.value);
-          }}
-          // A one-line field drops line breaks from pasted text, and a list
-          // copied one value per line would glue into one value.
-          onPaste={(event) => {
-            const text = event.clipboardData.getData('text');
-            const pasted = pasteFilter === undefined ? text : pasteFilter(text);
-            const { selectionStart, selectionEnd } = event.currentTarget;
+                      {name !== undefined && (
+                        <>
+                          <span className='mr-0.5 min-w-0 truncate font-sans' title={name}>
+                            {name}
+                          </span>{' '}
+                        </>
+                      )}
+                      <span
+                        className={cn('min-w-0 truncate', name !== undefined && 'text-muted-foreground')}
+                        title={token}
+                      >
+                        {token}
+                      </span>
+                      {invalid && <span className='sr-only'>{t('tokenInput.invalid')}</span>}
+                      <button
+                        type='button'
+                        aria-label={t('tokenInput.remove', { value: token })}
+                        className='inline-flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none pointer-coarse:size-7'
+                        onClick={() => {
+                          remove(index);
+                        }}
+                      >
+                        <XIcon className='size-3' aria-hidden='true' />
+                      </button>
+                    </Badge>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <Field
+            ref={setRef}
+            value={draft}
+            placeholder={tokens.length === 0 ? placeholder : undefined}
+            className='h-6 min-w-24 flex-1 bg-transparent px-1.5 font-mono text-base outline-none placeholder:text-muted-foreground md:text-sm'
+            onChange={(event) => {
+              type(event.target.value);
+            }}
+            // A one-line field drops line breaks from pasted text, and a list
+            // copied one value per line would glue into one value.
+            onPaste={(event) => {
+              const text = event.clipboardData.getData('text');
+              const pasted = pasteFilter === undefined ? text : pasteFilter(text);
+              const { selectionStart, selectionEnd } = event.currentTarget;
 
-            event.preventDefault();
-            type(
-              `${draft.slice(0, selectionStart ?? draft.length)}${pasted}${draft.slice(selectionEnd ?? draft.length)}`
-            );
-          }}
-          onKeyDown={(event) => {
-            if (suggestions !== undefined && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
               event.preventDefault();
+              type(
+                `${draft.slice(0, selectionStart ?? draft.length)}${pasted}${draft.slice(selectionEnd ?? draft.length)}`
+              );
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Tab' && !event.shiftKey && picked !== undefined) {
+                event.preventDefault();
+                accept(picked.value);
+              } else if (event.key === 'Enter' && draft !== '' && picked === undefined) {
+                event.preventDefault();
+                close();
+              } else if (event.key === 'Backspace' && draft === '' && tokens.length > 0) {
+                event.preventDefault();
+                setTyped(tokens.at(-1) ?? '');
+              }
+            }}
+            onFocus={(event) => {
               setListOpen(true);
-              setHighlighted(
-                movedHighlight(listShown ? highlighted : null, event.key === 'ArrowDown' ? 1 : -1, offered.length)
-              );
-            } else if (picked !== undefined && (event.key === 'Enter' || (event.key === 'Tab' && !event.shiftKey))) {
-              event.preventDefault();
-              accept(picked);
-            } else if (event.key === 'Escape' && listShown) {
-              // The list closes first; the next Escape reaches the sheet the field is in.
-              event.preventDefault();
-              event.stopPropagation();
-              closeList();
-            } else if (event.key === 'Enter' && draft !== '') {
-              event.preventDefault();
+              onFocus?.(event);
+            }}
+            onBlur={(event) => {
+              setListOpen(false);
               close();
-            } else if (event.key === 'Backspace' && draft === '' && tokens.length > 0) {
-              event.preventDefault();
-              setTyped(tokens.at(-1) ?? '');
+              onBlur?.(event);
+            }}
+            {...props}
+            aria-describedby={
+              listShown && (draft !== '' || picked !== undefined)
+                ? [props['aria-describedby'], footerId].filter((id) => id !== undefined).join(' ')
+                : props['aria-describedby']
             }
-          }}
-          onFocus={(event) => {
-            setListOpen(true);
-            onFocus?.(event);
-          }}
-          onBlur={(event) => {
-            closeList();
-            close();
-            onBlur?.(event);
-          }}
-          {...(suggestions !== undefined && {
-            role: 'combobox',
-            'aria-autocomplete': 'list' as const,
-            'aria-expanded': listShown,
-            'aria-controls': listShown ? listId : undefined,
-            'aria-activedescendant': picked === undefined ? undefined : tokenOptionId(listId, highlighted ?? 0),
-          })}
-          {...props}
-          aria-describedby={
-            listShown && (draft !== '' || picked !== undefined)
-              ? [props['aria-describedby'], `${listId}-footer`].filter((id) => id !== undefined).join(' ')
-              : props['aria-describedby']
-          }
-        />
-      </div>
-      {description}
-      {listShown && (
-        <TokenInputSuggestions
-          id={listId}
-          label={label}
-          items={offered}
-          highlighted={highlighted}
-          typed={draft}
-          footerId={`${listId}-footer`}
-          onPick={accept}
-          onHighlight={setHighlighted}
-        />
-      )}
-      {suggestions !== undefined && (
-        <div aria-live='polite' className='sr-only'>
-          {listShown ? t('tokenInput.suggestionCount', { count: offered.length }) : ''}
+          />
         </div>
-      )}
-    </div>
+        {description}
+      </div>
+    </TokenInputSuggestions>
   );
 }

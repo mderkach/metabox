@@ -60,9 +60,6 @@ Element.prototype.getAnimations = function getAnimations(): Animation[] {
   return [];
 };
 
-/** jsdom has no layout and no `scrollIntoView`; a list that brings itself into view would throw. */
-Element.prototype.scrollIntoView = function scrollIntoView() {};
-
 beforeAll(() => {
   server.listen({ onUnhandledRequest: 'error' });
 });

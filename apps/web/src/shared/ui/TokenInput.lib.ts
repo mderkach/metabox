@@ -10,9 +10,10 @@ export interface TokenSuggestion {
   group?: string;
 }
 
+/** A run of suggestions under one heading, in the shape Base UI lists grouped items. */
 export interface TokenSuggestionGroup {
-  label: string | undefined;
-  items: { suggestion: TokenSuggestion; index: number }[];
+  value: string | undefined;
+  items: TokenSuggestion[];
 }
 
 /**
@@ -33,37 +34,32 @@ export function offeredSuggestions(
   );
 }
 
-/** Runs of suggestions with the same group, each item with its index in the whole list. */
+/** Runs of suggestions with the same group, in the given order. */
 export function groupSuggestions(suggestions: readonly TokenSuggestion[]): TokenSuggestionGroup[] {
   const groups: TokenSuggestionGroup[] = [];
 
-  for (const [index, suggestion] of suggestions.entries()) {
+  for (const suggestion of suggestions) {
     const last = groups.at(-1);
 
-    if (last !== undefined && last.label === suggestion.group) {
-      last.items.push({ suggestion, index });
+    if (last !== undefined && last.value === suggestion.group) {
+      last.items.push(suggestion);
     } else {
-      groups.push({ label: suggestion.group, items: [{ suggestion, index }] });
+      groups.push({ value: suggestion.group, items: [suggestion] });
     }
   }
 
   return groups;
 }
 
-/** The highlight after an arrow press: from nothing the first or the last, past either end it wraps around. */
-export function movedHighlight(current: number | null, step: 1 | -1, count: number): number | null {
-  if (count === 0) {
-    return null;
+/** The nearest ancestor that scrolls vertically, such as a sheet or a side panel. */
+export function scrollParentOf(element: HTMLElement): HTMLElement | null {
+  for (let parent = element.parentElement; parent !== null; parent = parent.parentElement) {
+    const { overflowY } = getComputedStyle(parent);
+
+    if ((overflowY === 'auto' || overflowY === 'scroll') && parent.scrollHeight > parent.clientHeight) {
+      return parent;
+    }
   }
 
-  if (current === null) {
-    return step === 1 ? 0 : count - 1;
-  }
-
-  return (current + step + count) % count;
-}
-
-/** The id of an option in the suggestion list: the input names the highlighted one in `aria-activedescendant`. */
-export function tokenOptionId(listId: string, index: number): string {
-  return `${listId}-option-${String(index)}`;
+  return null;
 }
