@@ -70,4 +70,39 @@ describe('toRuleChanges', () => {
     ]);
     expect(toRuleChanges([DNS], [])).toEqual([{ kind: RULE_CHANGE.Removed, index: 1 }]);
   });
+
+  it('reports a rename alone as one change', () => {
+    expect(
+      toRuleChanges([DNS, GOOGLE], [DNS, GOOGLE], { applied: [null, 'Google'], draft: [null, 'Google via VPN'] })
+    ).toEqual([{ kind: RULE_CHANGE.Renamed, index: 2, previous: 2 }]);
+  });
+
+  it('reports a name given to an unnamed rule and a name cleared', () => {
+    expect(toRuleChanges([DNS, GOOGLE], [DNS, GOOGLE], { applied: ['DNS', null], draft: [null, 'Google'] })).toEqual([
+      { kind: RULE_CHANGE.Renamed, index: 1, previous: 1 },
+      { kind: RULE_CHANGE.Renamed, index: 2, previous: 2 },
+    ]);
+  });
+
+  it('puts the rename of an edited rule right after its edit', () => {
+    expect(
+      toRuleChanges([DNS, GOOGLE, LOCAL], [DNS, { ...GOOGLE, outbound: 'direct' }, LOCAL], {
+        applied: ['DNS', 'Google', 'Local'],
+        draft: ['DNS', 'Google direct', 'LAN'],
+      })
+    ).toEqual([
+      { kind: RULE_CHANGE.Target, index: 2, from: 'proxy', to: 'direct' },
+      { kind: RULE_CHANGE.Renamed, index: 2, previous: 2 },
+      { kind: RULE_CHANGE.Renamed, index: 3, previous: 3 },
+    ]);
+  });
+
+  it('compares the name of a moved rule with its old place', () => {
+    expect(
+      toRuleChanges([DNS, GOOGLE, LOCAL], [GOOGLE, DNS, LOCAL], {
+        applied: ['DNS', 'Google', null],
+        draft: ['Google', 'DNS', null],
+      })
+    ).toEqual([{ kind: RULE_CHANGE.Moved, index: 2, previous: 1 }]);
+  });
 });

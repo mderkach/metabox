@@ -91,6 +91,7 @@
       "removed": "Removed: {{title}} (rule {{index}})",
       "changed": "Changed: <node>{{title}}</node> (rule {{index}})",
       "moved": "Moved: <node>{{title}}</node> from position {{previous}} to {{index}}",
+      "renamed": "Renamed from “{{previousTitle}}” to “<node>{{title}}</node>” (rule {{index}})",
       "more_one": "And {{count}} more change",
       "more_other": "And {{count}} more changes"
     },

@@ -9,7 +9,7 @@ export { toAppliedIndices } from './model/Rule.applied';
 export { toHostAddress, toRuleCaption } from './model/Rule.caption';
 export type { RuleCaption } from './model/Rule.caption';
 export { RULE_CHANGE, toRuleChanges } from './model/Rule.changes';
-export type { RuleChange } from './model/Rule.changes';
+export type { RuleChange, RuleNames } from './model/Rule.changes';
 export {
   isNamedRuleAction,
   isNamedRuleMatcher,

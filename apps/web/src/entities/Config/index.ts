@@ -23,6 +23,7 @@ export {
   hasRuleSetCache,
   insertValue,
   isGenericSection,
+  parseSectionSearch,
   readRuleNames,
   readRules,
   readRuleSets,

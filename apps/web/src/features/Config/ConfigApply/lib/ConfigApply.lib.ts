@@ -273,7 +273,13 @@ export function useRuleChanges(): RuleChange[] {
   const draft = ConfigDocumentState.use.draft();
 
   return useMemo(
-    () => (applied === null || draft === null ? [] : toRuleChanges(readRules(applied), readRules(draft))),
+    () =>
+      applied === null || draft === null
+        ? []
+        : toRuleChanges(readRules(applied), readRules(draft), {
+            applied: readRuleNames(applied),
+            draft: readRuleNames(draft),
+          }),
     [applied, draft]
   );
 }
@@ -304,10 +310,12 @@ export function useConfigChanges(): ConfigChange[] {
 }
 
 export type SectionLink =
-  | { to: '/config' | '/config/rule-set' }
-  | { to: '/config/$section'; params: { section: GenericSection } };
+  | { to: '/config'; search?: { rule: number } }
+  | { to: '/config/rule-set' }
+  | { to: '/config/$section'; params: { section: GenericSection }; search?: { node: number } };
 
-export function toSectionLink(section: ConfigSection): SectionLink | null {
+/** `node` is the number of the node in the draft, from one: the link opens it in the section panel. */
+export function toSectionLink(section: ConfigSection, node?: number): SectionLink | null {
   if (section === CONFIG_SECTION.Route) {
     return { to: '/config' };
   }
@@ -316,7 +324,11 @@ export function toSectionLink(section: ConfigSection): SectionLink | null {
     return { to: '/config/rule-set' };
   }
 
-  return isGenericSection(section) ? { to: '/config/$section', params: { section } } : null;
+  if (!isGenericSection(section)) return null;
+
+  return node === undefined
+    ? { to: '/config/$section', params: { section } }
+    : { to: '/config/$section', params: { section }, search: { node } };
 }
 
 /** A value as one line of the summary; `null` means a list or an object, which are named as changed without a value. */

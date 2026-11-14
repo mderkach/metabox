@@ -1,13 +1,14 @@
+import { useSearch } from '@tanstack/react-router';
 import { renderWithRouter } from '@test/renderWithRouter';
 import { selectOption } from '@test/selectOption';
 import { server } from '@test/server';
 import { finishSidePanelTransition } from '@test/sidePanel';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { CONFIG_ENDPOINT, ConfigDocumentState, findValue } from '@entities/Config';
+import { CONFIG_ENDPOINT, ConfigDocumentState, findValue, parseSectionSearch } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 
@@ -106,6 +107,27 @@ describe('section screen', () => {
     expect(row.getByText('vless')).toBeInTheDocument();
     expect(row.getByText('a.example:443')).toBeInTheDocument();
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+  });
+
+  it('opens the node by its number from the address, also while the screen is already open', async () => {
+    serveConfig(CONFIG_TEXT);
+
+    const { router } = renderWithRouter(
+      function OutboundsFromAddress() {
+        const { node } = useSearch({ strict: false });
+
+        return <SectionNodes section='outbounds' requestedNode={node} />;
+      },
+      { validateSearch: parseSectionSearch, initialEntry: '/?node=2' }
+    );
+
+    expect(await screen.findByRole('complementary', { name: 'hk-01' })).toBeInTheDocument();
+
+    await act(async () => {
+      await router.navigate({ to: '/', search: { node: 1 } });
+    });
+
+    expect(await screen.findByRole('complementary', { name: 'direct' })).toBeInTheDocument();
   });
 
   it('a picked node opens in the panel with focus on its name, another row switches it, Escape closes', async () => {
