@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-10-21
 - Deciders: repository owner
+- Superseded by (as to `SINGBOX_VERSION` as the bench pin; it is the file `sing-box-extended.sha256`): [ADR-0082](./ADR-0082-count-seven-schema-registries-and-pin-the-bench-sing-box-by-file.md)
 
 ## Context and problem statement
 

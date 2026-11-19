@@ -5,6 +5,7 @@
 - Deciders: repository owner
 - Supersedes: section A.2.1 of [`../PRD.md`](../PRD.md)
 - Superseded by (as to printing objects as `z.looseObject`): [ADR-0018](./ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md)
+- Superseded by (as to the number of registries, seven instead of six): [ADR-0082](./ADR-0082-count-seven-schema-registries-and-pin-the-bench-sing-box-by-file.md)
 
 ## Context and problem statement
 
