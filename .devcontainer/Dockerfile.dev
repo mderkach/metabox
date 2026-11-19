@@ -27,14 +27,18 @@ RUN corepack enable \
 
 # OpenWrt uses musl: a glibc binary does not start there ("not found" although
 # the file exists), so cgo is disabled.
-# pnpm does not read PNPM_STORE_DIR and silently puts the store in the workspace
-# root (278 MB in the repository), so it is set through npm_config_*.
+# pnpm reads its settings from pnpm_config_* and ignores npm_config_*; without the store
+# setting it silently puts the store in the workspace root (278 MB in the repository).
 ENV CGO_ENABLED=0 \
     GOMODCACHE=/cache/go/mod \
     GOCACHE=/cache/go/build \
-    npm_config_store_dir=/cache/pnpm \
+    pnpm_config_store_dir=/cache/pnpm \
     # Without a TTY pnpm does not clean node_modules when the store changes: nobody can confirm.
-    npm_config_confirm_modules_purge=false
+    pnpm_config_confirm_modules_purge=false
 RUN mkdir -p /cache/go/mod /cache/go/build /cache/pnpm
+
+# The checkout is mounted from the host and on Linux belongs to the host user, not to root in the
+# container: git refuses such a directory, and the `lefthook install` of pnpm install fails with it.
+RUN git config --system --add safe.directory /workspace
 
 WORKDIR /workspace

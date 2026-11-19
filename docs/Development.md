@@ -107,17 +107,19 @@ The test bench is OpenWrt in a container. It runs procd, sing-box and the panel 
 
 On the bench the panel listens on port 8080; on a router it is 8088. The bench sets its own port in `.devcontainer/target/files/etc/config/metabox`.
 
-| Command                     | What it does                                                                              |
-| --------------------------- | ----------------------------------------------------------------------------------------- |
-| `make stand-base`           | builds the bench base from the BPI-R4 firmware image from downloads.openwrt.org           |
-| `make up`                   | starts the bench; panel at `http://localhost:8080`, Clash API on 9090                     |
-| `make up-dev`               | the same plus the Vite dev server with HMR on 5173                                        |
-| `make down`                 | stops the bench                                                                           |
-| `make stand-reset`          | resets the bench sing-box config to the reference from the image                          |
-| `make sh`, `make target-sh` | shell in the dev container and in the OpenWrt container                                   |
-| `make apply-check`          | runs the Apply cycle on the bench                                                         |
-| `make reach-check`          | checks that the panel answers from the bench local networks and not from the external one |
-| `make dataplane-check`      | checks LAN traffic interception; needs a privileged container and a kernel with tproxy    |
+| Command                     | What it does                                                                                                          |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `make stand-base`           | builds the bench base from the BPI-R4 firmware image from downloads.openwrt.org                                       |
+| `make up`                   | starts the bench; panel at `http://localhost:8080`, Clash API on 9090; on a Linux host at `http://192.168.210.2:9090` |
+| `make up-dev`               | the same plus the Vite dev server with HMR on 5173                                                                    |
+| `make down`                 | stops the bench                                                                                                       |
+| `make stand-reset`          | resets the bench sing-box config to the reference from the image                                                      |
+| `make sh`, `make target-sh` | shell in the dev container and in the OpenWrt container                                                               |
+| `make apply-check`          | runs the Apply cycle on the bench                                                                                     |
+| `make reach-check`          | checks that the panel answers from the bench local networks and not from the external one                             |
+| `make dataplane-check`      | checks LAN traffic interception; needs a privileged container and a kernel with tproxy                                |
+
+On a Linux host a request to the published port 9090 reaches the bench from the guest network gateway, an address inside the guest subnet, so the bench firewall refuses it as it refuses guest clients ([ADR-0083](./adr/ADR-0083-close-the-bench-guest-zone-like-a-router-guest-network.md)); the Clash API answers on the wired network address, and from the dev container.
 
 Bench variables are set in `.devcontainer/.env`. The file is not committed. Both docker compose and `make` read it, so `make package` builds for the same architecture the bench runs on. Without `.env`, the bench uses the public OpenWrt image, the same as CI.
 
