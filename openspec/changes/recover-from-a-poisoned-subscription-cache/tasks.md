@@ -6,7 +6,7 @@ Each group is one commit topic. Groups 1 and 2 do not depend on each other; grou
 - [x] 1.2 AC-91: `Plane` rollback gets the same check after `reload`. Verified by `make test`: `TestPlaneRollbackReportsCoreThatDidNotComeUp`.
 - [x] 1.3 AC-91: DeviceIO.md describes the healthcheck of the rollback; `docs/Recovery.md` and `docs/Recovery.ru.md`, "What an Apply undoes on its own", say that a rollback whose core does not start is reported as failed. Verified by manual: both copies say the same.
 - [x] 1.4 AC-91: rows for the tests of 1.1-1.2 in `docs/Verification.md`. Verified by `make trace-check`.
-- [ ] 1.5 AC-91, AC-92: the reason text the panel shows for `rollback_failed` and for a dropped provider gets an Impeccable critique (`/impeccable`) by someone who did not write it. Verified by manual: the critique is quoted in the pull request.
+- [x] 1.5 AC-91, AC-92: the reason text the panel shows for `rollback_failed` and for a dropped provider gets an Impeccable critique (`/impeccable`) by someone who did not write it. Verified by manual: the critique is quoted in the pull request.
 
 - [x] 1.6 AC-91: the replays at daemon start run beside the HTTP server, holding the apply slot until both are done; a replayed rollback refuses Confirm. Verified by `make test`: `TestSettleReplaysBesideTheServer`, `TestSettleHoldsTheApplyBeforeTheJournalIsRead`.
 
@@ -26,12 +26,14 @@ Each group is one commit topic. Groups 1 and 2 do not depend on each other; grou
 - [x] 3.7 AC-92: the bench test with the real service: the fixture with a poisoned entry replaces the cache file of a stopped core, a start from the panel makes the core fail and the daemon drops the entry and keeps the rest. Verified by the `integration` job of `.github/workflows/ci.yml`: `TestApplyHTTPOnEphemeralBench`.
 - [x] 3.8 AC-92: DeviceIO.md, a "Cache file recovery" section; `docs/Recovery.md` and `docs/Recovery.ru.md` explain what the daemon drops and where it logs it. Verified by manual: both copies say the same.
 - [x] 3.9 AC-92: rows for 3.2-3.7 in `docs/Verification.md`. Verified by `make trace-check`.
+- [x] 3.10 AC-92: after the independent review. The crash reason counts only lines written after the action (`Client.CrashMark`, `Client.Crash`), and it is polled during the wait for the new process too. A start from the panel answers within the panel's request timeout and repairs in the background, a crash seen during an Apply window is repaired after its Confirm, a core left halted is started at daemon start, and a failed rollback still names the dropped subscription. Verified by `make test`: `TestWatchAnswersBeforeThePanelGivesUp`, `TestWatchRepairsAfterTheApplyIsConfirmed`, `TestRollbackIgnoresAnOlderCrash`, `TestRollbackSeesACrashBeforeANewProcess`, `TestRecoverAtStart`, `TestCrashCountsOnlyLinesAfterTheMark`; `make test-schemagen`: `TestForkFailsStartOnItsOwnSavedXHTTPSubscription`.
 
 ## 4. Fallback (AC-93)
 
 - [x] 4.1 AC-93: a file that does not open as bbolt for a reason other than the lock is renamed to `<file>.broken`, replacing an earlier one, and the service starts. Verified by `make test`: `TestRecoveryMovesAnUnreadableFileAside`, `TestMoveAside`; a held lock is not moved (`TestRecoveryStartsTheCoreWhenTheEntryStays`).
 - [x] 4.2 AC-93: `docs/Recovery.md` and `docs/Recovery.ru.md` name the moved file. Verified by manual: both copies say the same.
 - [x] 4.3 AC-93: rows for 4.1 in `docs/Verification.md`. Verified by `make trace-check`.
+- [x] 4.4 AC-93: only a file bbolt refuses for its content goes aside, a file cut mid-page included, which faults the bbolt reader; a file the system cannot open stays. Verified by `make test`: `TestDropRefusesWhatItCannotDo`.
 
 ## 5. Integration
 

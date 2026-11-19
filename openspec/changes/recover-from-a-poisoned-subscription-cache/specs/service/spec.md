@@ -44,7 +44,31 @@ When the service fails with `start provider/remote[<tag>]: restore cached outbou
 
 - **GIVEN** a poisoned cache entry
 - **WHEN** the user starts or restarts the service in the panel and the core fails with the signature
-- **THEN** the daemon recovers the service and the panel receives the state after the recovery
+- **THEN** the panel receives an answer within the time it waits for a request, and the daemon recovers the service in the background even when the request is gone
+
+#### Scenario: A start from the panel answers on any crash
+
+- **GIVEN** a config the core fails on for a reason other than the cache file
+- **WHEN** the user starts or restarts the service in the panel
+- **THEN** the panel receives the state with the crash reason as soon as the core fails, within the time it waits for a request
+
+#### Scenario: A confirmed Apply does not leave the crash behind
+
+- **GIVEN** an Apply in its confirmation window and a core that started failing with the signature after a restart from the panel
+- **WHEN** the user confirms the Apply
+- **THEN** the daemon recovers the service after the confirmation
+
+#### Scenario: An older crash is not taken for a new one
+
+- **GIVEN** a log that still holds the signature from an earlier start and a core that now comes up
+- **WHEN** the daemon watches a restart, a start from the panel or its own start
+- **THEN** the cache file is not touched
+
+#### Scenario: A core left halted is started
+
+- **GIVEN** a service procd knows with no process, after a daemon was killed between stopping and starting the core
+- **WHEN** the daemon starts
+- **THEN** the daemon starts the service and watches it for the signature
 
 #### Scenario: A start during an Apply leaves the repair to the Apply
 
@@ -90,13 +114,25 @@ When the service fails with `start provider/remote[<tag>]: restore cached outbou
 
 ### Requirement: AC-93 An unreadable cache file is moved aside
 
-When the recovery of AC-92 cannot open the cache file as a bbolt database for a reason other than a held lock, the daemon SHALL move the file aside whole, next to it under a fixed name that replaces an earlier one, and start the service.
+When the recovery of AC-92 finds that the cache file is not a bbolt database by its content, the daemon SHALL move the file aside whole, next to it under a fixed name that replaces an earlier one, and start the service.
 
 #### Scenario: A file that is not a database
 
 - **GIVEN** a service failing with the signature and a cache file the daemon cannot open as a bbolt database
 - **WHEN** the recovery runs
 - **THEN** the file is renamed aside, the service starts without it and the daemon log names the moved file
+
+#### Scenario: A file cut short does not end the daemon
+
+- **GIVEN** a service failing with the signature and a cache file cut in the middle of a page
+- **WHEN** the recovery opens it
+- **THEN** the daemon keeps running, the file is renamed aside and the service starts without it
+
+#### Scenario: A file the system cannot open is not a broken file
+
+- **GIVEN** a cache file the system refuses to open or map, for permissions, a read-only file system or a lack of memory
+- **WHEN** the recovery opens it
+- **THEN** the file is not moved, the service is started again and the failure is reported
 
 #### Scenario: A held lock is not a broken file
 

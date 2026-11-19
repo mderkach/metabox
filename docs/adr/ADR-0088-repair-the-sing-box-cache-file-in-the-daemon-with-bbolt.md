@@ -43,7 +43,8 @@ In scope: how the daemon edits the cache file. Out of scope: when it does so (th
 
 - The daemon requires `go.etcd.io/bbolt`, pinned exactly in `apps/metaboxd/go.mod` and `go.sum`. One package under `apps/metaboxd/internal/` imports it; no other package does.
 - That package opens the cache file only with the `sing-box` process stopped and with a lock timeout. A timeout leaves the file untouched.
-- It deletes one key in the `rule_set` bucket, at the top level or under the bucket `0x00` + `cache_id`, and moves the whole file aside when it cannot open it for a reason other than the lock. It does not create buckets, write values or read other buckets.
+- It deletes one key in the `rule_set` bucket, at the top level or under the bucket `0x00` + `cache_id`, and moves the whole file aside when bbolt refuses it for its content. It does not create buckets, write values or read other buckets.
+- The key is the bare tag. The fork keeps subscriptions, remote rule sets and the WARP and MASQUE endpoint data under it, so a remote rule set or an endpoint with the same tag as the subscription loses its entry too. With two of them under one tag the fork already overwrites one entry with the other; checking tags for uniqueness is left to a separate change.
 - The format is checked against the fork: a fixture cache file is written by the fork's own code in `tools/schemagen` and read by the daemon tests.
 
 ### When the mechanism is removed or narrowed

@@ -27,7 +27,7 @@ After a passed check the panel asks to confirm the change within a confirmation 
 
 Changes of interception settings and of the device list on the Devices screen go through the same window and roll back to the previous settings.
 
-After a rollback the daemon checks that sing-box really started on the previous config: a new process and an answering Clash API. If it did not, the panel shows the rollback as failed with the reason sing-box gave, not as a successful rollback.
+After a rollback the daemon checks that sing-box really started on the previous config: a new process that answers on its control API (Clash API). If it does not, the panel shows the rollback as failed and quotes the last error from the sing-box log. In that case use "Getting back without the panel" below.
 
 The transaction is kept in `apply.json` in the daemon state directory (`/etc/metabox` by default) on persistent storage. If the router reboots or the daemon restarts during an Apply, the daemon finishes the transaction on start: an unfinished Apply is rolled back, and an open window starts again in full.
 
@@ -35,11 +35,11 @@ The automatic rollback does not help when the config was already broken before t
 
 ### A subscription that crashes sing-box
 
-sing-box keeps downloaded subscriptions in its cache file (`cache.db` next to the config) when `experimental.cache_file.store_subscriptions` is on. It can save a node it then refuses to read back, and from then on every start of sing-box fails, a router reboot included. The log shows `restore cached outbound provider` with the name of the subscription.
+Every start of sing-box fails, a router reboot included, and the log shows `restore cached outbound provider` with the name of a subscription. sing-box keeps downloaded subscriptions in its cache file (`cache.db` next to the config) when `experimental.cache_file.store_subscriptions` is on, and it can save a node there that it rejects itself on the next start.
 
-The daemon repairs this by itself: after a rollback, after a start or restart of sing-box in the panel and when the daemon starts, it stops sing-box without removing interception, deletes the entry of that one subscription from the cache file and starts sing-box again. Other subscriptions and remote rule sets stay in the cache. The daemon log names the dropped subscription, and a rollback names it in its reason. If the cache file does not open at all, the daemon renames it to `cache.db.broken` next to it and starts sing-box without a cache; the log names the moved file, and it can be deleted by hand.
+The daemon repairs this by itself: after a rollback, after a start or restart of sing-box in the panel and when the daemon starts. It stops sing-box without removing interception, so traffic of the listed devices does not leave directly meanwhile, deletes the entry of that one subscription from the cache file and starts sing-box again. After a start in the panel the repair runs in the background, and the service state in the panel changes when it is done. Other subscriptions and remote rule sets stay in the cache, unless one of them has the same name as the subscription: sing-box keeps both under one key. The daemon log names the dropped subscription, and the reason of the rollback names it too. If the cache file does not open at all, the daemon renames it to `cache.db.broken` next to it and starts sing-box without a cache; the log names the moved file, and it can be deleted by hand.
 
-If the crash happened before an Apply, the Apply itself fails its check for a reason it did not cause, and its rollback repairs the cache: apply the change again. If the subscription keeps serving the same node, the crash comes back on the next restart, and so does the repair.
+If sing-box was already crashing before your Apply, the Apply fails its check although the change is fine; its rollback repairs the cache. Apply the change again. If you confirm an Apply while sing-box crashes on its cache, the daemon repairs it right after the confirmation. If the subscription keeps serving the same node, the crash comes back on the next restart, and so does the repair.
 
 ## Getting back without the panel
 
