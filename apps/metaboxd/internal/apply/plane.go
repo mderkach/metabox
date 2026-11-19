@@ -9,11 +9,9 @@ import (
 	"log/slog"
 	"net/netip"
 	"slices"
-	"sync"
 	"time"
 
 	"metabox/internal/clashapi"
-	"metabox/internal/config"
 	"metabox/internal/dataplane"
 	"metabox/internal/locale"
 )
@@ -75,29 +73,17 @@ type planeRecord struct {
 // that takes the administrator's own address out of interception is applied the same way
 // and rolled back by the window without confirmation: it cuts the administrator off for no longer than the window.
 type Plane struct {
-	gate    *Manager
+	window
+
 	editor  PlaneEditor
 	service PlaneService
 	store   PlaneStore
 	health  Health
-	clock   Clock
-	log     *slog.Logger
 	opts    PlaneOptions
 
-	mu          sync.Mutex
-	current     Transaction
-	previous    dataplane.Snapshot
-	token       uint64
-	rollingBack bool
-	// confirming and confirmDone: see Manager.
-	confirming  bool
-	confirmDone chan struct{}
-	// windowEndsAt is the monotonic stamp of the window end, in memory only; see Manager.
-	windowEndsAt time.Time
-	confirmed    chan struct{}
-	cancel       context.CancelFunc
-
-	wg sync.WaitGroup
+	// previous and token are guarded by mu.
+	previous dataplane.Snapshot
+	token    uint64
 }
 
 // NewPlane assembles the dataplane transaction on top of the config apply gate. The clock
@@ -116,23 +102,29 @@ func NewPlane(
 		clock = SystemClock{}
 	}
 
-	return &Plane{
-		gate: gate, editor: editor, service: service, store: store,
-		health: health, clock: clock, log: log, opts: opts,
+	p := &Plane{
+		window: window{gate: gate, clock: clock, log: log, lang: opts.Lang, span: opts.Window, text: planeLog},
+		editor: editor, service: service, store: store, health: health, opts: opts,
 	}
+	p.subject = p
+
+	return p
 }
 
-// Current returns a snapshot of the dataplane transaction; Window is the remainder of the window.
-func (p *Plane) Current() Transaction {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	tx := p.current
-	if tx.Phase == PhaseAwaitingConfirm && !p.windowEndsAt.IsZero() {
-		tx.Window = max(0, time.Until(p.windowEndsAt))
-	}
-
-	return tx
+var planeLog = windowLog{
+	opened:             "dataplane model applied, confirmation window open",
+	notSaved:           "dataplane confirmation window state not saved",
+	interrupted:        "dataplane confirmation window interrupted by daemon shutdown",
+	restoredStopped:    "dataplane confirmation window interrupted by daemon shutdown",
+	expired:            "no confirmation, restoring the previous dataplane model",
+	confirmed:          "dataplane model change confirmed",
+	confirmedKept:      "state of the confirmed dataplane change not removed, the terminal phase is written",
+	unwritten:          "dataplane change interrupted before the model write, no rollback needed",
+	interruptedApply:   "dataplane change interrupted, restoring the previous model",
+	windowExpired:      "dataplane confirmation window expired, restoring the previous model",
+	rollbackUnfinished: "dataplane rollback interrupted in the confirmation window, finishing it",
+	windowRestored:     "dataplane confirmation window restored",
+	clearFinished:      "clear finished dataplane state",
 }
 
 // Start checks the model, takes the apply and moves the change into a background
@@ -362,71 +354,6 @@ func (p *Plane) probeDNS(ctx context.Context, port int) error {
 	return p.opts.DNS.Probe(ctx, inbound)
 }
 
-// await opens the confirmation window; the window record reaches the disk before the
-// phase does, for the reason given in Manager.await.
-func (p *Plane) await(ctx context.Context, log *slog.Logger, confirmed <-chan struct{}) {
-	p.mu.Lock()
-	tx := p.current
-	previous := p.previous
-	p.mu.Unlock()
-
-	tx.Phase = PhaseAwaitingConfirm
-	if err := p.persist(ctx, tx, previous); err != nil && ctx.Err() == nil {
-		log.Error("dataplane confirmation window state not saved", "err", err)
-	}
-
-	p.mu.Lock()
-	p.current.Phase = PhaseAwaitingConfirm
-	p.windowEndsAt = time.Now().Add(p.opts.Window)
-	p.mu.Unlock()
-
-	log.Info("dataplane model applied, confirmation window open", "window", p.opts.Window)
-
-	p.wait(ctx, log, confirmed, p.opts.Window)
-}
-
-// wait holds the window: confirmation, daemon stop or a timer rollback.
-func (p *Plane) wait(ctx context.Context, log *slog.Logger, confirmed <-chan struct{}, window time.Duration) {
-	select {
-	case <-confirmed:
-	case <-ctx.Done():
-		// The state stays on disk, the window is replayed at the next start.
-		log.Warn("dataplane confirmation window interrupted by daemon shutdown")
-	case <-p.clock.After(window):
-		if !p.beginRollback() {
-			return
-		}
-
-		log.Warn("no confirmation, restoring the previous dataplane model")
-		p.rollback(context.WithoutCancel(ctx), log)
-	}
-}
-
-// beginRollback is Manager.beginRollback for the dataplane change.
-func (p *Plane) beginRollback() bool {
-	for {
-		p.mu.Lock()
-
-		if p.current.Phase != PhaseAwaitingConfirm {
-			p.mu.Unlock()
-
-			return false
-		}
-
-		if !p.confirming {
-			p.rollingBack = true
-			p.mu.Unlock()
-
-			return true
-		}
-
-		done := p.confirmDone
-		p.mu.Unlock()
-
-		<-done
-	}
-}
-
 // rollback restores the section snapshot and makes the service reread it. A failure leaves
 // the state on disk: the next daemon start will try the rollback again.
 func (p *Plane) rollback(ctx context.Context, log *slog.Logger) {
@@ -468,146 +395,57 @@ func (p *Plane) rollback(ctx context.Context, log *slog.Logger) {
 	log.Info("previous dataplane model restored")
 }
 
-// Confirm closes the dataplane change confirmation window. The state on disk is made
-// terminal before the call returns, as in Manager.Confirm; ErrConfirmNotSaved leaves the
-// window open.
-func (p *Plane) Confirm(ctx context.Context, id string) (Transaction, error) {
-	p.mu.Lock()
-
-	if p.current.ID != id {
-		p.mu.Unlock()
-
-		return Transaction{}, ErrUnknownTransaction
-	}
-
-	if p.current.Phase != PhaseAwaitingConfirm || p.rollingBack || p.confirming {
-		p.mu.Unlock()
-
-		return Transaction{}, ErrNothingToConfirm
-	}
-
-	p.confirming = true
-	done := make(chan struct{})
-	p.confirmDone = done
-	tx := p.current
-	tx.Phase = PhaseConfirmed
-	tx.Window = 0
-	previous := p.previous
-	p.mu.Unlock()
-
-	// The order is the same as in Manager.Confirm: the state is removed before
-	// the apply is released, and an unremoved one is replaced by the terminal phase.
-	kept, err := settleState(ctx, p.store.ClearPlaneState, func(ctx context.Context) error {
-		return p.persist(ctx, tx, previous)
-	})
-
-	p.mu.Lock()
-	p.confirming = false
-
-	if err != nil {
-		p.mu.Unlock()
-		close(done)
-
-		return Transaction{}, err
-	}
-
-	p.current = tx
-	token := p.token
-	confirmed := p.confirmed
-	p.confirmed = nil
-	p.mu.Unlock()
-	close(done)
-
-	p.gate.unreserve(token)
-
-	if confirmed != nil {
-		close(confirmed)
-	}
-
-	if kept != nil {
-		p.log.Warn("state of the confirmed dataplane change not removed, the terminal phase is written",
-			"err", kept, "transaction_id", id)
-	}
-
-	p.log.Info("dataplane model change confirmed", "transaction_id", id)
-
-	return tx, nil
-}
-
-// Close cancels the change at once and waits for the background goroutine, as
-// Manager.Close does. The state stays on disk.
-func (p *Plane) Close() {
-	p.mu.Lock()
-	cancel := p.cancel
-	p.mu.Unlock()
-
-	if cancel != nil {
-		cancel()
-	}
-
-	p.wg.Wait()
-}
-
-// Replay replays a dataplane change left from the previous daemon lifetime. On
-// router boot the service has already raised the dataplane by the unconfirmed model from
-// UCI, and without a rollback it would stay forever.
-func (p *Plane) Replay(ctx context.Context) error {
+func (p *Plane) readState(ctx context.Context) (Transaction, error) {
 	data, err := p.store.ReadPlaneState(ctx)
-	if errors.Is(err, config.ErrNoState) {
-		return nil
-	}
-
 	if err != nil {
-		return fmt.Errorf("read dataplane state: %w", err)
+		return Transaction{}, fmt.Errorf("read dataplane state: %w", err)
 	}
 
 	var state planeRecord
 	if err := json.Unmarshal(data, &state); err != nil {
-		return fmt.Errorf("parse dataplane state: %w", err)
+		return Transaction{}, fmt.Errorf("parse dataplane state: %w", err)
 	}
 
-	tx := state.Transaction
-	log := p.log.With("transaction_id", tx.ID)
+	p.mu.Lock()
+	p.previous = state.Previous
+	p.mu.Unlock()
 
-	switch {
-	case tx.Phase == PhaseApplying:
-		// The section matched the snapshot: the write did not happen, and the service stands on
-		// the previous model: nothing to roll back.
-		if current, err := p.editor.Snapshot(ctx); err == nil && current.Equal(state.Previous) {
-			log.Warn("dataplane change interrupted before the model write, no rollback needed")
-
-			return p.store.ClearPlaneState(ctx)
-		}
-
-		log.Warn("dataplane change interrupted, restoring the previous model")
-		p.begin(tx, state.Previous)
-		p.rollback(ctx, log)
-
-	case tx.Phase == PhaseAwaitingConfirm && tx.Window <= 0:
-		log.Warn("dataplane confirmation window expired, restoring the previous model")
-		p.begin(tx, state.Previous)
-		p.rollback(ctx, log)
-
-	case tx.Phase == PhaseAwaitingConfirm && p.rolledBackInUCI(ctx, state.Previous):
-		// A window rollback broke off after Restore and before the state was cleared:
-		// a restored window would let Confirm keep the previous section as the change.
-		log.Warn("dataplane rollback interrupted in the confirmation window, finishing it")
-		p.begin(tx, state.Previous)
-		p.rollback(ctx, log)
-
-	case tx.Phase == PhaseAwaitingConfirm:
-		log.Warn("dataplane confirmation window restored", "window", tx.Window)
-		p.begin(tx, state.Previous)
-		p.restoreWindow(tx, p.gate.reserveRestored())
-
-	default:
-		if err := p.store.ClearPlaneState(ctx); err != nil {
-			return fmt.Errorf("clear finished dataplane state: %w", err)
-		}
-	}
-
-	return nil
+	return state.Transaction, nil
 }
+
+func (p *Plane) writeState(ctx context.Context, tx Transaction) error {
+	p.mu.Lock()
+	previous := p.previous
+	p.mu.Unlock()
+
+	return p.persist(ctx, tx, previous)
+}
+
+func (p *Plane) clearState(ctx context.Context) error { return p.store.ClearPlaneState(ctx) }
+
+// written: a section that matches the snapshot means the write did not happen, and the
+// service stands on the previous model. A failed read counts as written.
+func (p *Plane) written(ctx context.Context, _ Transaction) bool {
+	p.mu.Lock()
+	previous := p.previous
+	p.mu.Unlock()
+
+	current, err := p.editor.Snapshot(ctx)
+
+	return err != nil || !current.Equal(previous)
+}
+
+func (p *Plane) reverted(ctx context.Context, _ Transaction) bool {
+	p.mu.Lock()
+	previous := p.previous
+	p.mu.Unlock()
+
+	return p.rolledBackInUCI(ctx, previous)
+}
+
+func (p *Plane) restored(_ Transaction, token uint64) { p.token = token }
+
+func (p *Plane) free() { p.gate.unreserve(p.token) }
 
 // rolledBackInUCI reports whether the section already holds the snapshot the transaction
 // rolls back to. The record keeps no target model, so a change that left the section as it
@@ -622,49 +460,6 @@ func (p *Plane) rolledBackInUCI(ctx context.Context, previous dataplane.Snapshot
 	}
 
 	return current.Equal(previous)
-}
-
-func (p *Plane) begin(tx Transaction, previous dataplane.Snapshot) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	p.current = tx
-	p.previous = previous
-}
-
-// restoreWindow raises the window again for the period from the state: how much of it passed
-// before the reboot cannot be learned, as with Manager.restoreWindow.
-func (p *Plane) restoreWindow(tx Transaction, token uint64) {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	p.mu.Lock()
-	p.current = tx
-	p.token = token
-	p.windowEndsAt = time.Now().Add(tx.Window)
-	p.confirmed = make(chan struct{})
-	confirmed := p.confirmed
-	p.cancel = cancel
-	p.mu.Unlock()
-
-	p.wg.Add(1)
-
-	go func() {
-		defer p.wg.Done()
-		defer cancel()
-		defer p.gate.unreserve(token)
-
-		p.wait(ctx, p.log.With("transaction_id", tx.ID), confirmed, tx.Window)
-	}()
-}
-
-func (p *Plane) release(phase Phase, err error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	p.current.Phase = phase
-	p.current.ReasonCode = reasonOf(err)
-	p.current.Reason = locale.Message(p.opts.Lang, err)
-	p.rollingBack = false
 }
 
 func (p *Plane) persist(ctx context.Context, tx Transaction, previous dataplane.Snapshot) error {

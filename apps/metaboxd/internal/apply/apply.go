@@ -17,7 +17,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sync"
 	"time"
 
 	"metabox/internal/clashapi"
@@ -293,31 +292,20 @@ type Options struct {
 
 // Manager is the only owner of the apply cycle.
 type Manager struct {
+	window
+
 	store   Store
 	service Service
 	health  Health
-	clock   Clock
-	log     *slog.Logger
 	opts    Options
 
-	mu sync.Mutex
 	// busy closes the apply from the moment of reservation: the transaction
-	// appears later, and before it a second Start would slip past the check.
+	// appears later, and before it a second Start would slip past the check. Guarded by mu.
 	busy bool
 	// epoch numbers the busy ownerships. The background goroutine releases the apply
 	// by the number of its ownership: by its exit busy may already be held by the next
 	// Start, and an unconditional release would let two applies in at once.
 	epoch uint64
-	// rollingBack closes Confirm for the duration of the rollback: the phase stays
-	// awaiting_confirm until the end of Restore and Restart, and without this flag
-	// a confirmation would wedge into a rollback already in progress.
-	rollingBack bool
-	// confirming closes a second Confirm and holds the timer rollback while the
-	// terminal state is being written: the outcome of that write decides whether
-	// there is anything left to roll back. confirmDone closes when it is known.
-	confirming  bool
-	confirmDone chan struct{}
-	current     Transaction
 	// lastSum is the sha256 of what the daemon wrote itself. It survives a restart through
 	// the state file.
 	lastSum string
@@ -325,15 +313,6 @@ type Manager struct {
 	// It lives in memory only: after a restart the check is taken over by the client
 	// base, as with the config.
 	lastListsSum string
-	// windowEndsAt is when the confirmation window closes. Stored as a Go monotonic
-	// stamp and in memory only: the disk gets the duration, because the
-	// router has no real-time clock and between daemon lifetimes there is nothing to compare
-	// the stamp with.
-	windowEndsAt time.Time
-	confirmed    chan struct{}
-	cancel       context.CancelFunc
-
-	wg sync.WaitGroup
 }
 
 // New assembles the apply. The clock may be omitted, then the system one is used.
@@ -342,25 +321,14 @@ func New(store Store, service Service, health Health, clock Clock, log *slog.Log
 		clock = SystemClock{}
 	}
 
-	return &Manager{store: store, service: service, health: health, clock: clock, log: log, opts: opts}
-}
-
-// Current returns a snapshot of the current transaction. An empty phase means that
-// there were no applies in this daemon lifetime.
-//
-// Window in the snapshot is the remainder of the window, not its duration: the panel shows this
-// number to the user, and after a page reload a full sixty seconds
-// would be a promise the daemon does not make.
-func (m *Manager) Current() Transaction {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	tx := m.current
-	if tx.Phase == PhaseAwaitingConfirm && !m.windowEndsAt.IsZero() {
-		tx.Window = max(0, time.Until(m.windowEndsAt))
+	m := &Manager{
+		window: window{clock: clock, log: log, lang: opts.Lang, span: opts.Window, text: configLog},
+		store:  store, service: service, health: health, opts: opts,
 	}
+	m.subject = m
+	m.gate = m
 
-	return tx
+	return m
 }
 
 // Start starts an apply. The binary check runs synchronously: the user fixes the config by its output,
@@ -601,109 +569,6 @@ func listSums(files map[string][]byte) map[string]string {
 	return sums
 }
 
-// Confirm closes the confirmation window: the connection is alive, no rollback is needed.
-// The state on disk is made terminal before the call returns, under a context detached
-// from the request: a client that drops the request must not leave awaiting_confirm on
-// disk, which Replay would roll back after a restart. ErrConfirmNotSaved means the disk
-// refused both the removal and the terminal record; the window stays open.
-func (m *Manager) Confirm(ctx context.Context, id string) (Transaction, error) {
-	m.mu.Lock()
-
-	if m.current.ID != id {
-		m.mu.Unlock()
-
-		return Transaction{}, ErrUnknownTransaction
-	}
-	if m.current.Phase != PhaseAwaitingConfirm || m.rollingBack || m.confirming {
-		m.mu.Unlock()
-
-		return Transaction{}, ErrNothingToConfirm
-	}
-
-	m.confirming = true
-	done := make(chan struct{})
-	m.confirmDone = done
-	tx := m.current
-	tx.Phase = PhaseConfirmed
-	tx.Window = 0
-	m.mu.Unlock()
-
-	// The state is removed before busy is released: busy released earlier lets in
-	// the next Start, and ClearState would erase its state file. The response
-	// goes after the cleanup, so "confirmed and immediately applied" does not
-	// run into busy.
-	kept, err := settleState(ctx, m.store.ClearState, func(ctx context.Context) error { return m.persist(ctx, tx) })
-
-	m.mu.Lock()
-	m.confirming = false
-
-	if err != nil {
-		m.mu.Unlock()
-		close(done)
-
-		return Transaction{}, err
-	}
-
-	m.current = tx
-	confirmed := m.confirmed
-	m.confirmed = nil
-	m.busy = false
-	m.mu.Unlock()
-	close(done)
-
-	if confirmed != nil {
-		close(confirmed)
-	}
-
-	if kept != nil {
-		m.log.Warn("state of the confirmed transaction not removed, the terminal phase is written",
-			"err", kept, "transaction_id", id)
-	}
-
-	m.log.Info("apply confirmed", "transaction_id", id)
-
-	return tx, nil
-}
-
-// settleState makes the state file of a confirmed transaction terminal: removed, or
-// rewritten with the terminal phase when the removal fails, since Replay only removes a
-// terminal phase while a leftover awaiting_confirm would roll back the confirmed config.
-// kept is the removal failure when the terminal record stands in its place. The write
-// runs detached from the request with its own ceiling: it must finish even when the
-// client is gone.
-func settleState(ctx context.Context, remove, persist func(context.Context) error) (kept, err error) {
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), stateTimeout)
-	defer cancel()
-
-	clearErr := remove(ctx)
-	if clearErr == nil {
-		return nil, nil
-	}
-
-	if err := persist(ctx); err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrConfirmNotSaved, errors.Join(clearErr, err))
-	}
-
-	return clearErr, nil
-}
-
-// Close cancels the cycle at once and waits for the background goroutine. It does not
-// give the current step time to finish: procd sends SIGKILL five seconds after SIGTERM,
-// while a step may take the whole cycle timeout, so a grace period would only move the
-// kill into the step. Whatever the cycle was doing, the state stays on disk as it is: an
-// interrupted step or an unclosed window is replayed at the next start.
-func (m *Manager) Close() {
-	m.mu.Lock()
-	cancel := m.cancel
-	m.mu.Unlock()
-
-	if cancel != nil {
-		cancel()
-	}
-
-	m.wg.Wait()
-}
-
 // reserve takes the apply for one transaction and at the same time catches an outside
 // edit: the owner could have changed the config and the list files over SSH, and overwriting this
 // silently is not allowed. Returns the ownership number for unreserve.
@@ -825,24 +690,6 @@ func (m *Manager) unreserve(token uint64) {
 	if m.epoch == token {
 		m.busy = false
 	}
-}
-
-func (m *Manager) begin(tx Transaction) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.current = tx
-	m.confirmed = make(chan struct{})
-}
-
-func (m *Manager) release(phase Phase, err error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.current.Phase = phase
-	m.current.ReasonCode = reasonOf(err)
-	m.current.Reason = locale.Message(m.opts.Lang, err)
-	m.rollingBack = false
 }
 
 func (m *Manager) persist(ctx context.Context, tx Transaction) error {

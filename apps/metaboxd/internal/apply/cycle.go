@@ -19,6 +19,23 @@ import (
 	"metabox/internal/locale"
 )
 
+var configLog = windowLog{
+	opened:             "service is up, confirmation window open",
+	notSaved:           "confirmation window state not saved",
+	interrupted:        "confirmation window interrupted by daemon shutdown",
+	restoredStopped:    "restored window interrupted by daemon shutdown",
+	expired:            "no confirmation, restoring the previous config",
+	confirmed:          "apply confirmed",
+	confirmedKept:      "state of the confirmed transaction not removed, the terminal phase is written",
+	unwritten:          "apply interrupted before the config write, no rollback needed",
+	interruptedApply:   "apply interrupted, restoring the previous config",
+	windowExpired:      "confirmation window expired, restoring the previous config",
+	rollbackUnfinished: "rollback interrupted in the confirmation window, finishing it",
+	windowRestored:     "confirmation window restored",
+	clearUnwritten:     "clear interrupted state",
+	clearFinished:      "clear finished state",
+}
+
 // check lays the candidate out in a temporary directory and gives it to the binary the way
 // the service will start it. The candidate carries the whole layout of the config
 // directory: files named by a relative path resolve from -D, and list changes land in the
@@ -396,75 +413,6 @@ func (m *Manager) awaitProcess(ctx context.Context, before int) error {
 	}
 }
 
-// await holds the confirmation window. Without confirmation in time the config
-// is returned to the previous one.
-func (m *Manager) await(ctx context.Context, log *slog.Logger, confirmed <-chan struct{}) {
-	m.mu.Lock()
-	tx := m.current
-	m.mu.Unlock()
-
-	// The window record reaches the disk before the phase opens Confirm: a Confirm that
-	// slipped in between would make the state terminal, and this write would then
-	// put awaiting_confirm back over it for the replay to roll back.
-	tx.Phase = PhaseAwaitingConfirm
-	if err := m.persist(ctx, tx); err != nil && ctx.Err() == nil {
-		log.Error("confirmation window state not saved", "err", err)
-	}
-
-	m.mu.Lock()
-	m.current.Phase = PhaseAwaitingConfirm
-	m.windowEndsAt = time.Now().Add(m.opts.Window)
-	m.mu.Unlock()
-
-	log.Info("service is up, confirmation window open", "window", m.opts.Window)
-
-	select {
-	case <-confirmed:
-		return
-	case <-ctx.Done():
-		// The daemon is being stopped. The state stays on disk, the window is replayed
-		// at the next start.
-		log.Warn("confirmation window interrupted by daemon shutdown")
-
-		return
-	case <-m.clock.After(m.opts.Window):
-		if !m.beginRollback() {
-			return
-		}
-
-		log.Warn("no confirmation, restoring the previous config")
-		m.rollback(context.WithoutCancel(ctx), log)
-	}
-}
-
-// beginRollback closes the window before the rollback touches the disk: from this
-// moment Confirm gets a refusal. False means the confirmation got in
-// before the timer and there is nothing to roll back. A Confirm caught writing the
-// terminal state is waited for: its outcome decides.
-func (m *Manager) beginRollback() bool {
-	for {
-		m.mu.Lock()
-
-		if m.current.Phase != PhaseAwaitingConfirm {
-			m.mu.Unlock()
-
-			return false
-		}
-
-		if !m.confirming {
-			m.rollingBack = true
-			m.mu.Unlock()
-
-			return true
-		}
-
-		done := m.confirmDone
-		m.mu.Unlock()
-
-		<-done
-	}
-}
-
 // rollback returns the previous config and brings the service up on it. Both
 // halves of the rollback report together: a rollback that did neither
 // must tell about both failures.
@@ -571,7 +519,7 @@ func (m *Manager) closeUnwritten(ctx context.Context, log *slog.Logger) {
 
 	// The state is removed before busy is released, for the same reason as in
 	// rollback. An applying left on disk will be closed by the replay without a rollback:
-	// writeHappened finds no write.
+	// written finds no write.
 	if err := m.store.ClearState(ctx); err != nil {
 		log.Error("state of the transaction without a write not removed", "err", err)
 	}
@@ -581,75 +529,39 @@ func (m *Manager) closeUnwritten(ctx context.Context, log *slog.Logger) {
 	m.mu.Unlock()
 }
 
-// Replay replays a transaction left from the previous daemon lifetime. Called
-// at start: without it, a power loss within the confirmation window would leave
-// the device on the unconfirmed config forever.
-func (m *Manager) Replay(ctx context.Context) error {
+func (m *Manager) readState(ctx context.Context) (Transaction, error) {
 	data, err := m.store.ReadState(ctx)
-	if errors.Is(err, config.ErrNoState) {
-		return nil
-	}
 	if err != nil {
-		return fmt.Errorf("read state: %w", err)
+		return Transaction{}, fmt.Errorf("read state: %w", err)
 	}
 
 	var tx Transaction
 	if err := json.Unmarshal(data, &tx); err != nil {
-		return fmt.Errorf("parse state: %w", err)
+		return Transaction{}, fmt.Errorf("parse state: %w", err)
 	}
 
-	log := m.log.With("transaction_id", tx.ID)
-
-	switch {
-	case tx.Phase == PhaseApplying:
-		// The cycle broke off before reaching the confirmation window. A rollback is needed only
-		// if the config managed to be written: otherwise the disk has the previous config,
-		// and the backup may be left from a previous transaction, and restoring from
-		// it would silently lose an already confirmed version.
-		if !m.writeHappened(ctx, tx) {
-			log.Warn("apply interrupted before the config write, no rollback needed")
-
-			if err := m.store.ClearState(ctx); err != nil {
-				return fmt.Errorf("clear interrupted state: %w", err)
-			}
-
-			return nil
-		}
-
-		log.Warn("apply interrupted, restoring the previous config")
-		m.begin(tx)
-		m.rollback(ctx, log)
-
-	case tx.Phase == PhaseAwaitingConfirm && tx.Window <= 0:
-		log.Warn("confirmation window expired, restoring the previous config")
-		m.begin(tx)
-		m.rollback(ctx, log)
-
-	case tx.Phase == PhaseAwaitingConfirm && !m.appliedOnDisk(ctx, tx):
-		// A window rollback broke off after Restore and before the state was cleared:
-		// a restored window would let Confirm keep the transaction over the previous config.
-		log.Warn("rollback interrupted in the confirmation window, finishing it")
-		m.begin(tx)
-		m.rollback(ctx, log)
-
-	case tx.Phase == PhaseAwaitingConfirm:
-		log.Warn("confirmation window restored", "window", tx.Window)
-		m.restoreWindow(tx, m.reserveRestored())
-
-	default:
-		if err := m.store.ClearState(ctx); err != nil {
-			return fmt.Errorf("clear finished state: %w", err)
-		}
-	}
-
-	return nil
+	return tx, nil
 }
 
-// writeHappened reports whether a broken cycle managed to touch the disk: the config sha
+func (m *Manager) writeState(ctx context.Context, tx Transaction) error { return m.persist(ctx, tx) }
+
+func (m *Manager) clearState(ctx context.Context) error { return m.store.ClearState(ctx) }
+
+func (m *Manager) reverted(ctx context.Context, tx Transaction) bool { return !m.appliedOnDisk(ctx, tx) }
+
+// restored takes the sum of a window raised from the journal as the daemon's own write.
+func (m *Manager) restored(tx Transaction, _ uint64) { m.lastSum = tx.Sum }
+
+// free releases the apply when Confirm closes the window. Under the same lock as the
+// confirmed phase: released after it, a Start let in by the background goroutine's own
+// release would lose its ownership here.
+func (m *Manager) free() { m.busy = false }
+
+// written reports whether a broken cycle managed to touch the disk: the config sha
 // is compared with the sum from the state, and then the changing list files.
 // The transaction carries only the really changing ones, so a match of any of them
 // means a started write, not a file that did not change.
-func (m *Manager) writeHappened(ctx context.Context, tx Transaction) bool {
+func (m *Manager) written(ctx context.Context, tx Transaction) bool {
 	current, err := m.store.Sum(ctx)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		// The comparison failed: we assume the write happened, since an extra rollback
@@ -726,49 +638,6 @@ func (m *Manager) appliedOnDisk(ctx context.Context, tx Transaction) bool {
 	}
 
 	return true
-}
-
-// restoreWindow raises the timer again for the period from the state. How much of it
-// passed before the reboot cannot be learned: the router has no real-time clock.
-// The property "no confirmation, rollback" is preserved, and the user
-// gets one more window to confirm the connection.
-func (m *Manager) restoreWindow(tx Transaction, token uint64) {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	// The transaction and its cancel are set under one lock: between two
-	// sections a daemon stop would see the new window with the old cancel and
-	// interrupt the wrong thing.
-	m.mu.Lock()
-	m.current = tx
-	m.windowEndsAt = time.Now().Add(tx.Window)
-	m.lastSum = tx.Sum
-	m.confirmed = make(chan struct{})
-	confirmed := m.confirmed
-	m.cancel = cancel
-	m.mu.Unlock()
-
-	m.wg.Add(1)
-
-	go func() {
-		defer m.wg.Done()
-		defer cancel()
-		defer m.unreserve(token)
-
-		log := m.log.With("transaction_id", tx.ID)
-
-		select {
-		case <-confirmed:
-		case <-ctx.Done():
-			log.Warn("restored window interrupted by daemon shutdown")
-		case <-m.clock.After(tx.Window):
-			if !m.beginRollback() {
-				return
-			}
-
-			log.Warn("no confirmation, restoring the previous config")
-			m.rollback(context.WithoutCancel(ctx), log)
-		}
-	}()
 }
 
 func sum(data []byte) string {
