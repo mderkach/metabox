@@ -28,11 +28,11 @@ type Cache interface {
 // the core reads the cache before anything else and fails within a second or two.
 const serviceWatch = 15 * time.Second
 
-// recover drops the cached subscription the core crashed on and starts the core again. A core
+// repairCache drops the cached subscription the core crashed on and starts the core again. A core
 // that crashes on another provider gets the same treatment; the same provider twice ends the
 // recovery, so the rounds stop when the bucket has no more keys the core names. Called with the
 // apply held; returns the dropped providers even when the recovery failed later.
-func (m *Manager) recover(ctx context.Context, log *slog.Logger, poisoned *poisonedError) ([]string, error) {
+func (m *Manager) repairCache(ctx context.Context, log *slog.Logger, poisoned *poisonedError) ([]string, error) {
 	if m.opts.Cache == nil {
 		return nil, locale.Errorf("sing-box crashed on the cached subscription %q: %s", poisoned.tag, poisoned.reason)
 	}
@@ -224,7 +224,7 @@ func (m *Manager) recoverHeld(ctx context.Context, poisoned *poisonedError) {
 	}
 	defer m.unreserve(token)
 
-	if _, err := m.recover(ctx, m.log, poisoned); err != nil {
+	if _, err := m.repairCache(ctx, m.log, poisoned); err != nil {
 		m.log.Error("sing-box not repaired after a crash on a cached subscription", "err", err)
 	}
 }

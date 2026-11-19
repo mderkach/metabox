@@ -460,7 +460,7 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 		}
 
 		if poisoned, ok := errors.AsType[*poisonedError](upErr); ok {
-			dropped, upErr = m.recover(context.WithoutCancel(ctx), log, poisoned)
+			dropped, upErr = m.repairCache(context.WithoutCancel(ctx), log, poisoned)
 		}
 	}
 

@@ -383,7 +383,7 @@ func (p *Plane) rollback(ctx context.Context, log *slog.Logger) {
 		}
 
 		if poisoned, ok := errors.AsType[*poisonedError](upErr); ok {
-			dropped, upErr = p.gate.recover(context.WithoutCancel(ctx), log, poisoned)
+			dropped, upErr = p.gate.repairCache(context.WithoutCancel(ctx), log, poisoned)
 		}
 	}
 
