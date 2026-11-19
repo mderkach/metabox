@@ -99,7 +99,6 @@ STUB
     fi
     echo "metaboxd $reported started on $(uname -m) from the init script command"
 
-    # arg_after prints the argument that follows $1 in the recorded command.
     arg_after() {
       jsonfilter -i /tmp/procd-set.json -e "@.instances.metaboxd.command[*]" | awk -v flag="$1" "found { print; exit } \$0 == flag { found = 1 }"
     }
