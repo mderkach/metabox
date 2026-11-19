@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sync"
 	"time"
 
 	"metabox/internal/clashapi"
@@ -236,6 +237,13 @@ type Service interface {
 	Launch(ctx context.Context) (procd.Launch, error)
 	// PID returns the pid of the service process that is up; zero means none is up.
 	PID(ctx context.Context) (int, error)
+	// CrashMark marks the service log now; Crash returns the FATAL line the service wrote
+	// after the mark while procd knows it and no instance is up, empty otherwise.
+	CrashMark(ctx context.Context) string
+	Crash(ctx context.Context, mark string) (string, error)
+	// Halt stops the sing-box process and keeps the dataplane; Start brings it up again.
+	Halt(ctx context.Context) error
+	Start(ctx context.Context) error
 }
 
 // Health waits until the Clash API comes up after a restart.
@@ -296,6 +304,9 @@ type Options struct {
 	DNS DNSProber
 	// Lang is the language of Transaction.Reason; the zero value is English.
 	Lang locale.Lang
+	// Cache repairs the sing-box cache file when the core crashes on a cached subscription;
+	// nil leaves such a crash to the owner.
+	Cache Cache
 }
 
 // Manager is the only owner of the apply cycle.
@@ -325,6 +336,15 @@ type Manager struct {
 	// It lives in memory only: after a restart the check is taken over by the client
 	// base, as with the config.
 	lastListsSum string
+	// pending is a crash on the cache file seen while a transaction held the apply. Guarded
+	// by mu.
+	pending *pendingRepair
+
+	// repairs are the cache repairs that run beside the request that found them; Close
+	// cancels them through repairCtx and waits.
+	repairs     sync.WaitGroup
+	repairCtx   context.Context
+	stopRepairs context.CancelFunc
 }
 
 // New assembles the apply. The clock may be omitted, then the system one is used.
@@ -339,8 +359,28 @@ func New(store Store, service Service, health Health, clock Clock, log *slog.Log
 	}
 	m.subject = m
 	m.gate = m
+	m.repairCtx, m.stopRepairs = context.WithCancel(context.Background())
 
 	return m
+}
+
+// Close cancels the cycle and the cache repairs and waits for them. A repair cancelled
+// between halt and start still starts the core: dropEntry starts it detached.
+func (m *Manager) Close() {
+	m.stopRepairs()
+	m.repairs.Wait()
+	m.window.Close()
+}
+
+// Confirm closes the confirmation window of the config apply; a crash on the cache file seen
+// while the window held the apply is repaired after it.
+func (m *Manager) Confirm(ctx context.Context, id string) (Transaction, error) {
+	tx, err := m.window.Confirm(ctx, id)
+	if err == nil {
+		m.afterConfirm()
+	}
+
+	return tx, err
 }
 
 // Start starts an apply. The binary check runs synchronously: the user fixes the config by its output,

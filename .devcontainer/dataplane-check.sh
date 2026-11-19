@@ -217,6 +217,13 @@ got=$(tcp_to_outside "$LISTED_IP" -)
 check "after respawn the connection is accepted again ($got)" "$got" = connected
 answer=$(client_sh "$UNLISTED_IP" - "nslookup failclosed.metabox.example $OUTSIDE 2>&1 || true")
 check "after respawn DNS answers again" -n "$(echo "$answer" | grep -F 1.2.3.5)"
+# halt is how the daemon stops sing-box to repair its cache file: interception must stay.
+in_target halt
+check "halt stopped sing-box" -z "$(in_target singbox-pid)"
+rules=$(in_target expect-up 2>&1 | grep -c 'dataplane in place' || true)
+check "rules in place after halt" "$rules" = 1
+in_target start
+in_target wait
 
 section "12. Mode all: an unlisted client also goes through sing-box"
 in_target acl all

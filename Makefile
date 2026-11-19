@@ -9,7 +9,7 @@ LDFLAGS    := -s -w -X metabox/internal/version.Version=$(VERSION) -X metabox/in
 # Pins the version down: the `go` directive in go.mod raises it but does not lower it.
 export GOTOOLCHAIN := go$(shell cat .go-version)
 
-.PHONY: all schema schema-daemon rule-set-snapshot web embed daemon daemon-device daemon-target ldflags dev dev-mock test test-schemagen singbox-pin-check trace-check lint hooks clean up up-dev down sh target-sh apply-check reach-check dataplane-check package stand-base stand-reset
+.PHONY: all schema schema-daemon rule-set-snapshot web embed daemon daemon-device daemon-target ldflags dev dev-mock test test-schemagen cache-fixture singbox-pin-check trace-check lint hooks clean up up-dev down sh target-sh apply-check reach-check dataplane-check package stand-base stand-reset
 
 all: daemon
 
@@ -79,6 +79,12 @@ test:
 test-schemagen:
 	cd tools/schemagen && go test \
 		-tags "$(SCHEMA_TAGS)" -ldflags "$(SCHEMA_LDFLAGS)" ./...
+
+# The cache file the daemon tests edit is written by the pinned fork itself.
+cache-fixture:
+	cd tools/schemagen && go test \
+		-tags "$(SCHEMA_TAGS)" -ldflags "$(SCHEMA_LDFLAGS)" \
+		-run TestCacheFileFixture -count=1 . -update-cache-fixture
 
 # install.sh carries the fork version and the router package hash as literals, because it runs
 # from a bare router; they must equal the pin the test bench reads.

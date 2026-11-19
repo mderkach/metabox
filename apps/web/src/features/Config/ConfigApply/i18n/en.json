@@ -46,7 +46,7 @@
       "healthcheck_failed": "the service started, but sing-box did not answer",
       "dns_probe_failed": "sing-box started but does not answer DNS queries: check the DNS section",
       "interception_missing": "after the restart, traffic interception from the network stopped working",
-      "rollback_failed": "the previous config could not be restored — the new one stayed on the device",
+      "rollback_failed": "rollback failed: the previous config was not restored, or sing-box did not start on it. Reason below",
       "no_backup": "there was nothing to roll back to: the device had no config before this apply, so the service stayed on the new one",
       "lists_restored": "the device had no config before this apply: the rule-set files were restored, but the service stayed on the new config"
     }

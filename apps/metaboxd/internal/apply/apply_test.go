@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
+	"strconv"
 	"sync"
 	"testing"
 	"testing/synctest"
@@ -259,7 +260,11 @@ func (s *fakeStore) WriteLists(_ context.Context, put map[string][]byte, remove 
 	return nil
 }
 
-func (s *fakeStore) ReadState(context.Context) ([]byte, error) {
+func (s *fakeStore) ReadState(ctx context.Context) ([]byte, error) {
+	if err := s.pass(ctx, "ReadState"); err != nil {
+		return nil, err
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -345,6 +350,30 @@ type fakeService struct {
 	// restart.
 	lag   int
 	stale int
+	// crash is what the service left in the log about its last crash; crashes are the
+	// reasons of the next starts, one per start, and an empty one means the start comes up.
+	crash   string
+	crashes []string
+	halted  bool
+	// logged counts the crash lines the service wrote; crashAt is the line of the current
+	// crash. A broken core writes a new line on every start.
+	logged  int
+	crashAt int
+	// quiet keeps the crash line in the log while starts come up: an older crash.
+	quiet bool
+	// hangAfterCrash makes Crash hang once it has reported a crash, the way a stuck ubus or
+	// logread does.
+	hangAfterCrash bool
+	reported       bool
+}
+
+// relog writes the current crash to the log again, the way a broken core does on a start.
+// Called under mu.
+func (s *fakeService) relog() {
+	if s.crash != "" && !s.quiet {
+		s.logged++
+		s.crashAt = s.logged
+	}
 }
 
 func (s *fakeService) Check(_ context.Context, config, workdir string) error {
@@ -373,6 +402,7 @@ func (s *fakeService) Restart(ctx context.Context) error {
 
 	s.pid++
 	s.stale = s.lag
+	s.relog()
 
 	return nil
 }
@@ -387,6 +417,10 @@ func (s *fakeService) PID(context.Context) (int, error) {
 		return 0, s.pidErr
 	}
 
+	if s.halted {
+		return 0, nil
+	}
+
 	if s.stale != 0 {
 		if s.stale > 0 {
 			s.stale--
@@ -396,6 +430,66 @@ func (s *fakeService) PID(context.Context) (int, error) {
 	}
 
 	return s.pid, nil
+}
+
+func (s *fakeService) Halt(context.Context) error {
+	s.rec.add("Halt")
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.halted = true
+
+	return nil
+}
+
+func (s *fakeService) Start(ctx context.Context) error {
+	s.rec.add("Start")
+
+	if err := s.pass(ctx, "Start"); err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.halted = false
+	s.pid++
+
+	s.crash = ""
+	if len(s.crashes) > 0 {
+		s.crash, s.crashes = s.crashes[0], s.crashes[1:]
+	}
+	s.relog()
+
+	return nil
+}
+
+func (s *fakeService) CrashMark(context.Context) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return strconv.Itoa(s.logged)
+}
+
+func (s *fakeService) Crash(ctx context.Context, mark string) (string, error) {
+	s.mu.Lock()
+
+	if s.hangAfterCrash && s.reported {
+		s.mu.Unlock()
+		<-ctx.Done()
+
+		return "", ctx.Err()
+	}
+
+	defer s.mu.Unlock()
+	defer func() { s.reported = s.reported || s.crash != "" }()
+
+	if after, err := strconv.Atoi(mark); err == nil && s.crashAt <= after {
+		return "", nil
+	}
+
+	return s.crash, nil
 }
 
 func (s *fakeService) Launch(context.Context) (procd.Launch, error) {
@@ -414,6 +508,9 @@ type fakeHealth struct {
 
 	rec *recorder
 	err error
+	// silentWhile, when set, keeps the Clash API silent while it reports true, the way a
+	// crashing core never answers.
+	silentWhile func() bool
 }
 
 func (h *fakeHealth) Wait(ctx context.Context, _ clashapi.Settings) error {
@@ -421,6 +518,14 @@ func (h *fakeHealth) Wait(ctx context.Context, _ clashapi.Settings) error {
 
 	if err := h.pass(ctx, "Wait"); err != nil {
 		return err
+	}
+
+	for h.silentWhile != nil && h.silentWhile() {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Millisecond):
+		}
 	}
 
 	return h.err

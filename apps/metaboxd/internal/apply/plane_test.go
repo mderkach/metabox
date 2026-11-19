@@ -91,6 +91,25 @@ type fakeReloader struct {
 	calls    int
 	checks   int
 	checkErr error
+	// crash is the last crash reason procd reports for the service.
+	crash string
+}
+
+// PID counts reloads: each one brings up a new sing-box process.
+func (r *fakeReloader) PID(context.Context) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return r.calls + 1, nil
+}
+
+func (r *fakeReloader) CrashMark(context.Context) string { return "" }
+
+func (r *fakeReloader) Crash(context.Context, string) (string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return r.crash, nil
 }
 
 func (r *fakeReloader) Reload(ctx context.Context) error {

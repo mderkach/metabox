@@ -9,6 +9,7 @@
 START=97
 USE_PROCD=1
 extra_command "dataplane_check" "Check the dataplane ip rule, route and dnsmasq fragment"
+extra_command "halt" "Stop sing-box and keep the dataplane"
 
 RUN_DIR=/var/run/metabox
 NFT_FILE=$RUN_DIR/fw4_post.nft
@@ -521,6 +522,12 @@ stop_service() {
 restart() {
 	procd_kill "$(basename "${basescript:-$initscript}")" sing-box >/dev/null 2>&1
 	start "$@"
+}
+
+# Halt stops only the sing-box process, for the daemon to edit the files it holds. stop would
+# remove the dataplane too and let listed devices out directly.
+halt() {
+	procd_kill "$(basename "${basescript:-$initscript}")" sing-box >/dev/null 2>&1
 }
 
 service_triggers() {

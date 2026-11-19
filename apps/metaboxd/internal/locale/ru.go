@@ -196,4 +196,18 @@ var ru = map[string]string{
 	"the connection rule is not in the rule list of the running process": "правила соединения нет в списке правил работающего процесса",
 	"service state: %w":                                                  "состояние службы: %w",
 	"build request to %s: %w":                                            "сборка запроса к %s: %w",
+
+	// The check of sing-box after a restart and the repair of its cache file.
+	"read the config to check sing-box: %w":                        "чтение конфига для проверки sing-box: %w",
+	"sing-box did not start: %w":                                   "sing-box не запустился: %w",
+	"sing-box did not start: %w. Last error in its log: %s":        "sing-box не запустился: %w. Последняя ошибка из лога: %s",
+	"sing-box exits on the saved subscription %q: %s":              "sing-box аварийно завершается из-за сохранённой подписки %q: %s",
+	"sing-box still exits on the saved subscription %q: %s":        "sing-box всё ещё аварийно завершается из-за сохранённой подписки %q: %s",
+	"read the config for the cache file: %w":                       "чтение конфига для файла кэша: %w",
+	"stop sing-box before editing the cache file: %w":              "не удалось остановить sing-box перед правкой файла кэша: %w",
+	"sing-box did not start after the cache file was repaired: %w": "sing-box не запустился после правки файла кэша: %w",
+	"sing-box exits on the saved subscription %q, but subscriptions are not cached in this config (store_subscriptions is off), so the daemon cannot repair it":                       "sing-box аварийно завершается из-за сохранённой подписки %q, но в этом конфиге подписки не кэшируются (store_subscriptions выключен), демон не может это починить",
+	"could not remove subscription %q from the cache file (the subscription stays in the config): %w":                                                                                 "не удалось убрать подписку %q из файла кэша (сама подписка в конфиге остаётся): %w",
+	"sing-box could not start on the saved subscription %s. The daemon deleted its entry from the cache file; the next subscription update downloads it again":                        "sing-box не мог запуститься из-за сохранённой подписки %s. Демон удалил её запись из файла кэша; при следующем обновлении подписка скачается заново",
+	"sing-box could not start on the saved subscription %s, and the cache file did not open. The daemon renamed the file to %s; sing-box downloads subscriptions and rule sets again": "sing-box не мог запуститься из-за сохранённой подписки %s, а файл кэша не открылся. Демон переименовал файл в %s; sing-box скачает подписки и наборы правил заново",
 }

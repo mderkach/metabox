@@ -25,7 +25,7 @@ Issue: none yet.
 
 ## Already built
 
-No gap found in the code; what is missing is the device run and the Verification rows.
+One gap is known: issue #338 showed a rollback that restarts the service without checking it and reports the previous config restored while the core stays down, here because of a poisoned subscription entry in the sing-box cache file. The fix is the change [`recover-from-a-poisoned-subscription-cache`](../recover-from-a-poisoned-subscription-cache/proposal.md). Beyond it, what is missing is the device run and the Verification rows.
 
 - The confirmation window: `Manager.await` in `apps/metaboxd/internal/apply/cycle.go` restores the previous config when no confirmation comes in time; a failed step after the write rolls back in `Manager.cycle`. Tests: `TestRollbackWithoutConfirmation` (`apply_test.go`), `TestHTTPApplyRollsBackByWindow` (`http_test.go`).
 - A power cut or a daemon restart: the state is written to disk before the config and replayed at start (`Manager.Replay`). Tests: `TestHTTPApplyInterruptedAtEveryStep`, `TestHTTPApplyWindowAfterRestart` (`http_test.go`), `TestReplayRollsBackInterruptedApply`, `TestReplayRollsBackExpiredWindow`, `TestReplayRestoresLiveWindow` (`replay_test.go`).

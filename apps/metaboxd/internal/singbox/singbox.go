@@ -196,6 +196,12 @@ func (c *Client) CheckDataplane(ctx context.Context) error {
 	return c.service(ctx, "dataplane_check")
 }
 
+// Halt stops only the sing-box process and keeps the dataplane: stop would let the traffic of
+// listed devices out directly while the daemon edits a file the core holds.
+func (c *Client) Halt(ctx context.Context) error {
+	return c.service(ctx, "halt")
+}
+
 // Start brings the service up. An already running service is a regular path: the procd
 // init script does not complain about a repeated start.
 func (c *Client) Start(ctx context.Context) error {
@@ -313,6 +319,51 @@ func (c *Client) State(ctx context.Context) (State, error) {
 	}
 
 	return state, nil
+}
+
+// CrashMark returns the last line sing-box wrote to the device logger: Crash after it counts
+// only what the service wrote later. Empty when the logger holds none or is not available.
+func (c *Client) CrashMark(ctx context.Context) string {
+	log, ok := c.readLog(ctx)
+	if !ok {
+		return ""
+	}
+
+	lines := processLines(log, c.processName())
+	if len(lines) == 0 {
+		return ""
+	}
+
+	return lines[len(lines)-1]
+}
+
+// Crash returns the FATAL line the service wrote after mark while procd knows it and no
+// instance is up. Empty when the service runs, is stopped, or wrote no FATAL since the mark:
+// procd keeps the service known with no instance after halt and between the two halves of a
+// restart, and an older crash left in the log must not be taken for a new one.
+func (c *Client) Crash(ctx context.Context, mark string) (string, error) {
+	// Not State: it reads the log for the panel's reason, and this read would be the second
+	// on every poll.
+	running, err := c.running(ctx)
+	if err != nil {
+		return "", locale.Errorf("service state: %w", err)
+	}
+
+	if running.ExitCode == 0 || c.supervisor == nil {
+		return "", nil
+	}
+
+	supervised, err := c.supervisor.Service(ctx, c.ServiceName(), Instance)
+	if err != nil || !supervised.Known {
+		return "", nil
+	}
+
+	log, ok := c.readLog(ctx)
+	if !ok {
+		return "", nil
+	}
+
+	return freshFatal(processLines(log, c.processName()), mark), nil
 }
 
 // Launch returns what procd starts the service with: the working directory and the config.

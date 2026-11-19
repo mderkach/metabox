@@ -19,6 +19,7 @@ import (
 
 	"metabox/internal/apply"
 	"metabox/internal/auth"
+	"metabox/internal/cachefile"
 	"metabox/internal/cert"
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
@@ -53,6 +54,10 @@ const (
 
 	healthRequestTimeout = 5 * time.Second
 	healthPollInterval   = 500 * time.Millisecond
+
+	// How long the cache file repair waits for sing-box to let go of the file after its process
+	// was stopped.
+	cacheLockTimeout = 10 * time.Second
 
 	// DNS probe: the first query after a restart brings up the connection to upstream and
 	// may take seconds, so there are several attempts. A failure of all three is about
@@ -197,16 +202,14 @@ func run(log *slog.Logger, s settings) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// An unfinished transaction is replayed before the daemon starts
-	// accepting requests: a power loss within the confirmation window would otherwise leave
-	// the device on the unconfirmed config forever.
-	if err := manager.Replay(ctx); err != nil {
-		log.Error("unfinished transaction not replayed", "err", err)
-	}
-
-	if err := planeTx.Replay(ctx); err != nil {
-		log.Error("unfinished dataplane change not replayed", "err", err)
-	}
+	// A power loss within the confirmation window would otherwise leave the device on the
+	// unconfirmed config forever. The replay runs beside the server, holding the apply; on the
+	// way out it is cancelled and waited for before the manager closes.
+	settled := manager.Settle(ctx, planeTx)
+	defer func() {
+		stop()
+		<-settled
+	}()
 
 	spa, err := webui.Handler()
 	if errors.Is(err, webui.ErrNotBuilt) {
@@ -391,6 +394,7 @@ func run(log *slog.Logger, s settings) error {
 		AllowedOrigin:  s.allowedOrigin,
 		SPA:            spa,
 		Service:        service,
+		Recovery:       manager,
 		Restart:        self,
 		Events:         hub,
 		Clash:          clashHandler,
@@ -522,6 +526,7 @@ func build(
 		Dataplane:       plane,
 		DNS:             dns,
 		Lang:            s.lang,
+		Cache:           cachefile.Editor{LockTimeout: cacheLockTimeout},
 	})
 
 	planeTx := apply.NewPlane(manager, plane, service, store, health, nil, log, apply.PlaneOptions{
