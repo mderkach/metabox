@@ -14,30 +14,30 @@ func (Editor) MoveAside(ctx context.Context, path string) (string, error) {
 		return "", err
 	}
 
-	aside := path + ".broken"
-	if err := os.Rename(path, aside); err != nil {
+	root, err := os.OpenRoot(filepath.Dir(path))
+	if err != nil {
+		return "", fmt.Errorf("open cache directory: %w", err)
+	}
+	defer func() { _ = root.Close() }()
+
+	name := filepath.Base(path)
+	if err := root.Rename(name, name+".broken"); err != nil {
 		return "", fmt.Errorf("move cache file aside: %w", err)
 	}
 
-	if err := syncDir(filepath.Dir(path)); err != nil {
-		return aside, err
-	}
+	aside := path + ".broken"
 
-	return aside, nil
-}
-
-func syncDir(dir string) error {
-	d, err := os.Open(dir)
+	d, err := root.Open(".")
 	if err != nil {
-		return fmt.Errorf("open %s: %w", dir, err)
+		return aside, fmt.Errorf("open cache directory: %w", err)
 	}
 
 	syncErr := d.Sync()
 	closeErr := d.Close()
 
 	if syncErr != nil {
-		return fmt.Errorf("fsync %s: %w", dir, syncErr)
+		return aside, fmt.Errorf("fsync cache directory: %w", syncErr)
 	}
 
-	return closeErr
+	return aside, closeErr
 }
