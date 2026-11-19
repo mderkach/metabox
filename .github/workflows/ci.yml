@@ -177,7 +177,7 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [go, schemagen, web, web-browser, integration, package]
+    needs: [go, schemagen, web, web-browser, integration, dev-stand, package]
     if: always()
     steps:
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
@@ -282,6 +282,56 @@ jobs:
       - name: Target logs
         if: failure()
         run: docker compose -f .devcontainer/docker-compose.yml logs target
+
+  # The dev stand of `make up-dev` from a clean checkout: the Vite container, the daemon and
+  # sing-box answer on the ports the developer opens. The daemon is built for the runner without
+  # the panel, as in `integration`: Vite serves the panel here.
+  dev-stand:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      METABOX_BASE_IMAGE: openwrt/rootfs:x86-64-25.12.4
+      OPENWRT_PLATFORM: linux/amd64
+      DAEMON_BINARY: dist/metaboxd-linux-amd64
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: .go-version
+          cache: false
+
+      - name: Daemon build
+        env:
+          CGO_ENABLED: '0'
+        run: |
+          mkdir -p dist
+          ldflags="$(make -s ldflags VERSION=ci)"
+          cd apps/metaboxd && go build -ldflags "$ldflags" -o "../../$DAEMON_BINARY" .
+
+      - name: Dev stand
+        timeout-minutes: 10
+        run: docker compose -f .devcontainer/docker-compose.yml --profile dev up -d --build
+
+      - name: Panel, daemon and Clash API answer
+        timeout-minutes: 5
+        run: |
+          check() {
+            for i in $(seq 1 120); do
+              if curl -fs -o /dev/null "$2"; then echo "$1 answers"; return 0; fi
+              sleep 2
+            done
+            echo "$1 does not answer on $2" >&2
+            return 1
+          }
+          check "the daemon" http://localhost:8080/healthz
+          check "the Clash API" http://localhost:9090/version
+          check "Vite" http://localhost:5173/
+          check "the daemon through the Vite proxy" http://localhost:5173/api/status
+
+      - name: Stand logs
+        if: failure()
+        run: docker compose -f .devcontainer/docker-compose.yml --profile dev logs
 
   # The release starts its package under QEMU before publishing; the same check runs here on an
   # unsigned package, so a broken emulation or package shows up before a tag, not on it.
