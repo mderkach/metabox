@@ -63,6 +63,14 @@ export class ConnectionLoad {
     }, options);
   }
 
+  async longTaskCount(): Promise<number> {
+    return this.page.evaluate(
+      () =>
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- `install` puts the record on the page before its scripts run.
+        (globalThis as unknown as LoadGlobal).__METABOX_CONNECTION_LOAD__.longTasks.length
+    );
+  }
+
   /** Runs `act`, then lets the stream send `frames` more snapshots and returns the step cost. */
   async measure(act: () => Promise<void>, frames = FRAMES_PER_STEP): Promise<MainThreadCost> {
     const start = await this.page.evaluate<StepStart>(() => {

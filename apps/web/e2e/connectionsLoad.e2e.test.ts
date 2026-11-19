@@ -1,8 +1,6 @@
 import type { MainThreadCost } from './fixtures/connectionLoad.ts';
 import { E2E_TAG, expect, test } from './fixtures/index.ts';
 
-/** A busy router: 5000 live connections matched by 500 different rules. */
-const LOAD = { connections: 5000, rules: 500, frames: 40 } as const;
 /** `CLOSED_LIMIT` of the connection model: the hidden tab holds this many rows on a busy router. */
 const CLOSED_LIMIT = '200';
 const TICKS = 5;
@@ -11,8 +9,14 @@ const TICKS = 5;
  * to closed, so the first snapshot and a full closed tab take several seconds on a busy runner.
  */
 const STAND_READY_MS = 15_000;
-/** The scenario waits about twenty ticks of a second, besides loading the stand. */
+/** The scenario waits about twenty-five ticks of a second, besides loading the stand. */
 const SCENARIO_MS = 60_000;
+const FRAME_MS = 1000;
+/**
+ * A busy router: 5000 live connections matched by 500 different rules. The stream has a frame for
+ * every second the scenario may last, so a slow runner hits the timeout, not a silent stream.
+ */
+const LOAD = { connections: 5000, rules: 500, frames: SCENARIO_MS / FRAME_MS } as const;
 /** Indent of the printed costs. */
 const JSON_INDENT = 2;
 /** `METABOX_E2E_CPU_RATE=4` slows the page down as a weak laptop or a phone would. */
@@ -31,6 +35,8 @@ test(
     await connectionsPage.goto();
     await expect(connectionsPage.activeTab).toContainText(String(LOAD.connections), { timeout: STAND_READY_MS });
     await expect(connectionsPage.closedTab).toContainText(CLOSED_LIMIT, { timeout: STAND_READY_MS });
+    // Serializing the frames is one long task, so none recorded means the observer is not working.
+    expect(await connectionLoad.longTaskCount()).toBeGreaterThan(0);
 
     const costs: Record<string, MainThreadCost> = {};
 
