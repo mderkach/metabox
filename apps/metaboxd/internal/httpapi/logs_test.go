@@ -100,7 +100,7 @@ func TestLogsTail(t *testing.T) {
 	var body contract.Logs
 	got.decode(t, &body)
 
-	if body.Source != logs.SourceLogread || body.Since != "2026-10-09T20:00:00Z" || len(body.Entries) != 1 {
+	if body.Source != contract.SourceLogread || body.Since != "2026-10-09T20:00:00Z" || len(body.Entries) != 1 {
 		t.Errorf("response %+v", body)
 	}
 

@@ -59,7 +59,7 @@ func TestDataplaneModel(t *testing.T) {
 	var body contract.Dataplane
 	got.decode(t, &body)
 
-	if body.Model.RedirectPort != 5331 || body.Applied || body.AppliedReason != dataplane.NFTUnavailable {
+	if body.Model.RedirectPort != 5331 || body.Applied || body.AppliedReason != contract.NFTUnavailable {
 		t.Errorf("response %+v", body)
 	}
 }
@@ -81,7 +81,8 @@ func TestDataplaneInvalid(t *testing.T) {
 	}
 	got.decode(t, &body)
 
-	if body.Code != contract.ErrDataplaneInvalid || len(body.Details.Fields) != 1 || body.Details.Fields[0] != fields[0] {
+	want := contract.FieldError{Field: fields[0].Field, Value: fields[0].Value, Reason: contract.FieldReason(fields[0].Reason)}
+	if body.Code != contract.ErrDataplaneInvalid || len(body.Details.Fields) != 1 || body.Details.Fields[0] != want {
 		t.Errorf("failure %+v", body)
 	}
 }
@@ -157,7 +158,9 @@ func TestDataplaneChangeCycle(t *testing.T) {
 	model := dataplane.Defaults()
 	model.SourceIP = []string{"192.168.1.10"}
 
-	body, err := json.Marshal(contract.DataplaneChange{Model: model})
+	body, err := json.Marshal(struct {
+		Model dataplane.Model `json:"model"`
+	}{model})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -31,9 +31,11 @@ type walker struct {
 	// does not store it, and the artifact must be the same from run to run.
 	enums      map[string]enumDecl
 	enumsOrder []string
+	// pinned are the constant names fixed by `package.Type`, ahead of the package prefix.
+	pinned map[string]string
 }
 
-func generate(root string, roots []rootType) (string, error) {
+func generate(root string, roots []rootType, pinned map[string]string) (string, error) {
 	pkgs := make([]string, 0, len(roots))
 	seen := map[string]bool{}
 
@@ -49,7 +51,10 @@ func generate(root string, roots []rootType) (string, error) {
 		return "", err
 	}
 
-	w := &walker{src: src, printed: map[string]bool{}, bodies: map[string]string{}, enums: map[string]enumDecl{}}
+	w := &walker{
+		src: src, printed: map[string]bool{}, bodies: map[string]string{}, enums: map[string]enumDecl{},
+		pinned: pinned,
+	}
 
 	for _, item := range roots {
 		if err := w.schema(item.pkg, item.name); err != nil {
@@ -262,7 +267,9 @@ func (w *walker) enumNames() map[string]string {
 		decl := w.enums[key]
 		name := constantName(decl.name)
 
-		if count[name] > 1 {
+		if pinned, ok := w.pinned[key]; ok {
+			name = pinned
+		} else if count[name] > 1 {
 			name = constantName(packageName(decl.pkg)) + "_" + name
 		}
 

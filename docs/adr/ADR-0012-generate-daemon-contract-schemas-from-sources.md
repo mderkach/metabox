@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-09-12
 - Deciders: repository owner
+- Superseded by (as to the contract referring to domain types and the generator loading them): [ADR-0085](./ADR-0085-copy-domain-types-into-the-daemon-contract.md)
 
 ## Context and problem statement
 

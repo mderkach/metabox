@@ -75,9 +75,9 @@ func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(s.log, w, http.StatusOK, contract.Logs{
-		Source:  snapshot.Source,
+		Source:  contract.Source(snapshot.Source),
 		Since:   formatSince(snapshot.Since),
-		Entries: snapshot.Entries,
+		Entries: each(snapshot.Entries, entryOut),
 	})
 }
 
@@ -123,7 +123,7 @@ func (s *Server) handleLogStream(w http.ResponseWriter, r *http.Request) {
 		seq++
 
 		select {
-		case queue <- contract.LogEvent{Seq: seq, Entry: entry}:
+		case queue <- contract.LogEvent{Seq: seq, Entry: entryOut(entry)}:
 		default:
 		}
 	}

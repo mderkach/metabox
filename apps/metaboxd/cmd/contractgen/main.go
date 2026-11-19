@@ -51,6 +51,14 @@ var roots = []rootType{
 	{pkg: "internal/ruleset", name: "Catalog"},
 }
 
+// pinnedEnums fixes the constant names of enums whose type name repeats across packages.
+// The panel imports these constants, and the default package prefix would rename one
+// when its type moves to another package.
+var pinnedEnums = map[string]string{
+	"internal/contract.ReasonCode": "APPLY_REASON_CODE",
+	"internal/route.ReasonCode":    "ROUTE_REASON_CODE",
+}
+
 func main() {
 	out := flag.String("out", "", "path of the generated schema file")
 	root := flag.String("root", ".", "module root to read sources from")
@@ -61,7 +69,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	content, err := generate(*root, roots)
+	content, err := generate(*root, roots, pinnedEnums)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "contractgen:", err)
 		os.Exit(1)

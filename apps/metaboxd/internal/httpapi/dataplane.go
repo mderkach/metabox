@@ -59,7 +59,7 @@ func (s *Server) handleDataplaneChange(w http.ResponseWriter, r *http.Request) {
 		client = addr.Addr()
 	}
 
-	tx, err := s.plane.Start(r.Context(), req.Model, baseSum(match), client)
+	tx, err := s.plane.Start(r.Context(), modelIn(req.Model), baseSum(match), client)
 	if err != nil {
 		fail(s.log, w, r, err)
 
