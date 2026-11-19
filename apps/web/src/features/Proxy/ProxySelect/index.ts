@@ -1,1 +1,1 @@
-export * from './api';
+export { useSelectProxy } from './api/ProxySelect.api';

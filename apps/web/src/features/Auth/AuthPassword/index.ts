@@ -1,1 +1,1 @@
-export * from './ui';
+export { AuthPasswordSection } from './ui/AuthPasswordSection';

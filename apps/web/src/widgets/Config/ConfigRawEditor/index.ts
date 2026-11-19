@@ -1,1 +1,1 @@
-export * from './ui';
+export { ConfigRawEditor } from './ui/ConfigRawEditor';

@@ -1,1 +1,1 @@
-export * from './AuthLogin.api';
+export { useLogin } from './AuthLogin.api';

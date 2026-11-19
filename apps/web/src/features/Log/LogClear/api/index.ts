@@ -1,1 +1,1 @@
-export * from './LogClear.api';
+export { useClearLog } from './LogClear.api';

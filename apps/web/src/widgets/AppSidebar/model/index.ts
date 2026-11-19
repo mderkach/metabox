@@ -1,1 +1,1 @@
-export * from './AppSidebar.constants';
+export { NAV_ITEMS, NAV_TARGETS } from './AppSidebar.constants';

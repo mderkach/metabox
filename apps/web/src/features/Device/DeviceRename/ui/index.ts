@@ -1,1 +1,1 @@
-export * from './DeviceRenameForm';
+export { DeviceRenameForm } from './DeviceRenameForm';

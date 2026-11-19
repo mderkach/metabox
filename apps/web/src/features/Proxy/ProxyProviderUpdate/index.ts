@@ -1,1 +1,1 @@
-export * from './api';
+export { useUpdateProxyProvider } from './api/ProxyProviderUpdate.api';

@@ -1,1 +1,1 @@
-export * from './McpAccess.lib';
+export { copyText } from './McpAccess.lib';

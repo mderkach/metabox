@@ -1,1 +1,1 @@
-export * from './LogClearButton';
+export { LogClearButton } from './LogClearButton';

@@ -1,1 +1,1 @@
-export * from './DeviceRename.api';
+export { useRenameDevice } from './DeviceRename.api';

@@ -1,3 +1,3 @@
-export * from './createReactSelectors';
-export * from './stateCreator';
-export * from './useStore';
+export { createReactSelectors } from './createReactSelectors';
+export { stateCreator } from './stateCreator';
+export { useStore } from './useStore';
