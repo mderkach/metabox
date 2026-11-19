@@ -28,6 +28,12 @@ After restoring the previous config and restarting the service, the rollback SHA
 - **WHEN** the daemon starts and replays the transaction
 - **THEN** the transaction closes as `rollback_failed`
 
+#### Scenario: A failed window rollback is retried at the next daemon start
+
+- **GIVEN** a window rollback that closed as `rollback_failed` because the core did not come up
+- **WHEN** the daemon starts again
+- **THEN** the replay restores the previous config, restarts the service and checks it again
+
 #### Scenario: A rollback without a restart is not checked
 
 - **GIVEN** an apply with no config backup

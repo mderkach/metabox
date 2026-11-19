@@ -43,6 +43,10 @@ Rejected: a separate supervisor package with its own service handle. It would du
 
 `rollback` calls `awaitProcess` with the pid taken before the restart, then `health.Wait` with the Clash API settings of the restored config (`clashapi.Read` on the restored bytes, not the candidate's). A failure joins the restart error path: `rollback_failed`, the reason carries the crash reason, `lastSum` is reset as today. DNS and interception probes are not repeated: the rollback has nothing to roll back to, and the question is only whether the core runs. The same check goes into `Plane` rollback if the owner agrees (proposal, open questions).
 
+The wait ends early when procd knows the service, no instance runs and the crash reason carries the signature: in the incident the API wait used the whole two minutes of the cycle timeout, and the rollback shares that context. The recovery gets its own timeout of the same length, not the remainder.
+
+The `rollback_failed` path keeps today's state handling: the state file stays on disk. At the next daemon start the replay clears an `applying` transaction, because the disk already holds the previous config, and reruns the rollback of an `awaiting_confirm` one (restore, restart, healthcheck). With recovery at daemon start running after the replays, a router that rebooted into this state gets one more attempt without a user action.
+
 ### Recovery flow
 
 1. A trigger sees a failed healthcheck or a failed service, reads the crash reason and matches the signature. No match: nothing else happens.
@@ -52,11 +56,13 @@ Rejected: a separate supervisor package with its own service handle. It would du
 5. Delete the key of the tag. Absent key: start the service, report; do not search other buckets.
 6. Start the service, wait for a new process and the Clash API. A new signature with a tag not dropped yet: repeat from step 3. The same tag or another failure: report.
 
+Entry condition, the same for every trigger: procd knows the service, no instance is running, and the crash reason carries the signature. A service stopped by the user, a service procd does not know, a missing config or another crash reason ends the check at once without touching the slot, so the panel keeps working with sing-box down (AC-27).
+
 Triggers:
 
 - the rollback restart (AC-91 failure with the signature): recovery runs inside the rollback, under the same slot; success closes the transaction as `rolled_back` with the dropped tag in the reason;
-- `POST /api/service/start` and `/restart`: after the action the handler waits for the healthcheck and runs recovery on the signature, then answers with the state;
-- daemon start, after both replays: in a goroutine owned by `main`, cancelled by the root context, under the apply slot. It waits for the service with the cycle timeout, but stops waiting as soon as the crash reason carries the signature.
+- `POST /api/service/start` and `/restart`: after the action the handler polls the service for a few seconds, the time the core takes to fail on its cache; on the entry condition it runs recovery, then answers with the state. A core that starts answers as today. The extra wait in the handler is an open question of its own (proposal);
+- daemon start, after both replays: in a goroutine owned by `main`, cancelled by the root context. It polls the service without the apply slot and takes the slot only when the entry condition holds, so an Apply right after boot is not blocked by a healthy or stopped service.
 
 ### Moving a file aside
 
@@ -64,7 +70,7 @@ Renamed to `<file>.broken` in the same directory: one fixed name, replaced on ev
 
 ### Dependency
 
-`go.etcd.io/bbolt` v1.5.0, the upstream of the fork's `github.com/sagernet/bbolt`. Measured on 2026-11-19, `linux/arm64`, `-trimpath -ldflags="-s -w"`: a program that opens a database and deletes a key is 1.97 MB against 1.31 MB without bbolt, the same for both modules; the only indirect module is `golang.org/x/sys`, already required by the daemon. The decision, the rejected options and the condition for removal: [ADR-0086](../../../docs/adr/ADR-0086-repair-the-sing-box-cache-file-in-the-daemon-with-bbolt.md).
+`go.etcd.io/bbolt` v1.5.0, the upstream of the fork's `github.com/sagernet/bbolt`. Measured on 2026-11-19, `linux/arm64`, `-trimpath -ldflags="-s -w"`: a program that opens a database and deletes a key is 1.97 MB against 1.31 MB without bbolt, the same for both modules; the only indirect module is `golang.org/x/sys`, which the daemon already requires at v0.41.0 and bbolt v1.5.0 raises to v0.45.0. Checked on the same day on darwin/arm64: a file with a top-level and a nested `rule_set` bucket written by `sagernet/bbolt`, a key deleted by `go.etcd.io/bbolt`, then reopened by `sagernet/bbolt`: the other keys are intact and `Tx.Check` reports no error. Not yet checked on the router's linux/arm64 page size; the fixture test covers it in CI. The decision, the rejected options and the condition for removal: [ADR-0086](../../../docs/adr/ADR-0086-repair-the-sing-box-cache-file-in-the-daemon-with-bbolt.md).
 
 ### Fork pin test
 
@@ -80,7 +86,7 @@ The second test also writes the fixture `cache.db` the daemon tests read, so the
 - [Deleting a cache entry the user did not ask to delete] → only on the exact signature, only the key named by the core, logged with the tag; the next background update refills it.
 - [A refilled entry is poisoned again: the subscription still returns the bad link] → the core runs until the next restart, and recovery repeats then. The fix belongs to the subscription source or the fork; recovery only keeps the router reachable.
 - [Library divergence: the daemon's bbolt edits a file the fork's bbolt then rejects] → the fork deletes a file it cannot open; the fixture test from the fork's writer catches a format change on a fork bump.
-- [The daemon holds the apply slot at boot for up to the cycle timeout] → Apply answers `ErrBusy` for that time; the wait ends early on a running core or the signature.
+- [The daemon holds the apply slot during a recovery] → only after the entry condition holds, and for at most the recovery timeout; Apply answers `ErrBusy` meanwhile.
 - [The signature text changes in a fork release] → the pin test asserts the text; a change fails `make test-schemagen` before the bump ships.
 - [The fallback probably fails the first start on `initial rule-set`] → recorded as an open question; the core is down in that case anyway.
 

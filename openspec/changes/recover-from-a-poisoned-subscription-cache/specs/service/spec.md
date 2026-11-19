@@ -52,6 +52,12 @@ When the service fails with `start provider/remote[<tag>]: restore cached outbou
 - **WHEN** a trigger runs
 - **THEN** the cache file is not opened and the service is not stopped
 
+#### Scenario: A stopped service is left alone
+
+- **GIVEN** a service the user stopped in the panel
+- **WHEN** the daemon starts
+- **THEN** the daemon does not start the service, does not open the cache file, and an Apply is not refused as busy
+
 #### Scenario: A held lock stops the recovery
 
 - **GIVEN** a cache file whose lock is still held after the sing-box process was stopped
