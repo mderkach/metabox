@@ -5,7 +5,6 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -15,9 +14,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"slices"
-	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -170,7 +166,8 @@ func main() {
 	flag.TextVar(&s.logLevel, "log-level", slog.LevelInfo, "log level: debug, info, warn, error")
 	flag.TextVar(&s.lang, "lang", locale.English, "language of the texts the daemon shows the operator: en or ru")
 	flag.Usage = func() {
-		locale.PrintDefaults(flag.CommandLine.Output(), flag.CommandLine, helpLang(s))
+		lang := locale.HelpLang(flag.CommandLine, os.Args[1:], s.lang, s.uci, singbox.NewExec(helpLangTimeout).Command)
+		locale.PrintDefaults(flag.CommandLine.Output(), flag.CommandLine, lang)
 	}
 	flag.Parse()
 
@@ -184,10 +181,10 @@ func main() {
 
 func run(log *slog.Logger, s settings) error {
 	planeExec := singbox.NewExec(binaryTimeout)
-	plane := dataplane.New(dataplane.Runner(runCommand(planeExec)), dataplane.Options{
+	plane := dataplane.New(planeExec.Command, dataplane.Options{
 		UCI:   s.uci,
 		NFT:   s.nft,
-		Batch: batchCommand(planeExec),
+		Batch: planeExec.CommandInput,
 	})
 
 	manager, planeTx, store, service, err := build(log, s, plane)
@@ -231,7 +228,9 @@ func run(log *slog.Logger, s settings) error {
 	// without the runtime too, just with degraded screens.
 	var clashHandler http.Handler
 
-	clash, err := clashapi.NewProxy(configSettings(store), httpapi.ProxyError(log))
+	controller := clashapi.ConfigResolver(store.Read)
+
+	clash, err := clashapi.NewProxy(controller, httpapi.ProxyError(log))
 	if err != nil {
 		log.Warn("Clash API proxy not built", "err", err)
 	} else {
@@ -240,12 +239,13 @@ func run(log *slog.Logger, s settings) error {
 
 	deviceHistory := history.NewDevice(historyStepSeconds/int(systemInterval/time.Second), historyStepSeconds, historyPoints)
 	volume := &history.Volume{}
-	sysinfo := device.New(device.Options{Port: clashPort(store), History: deviceHistory, Split: volume})
+	sysinfo := device.New(device.Options{Port: controller.Port, History: deviceHistory, Split: volume})
+	serviceState := httpapi.ServiceStream(service, singboxVersion, sysinfo.Alive, s.lang)
 
 	source := events.NewClashSource(
-		clashSettings(store),
-		serviceState(service, singboxVersion, sysinfo, s.lang),
-		systemState(sysinfo, log),
+		events.ClashSettings(controller),
+		serviceState,
+		sysinfo.Encoded(log),
 		healthRequestTimeout,
 	)
 
@@ -300,7 +300,7 @@ func run(log *slog.Logger, s settings) error {
 	// addresses; a broken names file is not overwritten by the next edit.
 	var lan httpapi.DeviceRegistry
 
-	registry, err := devices.New(ctx, devices.Runner(runCommand(singbox.NewExec(binaryTimeout))), store, devices.Options{
+	registry, err := devices.New(ctx, singbox.NewExec(binaryTimeout).Command, store, devices.Options{
 		Leases: s.dhcpLeases,
 		UCI:    s.uci,
 	})
@@ -322,41 +322,24 @@ func run(log *slog.Logger, s settings) error {
 		probe = clashapi.NewDNSProbe(s.healthDNSName, dnsProbeTimeout, healthPollInterval, 1)
 	}
 
-	// Without certificates there is nothing to serve HTTPS with, so a pair that cannot
-	// be read or a store that cannot hold the daemon's own stops the start; the owner
-	// turns HTTPS off in UCI to run without them.
 	var (
 		tlsConfig *tls.Config
 		rootCert  func() []byte
 	)
 
-	switch {
-	case !s.https:
-	case (s.httpsCert == "") != (s.httpsKey == ""):
-		return errors.New("flags -https-cert and -https-key go together")
-	case s.httpsCert != "":
-		tlsConfig, err = cert.LoadPair(s.httpsCert, s.httpsKey)
+	if s.https {
+		if (s.httpsCert == "") != (s.httpsKey == "") {
+			return errors.New("flags -https-cert and -https-key go together")
+		}
+
+		tlsConfig, rootCert, err = cert.Panel(ctx, store, log, cert.Source{
+			Cert:  s.httpsCert,
+			Key:   s.httpsKey,
+			Hosts: httpapi.Hosts(httpapi.Addrs(s.addr), s.allowedOrigin),
+		})
 		if err != nil {
 			return err
 		}
-
-		log.Info("panel certificate from file", "cert", s.httpsCert,
-			"expires", tlsConfig.Certificates[0].Leaf.NotAfter)
-	default:
-		certs, err := cert.New(ctx, store, log, cert.Options{Hosts: httpapi.Hosts(httpapi.Addrs(s.addr), s.allowedOrigin)})
-		if err != nil {
-			return fmt.Errorf("panel certificate: %w", err)
-		}
-
-		if certs.RootCreated() {
-			log.Warn("new panel root certificate issued, install it on your devices",
-				"path", "/metabox-ca.crt", "ca_sha256", certs.Fingerprint())
-		} else {
-			log.Info("panel certificate", "ca_sha256", certs.Fingerprint(), "expires", certs.Expiry())
-		}
-
-		tlsConfig = certs.Config()
-		rootCert = certs.CA
 	}
 
 	explainer := route.NewExplainer(source, s.lang)
@@ -388,7 +371,7 @@ func run(log *slog.Logger, s settings) error {
 		SingboxVersion: singboxVersion,
 		SingboxTags:    build.Tags,
 		SchemaVersion:  version.Schema,
-		Service:        mcp.ServiceReader(serviceState(service, singboxVersion, sysinfo, s.lang)),
+		Service:        mcp.ServiceReader(serviceState),
 		Runtime:        source,
 		Explain:        explainer,
 		Config:         store,
@@ -417,7 +400,7 @@ func run(log *slog.Logger, s settings) error {
 		Clash:          clashHandler,
 		Explain:        explainer,
 		Hits:           hits,
-		History:        historyOf(traffic, deviceHistory, connectionSizes),
+		History:        history.NewRuntime(traffic, deviceHistory, connectionSizes),
 		RuleSets:       ruleSets,
 		Runtime:        sysinfo.Alive,
 		Devices:        lan,
@@ -507,165 +490,6 @@ func run(log *slog.Logger, s settings) error {
 	return errors.Join(errs...)
 }
 
-// helpLang is the language of -h: the one from -lang, otherwise the one from UCI
-// that the init script would pass, so help typed by hand on the router speaks it too.
-// A flag error also prints the usage, and under procd that goes to syslog, which
-// stays English: only an asked-for help is translated.
-func helpLang(s settings) locale.Lang {
-	if !slices.ContainsFunc(os.Args[1:], isHelpFlag) {
-		return locale.English
-	}
-
-	explicit := false
-
-	flag.Visit(func(f *flag.Flag) {
-		explicit = explicit || f.Name == "lang"
-	})
-
-	if explicit || s.uci == "" {
-		return s.lang
-	}
-
-	res, err := singbox.NewExec(helpLangTimeout).Run(context.Background(), s.uci, "-q", "get", "metabox.main.lang")
-	if err != nil || res.ExitCode != 0 {
-		return s.lang
-	}
-
-	lang, err := locale.Parse(strings.TrimSpace(res.Stdout))
-	if err != nil {
-		return s.lang
-	}
-
-	return lang
-}
-
-func isHelpFlag(arg string) bool {
-	switch arg {
-	case "-h", "-help", "--h", "--help":
-		return true
-	default:
-		return false
-	}
-}
-
-// runCommand translates a command launch to the form procd expects: that package
-// cannot declare its own result type, otherwise an import cycle would result.
-func runCommand(exec *singbox.Exec) procd.Runner {
-	return func(ctx context.Context, name string, args ...string) (string, int, error) {
-		res, err := exec.Run(ctx, name, args...)
-
-		return res.Stdout, res.ExitCode, err
-	}
-}
-
-// batchCommand is the same for a launch with stdin: it writes the dataplane model into UCI.
-func batchCommand(exec *singbox.Exec) dataplane.BatchRunner {
-	return func(ctx context.Context, input, name string, args ...string) (string, int, error) {
-		res, err := exec.RunInput(ctx, input, name, args...)
-
-		return res.Stdout, res.ExitCode, err
-	}
-}
-
-// clashSettings brings the controller settings to the form the event stream
-// expects: it has its own type so the package does not depend on the config section.
-func clashSettings(store *config.Store) events.Resolver {
-	resolve := configSettings(store)
-
-	return func(ctx context.Context) (events.Settings, error) {
-		settings, err := resolve(ctx)
-		if err != nil {
-			return events.Settings{}, err
-		}
-
-		base, err := settings.BaseURL()
-		if err != nil {
-			return events.Settings{}, err
-		}
-
-		return events.Settings{BaseURL: base, Secret: settings.Secret}, nil
-	}
-}
-
-// serviceState gives the stream the same service state as the handler: the panel
-// must see the same thing regardless of where it came from.
-func serviceState(service *singbox.Client, binary string, sysinfo *device.Reader, lang locale.Lang) events.ServiceReader {
-	return func(ctx context.Context) (json.RawMessage, error) {
-		// A poll failure does not interrupt publication: otherwise the stream would freeze on
-		// the last successful value, and the panel would show a crashed service
-		// as running.
-		state, err := service.State(ctx)
-
-		return json.Marshal(httpapi.ServiceState(state, binary, err, sysinfo.Alive(ctx), lang))
-	}
-}
-
-// systemState gives the stream the device readings. A partial read failure does not
-// cancel publication: thermal zones may be absent, and the sing-box process may be
-// not running, while the other readings are read.
-func systemState(reader *device.Reader, log *slog.Logger) events.SystemReader {
-	return func(ctx context.Context) (json.RawMessage, error) {
-		stat, err := reader.Read(ctx)
-		if err != nil {
-			log.Debug("device readings read partially", "err", err)
-		}
-
-		return json.Marshal(stat)
-	}
-}
-
-// historyOf merges two rings into one reader: the history handler returns traffic and
-// board readings in one response, and they have two rings: the step is counted differently.
-type historyReader struct {
-	*history.Traffic
-	device      *history.Device
-	connections *history.Connections
-}
-
-func (h historyReader) Device() []history.DevicePoint { return h.device.Points() }
-
-func (h historyReader) DeviceStep() int { return h.device.Step() }
-
-func (h historyReader) Connections() []int { return h.connections.Recent() }
-
-func historyOf(traffic *history.Traffic, device *history.Device, connections *history.Connections) httpapi.HistoryReader {
-	return historyReader{Traffic: traffic, device: device, connections: connections}
-}
-
-// clashPort returns the controller port from the applied config: by it the daemon
-// finds the process that does the routing.
-func clashPort(store *config.Store) device.PortResolver {
-	resolve := configSettings(store)
-
-	return func(ctx context.Context) (int, error) {
-		settings, err := resolve(ctx)
-		if err != nil {
-			return 0, err
-		}
-
-		_, port, err := net.SplitHostPort(settings.Address)
-		if err != nil {
-			return 0, fmt.Errorf("controller address %q: %w", settings.Address, err)
-		}
-
-		return strconv.Atoi(port)
-	}
-}
-
-// configSettings reads the controller address and secret from the applied config.
-// Read on every request: the controller port changes together with the config, and
-// a cache would send the proxy to an address that is no longer there.
-func configSettings(store *config.Store) clashapi.Resolver {
-	return func(ctx context.Context) (clashapi.Settings, error) {
-		data, err := store.Read(ctx)
-		if err != nil {
-			return clashapi.Settings{}, err
-		}
-
-		return clashapi.Read(data)
-	}
-}
-
 // build assembles the dependency graph. A separate function so that run only does
 // the start and stop.
 func build(
@@ -680,7 +504,7 @@ func build(
 
 	exec := singbox.NewExec(binaryTimeout)
 
-	service, err := singbox.New(exec, s.binary, initScript, s.logread, procd.New(runCommand(exec), s.ubus))
+	service, err := singbox.New(exec, s.binary, initScript, s.logread, procd.New(exec.Command, s.ubus))
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}

@@ -16,6 +16,30 @@ package history
 
 import "sync"
 
+// Runtime merges the rings into one reader: the history handler returns traffic, board
+// readings and connection counts in one response, and each has its own ring with its own
+// step.
+type Runtime struct {
+	*Traffic
+
+	device      *Device
+	connections *Connections
+}
+
+// NewRuntime merges the rings of one daemon lifetime.
+func NewRuntime(traffic *Traffic, device *Device, connections *Connections) Runtime {
+	return Runtime{Traffic: traffic, device: device, connections: connections}
+}
+
+// Device returns the board readings.
+func (r Runtime) Device() []DevicePoint { return r.device.Points() }
+
+// DeviceStep returns the step of the board readings in seconds.
+func (r Runtime) DeviceStep() int { return r.device.Step() }
+
+// Connections returns the recent connection counts.
+func (r Runtime) Connections() []int { return r.connections.Recent() }
+
 // ring is a ring of points with step coarsening.
 type ring[T any] struct {
 	points []T

@@ -46,6 +46,21 @@ func (e *Exec) RunInput(ctx context.Context, input, name string, args ...string)
 	return e.run(ctx, strings.NewReader(input), name, args...)
 }
 
+// Command is Run in the form of the runner types its consumers declare (procd, dataplane,
+// devices): they cannot take Result, since singbox imports procd.
+func (e *Exec) Command(ctx context.Context, name string, args ...string) (string, int, error) {
+	res, err := e.Run(ctx, name, args...)
+
+	return res.Stdout, res.ExitCode, err
+}
+
+// CommandInput is Command with input on stdin, in the form of dataplane.BatchRunner.
+func (e *Exec) CommandInput(ctx context.Context, input, name string, args ...string) (string, int, error) {
+	res, err := e.RunInput(ctx, input, name, args...)
+
+	return res.Stdout, res.ExitCode, err
+}
+
 func (e *Exec) run(ctx context.Context, stdin io.Reader, name string, args ...string) (Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()

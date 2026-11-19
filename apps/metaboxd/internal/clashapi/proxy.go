@@ -3,9 +3,12 @@ package clashapi
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -17,6 +20,36 @@ const Prefix = "/api/clash"
 // the applied config on every request: the user may change the port,
 // and the proxy must go where the controller listens now.
 type Resolver func(ctx context.Context) (Settings, error)
+
+// ConfigResolver reads the settings from the config read returns. The config is read on every
+// call: the controller port changes together with the config, and a cache would send the
+// proxy to an address that is no longer there.
+func ConfigResolver(read func(ctx context.Context) ([]byte, error)) Resolver {
+	return func(ctx context.Context) (Settings, error) {
+		data, err := read(ctx)
+		if err != nil {
+			return Settings{}, err
+		}
+
+		return Read(data)
+	}
+}
+
+// Port returns the controller port: by it the daemon finds the process that does the
+// routing.
+func (r Resolver) Port(ctx context.Context) (int, error) {
+	settings, err := r(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	_, port, err := net.SplitHostPort(settings.Address)
+	if err != nil {
+		return 0, fmt.Errorf("controller address %q: %w", settings.Address, err)
+	}
+
+	return strconv.Atoi(port)
+}
 
 // ErrorHandler returns a failure in the HTTP layer format. Injected from outside so that
 // the package does not know the daemon response format.
