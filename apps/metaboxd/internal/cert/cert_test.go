@@ -304,6 +304,42 @@ func TestUnreadableFilesAreReissued(t *testing.T) {
 	}
 }
 
+func TestUnreadableRootIsReissued(t *testing.T) {
+	for _, name := range []string{CACertName, CAKeyName} {
+		t.Run(name, func(t *testing.T) {
+			store := newMemStore()
+			first := newManager(t, store, []string{"192.168.1.1"}, testNow)
+			store.files[name] = []byte("garbage")
+
+			second := newManager(t, store, []string{"192.168.1.1"}, testNow)
+
+			if !second.RootCreated() || second.Fingerprint() == first.Fingerprint() {
+				t.Error("a root whose files do not parse was kept")
+			}
+
+			if err := verify(t, second, "192.168.1.1", testNow); err != nil {
+				t.Errorf("chain under the new root: %v", err)
+			}
+		})
+	}
+}
+
+func TestExpiredRootIsReissued(t *testing.T) {
+	store := newMemStore()
+	first := newManager(t, store, []string{"192.168.1.1"}, testNow)
+	later := first.ca.NotAfter.Add(time.Hour)
+
+	second := newManager(t, store, []string{"192.168.1.1"}, later)
+
+	if !second.RootCreated() || second.Fingerprint() == first.Fingerprint() {
+		t.Fatal("an expired root was kept")
+	}
+
+	if err := verify(t, second, "192.168.1.1", later); err != nil {
+		t.Errorf("chain under the new root: %v", err)
+	}
+}
+
 func TestStoreWriteFailureStopsTheStart(t *testing.T) {
 	store := newMemStore()
 	store.writeErr = errors.New("read-only file system")

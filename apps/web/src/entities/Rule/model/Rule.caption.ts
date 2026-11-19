@@ -42,12 +42,12 @@ const CAPTION_ORDER: readonly string[] = [
   'port_range',
 ];
 
-/** The mask of one host: such a source condition is a single device. */
-const HOST_MASK = /\/(?:32|128)$/;
+/** The mask of one host per family: `/32` is a large IPv6 network, not a host. */
+const HOST_MASK = { V4: /^[^:]+\/32$/, V6: /^[^/]*:[^/]*\/128$/ } as const;
 
 /** The address of a condition value that is one host; a subnet stays as is. */
 export function toHostAddress(value: string): string {
-  return value.replace(HOST_MASK, '');
+  return HOST_MASK.V4.test(value) || HOST_MASK.V6.test(value) ? value.slice(0, value.lastIndexOf('/')) : value;
 }
 
 function matchersOf(branch: Pick<RuleBranch, 'matchers' | 'group'>): RuleMatcher[] {

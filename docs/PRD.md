@@ -1,19 +1,18 @@
 # PRD: metabox
 
-|                      |                                                                           |
-| -------------------- | ------------------------------------------------------------------------- |
-| **Document version** | 1.75                                                                      |
-| **Status**           | **approved** 2026-08-30, except the open questions in section 10.1        |
-| **Owner**            | project author                                                            |
-| **Last revision**    | 2026-11-14                                                                |
-| **Basis**            | deep-interview `metabox-di-001` (11 rounds) + `metabox-di-002` (7 rounds) |
-| **Final ambiguity**  | 11% / 15% (threshold 20%)                                                 |
+|                      |                                                                    |
+| -------------------- | ------------------------------------------------------------------ |
+| **Document version** | 1.76                                                               |
+| **Status**           | **approved** 2026-08-30, except the open questions in section 10.1 |
+| **Owner**            | project author                                                     |
+| **Last revision**    | 2026-11-19                                                         |
+| **Basis**            | two requirements interviews with the owner on 2026-08-30           |
 
 **Change history**
 
 | Version | Date       | What changed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0.1     | 2026-08-30 | First edition based on the `metabox-di-001` interview                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 0.1     | 2026-08-30 | First edition based on the first requirements interview                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 0.2     | 2026-08-30 | Approved, except the open questions in 10.1. Checked against the PRD canon. Added personas and scenarios, success metrics, NFR, interface principles, open questions and risks, milestones. Manual JSON editing moved from Non-Goals to a feature. Architecture decisions moved to an appendix                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 0.3     | 2026-08-30 | After a review of the fork sources: AC-31/AC-32 — the daemon guarantees that `experimental.clash_api` is present; caveat in AC-2; Non-Goals extended with forms for `services` and a dashboard mode without Clash API                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 0.4     | 2026-08-30 | OQ-2 closed: added A.2.1 — a reflection-based schema generator, output in Zod, boundaries of the adapter layer. Zod added to the stack in section 9                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
@@ -98,6 +97,7 @@
 | 1.73    | 2026-11-14 | AC-90: `Shift+N` adds an own list on Rule sets, `?` opens the list of shortcuts, the arrow keys move between list rows and section nodes, and hints follow the presence of a keyboard instead of the width and a coarse pointer. Issue #250                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 1.74    | 2026-11-14 | AC-64: after a subscription update the panel shows the previous and the new node count and warns when the set collapses or becomes empty; the browser remembers the counts, so a background drop shows on the next visit. Issue #254                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | 1.75    | 2026-11-15 | The criteria of section 5 and the NFR table of section 6 moved to OpenSpec with their IDs and text; the main verb of each first sentence takes SHALL, scenarios added. Built criteria and the NFRs are in `openspec/specs/`, grouped by capability; AC-7, AC-69, AC-74 and AC-75 were found built and went there too; the other 14 unticked criteria are proposals in `openspec/changes/`. Sections 5 and 6 keep links ([ADR-0081](./adr/ADR-0081-keep-behaviour-specs-and-changes-in-openspec.md))                                                                                                                                                                                               |
+| 1.76    | 2026-11-19 | References to the interview transcripts by ID and round removed: the transcripts are not in the repository. The owner's answers behind the decisions are quoted in ADR-0038…ADR-0044, the deferred items of section 4 keep their reason. Requirements unchanged                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 > The document is living. Any decision in [`adr/`](./adr/README.md), including those moved from Appendix A, may be revised — they are decisions, not requirements; requirements are in sections 5 and 6.
 
@@ -211,8 +211,8 @@ SM-1 and SM-2 cover the two tasks from §1.1, SM-3…SM-5 cover preservation of 
 | Device Integration               | active       | Config write, `sing-box check`, restart via procd, healthcheck, version history, automatic rollback                                                                                                                               | AC-13…AC-16, AC-29, AC-87                                                                        |
 | Backend / API                    | active       | Go daemon: REST API, serving embedded static assets, reading runtime from Clash API and optional gRPC, owning config files                                                                                                        | AC-17…AC-19, AC-27…AC-28, AC-31…AC-33, AC-36, AC-47, AC-75                                       |
 | Dev Environment                  | active       | `.devcontainer`: frontend + backend + target OpenWrt environment with sing-box-extended                                                                                                                                           | AC-20…AC-22                                                                                      |
-| LuCI integration                 | **deferred** | A page/app inside LuCI                                                                                                                                                                                                            | Confirmed in interview 1, Round 0: "maybe later"                                                 |
-| Full local dat pipeline          | **deferred** | Downloading geosite.dat/geoip.dat to the router, parsing categories, a selection tree                                                                                                                                             | Interview 1, Round 6: "maybe in the future as an option"                                         |
+| LuCI integration                 | **deferred** | A page/app inside LuCI                                                                                                                                                                                                            | Deferred by the owner at the requirements interview                                              |
+| Full local dat pipeline          | **deferred** | Downloading geosite.dat/geoip.dat to the router, parsing categories, a selection tree                                                                                                                                             | The owner at the requirements interview: "maybe in the future as an option"                      |
 | Dataplane                        | active       | The only sing-box service the daemon manages, TCP/UDP/DNS interception from LAN by a source list, upstream dnsmasq, fail-closed, coexistence with other daemons that mark router traffic, migration from a previous routing setup | AC-48…AC-57, AC-67                                                                               |
 | Devices                          | active       | LAN devices from DHCP, custom names, a label instead of an IP across the panel, the "Devices" screen, a rule condition by device                                                                                                  | AC-58…AC-62, AC-88                                                                               |
 | Logs screen                      | active       | sing-box log stream with filters, clearing, rotation                                                                                                                                                                              | AC-63. Moved from deferred on 2026-10-09: without it, running the router on metabox requires SSH |
@@ -223,7 +223,7 @@ SM-1 and SM-2 cover the two tasks from §1.1, SM-3…SM-5 cover preservation of 
 | Panel and core update            | active       | Release check and installation of `metaboxd` and the core from the panel, through the Apply protocol                                                                                                                              | AC-81…AC-82. Decided 2026-10-24                                                                  |
 | Entry servers                    | active       | An inbound node presented as a server: users, client link, an outbound to leave through, a WAN port opened by an explicit toggle                                                                                                  | AC-83…AC-85. Decided 2026-10-24; the only exception to "no access from the internet"             |
 | Platforms other than OpenWrt     | **deferred** | A platform layer in the daemon; Docker without a dataplane as the first non-router target, then generic Linux                                                                                                                     | Roadmap items 1 and 10, 2026-10-24: the adapter boundary comes first                             |
-| Support for mips / weak hardware | **deferred** | Builds for mipsel, moving the UI out of the binary, memory budget                                                                                                                                                                 | Interview 1, Round 11: "if the community joins and there is demand"                              |
+| Support for mips / weak hardware | **deferred** | Builds for mipsel, moving the UI out of the binary, memory budget                                                                                                                                                                 | The owner at the requirements interview: later, if the community asks for it                     |
 
 Implementation state is not tracked in the PRD: it describes requirements, not the progress of work. Requirement readiness is the checkboxes in section 5.
 
@@ -374,7 +374,7 @@ Milestones are derived from the scenario priorities of section 2. There are no d
 
 ## Appendix A. Architecture decisions
 
-Decisions taken before ADRs were introduced. All sections moved to [`adr/`](./adr/README.md); the headings are kept so that links to A.* from the change history and the interviews lead to the new place. New entries are not added here.
+Decisions taken before ADRs were introduced. All sections moved to [`adr/`](./adr/README.md); the headings are kept so that links to A.* from the change history lead to the new place. New entries are not added here.
 
 ### A.1. Target schema — sing-box-extended only
 
@@ -394,29 +394,29 @@ One requirement of the decision stays in force, on the shape of the result: gene
 
 The section moved to [ADR-0040](./adr/ADR-0040-ship-the-panel-as-one-go-daemon-with-an-embedded-spa.md); the `sing-box rule-set compile` call was removed from it together with compiling custom lists ([ADR-0033](./adr/ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md)).
 
-### A.4. Apply protocol (Round 7)
+### A.4. Apply protocol
 
 The section moved to [ADR-0002](./adr/ADR-0002-apply-protocol-and-config-ownership.md): the apply sequence is defined there together with decisions that were not here — the config representation, the subject of validation and storage of the transaction state.
 
-### A.5. Rule sets (Round 6)
+### A.5. Rule sets
 
 The section moved to ADRs: the catalog of ready-made categories and its check against providers — to [ADR-0034](./adr/ADR-0034-keep-the-rule-set-catalog-in-the-daemon-and-refresh-it-daily.md), storage of custom lists — to [ADR-0033](./adr/ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md). Compiling a custom list to `.srs` on the device is cancelled: the fork's `local` rule set reads the JSON source directly.
 
-### A.6. Access model (Round 8) — an accepted risk
+### A.6. Access model — an accepted risk
 
 The section moved to [ADR-0041](./adr/ADR-0041-run-v1-without-authentication-behind-network-and-origin-checks.md).
 
-### A.7. Target hardware (Round 11)
+### A.7. Target hardware
 
 The section moved to [ADR-0042](./adr/ADR-0042-target-the-bpi-r4-pro-and-build-for-aarch64-only.md).
 
 ---
 
-### A.8. Manual JSON editing and the Save/Apply model (interview 2, Round 4–6)
+### A.8. Manual JSON editing and the Save/Apply model
 
 The section moved to [ADR-0043](./adr/ADR-0043-treat-manual-json-as-a-feature-and-split-save-from-apply.md).
 
-### A.9. Schema drift tracking (interview 2, Round 7)
+### A.9. Schema drift tracking
 
 The section moved to [ADR-0044](./adr/ADR-0044-catch-schema-drift-in-ci-and-at-runtime.md); the CI mechanism of the decision is not implemented.
 
@@ -430,14 +430,14 @@ The section moved to [ADR-0045](./adr/ADR-0045-split-document-and-server-state-a
 
 **Stack fixed by the user:** React, TypeScript, TanStack, Vite, oxlint, oxfmt. The rest (state management, UI kit, routing, forms, tests, project structure) is a subject of separate agreement after the PRD is approved.
 
-**Also follows from the interview decisions:**
+**Also follows from the decisions of appendix A:**
 
 - Go is the daemon language (cross-compilation for aarch64, embedding static assets).
 - Schema and adapters require a generator: extracting the structure from sing-box-extended → TS types + validators.
 - The sing-box Clash API (`experimental.clash_api`) is the data source for the dashboard; the fork returns traffic and memory as a line-by-line chunked response, connections as a snapshot.
 - Multi-container devcontainer: a dev container with the build stack + a target container on an OpenWrt rootfs.
 
-**References studied during the interview:**
+**References studied when the requirements were gathered:**
 
 - [shtorm-7/sing-box-extended](https://github.com/shtorm-7/sing-box-extended) — the target fork.
 - [EikeiDev/OpenWRT-sing-box-extended](https://github.com/EikeiDev/OpenWRT-sing-box-extended) — an installer for OpenWrt.

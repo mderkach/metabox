@@ -69,6 +69,22 @@ func TestPanelRefusesWithoutCertificates(t *testing.T) {
 		}
 	})
 
+	for name, src := range map[string]Source{
+		"certificate without key": {Cert: "/etc/ssl/panel.crt", Hosts: []string{"192.168.1.1"}},
+		"key without certificate": {Key: "/etc/ssl/panel.key", Hosts: []string{"192.168.1.1"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			store := newMemStore()
+
+			if _, _, err := Panel(t.Context(), store, testLogger(t), src); err == nil {
+				t.Error("half a pair was accepted")
+			}
+			if len(store.files) != 0 {
+				t.Error("half a pair issued the daemon's own root")
+			}
+		})
+	}
+
 	t.Run("store refuses the own root", func(t *testing.T) {
 		store := newMemStore()
 		store.writeErr = errors.New("файловая система только для чтения")

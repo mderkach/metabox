@@ -58,6 +58,33 @@ function metaboxMocks(): Plugin | false {
   };
 }
 
+const PRODUCTION_ENV = { 'process.env.NODE_ENV': JSON.stringify('production') };
+
+/**
+ * The production build of React on the dev server. Enabled by `METABOX_REACT=production` and
+ * lives only on the dev server, for timing the panel on the mock stand: the development build
+ * renders several times slower, with `StrictMode` double renders.
+ *
+ * The prebundled dependencies get a cache directory of their own, so they never mix with the
+ * development ones.
+ */
+function metaboxProductionReact(): Plugin | false {
+  if (process.env.METABOX_REACT !== 'production') {
+    return false;
+  }
+
+  return {
+    name: 'metabox-production-react',
+    apply: 'serve',
+    config: () => ({
+      cacheDir: 'node_modules/.vite-production-react',
+      define: PRODUCTION_ENV,
+      oxc: { jsx: { development: false, refresh: false } },
+      optimizeDeps: { rolldownOptions: { transform: { define: PRODUCTION_ENV } } },
+    }),
+  };
+}
+
 function serveMockWorker(server: ViteDevServer) {
   const require = createRequire(import.meta.url);
   const worker = path.join(path.dirname(require.resolve('msw/package.json')), 'lib/mockServiceWorker.js');
@@ -184,7 +211,15 @@ const sendDaemonOrigin: ProxyOptions['configure'] = (proxy) => {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), metaboxI18n(import.meta.dirname), metaboxCompress(), metaboxMocks(), metaboxScan()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    metaboxI18n(import.meta.dirname),
+    metaboxCompress(),
+    metaboxMocks(),
+    metaboxProductionReact(),
+    metaboxScan(),
+  ],
   resolve: {
     alias: {
       ...Object.fromEntries(LAYERS.map((layer) => [`@${layer}`, path.resolve(import.meta.dirname, `./src/${layer}`)])),

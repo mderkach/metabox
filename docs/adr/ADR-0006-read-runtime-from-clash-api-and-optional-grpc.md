@@ -109,7 +109,7 @@ Rollback: remove the gRPC branch from the daemon. The contract with the frontend
 - The daemon is running, the config has a `service` of type `api`, but the port is closed: the panel works, the connection source is the Clash API, and the reason for the failed connection is visible.
 - `make apply-check` passes unchanged: the Apply protocol is not affected by the decision.
 - The number of connections on the screen does not jump when the source changes: the sets are brought to one filtering rule, and DNS connections are either in both or in neither.
-- A measurement on the target hardware is recorded before the first `require` appears in `apps/metaboxd/go.mod`.
+- A measurement on the target hardware is recorded before the first `require` appears in `apps/metaboxd/go.mod`. Not met: the first `require` came unmeasured with [ADR-0055](./ADR-0055-embed-a-read-only-mcp-server-in-the-daemon-with-the-official-go-sdk.md); the released daemon was measured afterwards, see its Validation.
 - The `service` section of type `api` does not appear in the config in any scenario except an explicit user action.
 - `apps/web/src/features/Config/ConfigNodeForm/model/ConfigNodeForm.overrides.ts`: the form of the `api` service.
 

@@ -11,7 +11,7 @@
 
 The panel edits a sing-box config and builds forms from its schema, so before the generator and the forms it has to be decided whose config it describes. Besides upstream sing-box there are forks with additional protocols. The owner's router runs the fork [shtorm-7/sing-box-extended](https://github.com/shtorm-7/sing-box-extended): on top of upstream it provides WARP, MASQUE, MTProxy, Mieru, TrustTunnel and SSH; OpenVPN and Snell moved to upstream in 1.14, and the fork switched to the upstream implementations.
 
-The owner's answer in interview `metabox-di-001`, Round 2: "Only sing-box-extended."
+The owner's answer at the requirements interview on 2026-08-30, asked which sing-box version or fork the panel must be compatible with: "Only sing-box-extended."
 
 In scope: which config dialect the panel schema describes. Out of scope: how the schema is extracted from the fork ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)), how the panel handles types missing from the binary build ([ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md)), and a second core, which is moved to the PRD roadmap.
 
@@ -24,7 +24,7 @@ In scope: which config dialect the panel schema describes. Out of scope: how the
 
 ## Considered options
 
-The transcript kept only the owner's answer; the options and arguments below are reconstructed from the text of A.1 and sections 9 and 11 of the PRD.
+Only the owner's answer was recorded; the options and arguments below are reconstructed from the text of A.1 and sections 9 and 11 of the PRD.
 
 1. **Only sing-box-extended.** The fork is a superset of upstream, so upstream configs are valid automatically, and the fork's protocols get forms on a par with the rest. Drawback: the panel is tied to the release pace of one fork (risk R-4 in the PRD). **Chosen.**
 2. **Only upstream sing-box.** WARP, MASQUE, MTProxy, Mieru, TrustTunnel and SSH nodes would be unknown to the panel, while the binary on the owner's device is the fork. **Rejected.**
