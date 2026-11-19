@@ -84,6 +84,7 @@ func (m *Manager) run(
 
 	m.mu.Lock()
 	m.cancel = cancel
+	m.token = token
 	confirmed := m.confirmed
 	m.mu.Unlock()
 
@@ -495,7 +496,7 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	}
 
 	m.mu.Lock()
-	m.busy = false
+	m.drop(m.token)
 	m.mu.Unlock()
 
 	if !noBackup {
@@ -525,7 +526,7 @@ func (m *Manager) closeUnwritten(ctx context.Context, log *slog.Logger) {
 	}
 
 	m.mu.Lock()
-	m.busy = false
+	m.drop(m.token)
 	m.mu.Unlock()
 }
 
@@ -550,12 +551,12 @@ func (m *Manager) clearState(ctx context.Context) error { return m.store.ClearSt
 func (m *Manager) reverted(ctx context.Context, tx Transaction) bool { return !m.appliedOnDisk(ctx, tx) }
 
 // restored takes the sum of a window raised from the journal as the daemon's own write.
-func (m *Manager) restored(tx Transaction, _ uint64) { m.lastSum = tx.Sum }
+func (m *Manager) restored(tx Transaction, token uint64) {
+	m.lastSum = tx.Sum
+	m.token = token
+}
 
-// free releases the apply when Confirm closes the window. Under the same lock as the
-// confirmed phase: released after it, a Start let in by the background goroutine's own
-// release would lose its ownership here.
-func (m *Manager) free() { m.busy = false }
+func (m *Manager) free() { m.drop(m.token) }
 
 // written reports whether a broken cycle managed to touch the disk: the config sha
 // is compared with the sum from the state, and then the changing list files.

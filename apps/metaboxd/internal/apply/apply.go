@@ -306,6 +306,10 @@ type Manager struct {
 	// by the number of its ownership: by its exit busy may already be held by the next
 	// Start, and an unconditional release would let two applies in at once.
 	epoch uint64
+	// token is the ownership of the current transaction. Confirm and the rollback release
+	// the apply by it: a dataplane window restored at the same start may already hold the
+	// apply under a later one.
+	token uint64
 	// lastSum is the sha256 of what the daemon wrote itself. It survives a restart through
 	// the state file.
 	lastSum string
@@ -687,6 +691,11 @@ func (m *Manager) unreserve(token uint64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	m.drop(token)
+}
+
+// drop is unreserve for a caller that holds mu.
+func (m *Manager) drop(token uint64) {
 	if m.epoch == token {
 		m.busy = false
 	}

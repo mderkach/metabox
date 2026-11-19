@@ -27,12 +27,14 @@ type subject interface {
 	rollback(ctx context.Context, log *slog.Logger)
 	// restored and free run under window.mu: restored when a window from the journal is
 	// raised again under the apply ownership token, free when Confirm closes the window.
+	// For Manager window.mu is the gate's own mutex, so they must not lock it; Plane takes
+	// the gate's mutex inside its own, the only nesting order between them.
 	restored(tx Transaction, token uint64)
 	free()
 }
 
-// windowLog is the subject's wording of the protocol events in the log. A text with the
-// error prefix empty returns the error unwrapped.
+// windowLog is the subject's wording of the protocol events in the log and of the replay
+// error prefixes.
 type windowLog struct {
 	opened             string
 	notSaved           string
@@ -247,12 +249,12 @@ func (w *window) await(ctx context.Context, log *slog.Logger, confirmed <-chan s
 
 	log.Info(w.text.opened, "window", w.span)
 
-	w.hold(ctx, log, confirmed, w.span, w.text.interrupted)
+	w.wait(ctx, log, confirmed, w.span, w.text.interrupted)
 }
 
-// hold waits for confirmation, a daemon stop or the end of the window. A stop leaves the
+// wait waits for confirmation, a daemon stop or the end of the window. A stop leaves the
 // state on disk, and the window is replayed at the next start.
-func (w *window) hold(ctx context.Context, log *slog.Logger, confirmed <-chan struct{}, d time.Duration, stopped string) {
+func (w *window) wait(ctx context.Context, log *slog.Logger, confirmed <-chan struct{}, d time.Duration, stopped string) {
 	select {
 	case <-confirmed:
 	case <-ctx.Done():
@@ -348,7 +350,7 @@ func (w *window) Replay(ctx context.Context) error {
 }
 
 func wrap(prefix string, err error) error {
-	if err == nil || prefix == "" {
+	if err == nil {
 		return err
 	}
 
@@ -381,6 +383,6 @@ func (w *window) restoreWindow(tx Transaction, token uint64) {
 		defer cancel()
 		defer w.gate.unreserve(token)
 
-		w.hold(ctx, w.log.With("transaction_id", tx.ID), confirmed, tx.Window, w.text.restoredStopped)
+		w.wait(ctx, w.log.With("transaction_id", tx.ID), confirmed, tx.Window, w.text.restoredStopped)
 	}()
 }

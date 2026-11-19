@@ -115,7 +115,7 @@ var planeLog = windowLog{
 	opened:             "dataplane model applied, confirmation window open",
 	notSaved:           "dataplane confirmation window state not saved",
 	interrupted:        "dataplane confirmation window interrupted by daemon shutdown",
-	restoredStopped:    "dataplane confirmation window interrupted by daemon shutdown",
+	restoredStopped:    "restored dataplane window interrupted by daemon shutdown",
 	expired:            "no confirmation, restoring the previous dataplane model",
 	confirmed:          "dataplane model change confirmed",
 	confirmedKept:      "state of the confirmed dataplane change not removed, the terminal phase is written",
@@ -124,6 +124,7 @@ var planeLog = windowLog{
 	windowExpired:      "dataplane confirmation window expired, restoring the previous model",
 	rollbackUnfinished: "dataplane rollback interrupted in the confirmation window, finishing it",
 	windowRestored:     "dataplane confirmation window restored",
+	clearUnwritten:     "clear interrupted dataplane state",
 	clearFinished:      "clear finished dataplane state",
 }
 
