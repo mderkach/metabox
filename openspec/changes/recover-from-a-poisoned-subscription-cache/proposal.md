@@ -10,7 +10,7 @@ This breaks the promise of AC-14 (a config that breaks connectivity is returned 
 - **Recovery from a poisoned subscription entry.** When the core fails with the signature `start provider/remote[<tag>]: restore cached outbound provider`, the daemon stops only the sing-box process (interception stays), deletes the entry of that provider from `cache.db` with the `cache_id` and the file path taken from the config, starts the service and waits for the healthcheck. Triggers: the rollback restart, a start or restart of the service from the panel, the daemon start. Other subscriptions, remote rule sets and the rest of the cache stay.
 - **Fallback for an unreadable cache file.** If `cache.db` does not open as a bbolt database for a reason other than a held lock, the daemon moves the file aside whole and starts the service.
 - **Fork pin test.** `tools/schemagen` runs the pinned fork and pins two facts separately: a cached outbound with `x_padding_bytes: 0` fails the option check, and a cached subscription entry that fails to parse fails the core start. A fork bump that fixes either fails the matching test and points at what the fork fixed.
-- **New daemon dependency** `go.etcd.io/bbolt` to read and edit `cache.db`, recorded in [ADR-0086](../../../docs/adr/ADR-0086-repair-the-sing-box-cache-file-in-the-daemon-with-bbolt.md).
+- **New daemon dependency** `go.etcd.io/bbolt` to read and edit `cache.db`, recorded in [ADR-0088](../../../docs/adr/ADR-0088-repair-the-sing-box-cache-file-in-the-daemon-with-bbolt.md).
 - A new init script command of `metabox-singbox` that stops the sing-box instance without removing the dataplane.
 
 ## Capabilities

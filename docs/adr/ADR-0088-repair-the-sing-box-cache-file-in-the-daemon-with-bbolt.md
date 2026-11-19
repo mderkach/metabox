@@ -1,4 +1,4 @@
-# ADR-0086. Repair the sing-box cache file in the daemon with bbolt
+# ADR-0088. Repair the sing-box cache file in the daemon with bbolt
 
 - Status: Accepted
 - Date: 2026-11-19
