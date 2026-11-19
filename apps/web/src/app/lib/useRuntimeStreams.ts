@@ -90,7 +90,7 @@ export function useRuntimeStreams(): void {
         retry ??= setTimeout(connect, reconnectDelay(failures));
         failures += 1;
 
-        queryClient.fetchQuery({ ...getDaemonStatusOptions(), staleTime: 0 }).catch(function stopOnLostSession(
+        queryClient.query({ ...getDaemonStatusOptions(), staleTime: 0 }).catch(function stopOnLostSession(
           error: unknown
         ) {
           // Any other failure is already in the query cache, where the banner reads it.
