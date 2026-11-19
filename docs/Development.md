@@ -172,7 +172,7 @@ The package version comes from the [`VERSION`](../VERSION) file in semver: `0.1.
 Copy `dist/metaboxd.apk` and a [sing-box-extended](https://github.com/shtorm-7/sing-box-extended/releases) package of the same architecture to the router. dropbear on OpenWrt has no sftp server, so `scp` needs `-O`:
 
 ```sh
-scp -O dist/metaboxd.apk sing-box-extended_1.14.1-extended-2.7.2_openwrt_aarch64_cortex-a53.apk root@192.168.1.1:/tmp/
+scp -O dist/metaboxd.apk sing-box-extended_1.14.3-extended-2.7.3_openwrt_aarch64_cortex-a53.apk root@192.168.1.1:/tmp/
 ```
 
 On the router (the same for updates):
