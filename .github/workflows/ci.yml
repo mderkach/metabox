@@ -325,7 +325,9 @@ jobs:
             return 1
           }
           check "the daemon" http://localhost:8080/healthz
-          check "the Clash API" http://localhost:9090/version
+          # The bench firewall lets the Clash API in from the wired network only, where the dev container sits;
+          # on a Linux host the published port lands on another network of the target.
+          check "the Clash API" http://192.168.210.2:9090/version
           check "Vite" http://localhost:5173/
           check "the daemon through the Vite proxy" http://localhost:5173/api/status
 
