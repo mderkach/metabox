@@ -8,6 +8,7 @@ Playwright Test runs whole user flows in the served panel. Why a separate runner
 e2e/
 ├── fixtures/
 │   ├── index.ts        # mergeTests of the files below, expect, E2E_TAG, translate
+│   ├── bench.ts        # a connection through sing-box held open on the live bench
 │   ├── pages.ts        # page objects as fixtures
 │   └── pageErrors.ts   # fails a test on an uncaught page exception
 ├── lib/
