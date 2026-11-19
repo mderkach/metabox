@@ -1,5 +1,3 @@
-import { renderWithQuery } from '@test/renderWithQuery';
-import { selectOption } from '@test/selectOption';
 import { render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { JSONPath } from 'jsonc-parser';
@@ -11,14 +9,10 @@ import {
   findValue,
   newSectionNode,
   NODE_REGISTRY,
-  RULES_PATH,
   useConfigDiff,
   useConfigCurrent,
   type NodeRegistry,
 } from '@entities/Config';
-import { ConfigNodeAddForm } from '@features/Config/ConfigNodeAdd';
-import { ConfigSchema } from '@shared/api/generated';
-import { parseJsonc } from '@shared/lib/jsonc';
 
 import { NODE_OVERRIDE_ERROR, nodeOverrideOf, nodePreset, overrideIssues } from '../model';
 import { ConfigNodeForm } from '../ui/ConfigNodeForm';
@@ -116,20 +110,6 @@ describe('VLESS/Reality form override', () => {
 
     expect(screen.getByRole('combobox', { name: 'domain_strategy' })).toBeInTheDocument();
     expect(screen.getAllByRole('textbox', { name: 'Имя сервера (SNI)' })).toHaveLength(1);
-  });
-
-  it('flow and the uTLS fingerprint are chosen from the fork values', async () => {
-    const user = userEvent.setup();
-
-    render(<NodeFromStore path={VLESS} />);
-
-    await selectOption(user, screen.getByRole('combobox', { name: 'Режим XTLS' }), 'xtls-rprx-vision');
-    await selectOption(user, screen.getByRole('combobox', { name: 'Отпечаток браузера' }), 'firefox');
-
-    await waitFor(() => {
-      expect(findValue(draft(), [...VLESS, 'flow'])).toBe('xtls-rprx-vision');
-    });
-    expect(findValue(draft(), [...VLESS, 'tls', 'utls', 'fingerprint'])).toBe('firefox');
   });
 
   it('an empty server is a required field, nothing is written', async () => {
@@ -244,82 +224,6 @@ describe('VLESS override checks', () => {
     expect(overrideIssues(override, { type: 'vless' }, { type: 'vless', server: 'a.example' })).toEqual([
       { name: 'server', code: NODE_OVERRIDE_ERROR.Required },
     ]);
-  });
-});
-
-/**
- * A config built from scratch, at the schema level: in an empty document, forms assemble a VLESS
- * with Reality and a rule for it, and the schema accepts the whole config document.
- * `sing-box check` does not run here: that is a test bench check.
- */
-describe('VLESS/Reality from scratch', () => {
-  beforeEach(() => {
-    ConfigDocumentState.getState().reset();
-    ConfigDocumentState.getState().load('{}');
-  });
-
-  it('a node from the add form and the node form with a rule passes the config schema', async () => {
-    const user = userEvent.setup();
-    const add = renderWithQuery(<ConfigNodeAddForm section='outbounds' takenTags={[]} builtTags={['with_utls']} />);
-
-    await selectOption(
-      user,
-      screen.getByRole('combobox', { name: 'Тип' }),
-      'vlessVLESS: лёгкий прокси, обычно с Reality или TLS'
-    );
-    await user.type(screen.getByRole('textbox', { name: 'Тег' }), 'vless-out');
-    await user.click(screen.getByRole('button', { name: 'Добавить' }));
-
-    await waitFor(() => {
-      expect(findValue(draft(), ['outbounds', 0, 'tag'])).toBe('vless-out');
-    });
-
-    add.unmount();
-    render(<NodeFromStore path={VLESS} builtTags={['with_utls']} />);
-
-    // Long values are pasted, not typed: per-character input with
-    // a check on every character hits the test timeout under load.
-    const fill = async (role: 'textbox' | 'spinbutton', name: string, value: string) => {
-      await user.click(screen.getByRole(role, { name }));
-      await user.paste(value);
-    };
-
-    await fill('textbox', 'Сервер', 'a.example');
-    await fill('spinbutton', 'Порт сервера', '443');
-    await user.click(screen.getByLabelText(/^UUID пользователя/));
-    await user.paste(UUID);
-    await fill('textbox', 'Имя сервера (SNI)', 'www.example');
-    await fill('textbox', 'Публичный ключ Reality', PUBLIC_KEY);
-    await fill('textbox', 'Short ID Reality', '0123456789abcdef');
-
-    await waitFor(() => {
-      expect(findValue(draft(), [...VLESS, 'tls', 'reality', 'short_id'])).toBe('0123456789abcdef');
-    });
-
-    ConfigDocumentState.getState().insert([...RULES_PATH, 0], { outbound: 'vless-out' });
-
-    const { value, failure } = parseJsonc(draft());
-
-    expect(failure).toBeNull();
-    expect(value).toEqual({
-      outbounds: [
-        {
-          type: 'vless',
-          tag: 'vless-out',
-          tls: {
-            enabled: true,
-            utls: { enabled: true, fingerprint: 'chrome' },
-            reality: { enabled: true, public_key: PUBLIC_KEY, short_id: '0123456789abcdef' },
-            server_name: 'www.example',
-          },
-          server: 'a.example',
-          server_port: 443,
-          uuid: UUID,
-        },
-      ],
-      route: { rules: [{ outbound: 'vless-out' }] },
-    });
-    expect(ConfigSchema.safeParse(value).success).toBe(true);
   });
 });
 

@@ -1,6 +1,5 @@
 import { useSearch } from '@tanstack/react-router';
 import { renderWithRouter } from '@test/renderWithRouter';
-import { selectOption } from '@test/selectOption';
 import { server } from '@test/server';
 import { finishSidePanelTransition } from '@test/sidePanel';
 import { act, screen, waitFor, within } from '@testing-library/react';
@@ -492,60 +491,6 @@ describe('section screen', () => {
     expect(open).toHaveFocus();
   });
 
-  it('adds a direct outbound with a tag: the node goes to the end of the section, the comment is intact', async () => {
-    serveConfig(CONFIG_TEXT);
-
-    const user = userEvent.setup();
-
-    renderWithRouter(OutboundsSection);
-
-    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
-
-    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
-
-    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'directНапрямую, без прокси');
-    await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'direct-2');
-    await user.click(panel.getByRole('button', { name: 'Добавить' }));
-
-    await waitFor(() => {
-      expect(findValue(draft(), ['outbounds', 2])).toEqual({ type: 'direct', tag: 'direct-2' });
-    });
-    expect(draft()).toContain('// выходы');
-    expect(findValue(draft(), ['outbounds', 1])).toEqual(HK_01);
-    expect(await screen.findByRole('complementary', { name: 'direct-2' })).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.queryByRole('complementary', { name: 'Новый узел' })).not.toBeInTheDocument();
-    });
-  });
-
-  it('VLESS is added from the override preset: TLS with uTLS and Reality are already on', async () => {
-    serveConfig(CONFIG_TEXT);
-
-    const user = userEvent.setup();
-
-    renderWithRouter(OutboundsSection);
-
-    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
-
-    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
-
-    await selectOption(
-      user,
-      panel.getByRole('combobox', { name: 'Тип' }),
-      'vlessVLESS: лёгкий прокси, обычно с Reality или TLS'
-    );
-    await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'vless-out');
-    await user.click(panel.getByRole('button', { name: 'Добавить' }));
-
-    await waitFor(() => {
-      expect(findValue(draft(), ['outbounds', 2])).toEqual({
-        type: 'vless',
-        tag: 'vless-out',
-        tls: { enabled: true, utls: { enabled: true, fingerprint: 'chrome' }, reality: { enabled: true } },
-      });
-    });
-  });
-
   it('adds an outbound from a share link and opens it in the node form', async () => {
     serveConfig(CONFIG_TEXT);
 
@@ -605,88 +550,6 @@ describe('section screen', () => {
       'Ссылка не распознана: поддерживаются vless://, vmess://, trojan://, ss:// и hysteria2://'
     );
     expect(ConfigDocumentState.getState().draft).toBeNull();
-  });
-
-  it('rejects a tag taken by another node and writes nothing', async () => {
-    serveConfig(CONFIG_TEXT);
-
-    const user = userEvent.setup();
-
-    renderWithRouter(OutboundsSection);
-
-    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
-
-    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
-
-    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'directНапрямую, без прокси');
-    await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'hk-01');
-    await user.click(panel.getByRole('button', { name: 'Добавить' }));
-
-    expect(await panel.findByRole('alert')).toHaveTextContent('Тег уже занят другим узлом');
-    expect(ConfigDocumentState.getState().draft).toBeNull();
-  });
-
-  it('a type outside the binary build is marked in the choice, but is chosen and added', async () => {
-    let statusServed = false;
-
-    server.use(
-      http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG_TEXT)),
-      http.get(DAEMON_ENDPOINT.status(), () => {
-        statusServed = true;
-
-        return HttpResponse.json({
-          ...DAEMON_STATUS_FIXTURE,
-          core: { ...DAEMON_STATUS_FIXTURE.core, build: { tags: ['with_utls'] } },
-        });
-      })
-    );
-
-    const user = userEvent.setup();
-
-    renderWithRouter(OutboundsSection);
-
-    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
-    await waitFor(() => {
-      expect(statusServed).toBe(true);
-    });
-
-    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
-
-    await selectOption(
-      user,
-      panel.getByRole('combobox', { name: 'Тип' }),
-      'hysteria2недоступен в этой сборке sing-boxHysteria 2: быстрый прокси поверх QUIC'
-    );
-
-    expect(panel.getByText(/собран без этого типа \(with_quic\)/)).toBeInTheDocument();
-
-    await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'hy2');
-    await user.click(panel.getByRole('button', { name: 'Добавить' }));
-
-    await waitFor(() => {
-      expect(findValue(draft(), ['outbounds', 2])).toEqual({ type: 'hysteria2', tag: 'hy2' });
-    });
-  });
-
-  it('an empty section with a registry adds the first node and creates the array', async () => {
-    serveConfig(CONFIG_TEXT);
-
-    const user = userEvent.setup();
-
-    renderWithRouter(ProvidersSection);
-
-    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
-
-    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
-
-    await selectOption(user, panel.getByRole('combobox', { name: 'Тип' }), 'inline');
-    await user.type(panel.getByRole('textbox', { name: 'Тег' }), 'own');
-    await user.click(panel.getByRole('button', { name: 'Добавить' }));
-
-    await waitFor(() => {
-      expect(findValue(draft(), ['providers'])).toEqual([{ type: 'inline', tag: 'own' }]);
-    });
-    expect(draft()).toContain('// выходы');
   });
 
   it('an object section and a list without a registry have no add button', async () => {

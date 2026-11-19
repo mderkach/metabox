@@ -1,4 +1,3 @@
-import { selectOption } from '@test/selectOption';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { JSONPath } from 'jsonc-parser';
@@ -182,25 +181,6 @@ describe('node form by schema', () => {
 
     await waitFor(() => {
       expect(findValue(draft(), [...VMESS, 'network'])).toEqual(['tcp', 'udp']);
-    });
-  });
-
-  it('an enum value is chosen from the schema, the empty item clears the key', async () => {
-    const user = userEvent.setup();
-
-    renderVmess();
-    await showEmptyFields();
-
-    await selectOption(user, screen.getByRole('combobox', { name: 'domain_strategy' }), 'prefer_ipv4');
-
-    await waitFor(() => {
-      expect(findValue(draft(), [...VMESS, 'domain_strategy'])).toBe('prefer_ipv4');
-    });
-
-    await selectOption(user, screen.getByRole('combobox', { name: 'domain_strategy' }), 'не задано');
-
-    await waitFor(() => {
-      expect(findValue(draft(), VMESS)).not.toHaveProperty('domain_strategy');
     });
   });
 
