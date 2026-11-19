@@ -57,7 +57,7 @@ const (
 
 	// How long the cache file repair waits for sing-box to let go of the file after its process
 	// was stopped.
-	cacheLockTimeout = 5 * time.Second
+	cacheLockTimeout = 10 * time.Second
 
 	// DNS probe: the first query after a restart brings up the connection to upstream and
 	// may take seconds, so there are several attempts. A failure of all three is about

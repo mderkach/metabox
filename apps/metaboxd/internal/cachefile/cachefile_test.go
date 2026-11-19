@@ -153,6 +153,38 @@ func TestDropRefusesWhatItCannotDo(t *testing.T) {
 			t.Errorf("error %v, want ErrUnreadable", err)
 		}
 	})
+
+	// A file cut short faults the bbolt reader in its mmap; the daemon must survive it.
+	for _, size := range []string{"one page", "half"} {
+		t.Run("file cut to "+size, func(t *testing.T) {
+			data, err := os.ReadFile(fixture(t))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			cut := len(data) / 2
+			if size == "one page" {
+				cut = 4096
+			}
+
+			path := filepath.Join(t.TempDir(), "cache.db")
+			if err := os.WriteFile(path, data[:cut], 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := editor.Drop(t.Context(), path, "", "sub"); !errors.Is(err, cachefile.ErrUnreadable) {
+				t.Errorf("error %v, want ErrUnreadable", err)
+			}
+		})
+	}
+
+	// A file the system refuses to open is not a broken database: it is not moved aside.
+	t.Run("a path the system cannot open", func(t *testing.T) {
+		err := editor.Drop(t.Context(), t.TempDir(), "", "sub")
+		if err == nil || errors.Is(err, cachefile.ErrUnreadable) {
+			t.Errorf("error %v, want a plain open error", err)
+		}
+	})
 }
 
 func TestPoisonedProvider(t *testing.T) {

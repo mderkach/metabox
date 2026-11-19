@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -23,7 +24,9 @@ var (
 	ErrLocked = errors.New("cache file is locked by another process")
 	// ErrNoEntry means the file has no entry for the tag: there is nothing to drop.
 	ErrNoEntry = errors.New("no cached subscription entry")
-	// ErrUnreadable means the file does not open as a bbolt database.
+	// ErrUnreadable means the file is not a bbolt database: a foreign or broken header, a
+	// broken page, or a file cut short. A failure of the system to open or map a good file is
+	// not one of them.
 	ErrUnreadable = errors.New("cache file is not a readable database")
 )
 
@@ -36,13 +39,34 @@ type Editor struct {
 	LockTimeout time.Duration
 }
 
+// shortFile opens what bbolt says about a file shorter than its pages; the error has no
+// variable of its own.
+const shortFile = "file size too small"
+
+// unreadable reports whether bbolt refused the file for its content.
+func unreadable(err error) bool {
+	return errors.Is(err, bolterrors.ErrInvalid) ||
+		errors.Is(err, bolterrors.ErrChecksum) ||
+		errors.Is(err, bolterrors.ErrVersionMismatch) ||
+		strings.HasPrefix(err.Error(), shortFile)
+}
+
 // Drop deletes the cached subscription of tag. cacheID is experimental.cache_file.cache_id
 // of the config the service runs; empty means the top-level bucket. Other keys and buckets
 // stay as they are. A missing file is ErrNoEntry: opening it would create an empty database.
-func (e Editor) Drop(ctx context.Context, path, cacheID, tag string) error {
+func (e Editor) Drop(ctx context.Context, path, cacheID, tag string) (err error) {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+
+	// bbolt reads the file through mmap and trusts its page numbers: a file cut short in the
+	// middle of a page faults the reader, which would end the whole daemon.
+	defer debug.SetPanicOnFault(debug.SetPanicOnFault(true))
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%w: %s: %v", ErrUnreadable, path, r)
+		}
+	}()
 
 	if _, err := os.Stat(path); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -56,8 +80,11 @@ func (e Editor) Drop(ctx context.Context, path, cacheID, tag string) error {
 	if errors.Is(err, bolterrors.ErrTimeout) {
 		return fmt.Errorf("%w: %s", ErrLocked, path)
 	}
-	if err != nil {
+	if err != nil && unreadable(err) {
 		return fmt.Errorf("%w: %s: %w", ErrUnreadable, path, err)
+	}
+	if err != nil {
+		return fmt.Errorf("open cache file %s: %w", path, err)
 	}
 
 	updateErr := db.Update(func(tx *bolt.Tx) error {
