@@ -39,6 +39,13 @@ ROWS = """\
 | NFR-1 | ci      | `.github/workflows/ci.yml`   | `integration` |
 """
 
+ON_PURPOSE = """
+## Checked by hand on purpose
+
+| ID | Scenario | Why by hand |
+| --- | --- | --- |
+"""
+
 
 class TraceCheckTest(unittest.TestCase):
     def setUp(self):
@@ -118,6 +125,53 @@ class TraceCheckTest(unittest.TestCase):
         result = self.run_check()
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("checked only by hand, not in CI: AC-1", result.stdout)
+
+    def test_a_manual_row_in_the_table_is_reported_as_owed(self):
+        self.write("docs/Verification.md", ROWS + "| AC-1 | manual | | open the panel |\n")
+        result = self.run_check()
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("manual checks owed outside the section on purpose: AC-1", result.stdout)
+
+    def test_a_check_by_hand_on_purpose_covers_the_requirement(self):
+        rows = ROWS.replace("| NFR-1 | ci      | `.github/workflows/ci.yml`   | `integration` |\n", "")
+        self.write("docs/Verification.md", rows + ON_PURPOSE + "| NFR-1 | cut the power | the bench has no flash |\n")
+        result = self.run_check("--strict-coverage")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("checked by hand on purpose: NFR-1", result.stdout)
+        self.assertNotIn("owed", result.stdout)
+
+    def test_a_check_by_hand_on_purpose_names_the_reason(self):
+        self.write("docs/Verification.md", ROWS + ON_PURPOSE + "| NFR-1 | cut the power | |\n")
+        result = self.run_check()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("names the scenario and the reason", result.stdout)
+
+    def test_a_row_of_the_table_layout_is_refused_on_purpose(self):
+        self.write("docs/Verification.md", ROWS + ON_PURPOSE + "| NFR-1 | manual | | cut the power |\n")
+        result = self.run_check()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("the row has 4 cells", result.stdout)
+
+    def test_fails_on_a_broken_relative_link_in_the_main_specs(self):
+        self.write("docs/adr/ADR-0002-x.md", "# ADR-0002\n")
+        # The depth of a delta in a change folder, copied into the main specs by an archive.
+        self.write("openspec/specs/access/spec.md", "Decision in [ADR-0002](../../../../../docs/adr/ADR-0002-x.md).\n")
+        result = self.run_check()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("openspec/specs/access/spec.md:1: the link ../../../../../docs/adr/ADR-0002-x.md points at nothing", result.stdout)
+
+    def test_a_relative_link_that_resolves_passes(self):
+        self.write("docs/adr/ADR-0002-x.md", "# ADR-0002\n")
+        self.write(
+            "openspec/specs/access/spec.md",
+            "[ADR-0002](../../../docs/adr/ADR-0002-x.md#context), [site](https://example.com), [below](#scenario).\n",
+        )
+        self.write(
+            "openspec/changes/add-x/specs/access/spec.md",
+            "[ADR-0002](../../../../../docs/adr/ADR-0002-x.md)\n",
+        )
+        result = self.run_check()
+        self.assertEqual(result.returncode, 0, result.stdout)
 
     def test_fails_on_a_document_reference_in_code(self):
         self.write("internal/config/load.go", "// Writes atomically (ADR-0002).\n")

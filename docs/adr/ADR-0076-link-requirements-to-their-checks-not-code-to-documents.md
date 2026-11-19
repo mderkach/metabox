@@ -86,6 +86,7 @@ The 50 existing references are rewritten in the same change: a comment keeps its
 ## Links
 
 - [`docs/Verification.md`](../Verification.md), [`docs/PRD.md`](../PRD.md) sections 5–7 (the criteria and non-functional requirements moved to [`openspec/specs/`](../../openspec/specs/)).
+- [ADR-0087](./ADR-0087-keep-deliberate-hand-checks-apart-from-hand-checks-still-owed.md): the `manual` rows checked by hand on purpose, kept apart from those still owed, and the link check of `openspec/`.
 - [`.github/scripts/trace-check.py`](../../.github/scripts/trace-check.py), [`.github/tests/test_trace_check.py`](../../.github/tests/test_trace_check.py).
 - Root [`AGENTS.md`](../../AGENTS.md), section "Where technical knowledge lives".
 - B. Böckeler, [Understanding Spec-Driven-Development: Kiro, spec-kit, and Tessl](https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html): spec-first, spec-anchored and spec-as-source.

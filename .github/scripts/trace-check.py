@@ -17,6 +17,9 @@ INDEX = "docs/Verification.md"
 # A requirement in the main specs is built; one in a change's delta is still in progress.
 SPECS = "openspec/specs"
 CHANGES = "openspec/changes"
+# Rows under this heading are checked by hand by decision and name the reason; a manual row
+# anywhere else is a check still owed.
+ON_PURPOSE = "## Checked by hand on purpose"
 
 ID = r"(?:AC|NFR|UX)-\d+"
 AC_LINE = re.compile(r"^- \[( |x)\] \*\*(AC-\d+)\.\*\*")
@@ -25,6 +28,8 @@ SPEC_REQUIREMENT = re.compile(rf"^### Requirement: ({ID})\b")
 ROW = re.compile(rf"^\| *({ID}) *\|")
 CODE = re.compile(r"`([^`]+)`")
 DOC_REFERENCE = re.compile(rf"\b(?:ADR-\d{{4}}|{ID}|PRD)\b")
+LINK = re.compile(r"\]\(([^)\s]+)\)")
+EXTERNAL = re.compile(r"^[a-z][a-z0-9+.-]*:", re.I)
 
 # The Markdown lint config names documents as examples of a Markdown style; this script and its
 # test name the requirements document and need requirement IDs in their fixtures.
@@ -96,11 +101,14 @@ def read_requirements(root, report):
 
 def read_rows(root):
     rows = []
+    on_purpose = False
     for number, line in enumerate((root / INDEX).read_text(encoding="utf-8").splitlines(), 1):
+        if line.startswith("## "):
+            on_purpose = line.strip() == ON_PURPOSE
         if not ROW.match(line):
             continue
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        rows.append((number, cells))
+        rows.append((number, cells, on_purpose))
     return rows
 
 
@@ -121,10 +129,28 @@ def check_target(root, kind, path, target):
     return None if found else f"{target!r} is not found in {path}"
 
 
+def check_on_purpose(where, cells, known, report):
+    if len(cells) != 3:
+        report.error(where, f"the row has {len(cells)} cells", "write `| ID | Scenario | Why by hand |`")
+        return False
+    if not cells[1] or not cells[2]:
+        report.error(where, "a check by hand on purpose names the scenario and the reason", "fill Scenario and Why by hand")
+        return False
+    if cells[0] not in known:
+        report.error(where, f"{cells[0]} is not defined in {PRD} or {SPECS}", "fix the ID or remove the row")
+        return False
+    return True
+
+
 def check_rows(root, rows, known, report):
-    covered, gated = set(), set()
-    for number, cells in rows:
+    covered, gated, on_purpose, owed = set(), set(), set(), []
+    for number, cells, deliberate in rows:
         where = f"{INDEX}:{number}"
+        if deliberate:
+            if check_on_purpose(where, cells, known, report):
+                covered.add(cells[0])
+                on_purpose.add(cells[0])
+            continue
         if len(cells) != 4:
             report.error(where, f"the row has {len(cells)} cells", "write `| ID | Kind | File | Check |`")
             continue
@@ -141,6 +167,7 @@ def check_rows(root, rows, known, report):
         if kind == "manual":
             if file_cell or not check:
                 report.error(where, "a manual check has no file and describes the scenario", "empty the File cell, describe the scenario in Check")
+            owed.append(requirement)
             continue
         path, target = CODE.fullmatch(file_cell), CODE.fullmatch(check)
         if not path or not target:
@@ -148,10 +175,14 @@ def check_rows(root, rows, known, report):
             continue
         if reason := check_target(root, kind, path[1], target[1]):
             report.error(where, reason, "point the row at the check that exists, or remove the row")
-    return covered, gated
+    return covered, gated, on_purpose, owed
 
 
-def check_coverage(covered, gated, ticked, nfr, report):
+def by_number(ids):
+    return sorted(set(ids), key=lambda i: (i.split("-")[0], int(i.split("-")[1])))
+
+
+def check_coverage(covered, gated, ticked, nfr, on_purpose, owed, report):
     missing = sorted(ticked - covered, key=lambda i: int(i.split("-")[1])) + [i for i in nfr if i not in covered]
     required = len(ticked) + len(nfr)
     report.warning(f"coverage: {required - len(missing)} of {required} ticked criteria and NFRs have a check in {INDEX}")
@@ -159,6 +190,10 @@ def check_coverage(covered, gated, ticked, nfr, report):
         report.warning(f"without a check: {', '.join(missing)}")
     if by_hand := sorted(covered - gated):
         report.warning(f"checked only by hand, not in CI: {', '.join(by_hand)}")
+    if on_purpose:
+        report.warning(f"checked by hand on purpose: {', '.join(by_number(on_purpose))}")
+    if owed:
+        report.warning(f"manual checks owed outside the section on purpose: {', '.join(by_number(owed))}")
     return missing
 
 
@@ -188,6 +223,22 @@ def check_code(root, report):
         )
 
 
+def check_links(root, report):
+    """Archiving copies the relative links of a delta into the main specs as they are; written
+    for the depth of the change folder, they point at nothing there."""
+    for folder in (SPECS, CHANGES):
+        for path in spec_files(root, folder):
+            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                for match in LINK.finditer(line):
+                    target = match[1].split("#")[0]
+                    if target and not EXTERNAL.match(target) and not (path.parent / target).exists():
+                        report.error(
+                            f"{path.relative_to(root)}:{number}",
+                            f"the link {match[1]} points at nothing",
+                            "write the path relative to this file",
+                        )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
@@ -196,9 +247,10 @@ def main():
 
     report = Report()
     known, ticked, nfr = read_requirements(args.root, report)
-    covered, gated = check_rows(args.root, read_rows(args.root), known, report)
-    missing = check_coverage(covered, gated, ticked, nfr, report)
+    covered, gated, on_purpose, owed = check_rows(args.root, read_rows(args.root), known, report)
+    missing = check_coverage(covered, gated, ticked, nfr, on_purpose, owed, report)
     check_code(args.root, report)
+    check_links(args.root, report)
     if args.strict_coverage and missing:
         report.error(INDEX, f"{len(missing)} requirements have no check", "add a row per requirement")
 
