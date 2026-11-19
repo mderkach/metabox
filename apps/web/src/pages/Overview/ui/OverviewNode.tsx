@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { ArrowUpRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { SERVICE_GROUPS, useProxies } from '@entities/Proxy';
+import { SERVICE_GROUPS, toDelayLabel, useProxies } from '@entities/Proxy';
 import { useSelectProxy } from '@features/Proxy/ProxySelect';
 import { cn } from '@shared/lib/utils';
 import {
@@ -16,8 +16,6 @@ import {
   SkeletonRows,
 } from '@shared/ui';
 import { DELAY_TONE } from '@widgets/ProxyGroups';
-
-import { toDelayLabel } from '../lib/Overview.delay';
 
 /**
  * The node the traffic leaves through, switched in place: from a phone this is

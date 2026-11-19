@@ -1,10 +1,9 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { type ProxyNode } from '@entities/Proxy';
+import { toDelayLabel, type ProxyNode } from '@entities/Proxy';
 import { cn } from '@shared/lib/utils';
 
-import { toDelayText } from '../lib/ProxyGroups.delay';
 import { toMemberLabel } from './ProxyGroupLabel';
 import { ProxyNodeContent } from './ProxyNodeContent';
 
@@ -28,7 +27,7 @@ function ProxyNodeTileProto({
   const label = t('node.label', {
     name: node.name,
     type: toMemberLabel(t, node.type),
-    delay: toDelayText(t, node),
+    delay: toDelayLabel(t, node),
   });
 
   // `relative` keeps the hidden label inside the tile: `sr-only` is positioned
