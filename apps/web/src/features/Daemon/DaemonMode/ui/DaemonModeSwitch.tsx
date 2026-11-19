@@ -6,7 +6,7 @@ import { cn } from '@shared/lib/utils';
 import { PENDING_REVEAL, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton } from '@shared/ui';
 
 import { useSetClashMode } from '../api';
-import { toClashModeLabel } from './clashModeLabel';
+import { toClashModeLabel } from './DaemonMode.labels';
 
 /**
  * Runtime routing mode. It has no apply bar or confirmation: the config file

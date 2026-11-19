@@ -135,7 +135,7 @@
     "check-file/filename-naming-convention": [
       "error",
       {
-        "src/+(entities|features|widgets|pages)/**/!(index).{ts,tsx}": "PASCAL_CASE"
+        "apps/web/src/+(entities|features|widgets|pages)/**/!(index).{ts,tsx}": "PASCAL_CASE"
       },
       {
         "ignoreMiddleExtensions": true
@@ -144,10 +144,10 @@
     "check-file/folder-naming-convention": [
       "error",
       {
-        "src/entities/*/": "PASCAL_CASE",
-        "src/features/*/": "PASCAL_CASE",
-        "src/widgets/*/": "PASCAL_CASE",
-        "src/pages/*/": "PASCAL_CASE"
+        "apps/web/src/entities/*/": "PASCAL_CASE",
+        "apps/web/src/features/*/": "PASCAL_CASE",
+        "apps/web/src/widgets/*/": "PASCAL_CASE",
+        "apps/web/src/pages/*/": "PASCAL_CASE"
       }
     ],
     "typescript/no-floating-promises": "error",

@@ -5,9 +5,9 @@
   // some rules in `.oxlintrc.json`. Without this list every run reports about
   // two hundred findings that the repository already accepted as the norm.
   //
-  // The config does not set the scan scope: the `exclude`, `ignore` and
-  // `ignorePatterns` keys do not work in 0.9.14, and the CLI does not accept
-  // several directories in its arguments.
+  // `rules` turns a rule off everywhere; an exception for some files goes into
+  // `ignore.overrides`. react-doctor merges the rules of `.oxlintrc.json` but
+  // not its `overrides`, so an oxlint exception for a path is repeated there.
   "rules": {
     "eslint/no-magic-numbers": "off",
     "no-magic-numbers": "off",
@@ -36,8 +36,52 @@
     // The config text editor is recreated by `key` with the document refresh
     // counter, so an external edit reaches the uncontrolled field.
     "react-doctor/no-derived-useState": "off",
-    // Triggers only in the vendored shadcn zone, and it cannot be excluded by
-    // config: the scope keys do not work in 0.9.14.
-    "react-doctor/no-array-index-as-key": "off",
+    // The lists it fires on hold a handful of items: config tags, schema
+    // fields, selected facet values; in `Connection.filter.ts` it takes
+    // `String.includes` for an array. A performance fix starts from a
+    // measurement, not from the shape of the code.
+    "react-doctor/js-set-map-lookups": "off",
+  },
+  "ignore": {
+    "overrides": [
+      {
+        // Vendored shadcn primitives are not edited. The two a11y rules are
+        // off for them in `.oxlintrc.json` as well.
+        "files": ["src/shared/ui/shadcn/**"],
+        "rules": [
+          "jsx-a11y/click-events-have-key-events",
+          "jsx-a11y/no-noninteractive-element-interactions",
+          "react-doctor/jsx-no-constructed-context-values",
+          "react-doctor/no-array-index-as-key",
+        ],
+      },
+      {
+        // Tooling tests are plain JS; `.oxlintrc.json` sets their own name pattern.
+        "files": ["tools/**/*.test.js"],
+        "rules": ["vitest/consistent-test-filename"],
+      },
+      {
+        // `describe` is a pure formatter of a value, not an event callback.
+        "files": ["src/shared/ui/FacetFilter.tsx"],
+        "rules": ["react-doctor/no-prop-callback-in-render"],
+      },
+      {
+        // The listeners are added and removed in a loop over the same event
+        // list; the rule does not follow the loop into the cleanup.
+        "files": ["src/widgets/Rule/RuleTable/ui/RuleTable.tsx"],
+        "rules": ["react-doctor/effect-needs-cleanup"],
+      },
+      {
+        // `onTransitionCancel` is a React 19 DOM event the rule does not know.
+        "files": ["src/shared/ui/SidePanelLayout.tsx"],
+        "rules": ["react-doctor/no-unknown-property"],
+      },
+      {
+        // The popup has no `transition` class: it animates with keyframes
+        // (`animate-in`), and `duration-100` sets their length.
+        "files": ["src/shared/ui/TokenInputSuggestions.tsx"],
+        "rules": ["react-doctor/no-transition-all"],
+      },
+    ],
   },
 }

@@ -24,5 +24,5 @@ export { filterRules, parseRuleSearch, toTargetFilter, toTargetGroups, toTargetP
 export type { RuleSearch, RuleSetFilter, RuleTargetFilter, RuleTargetGroup } from './model/Rule.filter';
 export { newRulePlace, RULE_TARGET, ruleSetsOf, toNewRuleRow } from './model/Rule.model';
 export type { NewRulePlace, RuleBranch, RuleGroup, RuleMatcher, RuleRow, RuleTargetKind } from './model/Rule.model';
-export { useRuleTitle } from './ui/useRuleTitle';
-export type { RuleTitle } from './ui/useRuleTitle';
+export { useRuleTitle } from './ui/Rule.title';
+export type { RuleTitle } from './ui/Rule.title';

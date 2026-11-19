@@ -109,12 +109,27 @@ jobs:
       - run: pnpm --filter web build
       - run: pnpm --filter web check:bundle
 
-      # Advice, not a check: the rule set belongs to the vendor and changes between
-      # minor versions, so a failing step does not fail the build. What the repository
-      # has already accepted as the norm is disabled in `apps/web/doctor.config.jsonc`.
+      # An error-level finding fails the build; warnings do not. Every finding, warnings
+      # included, is listed in the job summary for the reviewer. What the repository has
+      # already accepted as the norm is disabled in `apps/web/doctor.config.jsonc`.
       - name: React doctor
-        continue-on-error: true
-        run: pnpm --filter web run lint:react
+        shell: bash
+        run: |
+          report="$RUNNER_TEMP/react-doctor.json"
+          status=0
+          pnpm --filter web run lint:react --json --json-out "$report" || status=$?
+          {
+            echo '### React doctor'
+            echo
+            if [ -s "$report" ]; then
+              jq -r '"\(.summary.errorCount) errors, \(.summary.warningCount) warnings", "",
+                "| Severity | Rule | Place |", "| --- | --- | --- |",
+                (.diagnostics[] | "| \(.severity) | `\(.plugin)/\(.rule)` | `\(.filePath):\(.line)` |")' "$report"
+            else
+              echo "No report: the run failed before writing it, see the step log."
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          exit "$status"
 
       # Full build: only here it is checked that the built SPA reaches
       # go:embed and ends up in the binary.
