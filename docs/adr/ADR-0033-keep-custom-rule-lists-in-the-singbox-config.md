@@ -6,7 +6,7 @@
 
 ## Context and problem statement
 
-AC-8 requires that the user can build a custom list of domains and addresses in the panel, including one based on a provider list, and that a route refers to it as a rule set. Open question OQ-3 in section 10.1 of the [PRD](../PRD.md) is where such a list physically lives: in the config itself, as a separate file next to it, or in the daemon state. While it is open, AC-8 cannot start, and milestone M2 does not close without it.
+AC-8 of the [`rule-sets`](../../openspec/specs/rule-sets/spec.md) spec requires that the user can build a custom list of domains and addresses in the panel, including one based on a provider list, and that a route refers to it as a rule set. Open question OQ-3 in section 10.1 of the [PRD](../PRD.md) is where such a list physically lives: in the config itself, as a separate file next to it, or in the daemon state. While it is open, AC-8 cannot start, and milestone M2 does not close without it.
 
 Constraints are already set by other decisions and by the code:
 

@@ -9,7 +9,7 @@
 
 The daemon takes the config as the body of `POST /api/apply` and writes it verbatim: parsing into structs or a map is forbidden, and the only structural edit is inserting `experimental.clash_api` ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)). So the text the interface sends is the future content of `/etc/sing-box/config.json`.
 
-The requirements for this text are set by the [PRD](../PRD.md): AC-2: after editing one field, the diff against the original file contains only that field; AC-3: constructs not recognized by the model survive a round-trip. Both criteria belong to milestone M3, but they can be violated as early as milestone M1: the very first Apply from the interface rewrites the whole file.
+The requirements for this text are set by the [`config-editor`](../../openspec/specs/config-editor/spec.md) spec: AC-2: after editing one field, the diff against the original file contains only that field; AC-3: constructs not recognized by the model survive a round-trip. Both criteria belong to milestone M3, but they can be violated as early as milestone M1: the very first Apply from the interface rewrites the whole file.
 
 At the moment the frontend gets the `GET /api/config` response through axios, that is, already parsed into an object, and checks it with the `ConfigSchema` schema (`apps/web/src/entities/Config/api/Config.query.ts`). The original text of the file is not kept anywhere.
 

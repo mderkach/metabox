@@ -7,7 +7,7 @@
 
 ## Context and problem statement
 
-The dashboard needs traffic, memory, service state, groups, nodes and the connection stream (AC-10…AC-12), and the Connections screen must handle thousands of connections (AC-30) without blocking the interface (NFR-2). At the moment the only source is the Clash API: the daemon guarantees the `experimental.clash_api` section in the applied config (AC-31) and shows this intervention to the user explicitly (AC-32). The OQ-5 check confirmed that the fork returns everything AC-10…AC-12 require.
+The dashboard needs traffic, memory, service state, groups, nodes and the connection stream (AC-10…AC-12), and the Connections screen must handle thousands of connections (AC-30, a proposal in [`connections-responsiveness`](../../openspec/changes/connections-responsiveness/proposal.md)) without blocking the interface (NFR-2). At the moment the only source is the Clash API: the daemon guarantees the `experimental.clash_api` section in the applied config (AC-31) and shows this intervention to the user explicitly (AC-32). The OQ-5 check confirmed that the fork returns everything AC-10…AC-12 require.
 
 In 1.14 the fork brought a second source: the `api` service type (`service/api/server.go`, registered as `C.TypeAPI`). It is a gRPC server over HTTP/2 with h2c, with its own `secret`, optional TLS and a built-in web dashboard. It brings up the `StartedService` service from `daemon/started_service.proto`. OQ-9 recorded the question: do we need a form for this type, and do we take it instead of the Clash API or in addition to it.
 

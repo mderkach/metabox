@@ -6,7 +6,7 @@
 
 ## Context and problem statement
 
-AC-5 requires every inbound/outbound type from the fork checklist to have either a hand-written form or an auto-generated renderer; no node is left without a renderer. AC-6 requires the "VLESS/Reality + rule-based routing" config to be built in the UI from scratch and to pass `sing-box check` without manual edits. Today only the routing rule is edited through a form; section nodes open as JSON (the shared sections screen), and that does not close AC-5.
+AC-5 requires every inbound/outbound type from the fork checklist to have either a hand-written form or an auto-generated renderer; no node is left without a renderer. AC-6, a proposal in [`config-from-scratch`](../../openspec/changes/config-from-scratch/proposal.md), requires the "VLESS/Reality + rule-based routing" config to be built in the UI from scratch and to pass `sing-box check` without manual edits. Today only the routing rule is edited through a form; section nodes open as JSON (the shared sections screen), and that does not close AC-5.
 
 Constraints set by existing decisions and code:
 
