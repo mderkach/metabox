@@ -1,3 +1,5 @@
+import { parse } from 'jsonc-parser';
+
 import { E2E_TAG, expect, test } from './fixtures/index.ts';
 
 test(
@@ -6,7 +8,8 @@ test(
   async ({ page, overviewPage, connectionsPage, benchConnection }) => {
     await test.step('the bench config has no services section', async () => {
       const response = await page.request.get('/api/config');
-      const config: unknown = await response.json();
+      // The config is JSON with comments: the panel keeps a rule's name as a comment line.
+      const config: unknown = parse(await response.text());
 
       expect(response.ok()).toBe(true);
       expect(config).not.toHaveProperty('services');
