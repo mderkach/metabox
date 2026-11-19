@@ -107,3 +107,39 @@ func TestCrashMark(t *testing.T) {
 		t.Errorf("mark %q of an empty log, want none", got)
 	}
 }
+
+// countingRunner counts the calls of each command.
+type countingRunner struct {
+	commandRunner
+	calls map[string]int
+}
+
+func (r *countingRunner) Run(ctx context.Context, name string, args ...string) (singbox.Result, error) {
+	r.calls[name]++
+
+	return r.commandRunner.Run(ctx, name, args...)
+}
+
+// Crash is polled every interval during a wait: it reads the logger once per poll.
+func TestCrashReadsTheLogOnce(t *testing.T) {
+	runner := &countingRunner{
+		commandRunner: commandRunner{
+			initScript: {ExitCode: 1},
+			logread:    {Stdout: "Thu Nov 19 10:00:00 2026 daemon.err sing-box[1]: FATAL[0000] boom"},
+		},
+		calls: map[string]int{},
+	}
+
+	client, err := singbox.New(runner, binary, initScript, logread, &fakeSupervisor{state: procd.State{Known: true}})
+	if err != nil {
+		t.Fatalf("client build: %v", err)
+	}
+
+	if _, err := client.Crash(t.Context(), ""); err != nil {
+		t.Fatalf("crash: %v", err)
+	}
+
+	if got := runner.calls[logread]; got != 1 {
+		t.Errorf("logread ran %d times, want once", got)
+	}
+}

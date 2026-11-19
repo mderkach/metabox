@@ -342,9 +342,20 @@ func (c *Client) CrashMark(ctx context.Context) string {
 // procd keeps the service known with no instance after halt and between the two halves of a
 // restart, and an older crash left in the log must not be taken for a new one.
 func (c *Client) Crash(ctx context.Context, mark string) (string, error) {
-	state, err := c.State(ctx)
-	if err != nil || !state.Failed {
-		return "", err
+	// Not State: it reads the log for the panel's reason, and this read would be the second
+	// on every poll.
+	running, err := c.running(ctx)
+	if err != nil {
+		return "", locale.Errorf("service state: %w", err)
+	}
+
+	if running.ExitCode == 0 || c.supervisor == nil {
+		return "", nil
+	}
+
+	supervised, err := c.supervisor.Service(ctx, c.ServiceName(), Instance)
+	if err != nil || !supervised.Known {
+		return "", nil
 	}
 
 	log, ok := c.readLog(ctx)
