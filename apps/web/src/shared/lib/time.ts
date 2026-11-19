@@ -1,7 +1,6 @@
 /**
  * Time units. Everything that converts some units to others takes its coefficients
- * from here: `1000`, `60` and `24` used to live as copies in six modules, and each
- * copy read as an independent decision.
+ * from here, so a `1000`, `60` or `24` is never an independent decision of a module.
  *
  * Only conversion coefficients here. Thresholds and periods — the polling interval,
  * the request timeout, the plausible-delta window — are settings of their own modules and
