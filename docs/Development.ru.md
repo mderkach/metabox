@@ -172,7 +172,7 @@ make package METABOX_BASE_IMAGE=metabox/openwrt-device:latest
 Скопируйте на роутер `dist/metaboxd.apk` и пакет [sing-box-extended](https://github.com/shtorm-7/sing-box-extended/releases) той же архитектуры. У dropbear на OpenWrt нет sftp-сервера, поэтому `scp` нужен с `-O`:
 
 ```sh
-scp -O dist/metaboxd.apk sing-box-extended_1.14.1-extended-2.7.2_openwrt_aarch64_cortex-a53.apk root@192.168.1.1:/tmp/
+scp -O dist/metaboxd.apk sing-box-extended_1.14.3-extended-2.7.3_openwrt_aarch64_cortex-a53.apk root@192.168.1.1:/tmp/
 ```
 
 На роутере (так же и при обновлении):

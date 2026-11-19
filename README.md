@@ -77,7 +77,7 @@ metabox installs on the router as one apk package. It contains the `metaboxd` da
 
 - OpenWrt 25.12 or SNAPSHOT. These versions use the apk package manager. OpenWrt 24.10 and older use opkg and are not supported.
 - An aarch64 router. Packages are built for `aarch64_cortex-a53`, the architecture of mediatek/filogic firmware. Check yours with `cat /etc/apk/arch`.
-- The `sing-box-extended` package. `metaboxd` depends on it, and the install script installs it. Tested version: `1.14.1-extended-2.7.2`.
+- The `sing-box-extended` package. `metaboxd` depends on it, and the install script installs it. Tested version: `1.14.3-extended-2.7.3`.
 
 ## Install
 

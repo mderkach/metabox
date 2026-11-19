@@ -17,8 +17,8 @@ FEED_FILE=/etc/apk/repositories.d/metabox.list
 # The pin is sing-box-extended.sha256, which the test bench reads too; `make singbox-pin-check`
 # fails when these two lines drift from it. The fork release has no checksum file: the hash
 # is the asset digest from the GitHub API.
-SINGBOX_VERSION=1.14.1-extended-2.7.2
-SINGBOX_SHA256=be11f74666b11167e5071547a705f7e730731dfaac39650c51b49f4d68aa8870
+SINGBOX_VERSION=1.14.3-extended-2.7.3
+SINGBOX_SHA256=493c942e9429431df8aae2ed7df589bf3ab285f32f49d49453ee133dbd842f38
 SINGBOX_URL="https://github.com/shtorm-7/sing-box-extended/releases/download/v${SINGBOX_VERSION}/sing-box-extended_${SINGBOX_VERSION}_openwrt_${ARCH}.apk"
 
 channel=testing
