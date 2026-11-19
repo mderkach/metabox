@@ -34,6 +34,7 @@ import (
 	"metabox/internal/logs"
 	"metabox/internal/mcp"
 	"metabox/internal/route"
+	"metabox/internal/singbox"
 )
 
 const initializeBody = `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}`
@@ -1256,5 +1257,218 @@ func TestPanelEndpointsManageToken(t *testing.T) {
 	resp = b.send(http.MethodGet, "/mcp", map[string]string{"Authorization": "Bearer " + issued.Token}, "")
 	if unknown := b.send(http.MethodGet, "/no-such-page", nil, ""); resp.status != unknown.status {
 		t.Errorf("after disable: status %d, an unknown path %d", resp.status, unknown.status)
+	}
+}
+
+// newBareBench serves only the tools the given options enable, behind a panel server
+// with the given options.
+func newBareBench(t *testing.T, store mcp.Store, opts mcp.Options, panel httpapi.Options) *bench {
+	t.Helper()
+
+	access, err := mcp.NewAccess(t.Context(), store)
+	if err != nil {
+		t.Fatalf("access: %v", err)
+	}
+
+	b := &bench{t: t, access: access, logBuf: &syncBuffer{}}
+	log := slog.New(slog.NewTextHandler(b.logBuf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	panel.Version = "test"
+	panel.MCP = mcp.New(access, log, opts)
+	b.srv = httptest.NewServer(httpapi.NewServer(idleApplier{}, fakeConfig{}, log, panel))
+	t.Cleanup(b.srv.Close)
+
+	return b
+}
+
+type fakePlane struct {
+	snap dataplane.Snapshot
+	err  error
+}
+
+func (f fakePlane) Snapshot(context.Context) (dataplane.Snapshot, error) { return f.snap, f.err }
+
+func TestStatusNamesRoutingMode(t *testing.T) {
+	type routing struct {
+		Read    bool   `json:"read"`
+		Enabled bool   `json:"enabled"`
+		Mode    string `json:"mode"`
+	}
+
+	tests := []struct {
+		name  string
+		plane fakePlane
+		want  routing
+	}{
+		{
+			"the section from UCI",
+			fakePlane{snap: dataplane.Snapshot{Exists: true, Type: "dataplane", Options: map[string][]string{"enabled": {"0"}, "acl_mode": {"all"}}}},
+			routing{Read: true, Enabled: false, Mode: "all"},
+		},
+		{"an unread section", fakePlane{err: errors.New("uci failed")}, routing{}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := newBareBench(t, &memoryStore{}, mcp.Options{Version: "test", Dataplane: tt.plane}, httpapi.Options{})
+			session := b.session(b.enable())
+
+			out := call[struct {
+				Routing routing `json:"routing"`
+			}](t, session, "metabox_status", nil)
+
+			if out.Routing != tt.want {
+				t.Errorf("routing %+v, want %+v", out.Routing, tt.want)
+			}
+		})
+	}
+}
+
+func TestFailedToolCallLogsTheReason(t *testing.T) {
+	b := newBench(t, nil, &memoryStore{})
+	session := b.session(b.enable())
+
+	result, err := session.CallTool(t.Context(), &sdk.CallToolParams{Name: "metabox_config_version", Arguments: map[string]any{"id": 7}})
+	if err != nil {
+		t.Fatalf("call: %v", err)
+	}
+
+	if !result.IsError {
+		t.Fatal("reading a missing version did not return a tool error")
+	}
+
+	var lines []string
+
+	for line := range strings.Lines(b.logBuf.String()) {
+		if strings.Contains(line, "tool=metabox_config_version") {
+			lines = append(lines, line)
+		}
+	}
+
+	if len(lines) != 1 {
+		t.Fatalf("log lines for the call %q, want one", lines)
+	}
+
+	for _, attr := range []string{"addr=127.0.0.1:", "duration_ms=", `err="no config version"`} {
+		if !strings.Contains(lines[0], attr) {
+			t.Errorf("log line %q has no %s", lines[0], attr)
+		}
+	}
+}
+
+// The server has neither a config reader nor a runtime, and the reference still answers:
+// it does not read the config on the router.
+func TestConfigFieldNeedsNoConfig(t *testing.T) {
+	b := newBareBench(t, &memoryStore{}, mcp.Options{Version: "test"}, httpapi.Options{})
+	session := b.session(b.enable())
+
+	list, err := session.ListTools(t.Context(), nil)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+
+	for _, tool := range list.Tools {
+		if tool.Name == "metabox_config_version" {
+			t.Fatal("the bench offers a config reader")
+		}
+	}
+
+	out := call[fieldOut](t, session, "metabox_config_field", map[string]any{"path": "route.rules.3.outbound"})
+	if out.Path != "route.rules.*.outbound" || out.Reference != "outbound" {
+		t.Errorf("got path %q reference %q, want route.rules.*.outbound naming an outbound", out.Path, out.Reference)
+	}
+}
+
+type recordingService struct {
+	mu    sync.Mutex
+	calls []string
+}
+
+func (s *recordingService) record(call string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.calls = append(s.calls, call)
+
+	return nil
+}
+
+func (s *recordingService) State(context.Context) (singbox.State, error) {
+	return singbox.State{Running: true}, nil
+}
+
+func (s *recordingService) Start(context.Context) error   { return s.record("start") }
+func (s *recordingService) Stop(context.Context) error    { return s.record("stop") }
+func (s *recordingService) Restart(context.Context) error { return s.record("restart") }
+
+func (s *recordingService) recorded() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return slices.Clone(s.calls)
+}
+
+func TestTurningMCPOnAndOffRestartsNothing(t *testing.T) {
+	singboxService, daemon := &recordingService{}, &recordingService{}
+	b := newBareBench(t, &memoryStore{}, mcp.Options{Version: "test"}, httpapi.Options{Service: singboxService, Restart: daemon})
+	origin := map[string]string{"Origin": b.srv.URL}
+
+	for _, step := range []string{"enable", "regenerate"} {
+		resp := b.post("/api/mcp/token", origin, "")
+		if resp.status != http.StatusOK {
+			t.Fatalf("%s: status %d", step, resp.status)
+		}
+
+		var issued contract.MCPToken
+		if err := json.Unmarshal(resp.body, &issued); err != nil {
+			t.Fatal(err)
+		}
+
+		b.session(issued.Token)
+	}
+
+	if resp := b.send(http.MethodDelete, "/api/mcp/token", origin, ""); resp.status != http.StatusNoContent {
+		t.Fatalf("disable: status %d, want 204", resp.status)
+	}
+
+	if calls := singboxService.recorded(); len(calls) != 0 {
+		t.Errorf("sing-box service calls %v, want none", calls)
+	}
+
+	if calls := daemon.recorded(); len(calls) != 0 {
+		t.Errorf("daemon restarts %v, want none", calls)
+	}
+}
+
+// Removing the token file over SSH and restarting the daemon turns MCP off without
+// reinstalling the package.
+func TestRemovingTheTokenFileTurnsMCPOff(t *testing.T) {
+	stateDir := filepath.Join(t.TempDir(), "metabox")
+
+	store, err := config.NewStore(t.TempDir(), "config.json", stateDir)
+	if err != nil {
+		t.Fatalf("store: %v", err)
+	}
+
+	token := newBareBench(t, store, mcp.Options{Version: "test"}, httpapi.Options{}).enable()
+
+	if err := os.Remove(filepath.Join(stateDir, "mcp.json")); err != nil {
+		t.Fatalf("remove the token file: %v", err)
+	}
+
+	b := newBareBench(t, store, mcp.Options{Version: "test"}, httpapi.Options{})
+
+	var state contract.MCP
+	if err := json.Unmarshal(b.send(http.MethodGet, "/api/mcp", nil, "").body, &state); err != nil {
+		t.Fatal(err)
+	}
+
+	if state.Enabled {
+		t.Error("the panel shows MCP on after the token file was removed")
+	}
+
+	resp := b.send(http.MethodGet, "/mcp", map[string]string{"Authorization": "Bearer " + token}, "")
+	if unknown := b.send(http.MethodGet, "/no-such-page", nil, ""); resp.status != unknown.status || !bytes.Equal(resp.body, unknown.body) {
+		t.Errorf("/mcp answered %d %q, an unknown path %d %q", resp.status, resp.body, unknown.status, unknown.body)
 	}
 }
