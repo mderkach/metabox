@@ -98,4 +98,24 @@ STUB
       exit 1
     fi
     echo "metaboxd $reported started on $(uname -m) from the init script command"
+
+    # arg_after prints the argument that follows $1 in the recorded command.
+    arg_after() {
+      jsonfilter -i /tmp/procd-set.json -e "@.instances.metaboxd.command[*]" | awk -v flag="$1" "found { print; exit } \$0 == flag { found = 1 }"
+    }
+
+    uci set metabox.main.https=1
+    uci set metabox.main.https_cert=/etc/metabox/owner.crt
+    uci set metabox.main.https_key=/etc/metabox/owner.key
+    uci commit metabox
+    rm -f /tmp/procd-set.json
+    /etc/init.d/metaboxd start
+    jsonfilter -i /tmp/procd-set.json -e "@.instances.metaboxd.command[*]" | grep -qx -- "-https=1" &&
+      [ "$(arg_after -https-cert)" = /etc/metabox/owner.crt ] &&
+      [ "$(arg_after -https-key)" = /etc/metabox/owner.key ] || {
+      echo "the UCI https settings did not reach the daemon flags:" >&2
+      jsonfilter -i /tmp/procd-set.json -e "@.instances.metaboxd.command[*]" >&2
+      exit 1
+    }
+    echo "the init script hands https, https_cert and https_key from UCI to the daemon flags"
   '
