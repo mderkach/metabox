@@ -14,7 +14,8 @@ Facts the decision depends on:
 
 - The daemon module requires only the MCP Go SDK ([ADR-0055](./ADR-0055-embed-a-read-only-mcp-server-in-the-daemon-with-the-official-go-sdk.md)); a new dependency is a separate decision ([`../../apps/metaboxd/AGENTS.md`](../../apps/metaboxd/AGENTS.md)).
 - The fork uses `github.com/sagernet/bbolt`, a fork of `go.etcd.io/bbolt` without tagged releases: 2.7.3 pins `v0.0.0-20260915102804-500ee1e84832`, 2.7.2 pins `v0.0.0-20260823094646-e24805439c9c`.
-- Measured on 2026-11-19 for `linux/arm64` with `-trimpath -ldflags="-s -w"`: a program that opens a database and deletes a key is 1.97 MB with `go.etcd.io/bbolt` v1.5.0 and the same with `sagernet/bbolt`, against 1.31 MB for the same program without bbolt. The only indirect module of either is `golang.org/x/sys`, which the daemon already requires.
+- Measured on 2026-11-19 for `linux/arm64` with `-trimpath -ldflags="-s -w"`: a program that opens a database and deletes a key is 1.97 MB with `go.etcd.io/bbolt` v1.5.0 and the same with `sagernet/bbolt`, against 1.31 MB for the same program without bbolt. The only indirect module of either is `golang.org/x/sys`, which the daemon already requires at v0.41.0; bbolt v1.5.0 raises it to v0.45.0.
+- Checked on the same day on darwin/arm64: a file with a top-level and a nested `rule_set` bucket written by `sagernet/bbolt`, a key deleted by `go.etcd.io/bbolt` and the file reopened by `sagernet/bbolt` keeps the other keys, and `Tx.Check` finds no error. Not checked on the router yet.
 - The fork's CLI has no command that edits the cache file (`cmd/sing-box/` in the fork sources).
 - The core holds the file lock while it runs, so the file is edited only with the `sing-box` process stopped.
 - The fork deletes a cache file it cannot open (`ErrInvalid`, `ErrChecksum`, `ErrVersionMismatch`, a failed database check) in `experimental/cachefile/cache.go`.
@@ -32,7 +33,7 @@ In scope: how the daemon edits the cache file. Out of scope: when it does so (th
 
 ## Considered options
 
-1. **`go.etcd.io/bbolt` in the daemon, one package imports it.** Deletes the one entry, keeps everything else. Upstream with tagged releases; the file format is the one `sagernet/bbolt` reads. Cost: 0.66 MB of binary, a second external module to follow, and a duty to check that the formats of the two libraries stay compatible. **Chosen.**
+1. **`go.etcd.io/bbolt` in the daemon, one package imports it.** Deletes the one entry, keeps everything else. Upstream with tagged releases; the file format is the one `sagernet/bbolt` reads. Cost: 0.66 MB of binary, a minor version bump of `golang.org/x/sys`, a second external module to follow, and a duty to check that the formats of the two libraries stay compatible. **Chosen.**
 2. **`github.com/sagernet/bbolt` in the daemon.** The same library the core uses, so no format question. Drawbacks: no releases, only pseudo-versions; the router and the pinned fork already use two different commits, so matching the core exactly would mean following the fork's pin. **Rejected**: the format compatibility it buys is checked by a test in option 1 instead.
 3. **Move the whole cache file aside, no library.** A rename needs nothing. Drawbacks: drops every subscription, the remote rule sets and the DNS caches; the first start then downloads rule sets and probably fails where they go through subscription nodes. **Rejected** as the main path; kept as the fallback for a file the daemon cannot open (AC-93 in the change).
 4. **A `sing-box` subcommand.** The fork has none that edits the cache, and adding one is writing to the fork. **Rejected.**
