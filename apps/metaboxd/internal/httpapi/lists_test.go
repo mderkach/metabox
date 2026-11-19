@@ -120,7 +120,7 @@ func TestConfigListsServed(t *testing.T) {
 		t.Errorf("etag %q, expected %q", files.Etag, want)
 	}
 
-	if files.Stats["my.json"] != stats["my.json"] {
+	if files.Stats["my.json"] != contract.ListStat(stats["my.json"]) {
 		t.Errorf("file stat returned as %+v, expected %+v", files.Stats["my.json"], stats["my.json"])
 	}
 }

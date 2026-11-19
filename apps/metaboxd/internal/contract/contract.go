@@ -2,19 +2,11 @@
 //
 // The package exists so the contract has an explicit boundary: the panel builds schemas
 // from these types, and a private handler struct cannot be a contract,
-// since its rename would silently reach the panel. Domain types
-// that go into a response whole stay in their own packages: contract refers to
-// them and does not copy them.
+// since its rename would silently reach the panel. Domain types that go into a response
+// whole are copied here field for field, with their godoc, which the panel schema carries:
+// the contract imports no domain package and is read without them. A test in this package
+// keeps each copy in step with its domain type.
 package contract
-
-import (
-	"metabox/internal/apply"
-	"metabox/internal/config"
-	"metabox/internal/dataplane"
-	"metabox/internal/devices"
-	"metabox/internal/history"
-	"metabox/internal/logs"
-)
 
 // Health is the response of `GET /healthz`.
 type Health struct {
@@ -48,8 +40,8 @@ type Status struct {
 	ConfirmWindowSeconds int `json:"confirm_window_seconds"`
 	// Runtime is where the daemon reads the runtime from. A silent swap of one source for
 	// another is forbidden, so the composition is declared by the contract.
-	Runtime     Runtime            `json:"runtime"`
-	Transaction *apply.Transaction `json:"transaction,omitempty"`
+	Runtime     Runtime      `json:"runtime"`
+	Transaction *Transaction `json:"transaction,omitempty"`
 	// TransactionHref is the address of the running apply. Without it a page reload
 	// loses the transaction: its identifier lived only in the response to
 	// POST.
@@ -57,7 +49,7 @@ type Status struct {
 	// DataplaneTransaction is the last dataplane model change in this daemon
 	// lifetime. It goes by the same protocol and with the same phases as a config
 	// apply, and never runs at the same time as it.
-	DataplaneTransaction *apply.Transaction `json:"dataplane_transaction,omitempty"`
+	DataplaneTransaction *Transaction `json:"dataplane_transaction,omitempty"`
 	// DataplaneTransactionHref is the address of the dataplane change, by the same rule as
 	// TransactionHref.
 	DataplaneTransactionHref string `json:"dataplane_transaction_href,omitempty"`
@@ -108,7 +100,7 @@ type Runtime struct {
 
 // Versions is the response of `GET /api/config/versions`.
 type Versions struct {
-	Versions []config.Version `json:"versions"`
+	Versions []Version `json:"versions"`
 	// CurrentSum is the sha256 of the applied config in the same notation as
 	// `Version.Sum`: the panel marks the version matching the file on the
 	// device by it. Computed by the daemon because the browser gives `crypto.subtle` only
@@ -162,17 +154,17 @@ const ServiceStateUnread ServiceErrorCode = "service_state_unread"
 // an absolute stamp would lie. The points go in sequence with the step StepSeconds, the last
 // is the freshest, and the axis labels are computed by the panel from its own clock.
 type History struct {
-	StepSeconds int             `json:"step_seconds"`
-	Points      []history.Point `json:"points"`
+	StepSeconds int     `json:"step_seconds"`
+	Points      []Point `json:"points"`
 	// DeviceStepSeconds is the step of Device. The board ring coarsens on its own: the
 	// readings go on while the traffic stream is down.
 	DeviceStepSeconds int `json:"device_step_seconds"`
 	// Device is the board readings in sequence with the step DeviceStepSeconds: load,
 	// temperature, memory.
-	Device []history.DevicePoint `json:"device"`
+	Device []DevicePoint `json:"device"`
 	// Recent is the last minute of traffic per second, without averaging. Empty
 	// until the daemon has received a single sample.
-	Recent []history.Point `json:"recent"`
+	Recent []Point `json:"recent"`
 	// Connections is the number of live connections over the last minute, one snapshot
 	// per second.
 	Connections []int `json:"connections"`
@@ -303,13 +295,13 @@ type RuleSetFiles struct {
 	Etag string `json:"etag"`
 	// Stats is the file name → size and modification time on disk. A file missing here
 	// was removed between the two reads; no field means there are no files.
-	Stats map[string]config.ListStat `json:"stats,omitempty"`
+	Stats map[string]ListStat `json:"stats,omitempty"`
 }
 
 // Devices is the response of `GET /api/devices` and `PUT /api/devices/{mac}`: LAN
 // devices by address, those without an address at the end.
 type Devices struct {
-	Devices []devices.Device `json:"devices"`
+	Devices []Device `json:"devices"`
 }
 
 // DeviceName is the body of `PUT /api/devices/{mac}`.
@@ -397,41 +389,41 @@ type MCPToken struct {
 // Dataplane is the response of `GET /api/dataplane`: the dataplane model from UCI and
 // whether its rules stand on the device.
 type Dataplane struct {
-	Model dataplane.Model `json:"model"`
+	Model Model `json:"model"`
 	// Applied means the dataplane chains are in the fw4 table. False without AppliedReason means
 	// nft was read and there are no chains.
 	Applied bool `json:"applied"`
 	// AppliedReason is why Applied was not observed but substituted with false.
-	AppliedReason dataplane.AppliedReason `json:"applied_reason,omitempty"`
+	AppliedReason AppliedReason `json:"applied_reason,omitempty"`
 }
 
 // DataplaneChange is the body of `PUT /api/dataplane`: the model in the same form as the
 // model field of the `GET /api/dataplane` response. Written whole: a missing field is a
 // zero value, not "leave as is".
 type DataplaneChange struct {
-	Model dataplane.Model `json:"model"`
+	Model Model `json:"model"`
 }
 
 // DataplaneDetails are the fields of the `dataplane_invalid` failure.
 type DataplaneDetails struct {
-	Fields []dataplane.FieldError `json:"fields"`
+	Fields []FieldError `json:"fields"`
 }
 
 // Logs is the response of `GET /api/logs`: the last sing-box log lines, old first.
 type Logs struct {
-	Source logs.Source `json:"source"`
+	Source Source `json:"source"`
 	// Since is the last cleanup mark in RFC 3339: lines earlier than it are not
 	// returned. No field means there was no cleanup since the daemon start.
-	Since   string       `json:"since,omitempty"`
-	Entries []logs.Entry `json:"entries"`
+	Since   string  `json:"since,omitempty"`
+	Entries []Entry `json:"entries"`
 }
 
 // LogEvent is the `log` event of the `GET /api/logs/stream` stream.
 type LogEvent struct {
 	// Seq grows by one with each line, including one dropped because of
 	// a slow reader: a gap means lost lines.
-	Seq   uint64     `json:"seq"`
-	Entry logs.Entry `json:"entry"`
+	Seq   uint64 `json:"seq"`
+	Entry Entry  `json:"entry"`
 }
 
 // LogsCleared is the response of `POST /api/logs/clear`.

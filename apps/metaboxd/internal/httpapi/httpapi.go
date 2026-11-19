@@ -439,13 +439,13 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 	body.SingboxBuild = body.Core.Build
 
 	if tx := s.applier.Current(); tx.ID != "" {
-		body.Transaction = &tx
+		body.Transaction = transactionOut(tx)
 		body.TransactionHref = "/api/apply/" + tx.ID
 	}
 
 	if s.plane != nil {
 		if tx := s.plane.Current(); tx.ID != "" {
-			body.DataplaneTransaction = &tx
+			body.DataplaneTransaction = transactionOut(tx)
 			body.DataplaneTransactionHref = "/api/dataplane/apply/" + tx.ID
 		}
 	}
@@ -535,12 +535,14 @@ func (s *Server) handleConfigLists(w http.ResponseWriter, r *http.Request) {
 
 	out.Etag = config.ListsEtag(sums)
 
-	out.Stats, err = s.reader.ListStats(r.Context())
+	stats, err := s.reader.ListStats(r.Context())
 	if err != nil {
 		fail(s.log, w, r, err)
 
 		return
 	}
+
+	out.Stats = listStatsOut(stats)
 
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(s.log, w, http.StatusOK, out)
@@ -558,7 +560,7 @@ func (s *Server) handleVersions(w http.ResponseWriter, r *http.Request) {
 		s.log.Warn("version skipped in the history", "version_id", v.ID, "err", v.Err)
 	}
 
-	out := contract.Versions{Versions: versions}
+	out := contract.Versions{Versions: each(versions, versionOut)}
 
 	data, err := s.reader.Read(r.Context())
 	switch {
@@ -813,7 +815,7 @@ func (s *Server) handleDevices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(s.log, w, http.StatusOK, contract.Devices{Devices: list})
+	writeJSON(s.log, w, http.StatusOK, contract.Devices{Devices: each(list, deviceOut)})
 }
 
 // handleDeviceName sets the own name and returns the whole list: the device label
@@ -869,7 +871,7 @@ func (s *Server) handleDataplane(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("ETag", `"`+snap.Sum()+`"`)
 	writeJSON(s.log, w, http.StatusOK, contract.Dataplane{
-		Model: model, Applied: applied, AppliedReason: reason,
+		Model: modelOut(model), Applied: applied, AppliedReason: contract.AppliedReason(reason),
 	})
 }
 
@@ -936,10 +938,10 @@ func (s *Server) observeRuntime(ctx context.Context) bool {
 func (s *Server) handleHistory(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(s.log, w, http.StatusOK, contract.History{
 		StepSeconds:       s.history.Step(),
-		Points:            s.history.Points(),
+		Points:            each(s.history.Points(), pointOut),
 		DeviceStepSeconds: s.history.DeviceStep(),
-		Device:            s.history.Device(),
-		Recent:            s.history.Recent(),
+		Device:            each(s.history.Device(), devicePointOut),
+		Recent:            each(s.history.Recent(), pointOut),
 		Connections:       s.history.Connections(),
 	})
 }

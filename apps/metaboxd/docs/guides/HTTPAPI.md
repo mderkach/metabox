@@ -39,7 +39,7 @@ External edits are caught by optimistic locking: `GET /api/config` returns an `E
 
 A body that an endpoint returns is declared in `internal/contract` as an exported type, not as a private struct next to the handler. The panel builds its schemas from these types, and the contract must be declared explicitly: a private field gets renamed with no obligations, a promise to the client does not.
 
-A domain type that goes into a response as a whole (`apply.Transaction`, `config.Version`, `route.Explanation`) stays in its package: `contract` references it, it does not copy it.
+`contract` imports no domain package. A domain type that goes into a `contract` response whole (`apply.Transaction`, `config.Version`) is copied into `internal/contract/domain.go` field for field, with its godoc and constants, and the handler maps the domain value into the copy. `TestCopiesMatchDomainTypes` fails when a copy drifts from its domain type. A shape the daemon returns whole without `contract` (`route.Explanation`, `events.Event`) stays in its package and is listed among the generator's roots ([ADR-0085](../../../../docs/adr/ADR-0085-copy-domain-types-into-the-daemon-contract.md)).
 
 ## Handlers
 

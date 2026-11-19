@@ -120,7 +120,7 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 		writeJSON(log, w, http.StatusUnprocessableEntity, contract.Error{
 			Code:    contract.ErrDataplaneInvalid,
 			Message: locale.T(lang, "dataplane model rejected"),
-			Details: contract.DataplaneDetails{Fields: invalid.Fields},
+			Details: contract.DataplaneDetails{Fields: each(invalid.Fields, fieldErrorOut)},
 		})
 
 		return

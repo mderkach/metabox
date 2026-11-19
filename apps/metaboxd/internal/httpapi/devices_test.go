@@ -66,7 +66,7 @@ func TestDevicesNameSurvivesRestart(t *testing.T) {
 	var put contract.Devices
 	got.decode(t, &put)
 
-	if len(put.Devices) != 1 || put.Devices[0].Name != "Телефон" || put.Devices[0].NameSource != devices.SourceCustom {
+	if len(put.Devices) != 1 || put.Devices[0].Name != "Телефон" || put.Devices[0].NameSource != contract.SourceCustom {
 		t.Errorf("edit response %+v", put)
 	}
 
