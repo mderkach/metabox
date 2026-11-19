@@ -110,7 +110,28 @@ func TestApplyHTTPOnEphemeralBench(t *testing.T) {
 	assertBenchRuntime(t, "apply-http-replay.metabox.example")
 	assertBenchStateCleared(t)
 	assertBenchReachable(t)
-	t.Log("HTTP Apply, confirmation, timeout, replay and interrupted-write recovery passed")
+
+	t.Log("stopped service: the panel keeps the config, and a restart from the panel brings sing-box up")
+	benchExec(t, nil, "/etc/init.d/metabox-singbox", "stop")
+	waitBenchService(t, "stopped")
+	benchRequest(t, http.MethodGet, "/api/status", nil, http.StatusOK)
+	assertBenchConfig(t, replayed)
+	benchRequest(t, http.MethodPost, "/api/service/restart", nil, http.StatusOK)
+	waitBenchService(t, "running")
+	assertBenchRuntime(t, "apply-http-replay.metabox.example")
+	assertBenchReachable(t)
+	t.Log("HTTP Apply, confirmation, timeout, replay, interrupted-write recovery and a restart of a stopped service passed")
+}
+
+func waitBenchService(t *testing.T, status string) {
+	t.Helper()
+	waitBench(t, 15*time.Second, "service status "+status, func() bool {
+		var service struct {
+			Status string `json:"status"`
+		}
+		decodeBench(t, benchRequest(t, http.MethodGet, "/api/service", nil, http.StatusOK), &service)
+		return service.Status == status
+	})
 }
 
 func benchCandidate(t *testing.T, baseline []byte, domain string) []byte {
