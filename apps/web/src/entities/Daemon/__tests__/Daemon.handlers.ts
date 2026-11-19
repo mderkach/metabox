@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 
 import { CONFIG_ENDPOINT } from '@entities/Config';
+import { parseJsonc } from '@shared/lib/jsonc';
 
 import { DAEMON_ENDPOINT } from '../api/Daemon.endpoints';
 import type { ApplyTransactionWire, DaemonStatusWire } from '../api/Daemon.schema';
@@ -13,6 +14,30 @@ import {
 
 /** The daemon confirmation window is a minute, in nanoseconds of `time.Duration`. */
 const CONFIRM_WINDOW_NS = 60_000_000_000;
+
+/** Apply envelope type: the daemon reads the config from its `config` field. */
+const APPLY_ENVELOPE_TYPE = 'application/vnd.metabox.apply+json';
+
+/** True when the text is a JSONC object, the dialect and the check the panel parses the config with. */
+function isConfigObject(text: string): boolean {
+  const { value, failure } = parseJsonc(text);
+
+  return failure === null && typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** The config text of an apply body, or `null` when an envelope carries none. */
+async function readApplyConfig(request: Request): Promise<string | null> {
+  const text = await request.text();
+
+  if (!(request.headers.get('content-type') ?? '').startsWith(APPLY_ENVELOPE_TYPE)) {
+    return text;
+  }
+
+  const { value } = parseJsonc(text);
+  const config = typeof value === 'object' && value !== null && 'config' in value ? value.config : null;
+
+  return typeof config === 'string' ? config : null;
+}
 
 /**
  * Daemon mocks together with the apply cycle.
@@ -54,7 +79,20 @@ export function createStatefulDaemonHandlers(extraStatus: () => Partial<DaemonSt
       })
     ),
 
-    http.post(DAEMON_ENDPOINT.apply(), () => HttpResponse.json(start(), { status: 202 })),
+    // Like the daemon, a body that is not a config object is rejected: a mock that takes
+    // anything hides a request the panel built wrongly.
+    http.post(DAEMON_ENDPOINT.apply(), async ({ request }) => {
+      const config = await readApplyConfig(request);
+
+      if (config === null || !isConfigObject(config)) {
+        return HttpResponse.json(
+          { code: 'config_not_object', message: 'конфиг должен быть объектом JSON' },
+          { status: 400 }
+        );
+      }
+
+      return HttpResponse.json(start(), { status: 202 });
+    }),
     http.post(`${CONFIG_ENDPOINT.versions()}/:id/restore`, () => HttpResponse.json(start(), { status: 202 })),
 
     http.get(DAEMON_ENDPOINT.applyState(':id'), () =>
