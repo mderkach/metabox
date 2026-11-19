@@ -168,3 +168,23 @@ func TestLimitWriterReportsFullWrite(t *testing.T) {
 		t.Error("truncation not marked")
 	}
 }
+
+// Command and CommandInput carry the stdout and the exit code to the runner types of
+// procd, dataplane and devices; a non-zero code stays a verdict, not an error.
+func TestExecCommandForms(t *testing.T) {
+	t.Setenv(helperEnv, "1")
+	t.Setenv(helperStdout, "uci вывод")
+	t.Setenv(helperCode, "3")
+
+	exec := NewExec(time.Minute)
+
+	out, code, err := exec.Command(t.Context(), os.Args[0], "-test.run=^TestHelperProcess$")
+	if err != nil || out != "uci вывод" || code != 3 {
+		t.Errorf("Command: got %q, %d, %v", out, code, err)
+	}
+
+	out, code, err = exec.CommandInput(t.Context(), "set metabox.x=1\n", os.Args[0], "-test.run=^TestHelperProcess$")
+	if err != nil || out != "uci вывод" || code != 3 {
+		t.Errorf("CommandInput: got %q, %d, %v", out, code, err)
+	}
+}

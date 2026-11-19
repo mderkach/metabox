@@ -11,8 +11,10 @@ package device
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -200,6 +202,20 @@ func (r *Reader) SampleDevice(ctx context.Context) {
 	}
 
 	r.history.Record(sample)
+}
+
+// Encoded is Read in the form of the event stream. A partial read failure does not cancel
+// publication: thermal zones may be absent and the sing-box process may be down, while the
+// other readings are read.
+func (r *Reader) Encoded(log *slog.Logger) func(ctx context.Context) (json.RawMessage, error) {
+	return func(ctx context.Context) (json.RawMessage, error) {
+		stat, err := r.Read(ctx)
+		if err != nil {
+			log.Debug("device readings read partially", "err", err)
+		}
+
+		return json.Marshal(stat)
+	}
 }
 
 // Read takes the readings. The error lists what could not be read;

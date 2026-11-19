@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"metabox/internal/clashapi"
 )
 
 // errNoService means the service state source is not set: the stream lives
@@ -27,6 +29,24 @@ type Settings struct {
 // Resolver returns the controller settings. Read on every connection: the port
 // changes together with the config.
 type Resolver func(ctx context.Context) (Settings, error)
+
+// ClashSettings brings the controller settings to the form of the stream: the stream has its own
+// type so that its consumers do not depend on the config section.
+func ClashSettings(resolve clashapi.Resolver) Resolver {
+	return func(ctx context.Context) (Settings, error) {
+		settings, err := resolve(ctx)
+		if err != nil {
+			return Settings{}, err
+		}
+
+		base, err := settings.BaseURL()
+		if err != nil {
+			return Settings{}, err
+		}
+
+		return Settings{BaseURL: base, Secret: settings.Secret}, nil
+	}
+}
 
 // ServiceReader returns the service state in the form the `/api/service` handler
 // returns it. The interface is declared here, at the consumer.

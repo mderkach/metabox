@@ -873,6 +873,25 @@ func (s *Server) handleDataplane(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// ServiceStream gives the event stream the same service state as the handler: the panel
+// must see the same thing regardless of where it came from. A poll failure does not
+// interrupt publication: otherwise the stream would freeze on the last successful value,
+// and the panel would show a crashed service as running.
+func ServiceStream(
+	service interface {
+		State(ctx context.Context) (singbox.State, error)
+	},
+	binary string,
+	observed func(ctx context.Context) bool,
+	lang locale.Lang,
+) events.ServiceReader {
+	return func(ctx context.Context) (json.RawMessage, error) {
+		state, err := service.State(ctx)
+
+		return json.Marshal(ServiceState(state, binary, err, observed(ctx), lang))
+	}
+}
+
 // ServiceState brings the service state to the response form. Exported
 // because the same body goes to the event stream: the panel must get one
 // format regardless of whether it came from a handler or a stream.
