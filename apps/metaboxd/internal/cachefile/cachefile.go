@@ -59,8 +59,8 @@ func (e Editor) Drop(ctx context.Context, path, cacheID, tag string) (err error)
 		return err
 	}
 
-	// bbolt reads the file through mmap and trusts its page numbers: a file cut short in the
-	// middle of a page faults the reader, which would end the whole daemon.
+	// bbolt reads the file through mmap and trusts its page numbers: a broken page the length
+	// check below does not catch faults the reader, which would end the whole daemon.
 	defer debug.SetPanicOnFault(debug.SetPanicOnFault(true))
 	defer func() {
 		if r := recover(); r != nil {
@@ -74,6 +74,10 @@ func (e Editor) Drop(ctx context.Context, path, cacheID, tag string) (err error)
 		}
 
 		return fmt.Errorf("cache file %s: %w", path, err)
+	}
+
+	if err := checkLength(path); err != nil {
+		return err
 	}
 
 	db, err := bolt.Open(path, 0o600, &bolt.Options{Timeout: e.LockTimeout})

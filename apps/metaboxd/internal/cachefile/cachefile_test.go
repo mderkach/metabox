@@ -172,8 +172,11 @@ func TestDropRefusesWhatItCannotDo(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if err := editor.Drop(t.Context(), path, "", "sub"); !errors.Is(err, cachefile.ErrUnreadable) {
-				t.Errorf("error %v, want ErrUnreadable", err)
+			// The second attempt must not find the file locked by the first one.
+			for attempt := range 2 {
+				if err := editor.Drop(t.Context(), path, "", "sub"); !errors.Is(err, cachefile.ErrUnreadable) {
+					t.Errorf("attempt %d: error %v, want ErrUnreadable", attempt+1, err)
+				}
 			}
 		})
 	}
