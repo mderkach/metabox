@@ -34,6 +34,7 @@ Measured 2026-11-19 with Chromium headless shell of Playwright 1.64.1. A cell is
 | Apple M4 Pro                       | development    | 4×  | 1    | 318–584 ms                                | the same, and the search input                                                    |
 | GitHub `ubuntu-latest` runner      | development    | 1×  | 1    | 106–211 ms                                | the `flush` timer, the sort click                                                 |
 | Apple M4 Pro                       | production     | 1×  | 4    | 0 in every step                           |                                                                                   |
+| GitHub `ubuntu-latest` runner      | production     | 1×  | 1    | 0 in every step                           |                                                                                   |
 | Apple M4 Pro                       | production     | 4×  | 3    | 0–105 ms, one step of fifteen over 100 ms | the sort click, the search input, the `flush` timer                               |
 
 ## First page size budget
