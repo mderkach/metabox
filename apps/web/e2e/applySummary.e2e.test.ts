@@ -1,8 +1,15 @@
 import { E2E_TAG, expect, test } from './fixtures/index.ts';
+import { FOCUS_METER } from './lib/focus.ts';
 
 const RULE = { title: '192.168.1.100/32 → direct', index: 4 };
 const RULE_NAME = 'Printer';
 const DNS_SERVER = 'dns-direct-cf';
+const TEXT_CONTRAST_AA = 4.5;
+declare const window: { focusMeter: { textContrast: (element: unknown) => Promise<number | null> } };
+
+async function measureTextContrast(element: unknown) {
+  return window.focusMeter.textContrast(element);
+}
 
 test(
   'a rename alone is one summary item that leads back to the rule',
@@ -55,6 +62,34 @@ test(
 
       await expect(applyBar.diff).toBeHidden();
       await expect(sectionPage.serverField(DNS_SERVER)).toHaveValue('1.0.0.1');
+    });
+  }
+);
+
+test(
+  'Apply and its keyboard hint meet AA text contrast before and during hover in the light theme',
+  { tag: E2E_TAG.Mock },
+  async ({ page, configPage, applyBar }) => {
+    await page.addInitScript({ content: FOCUS_METER });
+    await page.addInitScript({ content: "localStorage.setItem('theme', 'light')" });
+    await configPage.goto();
+    await configPage.openRule(RULE.title, RULE.index);
+    await configPage.ruleName.fill(RULE_NAME);
+
+    const button = applyBar.applyButton;
+    const shortcut = button.locator('kbd');
+
+    await test.step('the Apply label and shortcut are readable at rest', async () => {
+      await expect(shortcut).toBeVisible();
+      expect(await button.evaluate(measureTextContrast)).toBeGreaterThanOrEqual(TEXT_CONTRAST_AA);
+      expect(await shortcut.evaluate(measureTextContrast)).toBeGreaterThanOrEqual(TEXT_CONTRAST_AA);
+    });
+
+    await test.step('the Apply label and shortcut stay readable when hovered', async () => {
+      await button.hover();
+
+      expect(await button.evaluate(measureTextContrast)).toBeGreaterThanOrEqual(TEXT_CONTRAST_AA);
+      expect(await shortcut.evaluate(measureTextContrast)).toBeGreaterThanOrEqual(TEXT_CONTRAST_AA);
     });
   }
 );

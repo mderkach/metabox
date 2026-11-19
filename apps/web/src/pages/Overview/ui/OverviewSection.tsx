@@ -49,12 +49,7 @@ export function OverviewSection({
             title
           )}
         </h2>
-        {note !== undefined && (
-          <p>
-            <span aria-hidden='true'>· </span>
-            {note}
-          </p>
-        )}
+        {note !== undefined && <p>{note}</p>}
       </div>
       <div id={contentId} hidden={!expanded} className='flex flex-col gap-3'>
         {expanded && children}

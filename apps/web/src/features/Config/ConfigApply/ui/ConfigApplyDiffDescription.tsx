@@ -10,7 +10,7 @@ export function ConfigApplyDiffDescription() {
   const seconds = useConfirmWindow();
 
   if (seconds === null) {
-    return <DialogDescription>{t('diff.description')}</DialogDescription>;
+    return <DialogDescription className='max-w-help-text text-pretty'>{t('diff.description')}</DialogDescription>;
   }
 
   const duration =
@@ -18,5 +18,9 @@ export function ConfigApplyDiffDescription() {
       ? t('diff.window.minute', { count: seconds / SECONDS_IN_MINUTE })
       : t('diff.window.second', { count: seconds });
 
-  return <DialogDescription>{t('diff.descriptionWindow', { window: duration })}</DialogDescription>;
+  return (
+    <DialogDescription className='max-w-help-text text-pretty'>
+      {t('diff.descriptionWindow', { window: duration })}
+    </DialogDescription>
+  );
 }

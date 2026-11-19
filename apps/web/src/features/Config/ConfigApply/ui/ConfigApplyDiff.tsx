@@ -45,7 +45,10 @@ export function ConfigApplyDiff({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button size='sm' aria-keyshortcuts={SHORTCUT.Apply} />}>
         {t('bar.apply')}
-        <ShortcutKbd shortcut={SHORTCUT.Apply} className='bg-primary-foreground/20 text-primary-foreground' />
+        <ShortcutKbd
+          shortcut={SHORTCUT.Apply}
+          className='bg-transparent text-primary-foreground inset-ring-1 inset-ring-primary-foreground/35'
+        />
       </DialogTrigger>
 
       <DialogContent showCloseButton={false} className={DIALOG_SIZE.Document}>

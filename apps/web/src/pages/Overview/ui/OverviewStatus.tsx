@@ -19,7 +19,7 @@ export function OverviewStatus({ onAnnounce }: { onAnnounce: (message: string) =
       <Card className={CARD_FLUSH}>
         <div className='grid gap-px bg-border lg:grid-cols-3'>
           <div className='bg-card p-4'>
-            <DaemonServiceControl />
+            <DaemonServiceControl heading='h2' />
           </div>
           <div className='bg-card p-4'>
             <OverviewNode onSelected={onAnnounce} />

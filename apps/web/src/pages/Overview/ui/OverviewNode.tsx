@@ -31,7 +31,7 @@ export function OverviewNode({ onSelected }: { onSelected: (message: string) => 
 
   return (
     <div className='flex flex-col gap-3'>
-      <h3>
+      <h2>
         <Link
           to='/proxies'
           className='flex w-fit items-center gap-1 transition-colors hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none pointer-coarse:min-h-11'
@@ -39,7 +39,7 @@ export function OverviewNode({ onSelected }: { onSelected: (message: string) => 
           <span className={CARD_TITLE}>{t('node.title')}</span>
           <ArrowUpRight aria-hidden='true' className='size-3.5 text-muted-foreground' />
         </Link>
-      </h3>
+      </h2>
 
       {proxies.isPending && <SkeletonRows rows={1} className='p-0' />}
       {proxies.isLoadingError && <QueryFailure messageKey='source.proxies' query={proxies} />}

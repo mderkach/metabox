@@ -91,7 +91,7 @@ export function AppSidebar() {
                   {!sidebar.collapsed && (
                     <>
                       <span className='grow truncate'>{t(item.key, { ns: 'shared' })}</span>
-                      <span className='shrink-0 rounded-sm bg-muted px-1 text-2xs tracking-wide text-muted-foreground uppercase'>
+                      <span className='shrink-0 rounded-sm bg-muted px-1 text-xs tracking-wide text-muted-foreground uppercase'>
                         {t('soon', { ns: 'shared' })}
                       </span>
                     </>

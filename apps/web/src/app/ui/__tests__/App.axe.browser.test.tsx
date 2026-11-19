@@ -94,7 +94,10 @@ describe('main screens', () => {
           .map(async (animation) => animation.finished)
       );
 
-      const { violations } = await axe.run(document.body, { runOnly: { type: 'tag', values: WCAG_AA_TAGS } });
+      const { violations } = await axe.run(document.body, {
+        runOnly: { type: 'tag', values: WCAG_AA_TAGS },
+        rules: { 'heading-order': { enabled: name === 'Overview' } },
+      });
       const found = Object.fromEntries(violations.map((violation) => [violation.id, violation.nodes.length]));
       const details = violations.flatMap((violation) =>
         violation.nodes.map((node) => `${violation.id}: ${node.target.join(' ')} :: ${node.failureSummary}`)

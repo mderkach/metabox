@@ -9,6 +9,7 @@ export class ApplyBar {
   readonly page: Page;
   readonly region: Locator;
   readonly dirty: Locator;
+  readonly applyButton: Locator;
   readonly diff: Locator;
   readonly ruleChanges: Locator;
   readonly nodeChanges: Locator;
@@ -19,6 +20,7 @@ export class ApplyBar {
     this.page = page;
     this.region = page.getByRole('region', { name: translate(CONFIG_APPLY, 'bar.label') });
     this.dirty = this.region.getByText(translate(CONFIG_APPLY, 'bar.dirty'));
+    this.applyButton = this.region.getByRole('button', { name: translate(CONFIG_APPLY, 'bar.apply'), exact: true });
     this.diff = page.getByRole('dialog', { name: translate(CONFIG_APPLY, 'diff.title') });
     this.ruleChanges = this.diff.getByRole('list', { name: translate(CONFIG_APPLY, 'diff.rules.label') });
     this.nodeChanges = this.diff.getByRole('list', { name: translate(CONFIG_APPLY, 'changes.label') });
@@ -27,7 +29,7 @@ export class ApplyBar {
   }
 
   async apply() {
-    await this.region.getByRole('button', { name: translate(CONFIG_APPLY, 'bar.apply'), exact: true }).click();
+    await this.applyButton.click();
   }
 
   /** Unfolds the line diff under the summary; `lines` is how many changed lines the button counts. */

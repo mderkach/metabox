@@ -56,7 +56,7 @@ const REASON_KEY: Readonly<Record<ServiceErrorCode, ParseKeys<'widgets/Daemon/Da
  * is down. Without a confirmed state there are no commands: whose service runs the process
  * is unknown, and restarting our own with a foreign process would bring up a second copy.
  */
-export function DaemonServiceControl() {
+export function DaemonServiceControl({ heading: Heading = 'h3' }: { heading?: 'h2' | 'h3' }) {
   const { t } = useTranslation('widgets/Daemon/DaemonService');
   const service = useServiceState();
   const action = useServiceAction();
@@ -85,7 +85,7 @@ export function DaemonServiceControl() {
   return (
     <div className='flex flex-col gap-3'>
       <div className='flex flex-wrap items-baseline gap-x-2.5 gap-y-1'>
-        <h3 className={CARD_TITLE}>sing-box</h3>
+        <Heading className={CARD_TITLE}>sing-box</Heading>
         <p className='flex items-center gap-1.5 self-center text-sm'>
           <span
             aria-hidden='true'
