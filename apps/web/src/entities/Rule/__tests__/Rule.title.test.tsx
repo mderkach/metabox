@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { DEVICE_ENDPOINT } from '@entities/Device';
 
 import { toRuleRowsFromNodes } from '../model/Rule.adapter';
-import { useRuleTitle } from '../ui/useRuleTitle';
+import { useRuleTitle } from '../ui/Rule.title';
 
 function wrapper({ children }: { children: ReactNode }) {
   return (
