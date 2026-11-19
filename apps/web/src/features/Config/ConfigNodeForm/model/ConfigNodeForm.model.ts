@@ -3,6 +3,7 @@ import { get, set, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
 
 import { compactNode } from '@entities/Config';
+import { isRecord } from '@shared/lib/isRecord';
 import { BOOLEAN_GROUP_FLAG, type FieldPlan } from '@shared/lib/schemaShape';
 
 import { overrideIssues, type NodeOverride } from './ConfigNodeForm.overrides';
@@ -74,10 +75,6 @@ export function toNodeFormResolver(
 
     return { values: {}, errors };
   };
-}
-
-function isRecord(value: unknown): value is ConfigNodeFormModel {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /** Form field name: a dotted path from the node root, and RHF understands only that. */

@@ -7,6 +7,7 @@ import {
   type NodeEdit,
 } from '@entities/Config';
 import type { RuleSetAddModel } from '@features/RuleSet/RuleSetAdd/@x/RuleSetEdit';
+import { isRecord } from '@shared/lib/isRecord';
 
 import { toRuleSetEditNode } from './RuleSetEdit.schema';
 
@@ -34,8 +35,4 @@ export function writeRuleSetEdit(
   editMany(written);
 
   return written.length < edits.length;
-}
-
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

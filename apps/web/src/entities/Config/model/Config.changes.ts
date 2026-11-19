@@ -1,5 +1,7 @@
 import type { JSONPath } from 'jsonc-parser';
 
+import { isRecord } from '@shared/lib/isRecord';
+
 import {
   CONFIG_SECTION,
   findValue,
@@ -100,10 +102,6 @@ function toNodeChanges(section: NodeListSection, applied: unknown, draft: unknow
     .map((name): ConfigChange => ({ kind: CONFIG_CHANGE.Removed, section, name }));
 
   return [...changes, ...removed];
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /** Value at `path` in an already parsed document; `undefined` means no node. */

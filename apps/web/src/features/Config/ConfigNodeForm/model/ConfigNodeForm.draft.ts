@@ -9,6 +9,7 @@ import {
   findValue,
   type NodeEdit,
 } from '@entities/Config';
+import { isRecord } from '@shared/lib/isRecord';
 import { BOOLEAN_GROUP_FLAG, FIELD_KIND, type FieldPlan } from '@shared/lib/schemaShape';
 
 import { splitByPresence, toFieldName, UNSET, type ConfigNodeFormModel } from './ConfigNodeForm.model';
@@ -105,10 +106,6 @@ export function packBooleanGroups(
   }
 
   return packed;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function pickKeys(source: Record<string, unknown>, keys: readonly string[]): Record<string, unknown> {
