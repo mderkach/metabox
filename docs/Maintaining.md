@@ -63,7 +63,7 @@ gh secret set APK_SIGN_KEY < ~/.config/metabox/release.key
 
 ## Branch rule
 
-Changes reach `main` only through a PR. A repository rule blocks the merge until the `checks` and `integration` CI jobs pass. `checks` already includes `integration`; the second entry can be removed from the rule. The rule stores job names, so renaming a job in `ci.yml` requires editing the rule in the same change. Otherwise the merge waits for a check that no longer exists.
+Changes reach `main` only through a PR. A repository rule blocks the merge until the `checks` CI job passes; `checks` waits for every other job, `integration` included. The rule stores the job name, so renaming `checks` in `ci.yml` requires editing the rule in the same change. Otherwise the merge waits for a check that no longer exists.
 
 ## Workflow actions
 
