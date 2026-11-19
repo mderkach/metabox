@@ -98,6 +98,7 @@ No product behaviour changes, and nothing from `e2e/` reaches the bundle. Rollba
 
 - [PRD](../PRD.md): OQ-6 in 10.1
 - [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md): test levels
+- [ADR-0086](./ADR-0086-time-the-connections-screen-nightly-on-a-mock-stand-with-production-react.md): the load stand, a mock stand with the production build of React for timing scenarios
 - [ADR-0064](./ADR-0064-run-browser-tests-in-a-vitest-browser-project-next-to-jsdom.md): Vitest browser project
 - [ADR-0067](./ADR-0067-test-http-apply-on-the-disposable-ci-bench.md): the CI bench
 - [E2E.md](../../apps/web/docs/guides/testing/E2E.md), [Unit.md](../../apps/web/docs/guides/testing/Unit.md), [apps/web/AGENTS.md](../../apps/web/AGENTS.md)

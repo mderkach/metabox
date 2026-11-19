@@ -1,0 +1,49 @@
+name: connections load
+
+# Times the Connections screen under 5000 connections on the mock stand with the production build
+# of React. Shared runners are noisy, so the run is nightly and by hand and blocks no merge.
+on:
+  schedule:
+    - cron: '41 3 * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/connections-load.yml
+
+permissions:
+  contents: read
+
+jobs:
+  connections-load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: package.json
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      # The headless shell is enough for headless runs; --with-deps installs its system libraries.
+      - name: Chromium
+        run: pnpm --filter web exec playwright install --with-deps --only-shell chromium
+
+      # Prints the longest main-thread task of each step before comparing it with the threshold.
+      - name: Connections under load
+        run: pnpm --filter web test:e2e --grep @load
+        env:
+          METABOX_E2E_STAND: load
+
+      - name: E2E report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: playwright-report-load
+          path: apps/web/playwright-report
+          retention-days: 14

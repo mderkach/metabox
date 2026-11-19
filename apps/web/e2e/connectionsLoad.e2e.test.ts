@@ -4,6 +4,8 @@ import { E2E_TAG, expect, test } from './fixtures/index.ts';
 /** `CLOSED_LIMIT` of the connection model: the hidden tab holds this many rows on a busy router. */
 const CLOSED_LIMIT = '200';
 const TICKS = 5;
+/** The longest main-thread task the screen may take while the stream runs. */
+const LONGEST_TASK_MS = 100;
 /**
  * The stand serializes every frame before the panel starts, and churn moves about 40 rows a frame
  * to closed, so the first snapshot and a full closed tab take several seconds on a busy runner.
@@ -23,8 +25,8 @@ const JSON_INDENT = 2;
 const CPU_RATE = Number(process.env.METABOX_E2E_CPU_RATE ?? 1);
 
 test(
-  'the connections screen reports its longest main-thread task under 5000 connections',
-  { tag: E2E_TAG.Mock },
+  'no main-thread task of the connections screen reaches 100 ms under 5000 connections',
+  { tag: E2E_TAG.Load },
   async ({ page, connectionLoad, connectionsPage }) => {
     test.setTimeout(SCENARIO_MS);
     await connectionLoad.install(LOAD);
@@ -66,8 +68,10 @@ test(
       });
     });
 
-    // The stand runs the development build of React, so the numbers are recorded, not compared
-    // with a threshold: production renders the same steps several times faster.
     console.log(`[MAIN THREAD] cpu x${String(CPU_RATE)} ${JSON.stringify(costs, null, JSON_INDENT)}`);
+
+    for (const [step, cost] of Object.entries(costs)) {
+      expect.soft(cost.longest, step).toBeLessThan(LONGEST_TASK_MS);
+    }
   }
 );

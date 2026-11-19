@@ -19,23 +19,22 @@ On `make dev-mock` the connection snapshot comes from MSW (Mock Service Worker) 
 
 ## Connections under load in a browser
 
-`e2e/connectionsLoad.e2e.test.ts` opens Connections with 5000 live connections matched by 500 different rule texts and the closed tab full, then prints the longest main-thread task (Long Tasks API) of each step: five snapshot ticks, a sort by Volume, a sort by To, typing `video` into the search, switching to Closed and back with that search still set. It also prints the scripts of the longest animation frame of the step (Long Animation Frames API), which names where the block happened. The first snapshot, 5000 new rows at once, comes before the first step and is not measured.
+`e2e/connectionsLoad.e2e.test.ts` opens Connections with 5000 live connections matched by 500 different rule texts and the closed tab full. It prints the longest main-thread task (Long Tasks API) of each step: five snapshot ticks, a sort by Volume, a sort by To, typing `video` into the search, switching to Closed and back with that search still set. Then it fails a step whose longest task reaches 100 ms. It also prints the scripts of the longest animation frame of the step (Long Animation Frames API), which names where the block happened. The first snapshot, 5000 new rows at once, comes before the first step and is not measured.
 
+- It runs on the load stand: the mock stand with the production build of React, `METABOX_E2E_STAND=load pnpm --filter web test:e2e --grep @load`. The development build renders several times slower and crosses 100 ms on a fast machine already. `METABOX_E2E_CPU_RATE=4` slows the page down as a weak laptop or a phone would; the threshold is set for 1×.
+- The `connections-load` workflow runs it nightly and by hand. Shared runners are noisy, so it blocks no merge; read a failure together with the numbers it printed.
 - The stream does not go through msw. The scenario sets `__METABOX_CONNECTION_LOAD__` before the page loads, and the mock entry (`mocks/connectionLoad.ts`) serializes a frame for every second of the scenario in advance and replaces the runtime `EventSource` with one that dispatches a ready string once a second. The main thread pays for the parse, the store and the render, as with the daemon; the push itself took 9 ms at 4× slowdown. The other requests still go to msw.
 - The config the panel reads stays the default mock one: Connections does not fetch the config, so the 500 rules exist only as the matched rule texts of the connections, which the Rule facet counts.
-- It runs as the Playwright project `load`, alone: CI runs it in its own step of the `web-browser` job. Locally: `pnpm --filter web test:e2e --project load`; `METABOX_E2E_CPU_RATE=4` slows the page down as a weak laptop or a phone would.
-- The stand is the Vite dev server, so React runs its development build, with `StrictMode` double renders. The scenario records the numbers and compares nothing: on this build the 100 ms threshold is reached on a fast machine already.
 
-Measured 2026-11-19, Apple M4 Pro, Chromium headless shell of Playwright 1.64.1, load average 6 to 15 from other processes. A cell is the range of the longest task of a step over all steps of all runs; 0 means no task reached the 50 ms the browser reports from:
+Measured 2026-11-19 with Chromium headless shell of Playwright 1.64.1. A cell is the range of the longest task of a step over all steps of all runs; 0 means no task reached the 50 ms the browser reports from:
 
-| Build of React                                                                 | CPU | Runs | Longest task of a step                    | Where                                                                             |
-| ------------------------------------------------------------------------------ | --- | ---- | ----------------------------------------- | --------------------------------------------------------------------------------- |
-| development (the stand)                                                        | 1×  | 7    | 0–100 ms                                  | the `flush` timer of `listenConnections` (store apply and render), the sort click |
-| development (the stand)                                                        | 4×  | 1    | 318–584 ms                                | the same, and the search input                                                    |
-| production (`process.env.NODE_ENV`, JSX without dev runtime, local experiment) | 1×  | 3    | 0 in every step                           |                                                                                   |
-| production (local experiment)                                                  | 4×  | 3    | 0–105 ms, one step of fifteen over 100 ms | the sort click, the search input, the `flush` timer                               |
-
-The production rows come from a temporary Vite config that is not in the repository: the build the daemon serves has no mocks, so the stand cannot run it as is.
+| Machine                            | Build of React | CPU | Runs | Longest task of a step                    | Where                                                                             |
+| ---------------------------------- | -------------- | --- | ---- | ----------------------------------------- | --------------------------------------------------------------------------------- |
+| Apple M4 Pro, load average 6 to 15 | development    | 1×  | 7    | 0–100 ms                                  | the `flush` timer of `listenConnections` (store apply and render), the sort click |
+| Apple M4 Pro                       | development    | 4×  | 1    | 318–584 ms                                | the same, and the search input                                                    |
+| GitHub `ubuntu-latest` runner      | development    | 1×  | 1    | 106–211 ms                                | the `flush` timer, the sort click                                                 |
+| Apple M4 Pro                       | production     | 1×  | 4    | 0 in every step                           |                                                                                   |
+| Apple M4 Pro                       | production     | 4×  | 3    | 0–105 ms, one step of fifteen over 100 ms | the sort click, the search input, the `flush` timer                               |
 
 ## First page size budget
 

@@ -10,6 +10,7 @@ export const test = mergeTests(connectionLoadTest, pageErrorsTest, pagesTest);
 export const E2E_TAG = {
   Mock: '@mock',
   Live: '@live',
+  Load: '@load',
 } as const;
 
 export { expect };
