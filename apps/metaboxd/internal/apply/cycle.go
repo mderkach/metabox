@@ -449,18 +449,18 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 
 	var (
 		restartErr, upErr error
-		dropped           []string
+		repaired          repair
 	)
 	if restoreErr == nil && !noBackup {
-		before, pidErr := m.service.PID(ctx)
+		from := snapshot(ctx, m.service)
 
 		restartErr = m.service.Restart(ctx)
 		if restartErr == nil {
-			upErr = coreUp(ctx, log, m.service, m.health, m.store, m.opts.ProcessInterval, before, pidErr)
+			upErr = coreUp(ctx, log, m.service, m.health, m.store, m.opts.ProcessInterval, from, false)
 		}
 
 		if poisoned, ok := errors.AsType[*poisonedError](upErr); ok {
-			dropped, upErr = m.repairCache(context.WithoutCancel(ctx), log, poisoned)
+			repaired, upErr = m.repairCache(context.WithoutCancel(ctx), log, poisoned)
 		}
 	}
 
@@ -475,6 +475,8 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 		m.mu.Lock()
 		m.lastSum = ""
 		m.lastListsSum = ""
+		// The cache file was changed even though the core did not come up: the user is told.
+		m.current.Reason = recovered(m.opts.Lang, m.current.Reason, repaired)
 		m.mu.Unlock()
 
 		return
@@ -500,7 +502,7 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 		}
 	} else {
 		m.current.Phase = PhaseRolledBack
-		m.current.Reason = recovered(m.opts.Lang, m.current.Reason, dropped)
+		m.current.Reason = recovered(m.opts.Lang, m.current.Reason, repaired)
 		m.lastSum = ""
 		m.lastListsSum = ""
 	}

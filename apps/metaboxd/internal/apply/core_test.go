@@ -32,6 +32,7 @@ func breakCore(h *harness) {
 	defer h.service.mu.Unlock()
 
 	h.service.crash = crashLine
+	h.service.relog()
 }
 
 func TestRollbackWaitsForRestoredCore(t *testing.T) {

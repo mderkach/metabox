@@ -220,7 +220,9 @@ func (s *scriptedService) Launch(context.Context) (procd.Launch, error) {
 	return procd.Launch{}, nil
 }
 
-func (s *scriptedService) Crash(context.Context) (string, error) { return "", nil }
+func (s *scriptedService) CrashMark(context.Context) string { return "" }
+
+func (s *scriptedService) Crash(context.Context, string) (string, error) { return "", nil }
 
 func (s *scriptedService) Halt(context.Context) error { return nil }
 

@@ -51,8 +51,12 @@ func (c *fakeCache) MoveAside(_ context.Context, path string) (string, error) {
 	return path + ".broken", nil
 }
 
-func (c *fakeCache) Drop(_ context.Context, path, cacheID, tag string) error {
+func (c *fakeCache) Drop(ctx context.Context, path, cacheID, tag string) error {
 	c.rec.add("Drop")
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -124,6 +128,7 @@ func (h *cacheHarness) crash(reason string, next ...string) {
 
 	h.service.crash = reason
 	h.service.crashes = next
+	h.service.relog()
 }
 
 // rollBack applies a config and lets its window run out while the core crashes with reason.
@@ -189,6 +194,9 @@ func TestRecoveryStopsOnTheSameSubscription(t *testing.T) {
 	}
 	if got := h.cache.dropped(); !slices.Equal(got, []string{"sub"}) {
 		t.Errorf("dropped %v, want sub once", got)
+	}
+	if !strings.Contains(tx.Reason, "deleted its entry") {
+		t.Errorf("reason %q does not tell that the cache file was changed", tx.Reason)
 	}
 }
 
@@ -275,6 +283,22 @@ func TestRecoveryResolvesTheCacheFromTheWorkdir(t *testing.T) {
 	}
 }
 
+// waitDropped waits for the background repair to drop want.
+func (h *cacheHarness) waitDropped(t *testing.T, want ...string) {
+	t.Helper()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if slices.Equal(h.cache.dropped(), want) {
+			return
+		}
+
+		time.Sleep(time.Millisecond)
+	}
+
+	t.Fatalf("dropped %v, want %v", h.cache.dropped(), want)
+}
+
 func TestWatchRecoversAStartFromThePanel(t *testing.T) {
 	h := newCacheHarness(t, cycleTimeout)
 
@@ -287,9 +311,49 @@ func TestWatchRecoversAStartFromThePanel(t *testing.T) {
 		t.Fatalf("watch: %v", err)
 	}
 
-	if got := h.cache.dropped(); !slices.Equal(got, []string{"sub"}) {
-		t.Errorf("dropped %v, want sub", got)
-	}
+	h.waitDropped(t, "sub")
+}
+
+// The panel gives up on a request after 15 seconds and then reports the action as failed. The
+// handler answers as soon as the core crashes for any reason, and the repair goes on after the
+// request is gone.
+func TestWatchAnswersBeforeThePanelGivesUp(t *testing.T) {
+	t.Run("a crash that is not the cache file ends the watch", func(t *testing.T) {
+		h := newCacheHarness(t, cycleTimeout)
+
+		begin := time.Now()
+
+		err := h.manager.Watch(t.Context(), func(ctx context.Context) error {
+			h.crash(crashLine)
+
+			return h.service.Restart(ctx)
+		})
+		if err != nil {
+			t.Fatalf("watch: %v", err)
+		}
+
+		if took := time.Since(begin); took > time.Second {
+			t.Errorf("the handler answered after %v, want at once on a crash", took)
+		}
+	})
+
+	t.Run("the repair outlives the request", func(t *testing.T) {
+		h := newCacheHarness(t, cycleTimeout)
+		ctx, cancel := context.WithCancel(t.Context())
+
+		err := h.manager.Watch(ctx, func(ctx context.Context) error {
+			h.crash(poisonedLine("sub"))
+
+			return h.service.Restart(ctx)
+		})
+		cancel()
+
+		if err != nil {
+			t.Fatalf("watch: %v", err)
+		}
+
+		h.waitDropped(t, "sub")
+	})
 }
 
 func TestWatchLeavesAHealthyStart(t *testing.T) {
@@ -329,15 +393,150 @@ func TestWatchDoesNotRecoverDuringAnApply(t *testing.T) {
 	}
 }
 
+// A crash seen while an Apply holds the service is left to its rollback. A Confirm closes the
+// Apply without a rollback, so the repair runs after it.
+func TestWatchRepairsAfterTheApplyIsConfirmed(t *testing.T) {
+	h := newCacheHarness(t, cycleTimeout)
+
+	tx, err := h.manager.Start(t.Context(), []byte(cachedConfig), apply.Lists{}, "", "")
+	if err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	h.waitWindow(t)
+
+	// A core in a crash loop: every start crashes until the entry is gone.
+	err = h.manager.Watch(t.Context(), func(ctx context.Context) error {
+		h.crash(poisonedLine("sub"))
+
+		return h.service.Restart(ctx)
+	})
+	if err != nil {
+		t.Fatalf("watch: %v", err)
+	}
+
+	if _, err := h.manager.Confirm(t.Context(), tx.ID); err != nil {
+		t.Fatalf("confirm: %v", err)
+	}
+
+	// The crash loop goes on after the Confirm: procd respawns the core.
+	h.service.mu.Lock()
+	h.service.relog()
+	h.service.mu.Unlock()
+
+	h.waitDropped(t, "sub")
+}
+
+// startsSlowly keeps the Clash API silent for a while, long enough for the crash reason to be
+// polled before the core answers.
+func startsSlowly() func() bool {
+	var once sync.Once
+
+	var begin time.Time
+
+	return func() bool {
+		once.Do(func() { begin = time.Now() })
+
+		return time.Since(begin) < 50*time.Millisecond
+	}
+}
+
+// An older crash on the cache file is still in the log after the repair. A core that comes up
+// on the next restart is not taken for a crashing one.
+func TestRollbackIgnoresAnOlderCrash(t *testing.T) {
+	h := newCacheHarness(t, cycleTimeout)
+	h.health.silentWhile = nil
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	h.waitWindow(t)
+
+	// The line from an earlier start; this core comes up.
+	h.crash(poisonedLine("sub"))
+	h.service.mu.Lock()
+	h.service.quiet = true
+	h.service.mu.Unlock()
+	h.health.silentWhile = startsSlowly()
+
+	h.clock.fire()
+	h.manager.Close()
+
+	if tx := h.manager.Current(); tx.Phase != apply.PhaseRolledBack {
+		t.Errorf("phase %q, reason %q: want rolled_back", tx.Phase, tx.Reason)
+	}
+	if got := h.cache.dropped(); len(got) != 0 {
+		t.Errorf("dropped %v on an older crash", got)
+	}
+}
+
+// procd may still report the previous process while the new one already crashes: the crash
+// is watched from the restart on, not only once a new pid shows.
+func TestRollbackSeesACrashBeforeANewProcess(t *testing.T) {
+	h := newCacheHarness(t, time.Minute)
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	h.waitWindow(t)
+
+	h.service.mu.Lock()
+	h.service.lag = -1
+	h.service.mu.Unlock()
+	h.crash(poisonedLine("sub"))
+
+	begin := time.Now()
+	h.clock.fire()
+	h.manager.Close()
+
+	tx := h.manager.Current()
+
+	if tx.Phase != apply.PhaseRolledBack {
+		t.Errorf("phase %q, reason %q: want rolled_back", tx.Phase, tx.Reason)
+	}
+	if took := time.Since(begin); took > 10*time.Second {
+		t.Errorf("the rollback took %v: the crash was seen only at the deadline", took)
+	}
+}
+
 func TestRecoverAtStart(t *testing.T) {
 	t.Run("a core crashing on its cache is repaired", func(t *testing.T) {
 		h := newCacheHarness(t, cycleTimeout)
-		h.crash(poisonedLine("sub"))
+		// procd gave up respawning; the start the daemon gives crashes again.
+		h.crash(poisonedLine("sub"), poisonedLine("sub"))
 
 		h.manager.RecoverAtStart(t.Context())
 
 		if got := h.cache.dropped(); !slices.Equal(got, []string{"sub"}) {
 			t.Errorf("dropped %v, want sub", got)
+		}
+	})
+
+	t.Run("a core left halted is started", func(t *testing.T) {
+		h := newCacheHarness(t, cycleTimeout)
+		h.service.mu.Lock()
+		h.service.halted = true
+		h.service.mu.Unlock()
+
+		h.manager.RecoverAtStart(t.Context())
+
+		if !slices.Contains(h.rec.snapshot(), "Start") {
+			t.Errorf("steps %v: a halted core stayed down", h.rec.snapshot())
+		}
+	})
+
+	t.Run("an older crash of a running core is left alone", func(t *testing.T) {
+		h := newCacheHarness(t, cycleTimeout)
+		h.health.silentWhile = startsSlowly()
+		h.crash(poisonedLine("sub"))
+		h.service.mu.Lock()
+		h.service.pid = 1
+		h.service.quiet = true
+		h.service.mu.Unlock()
+
+		h.manager.RecoverAtStart(t.Context())
+
+		if got := h.cache.dropped(); len(got) != 0 {
+			t.Errorf("dropped %v on a crash written before the daemon started", got)
 		}
 	})
 

@@ -321,15 +321,38 @@ func (c *Client) State(ctx context.Context) (State, error) {
 	return state, nil
 }
 
-// Crash returns how the service explained its last crash while procd knows it and no instance
-// is up. Empty when the service runs, is stopped or left no reason.
-func (c *Client) Crash(ctx context.Context) (string, error) {
+// CrashMark returns the last line sing-box wrote to the device logger: Crash after it counts
+// only what the service wrote later. Empty when the logger holds none or is not available.
+func (c *Client) CrashMark(ctx context.Context) string {
+	log, ok := c.readLog(ctx)
+	if !ok {
+		return ""
+	}
+
+	lines := processLines(log, c.processName())
+	if len(lines) == 0 {
+		return ""
+	}
+
+	return lines[len(lines)-1]
+}
+
+// Crash returns the FATAL line the service wrote after mark while procd knows it and no
+// instance is up. Empty when the service runs, is stopped, or wrote no FATAL since the mark:
+// procd keeps the service known with no instance after halt and between the two halves of a
+// restart, and an older crash left in the log must not be taken for a new one.
+func (c *Client) Crash(ctx context.Context, mark string) (string, error) {
 	state, err := c.State(ctx)
 	if err != nil || !state.Failed {
 		return "", err
 	}
 
-	return state.LastError, nil
+	log, ok := c.readLog(ctx)
+	if !ok {
+		return "", nil
+	}
+
+	return freshFatal(processLines(log, c.processName()), mark), nil
 }
 
 // Launch returns what procd starts the service with: the working directory and the config.

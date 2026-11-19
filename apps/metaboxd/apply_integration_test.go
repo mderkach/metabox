@@ -143,8 +143,9 @@ func TestApplyHTTPOnEphemeralBench(t *testing.T) {
 	benchExec(t, nil, "/etc/init.d/metabox-singbox", "halt")
 	benchCommand(t, nil, "cp", "internal/cachefile/testdata/cache.db", "metabox-target-1:"+benchCacheFile)
 	benchServiceStart(t)
-	assertBenchCacheKeys(t, []string{"geo", "other"})
+	// The repair runs after the answer: the keys are read once the core is up again.
 	assertBenchRuntimeUp(t)
+	assertBenchCacheKeys(t, []string{"geo", "other"})
 	assertBenchReachable(t)
 	t.Log("HTTP Apply, confirmation, timeout, replay, interrupted-write recovery, a restart of a stopped service and cache file recovery passed")
 }
@@ -175,11 +176,11 @@ func benchCachedCandidate(t *testing.T, baseline []byte) []byte {
 	return append(data, '\n')
 }
 
-// benchServiceStart starts the service from the panel. The daemon answers after it watched the
-// start and repaired the cache, which takes longer than an ordinary request.
+// benchServiceStart starts the service from the panel the way the panel does, with its
+// 15-second request timeout: the daemon answers within it and repairs the cache afterwards.
 func benchServiceStart(t *testing.T) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(t.Context(), 90*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, benchURL+"/api/service/start", nil)
 	if err != nil {
@@ -232,7 +233,7 @@ func assertBenchCacheKeys(t *testing.T, want []string) {
 
 func assertBenchRuntimeUp(t *testing.T) {
 	t.Helper()
-	waitBench(t, 30*time.Second, "the sing-box runtime after the cache repair", func() bool {
+	waitBench(t, 60*time.Second, "the sing-box runtime after the cache repair", func() bool {
 		_, status := benchRequestStatus(t, http.MethodGet, "/api/clash/version", nil)
 		return status == http.StatusOK
 	})

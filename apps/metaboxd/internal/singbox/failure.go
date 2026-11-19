@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"metabox/internal/clashapi"
@@ -48,20 +49,78 @@ func (c *Client) failure(ctx context.Context, launch procd.Launch) string {
 }
 
 func (c *Client) logreadFailure(ctx context.Context) string {
-	if c.logread == "" {
+	log, ok := c.readLog(ctx)
+	if !ok {
 		return ""
 	}
 
-	// The -l limit is not passed to the logger: logd cuts the last N lines of the whole
-	// journal before the -e filter, and on a router where dnsmasq writes thousands of lines
-	// the sing-box lines do not get into the tail. The logd ring is limited by size
-	// (64 KiB by default), so all the filtered output is small.
+	return lastFailure(log, c.processName())
+}
+
+// readLog returns the sing-box lines of the device logger. The -l limit is not passed to the
+// logger: logd cuts the last N lines of the whole journal before the -e filter, and on a
+// router where dnsmasq writes thousands of lines the sing-box lines do not get into the
+// tail. The logd ring is limited by size (64 KiB by default), so all the filtered output is
+// small.
+func (c *Client) readLog(ctx context.Context) (string, bool) {
+	if c.logread == "" {
+		return "", false
+	}
+
 	res, err := c.runner.Run(ctx, c.logread, "-e", c.processName())
 	if err != nil || res.ExitCode != 0 {
-		return ""
+		return "", false
 	}
 
-	return lastFailure(res.Stdout, c.processName())
+	return res.Stdout, true
+}
+
+// processLines returns the lines the process wrote, as the logger gave them.
+func processLines(log, process string) []string {
+	prefix := process + "["
+
+	var lines []string
+
+	for line := range strings.Lines(log) {
+		line = strings.TrimRight(line, "\r\n")
+		if strings.Contains(ansi.ReplaceAllString(line, ""), prefix) {
+			lines = append(lines, line)
+		}
+	}
+
+	return lines
+}
+
+// freshFatal returns the last FATAL or PANIC message written after the line mark. A mark the
+// logd ring no longer holds means every line is newer. ERROR does not count: a process that
+// is being stopped may write one on its way out, and only a failed start ends with FATAL.
+func freshFatal(lines []string, mark string) string {
+	if mark != "" {
+		if i := lastIndex(lines, mark); i >= 0 {
+			lines = lines[i+1:]
+		}
+	}
+
+	for _, line := range slices.Backward(lines) {
+		message := messageOf(strings.TrimSpace(ansi.ReplaceAllString(line, "")))
+		upper := strings.ToUpper(message)
+
+		if strings.HasPrefix(upper, "FATAL") || strings.HasPrefix(upper, "PANIC") {
+			return clamp(message, failureLimit)
+		}
+	}
+
+	return ""
+}
+
+func lastIndex(lines []string, line string) int {
+	for i, l := range slices.Backward(lines) {
+		if l == line {
+			return i
+		}
+	}
+
+	return -1
 }
 
 // fileFailure reads the reason from the tail of the log.output file of the config the

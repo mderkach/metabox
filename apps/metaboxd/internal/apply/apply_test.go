@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
+	"strconv"
 	"sync"
 	"testing"
 	"testing/synctest"
@@ -354,6 +355,21 @@ type fakeService struct {
 	crash   string
 	crashes []string
 	halted  bool
+	// logged counts the crash lines the service wrote; crashAt is the line of the current
+	// crash. A broken core writes a new line on every start.
+	logged  int
+	crashAt int
+	// quiet keeps the crash line in the log while starts come up: an older crash.
+	quiet bool
+}
+
+// relog writes the current crash to the log again, the way a broken core does on a start.
+// Called under mu.
+func (s *fakeService) relog() {
+	if s.crash != "" && !s.quiet {
+		s.logged++
+		s.crashAt = s.logged
+	}
 }
 
 func (s *fakeService) Check(_ context.Context, config, workdir string) error {
@@ -382,6 +398,7 @@ func (s *fakeService) Restart(ctx context.Context) error {
 
 	s.pid++
 	s.stale = s.lag
+	s.relog()
 
 	return nil
 }
@@ -435,13 +452,25 @@ func (s *fakeService) Start(context.Context) error {
 	if len(s.crashes) > 0 {
 		s.crash, s.crashes = s.crashes[0], s.crashes[1:]
 	}
+	s.relog()
 
 	return nil
 }
 
-func (s *fakeService) Crash(context.Context) (string, error) {
+func (s *fakeService) CrashMark(context.Context) string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	return strconv.Itoa(s.logged)
+}
+
+func (s *fakeService) Crash(_ context.Context, mark string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if after, err := strconv.Atoi(mark); err == nil && s.crashAt <= after {
+		return "", nil
+	}
 
 	return s.crash, nil
 }

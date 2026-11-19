@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,17 +25,30 @@ type Cache interface {
 	MoveAside(ctx context.Context, path string) (string, error)
 }
 
-// serviceWatch is how long a start from the panel is watched for a crash on the cache file:
-// the core reads the cache before anything else and fails within a second or two.
-const serviceWatch = 15 * time.Second
+// serviceWatch is how long a start from the panel is watched, counted from the request: the
+// panel gives up on a request after 15 seconds, and the core reads its cache before anything
+// else and fails within a second or two.
+const serviceWatch = 8 * time.Second
+
+// repair is what the recovery changed in the cache file.
+type repair struct {
+	// dropped are the subscriptions whose entries were deleted.
+	dropped []string
+	// movedTo is where the whole file went when it did not open; empty when it stayed.
+	movedTo string
+}
 
 // repairCache drops the cached subscription the core crashed on and starts the core again. A core
 // that crashes on another provider gets the same treatment; the same provider twice ends the
 // recovery, so the rounds stop when the bucket has no more keys the core names. Called with the
-// apply held; returns the dropped providers even when the recovery failed later.
-func (m *Manager) repairCache(ctx context.Context, log *slog.Logger, poisoned *poisonedError) ([]string, error) {
+// apply held; returns what was changed even when the recovery failed later.
+func (m *Manager) repairCache(ctx context.Context, log *slog.Logger, poisoned *poisonedError) (repair, error) {
+	m.mu.Lock()
+	m.pending = nil
+	m.mu.Unlock()
+
 	if m.opts.Cache == nil {
-		return nil, locale.Errorf("sing-box crashed on the cached subscription %q: %s", poisoned.tag, poisoned.reason)
+		return repair{}, locale.Errorf("sing-box exits on the saved subscription %q: %s", poisoned.tag, poisoned.reason)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, m.opts.CycleTimeout)
@@ -42,40 +56,49 @@ func (m *Manager) repairCache(ctx context.Context, log *slog.Logger, poisoned *p
 
 	data, err := m.store.Read(ctx)
 	if err != nil {
-		return nil, locale.Errorf("read the config for the cache file: %w", err)
+		return repair{}, locale.Errorf("read the config for the cache file: %w", err)
 	}
 
 	cache, err := clashapi.ReadCacheFile(data)
 	if err != nil {
-		return nil, err
+		return repair{}, err
 	}
 
 	if !cache.Enabled || !cache.StoreSubscriptions {
-		return nil, locale.Errorf("sing-box crashed on the cached subscription %q, but the config keeps no subscriptions in the cache file", poisoned.tag)
+		return repair{}, locale.Errorf("sing-box exits on the saved subscription %q, but subscriptions are not cached in this config (store_subscriptions is off), so the daemon cannot repair it", poisoned.tag)
 	}
 
 	path := m.cachePath(ctx, cache.Path)
 
-	var dropped []string
+	var done repair
 
 	for {
-		if slices.Contains(dropped, poisoned.tag) {
-			return dropped, locale.Errorf("sing-box still crashes on the cached subscription %q: %s", poisoned.tag, poisoned.reason)
+		if slices.Contains(done.dropped, poisoned.tag) {
+			return done, locale.Errorf("sing-box still exits on the saved subscription %q: %s", poisoned.tag, poisoned.reason)
 		}
 
-		if err := m.dropEntry(ctx, log, path, cache.CacheID, poisoned.tag); err != nil {
-			return dropped, err
+		from := snapshot(ctx, m.service)
+
+		movedTo, err := m.dropEntry(ctx, log, path, cache.CacheID, poisoned.tag)
+		if err != nil {
+			return done, err
 		}
 
-		dropped = append(dropped, poisoned.tag)
-		log.Warn("cached subscription dropped: sing-box crashed on it", "provider", poisoned.tag, "cache_file", path)
+		done.dropped = append(done.dropped, poisoned.tag)
+		if movedTo != "" {
+			done.movedTo = movedTo
+		} else {
+			log.Warn("cached subscription dropped: sing-box exited on it", "provider", poisoned.tag, "cache_file", path)
+		}
 
-		_, pidErr := m.service.PID(ctx)
-		upErr := coreUp(ctx, log, m.service, m.health, m.store, m.opts.ProcessInterval, 0, pidErr)
+		// The core was halted: any process that comes up is the new one.
+		from.pid = 0
+
+		upErr := coreUp(ctx, log, m.service, m.health, m.store, m.opts.ProcessInterval, from, false)
 
 		next, ok := errors.AsType[*poisonedError](upErr)
-		if !ok {
-			return dropped, upErr
+		if !ok || movedTo != "" {
+			return done, upErr
 		}
 
 		poisoned = next
@@ -83,40 +106,43 @@ func (m *Manager) repairCache(ctx context.Context, log *slog.Logger, poisoned *p
 }
 
 // dropEntry stops the sing-box process, deletes the entry and starts the process again. A file
-// the daemon cannot open as a database goes aside whole: the core cannot have read the entry
-// from it either, unless the two bbolt implementations disagree, and then nothing short of a
-// fresh file brings the core back. A held lock never counts as such a file. The start runs
-// even when the delete did not: the core must not stay stopped because of the daemon, and it
-// runs detached so a daemon shutdown does not leave it so either.
-func (m *Manager) dropEntry(ctx context.Context, log *slog.Logger, path, cacheID, tag string) error {
+// that is not a bbolt database goes aside whole and its new path is returned: the core cannot
+// have read the entry from it either, unless the two bbolt implementations disagree, and then
+// nothing short of a fresh file brings the core back. The start runs even when the delete did
+// not: the core must not stay stopped because of the daemon, and it runs detached so a daemon
+// shutdown does not leave it so either.
+func (m *Manager) dropEntry(ctx context.Context, log *slog.Logger, path, cacheID, tag string) (string, error) {
 	if err := m.service.Halt(ctx); err != nil {
-		return locale.Errorf("stop sing-box for the cache file: %w", err)
+		return "", locale.Errorf("stop sing-box before editing the cache file: %w", err)
 	}
 
 	m.awaitDown(ctx)
+
+	var movedTo string
 
 	dropErr := m.opts.Cache.Drop(ctx, path, cacheID, tag)
 	if errors.Is(dropErr, cachefile.ErrUnreadable) {
 		aside, err := m.opts.Cache.MoveAside(ctx, path)
 		if err == nil {
-			log.Warn("cache file moved aside: it does not open as a database", "cache_file", path, "moved_to", aside, "err", dropErr)
+			movedTo = aside
+			log.Warn("cache file renamed: it does not open as a database", "cache_file", path, "moved_to", aside, "err", dropErr)
 		}
 
 		dropErr = err
 	}
 
 	if dropErr != nil {
-		dropErr = locale.Errorf("drop the cached subscription %q: %w", tag, dropErr)
+		dropErr = locale.Errorf("could not remove subscription %q from the cache file (the subscription stays in the config): %w", tag, dropErr)
 	}
 
 	startCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), stateTimeout)
 	defer cancel()
 
 	if err := m.service.Start(startCtx); err != nil {
-		return errors.Join(dropErr, locale.Errorf("start sing-box after the cache file: %w", err))
+		return movedTo, errors.Join(dropErr, locale.Errorf("sing-box did not start after the cache file was repaired: %w", err))
 	}
 
-	return dropErr
+	return movedTo, dropErr
 }
 
 // awaitDown waits until procd reports no process. Without procd there is nothing to ask: the
@@ -155,14 +181,27 @@ func (m *Manager) cachePath(ctx context.Context, path string) string {
 	return filepath.Join(workdir, path)
 }
 
-// recovered is the transaction reason after a rollback that dropped cached subscriptions:
-// the user sees what the daemon changed on the device without being asked.
-func recovered(l locale.Lang, reason string, dropped []string) string {
-	if len(dropped) == 0 {
+// recovered is the transaction reason after a rollback that changed the cache file: the user
+// sees what the daemon changed on the device without being asked.
+func recovered(l locale.Lang, reason string, done repair) string {
+	if len(done.dropped) == 0 {
 		return reason
 	}
 
-	note := locale.Sprintf(l, "sing-box crashed on the cached subscription %s, its entry was dropped from the cache file", strings.Join(dropped, ", "))
+	quoted := make([]string, len(done.dropped))
+	for i, tag := range done.dropped {
+		quoted[i] = strconv.Quote(tag)
+	}
+
+	tags := strings.Join(quoted, ", ")
+
+	var note string
+	if done.movedTo != "" {
+		note = locale.Sprintf(l, "sing-box could not start on the saved subscription %s, and the cache file did not open. The daemon renamed the file to %s; sing-box downloads subscriptions and rule sets again", tags, done.movedTo)
+	} else {
+		note = locale.Sprintf(l, "sing-box could not start on the saved subscription %s. The daemon deleted its entry from the cache file; the next subscription update downloads it again", tags)
+	}
+
 	if reason == "" {
 		return note
 	}
@@ -170,46 +209,59 @@ func recovered(l locale.Lang, reason string, dropped []string) string {
 	return reason + "\n" + note
 }
 
-// Watch runs a start or restart of the service from the panel and repairs a core that then
-// crashes on a cached subscription. It returns only the error of start: the panel reads the
-// state after it. The apply is taken only for the repair, so a healthy or stopped service
-// never refuses an Apply.
+// Watch runs a start or restart of the service from the panel and watches the core for a
+// crash on a cached subscription. It returns only the error of start, within the time the
+// panel waits for a request: the panel reads the state after it. The repair runs in the
+// background under the apply, so it neither holds the request nor ends with it; a healthy or
+// stopped service never refuses an Apply.
 func (m *Manager) Watch(ctx context.Context, start func(context.Context) error) error {
-	before, pidErr := m.service.PID(ctx)
+	watchCtx, cancel := context.WithTimeout(ctx, serviceWatch)
+	defer cancel()
+
+	from := snapshot(watchCtx, m.service)
 
 	if err := start(ctx); err != nil {
 		return err
 	}
 
-	watchCtx, cancel := context.WithTimeout(ctx, serviceWatch)
-	defer cancel()
-
-	upErr := coreUp(watchCtx, m.log, m.service, m.health, m.store, m.opts.ProcessInterval, before, pidErr)
+	upErr := coreUp(watchCtx, m.log, m.service, m.health, m.store, m.opts.ProcessInterval, from, true)
 	if poisoned, ok := errors.AsType[*poisonedError](upErr); ok {
-		m.recoverHeld(ctx, poisoned)
+		m.repairLater(poisoned, from.mark)
 	}
 
 	return nil
 }
 
 // RecoverAtStart repairs a core that crashes on a cached subscription when the daemon starts,
-// after the replays: the router may have rebooted into the crash loop. A service procd does
-// not know, stopped by the user or never started, is left alone.
+// after the replays: the router may have rebooted into the crash loop. A service procd does not
+// know, stopped by the user or never started, is left alone. A service procd knows with no
+// process is started first: a daemon killed in the middle of a repair leaves the core halted,
+// and procd stops respawning a core that keeps crashing; the start gives a fresh crash to
+// read, since the one left in the log may be older than the last repair.
 func (m *Manager) RecoverAtStart(ctx context.Context) {
-	if _, err := m.service.PID(ctx); err != nil {
+	from := snapshot(ctx, m.service)
+	if from.pidErr != nil {
 		return
+	}
+
+	if from.pid == 0 {
+		m.log.Warn("sing-box is known to procd but has no process, starting it")
+
+		if err := m.service.Start(ctx); err != nil {
+			m.log.Error("sing-box not started", "err", err)
+
+			return
+		}
 	}
 
 	waitCtx, cancel := context.WithTimeout(ctx, m.opts.CycleTimeout)
 	defer cancel()
 
-	// The service may have crashed for good before the daemon started: the crash reason is
-	// watched from the start, not only after a new process.
-	err := watch(waitCtx, m.service, m.opts.ProcessInterval, func(ctx context.Context) error {
-		return coreUp(ctx, m.log, m.service, m.health, m.store, m.opts.ProcessInterval, 0, nil)
-	})
-	if poisoned, ok := errors.AsType[*poisonedError](err); ok {
-		m.recoverHeld(ctx, poisoned)
+	from.pid = 0
+
+	upErr := coreUp(waitCtx, m.log, m.service, m.health, m.store, m.opts.ProcessInterval, from, false)
+	if poisoned, ok := errors.AsType[*poisonedError](upErr); ok {
+		m.recoverHeld(ctx, poisoned, from.mark)
 	}
 }
 
@@ -242,13 +294,19 @@ func (m *Manager) Settle(ctx context.Context, plane *Plane) <-chan struct{} {
 	return done
 }
 
-// recoverHeld takes the apply for the repair. An Apply already running owns the service, and
-// its own rollback repairs the core.
-func (m *Manager) recoverHeld(ctx context.Context, poisoned *poisonedError) {
-	token, err := m.reserveExclusive()
-	if err != nil {
-		m.log.Warn("cached subscription not repaired: an apply is running", "provider", poisoned.tag)
+// pendingRepair is a crash on a cached subscription seen while an Apply or a dataplane change
+// held the apply. Its rollback repairs the core; its Confirm leaves the crash, so the repair
+// runs after it.
+type pendingRepair struct {
+	poisoned *poisonedError
+	mark     string
+}
 
+// recoverHeld takes the apply for the repair and runs it. While an Apply or a dataplane change
+// holds the apply the crash is kept for after its Confirm.
+func (m *Manager) recoverHeld(ctx context.Context, poisoned *poisonedError, mark string) {
+	token, ok := m.holdForRepair(poisoned, mark)
+	if !ok {
 		return
 	}
 	defer m.unreserve(token)
@@ -256,4 +314,66 @@ func (m *Manager) recoverHeld(ctx context.Context, poisoned *poisonedError) {
 	if _, err := m.repairCache(ctx, m.log, poisoned); err != nil {
 		m.log.Error("sing-box not repaired after a crash on a cached subscription", "err", err)
 	}
+}
+
+// repairLater is recoverHeld in the background: the apply is taken before it returns, and
+// Close cancels the repair and waits for it.
+func (m *Manager) repairLater(poisoned *poisonedError, mark string) {
+	token, ok := m.holdForRepair(poisoned, mark)
+	if !ok {
+		return
+	}
+
+	m.repairs.Add(1)
+
+	go func() {
+		defer m.repairs.Done()
+		defer m.unreserve(token)
+
+		if _, err := m.repairCache(m.repairCtx, m.log, poisoned); err != nil {
+			m.log.Error("sing-box not repaired after a crash on a cached subscription", "err", err)
+		}
+	}()
+}
+
+func (m *Manager) holdForRepair(poisoned *poisonedError, mark string) (uint64, bool) {
+	token, err := m.reserveExclusive()
+	if err == nil {
+		return token, true
+	}
+
+	m.log.Warn("cached subscription not repaired yet: an apply is running", "provider", poisoned.tag)
+
+	m.mu.Lock()
+	m.pending = &pendingRepair{poisoned: poisoned, mark: mark}
+	m.mu.Unlock()
+
+	return 0, false
+}
+
+// afterConfirm runs the repair kept while the confirmed transaction held the apply, if the
+// core still crashes on the cache: the core is watched again from the same log mark.
+func (m *Manager) afterConfirm() {
+	m.mu.Lock()
+	pending := m.pending
+	m.pending = nil
+	m.mu.Unlock()
+
+	if pending == nil {
+		return
+	}
+
+	m.repairs.Add(1)
+
+	go func() {
+		defer m.repairs.Done()
+
+		ctx, cancel := context.WithTimeout(m.repairCtx, serviceWatch)
+		defer cancel()
+
+		upErr := coreUp(ctx, m.log, m.service, m.health, m.store, m.opts.ProcessInterval, since{mark: pending.mark}, false)
+		if poisoned, ok := errors.AsType[*poisonedError](upErr); ok {
+			m.recoverHeld(m.repairCtx, poisoned, pending.mark)
+		}
+	}()
 }

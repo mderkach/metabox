@@ -103,7 +103,9 @@ func (r *fakeReloader) PID(context.Context) (int, error) {
 	return r.calls + 1, nil
 }
 
-func (r *fakeReloader) Crash(context.Context) (string, error) {
+func (r *fakeReloader) CrashMark(context.Context) string { return "" }
+
+func (r *fakeReloader) Crash(context.Context, string) (string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

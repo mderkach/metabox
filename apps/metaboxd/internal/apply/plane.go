@@ -35,7 +35,8 @@ type PlaneService interface {
 	Reload(ctx context.Context) error
 	CheckDataplane(ctx context.Context) error
 	PID(ctx context.Context) (int, error)
-	Crash(ctx context.Context) (string, error)
+	CrashMark(ctx context.Context) string
+	Crash(ctx context.Context, mark string) (string, error)
 }
 
 // PlaneStore is the applied config in which dns-in is looked up, and the state file
@@ -87,6 +88,17 @@ type Plane struct {
 	// previous and token are guarded by mu.
 	previous dataplane.Snapshot
 	token    uint64
+}
+
+// Confirm closes the confirmation window of the dataplane change; a crash on the cache file
+// seen while the window held the apply is repaired after it.
+func (p *Plane) Confirm(ctx context.Context, id string) (Transaction, error) {
+	tx, err := p.window.Confirm(ctx, id)
+	if err == nil {
+		p.gate.afterConfirm()
+	}
+
+	return tx, err
 }
 
 // NewPlane assembles the dataplane transaction on top of the config apply gate. The clock
@@ -372,18 +384,18 @@ func (p *Plane) rollback(ctx context.Context, log *slog.Logger) {
 
 	var (
 		reloadErr, upErr error
-		dropped          []string
+		repaired         repair
 	)
 	if restoreErr == nil {
-		before, pidErr := p.service.PID(ctx)
+		from := snapshot(ctx, p.service)
 
 		reloadErr = p.service.Reload(ctx)
 		if reloadErr == nil {
-			upErr = coreUp(ctx, log, p.service, p.health, p.store, p.gate.opts.ProcessInterval, before, pidErr)
+			upErr = coreUp(ctx, log, p.service, p.health, p.store, p.gate.opts.ProcessInterval, from, false)
 		}
 
 		if poisoned, ok := errors.AsType[*poisonedError](upErr); ok {
-			dropped, upErr = p.gate.repairCache(context.WithoutCancel(ctx), log, poisoned)
+			repaired, upErr = p.gate.repairCache(context.WithoutCancel(ctx), log, poisoned)
 		}
 	}
 
@@ -391,12 +403,17 @@ func (p *Plane) rollback(ctx context.Context, log *slog.Logger) {
 		log.Error("dataplane model rollback did not go through", "err", err)
 		p.release(PhaseFailed, stepFailed(ReasonRollbackFailed, err))
 
+		// The cache file was changed even though the core did not come up: the user is told.
+		p.mu.Lock()
+		p.current.Reason = recovered(p.lang, p.current.Reason, repaired)
+		p.mu.Unlock()
+
 		return
 	}
 
 	p.mu.Lock()
 	p.current.Phase = PhaseRolledBack
-	p.current.Reason = recovered(p.lang, p.current.Reason, dropped)
+	p.current.Reason = recovered(p.lang, p.current.Reason, repaired)
 	p.current.Window = 0
 	p.windowEndsAt = time.Time{}
 	p.rollingBack = false
