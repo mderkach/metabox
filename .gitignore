@@ -37,13 +37,8 @@ apps/metaboxd/internal/webui/static/*
 **/.impeccable/design.json
 **/.impeccable/config.local.json
 
-# Owner's working documents: implementation status, debt, interviews and the runbook
-# of the owner's router. They sit next to the rest of the documentation and are not part of the repository.
-/docs/Status.md
+# The owner's working list of debt: it sits next to the rest of the documentation and is not part of the repository.
 /docs/TechDebt.md
-/docs/Interviews.md
-/apps/metaboxd/docs/guides/Migration.md
-/apps/metaboxd/docs/guides/migration/
 
 # apk signing key: lives only in the repository secret
 *.key

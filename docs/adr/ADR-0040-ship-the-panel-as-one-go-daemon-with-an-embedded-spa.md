@@ -10,7 +10,7 @@
 
 The panel on the router needs a server side: the browser cannot write `config.json` by itself, call `sing-box check`, restart the service through procd or roll the config back. It has to be decided what this part is and how the interface reaches the device together with it.
 
-The owner's answer in interview `metabox-di-001`, Round 3: "Own Go daemon with an embedded UI." This is a pattern common among router panels: a Go daemon with an embedded UI and a single JSON config. LuCI integration was deferred in Round 0.
+The owner's answer at the requirements interview on 2026-08-30, asked what the runtime on the router should be: "Own Go daemon with an embedded UI." This is a pattern common among router panels: a Go daemon with an embedded UI and a single JSON config. LuCI integration was deferred at the same interview.
 
 In scope: what the panel runtime on the device consists of and what it does. Out of scope: the way static files are embedded ([ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md)), the apply protocol ([ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md)), the package format ([ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md)).
 
@@ -23,9 +23,9 @@ In scope: what the panel runtime on the device consists of and what it does. Out
 
 ## Considered options
 
-The transcript kept only the owner's answer; the alternatives below are reconstructed from the PRD text.
+Only the owner's answer was recorded; the alternatives below are reconstructed from the PRD text.
 
-1. **A LuCI application.** Integrates into the stock OpenWrt web interface. Deferred by the owner in Round 0 and listed in the roadmap as "LuCI integration"; work with the config, `check`, restart and rollback would still require its own server side on the device. **Rejected for v1.**
+1. **A LuCI application.** Integrates into the stock OpenWrt web interface. Deferred by the owner at the interview and listed in the roadmap as "LuCI integration"; work with the config, `check`, restart and rollback would still require its own server side on the device. **Rejected for v1.**
 2. **Static files separate from the server side**: the SPA is served by the router's stock web server, the API is a separate process. Two delivery artifacts instead of one, whose versions can diverge. **Rejected.**
 3. **One Go binary that serves the embedded SPA and holds the API.** **Chosen.**
 
