@@ -160,6 +160,7 @@ CI runs on every PR and must be green before the merge. It runs:
 - the `pre-push` checks plus what needs a clean runner or more time: the frontend browser tests and the e2e scenarios on the mock stand, `go test -race`, the `make daemon` build with the embedded panel, the fork pin check and the tests of the release, fork release watch and requirement link scripts;
 - commitlint over every commit of the PR;
 - an integration run on the test bench: Apply, network reachability, LAN interception.
+- the router package built for `aarch64_cortex-a53`, installed into an aarch64 OpenWrt rootfs under QEMU and started, as the release does before publishing.
 
 ### Merging
 
