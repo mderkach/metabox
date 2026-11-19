@@ -41,7 +41,7 @@ Rejected: a separate supervisor package with its own service handle. It would du
 
 ### Honest rollback
 
-`rollback` calls `awaitProcess` with the pid taken before the restart, then `health.Wait` with the Clash API settings of the restored config (`clashapi.Read` on the restored bytes, not the candidate's). A failure joins the restart error path: `rollback_failed`, the reason carries the crash reason, `lastSum` is reset as today. DNS and interception probes are not repeated: the rollback has nothing to roll back to, and the question is only whether the core runs. The same check goes into `Plane` rollback if the owner agrees (proposal, open questions).
+`rollback` calls `awaitProcess` with the pid taken before the restart, then `health.Wait` with the Clash API settings of the restored config (`clashapi.Read` on the restored bytes, not the candidate's). A failure joins the restart error path: `rollback_failed`, the reason carries the crash reason, `lastSum` is reset as today. DNS and interception probes are not repeated: the rollback has nothing to roll back to, and the question is only whether the core runs. The same check goes into `Plane` rollback: its `reload` restarts the core too.
 
 The wait ends early when procd knows the service, no instance runs and the crash reason carries the signature: the rollback has its own cycle timeout of two minutes, and in the incident the API wait alone used two minutes, so without the early exit nothing would be left for the recovery. The recovery gets its own timeout of the same length, not the remainder of the rollback's.
 
@@ -61,7 +61,7 @@ Entry condition, the same for every trigger: procd knows the service, no instanc
 Triggers:
 
 - the rollback restart (AC-91 failure with the signature): recovery runs inside the rollback, under the same slot; success closes the transaction as `rolled_back` with the dropped tag in the reason;
-- `POST /api/service/start` and `/restart`: after the action the handler polls the service for a few seconds, the time the core takes to fail on its cache; on the entry condition it runs recovery, then answers with the state. A core that starts answers as today. The extra wait in the handler is an open question of its own (proposal);
+- `POST /api/service/start` and `/restart`: after the action the handler polls the service for a few seconds, the time the core takes to fail on its cache; on the entry condition it runs recovery, then answers with the state. A core that starts answers as today, a few seconds later;
 - daemon start, after both replays: in a goroutine owned by `main`, cancelled by the root context. It polls the service without the apply slot and takes the slot only when the entry condition holds, so an Apply right after boot is not blocked by a healthy or stopped service.
 
 ### Moving a file aside
@@ -88,12 +88,22 @@ The second test also writes the fixture `cache.db` the daemon tests read, so the
 - [Library divergence: the daemon's bbolt edits a file the fork's bbolt then rejects] → the fork deletes a file it cannot open; the fixture test from the fork's writer catches a format change on a fork bump.
 - [The daemon holds the apply slot during a recovery] → only after the entry condition holds, and for at most the recovery timeout; Apply answers `ErrBusy` meanwhile.
 - [The signature text changes in a fork release] → the pin test asserts the text; a change fails `make test-schemagen` before the bump ships.
-- [The fallback probably fails the first start on `initial rule-set`] → recorded as an open question; the core is down in that case anyway.
+- [The fallback probably fails the first start on `initial rule-set`] → kept by the owner's decision: the core is down in that case anyway, and the next start after the rule sets download comes up.
 
 ## Migration Plan
 
 No data migration. The new init command ships in the same package as the daemon, so a daemon never calls a script without it. Rolling back the package returns the old rollback behaviour; a file moved aside stays as `<file>.broken` and can be removed by hand.
 
-## Open Questions
+## Answered questions
 
-Listed in proposal.md, "Open questions": they change specs or tasks and must be answered before the work starts.
+The owner accepted the proposed option of every question on 2026-11-19:
+
+- Attempts: one round per distinct provider tag, never the same tag twice. Every round deletes a key that exists, so the rounds end when the bucket has no key the core names; no separate counter.
+- What the panel shows: a warning in the daemon log and, inside a rollback, the dropped provider in the transaction reason. A panel notice is issue #364.
+- The wait in `POST /api/service/start` and `/restart`: the handler waits and answers after the recovery.
+- Recovery on the Apply side: only in the rollback; `docs/Recovery.md` says that the user applies again.
+- Dataplane rollback: AC-91 covers it.
+- Entries of removed providers: not dropped.
+- `cache_id`: only the bucket of the running config; an absent key stops the recovery.
+- Fallback: kept.
+- procd crash loop: no own accounting.
