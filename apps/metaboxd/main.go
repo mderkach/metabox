@@ -328,10 +328,6 @@ func run(log *slog.Logger, s settings) error {
 	)
 
 	if s.https {
-		if (s.httpsCert == "") != (s.httpsKey == "") {
-			return errors.New("flags -https-cert and -https-key go together")
-		}
-
 		tlsConfig, rootCert, err = cert.Panel(ctx, store, log, cert.Source{
 			Cert:  s.httpsCert,
 			Key:   s.httpsKey,
