@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 	"time"
 
@@ -136,6 +137,30 @@ func TestServiceState(t *testing.T) {
 				t.Errorf("rejection code: got %q, expected %q", body.LastErrorCode, tt.wantCode)
 			}
 		})
+	}
+}
+
+// A stopped service is restarted through the init script like a running one: procd brings
+// it up, and the daemon does not refuse or turn the restart into a start.
+func TestRestartOfAStoppedService(t *testing.T) {
+	service := &fakeService{running: false}
+	srv := newServiceServer(t, service)
+
+	got := request(t, srv, http.MethodPost, "/api/service/restart", srv.URL, nil)
+
+	if got.status != http.StatusOK {
+		t.Fatalf("response code: got %d, expected %d", got.status, http.StatusOK)
+	}
+
+	if !slices.Equal(service.calls, []string{"restart", "running"}) {
+		t.Errorf("service calls: got %v, expected a restart and a state read", service.calls)
+	}
+
+	var body serviceBody
+	got.decode(t, &body)
+
+	if body.Status != "running" {
+		t.Errorf("state after the restart: got %q, expected running", body.Status)
 	}
 }
 

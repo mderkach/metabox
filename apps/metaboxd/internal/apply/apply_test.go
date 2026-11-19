@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"io/fs"
 	"log/slog"
@@ -822,6 +823,41 @@ func TestClashAPIIsGuaranteed(t *testing.T) {
 	}
 	if settings.Address == "" {
 		t.Error("config written without a working clash_api")
+	}
+}
+
+// The daemon guarantees only clash_api: an API service section appears only when the user
+// writes one, and the services the user wrote stay as they were.
+func TestApplyAddsNoAPIService(t *testing.T) {
+	tests := []struct {
+		name   string
+		config string
+		want   string
+	}{
+		{"config without services", validConfig, ""},
+		{"services without an API one", `{"services":[{"type":"resolved","tag":"resolver"}]}`, `[{"type":"resolved","tag":"resolver"}]`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newHarness(t)
+
+			if _, err := h.manager.Start(t.Context(), []byte(tt.config), apply.Lists{}, "", ""); err != nil {
+				t.Fatalf("apply: %v", err)
+			}
+			h.waitWindow(t)
+
+			var written struct {
+				Services json.RawMessage `json:"services"`
+			}
+			if err := json.Unmarshal(h.store.config(), &written); err != nil {
+				t.Fatalf("written config: %v", err)
+			}
+
+			if string(written.Services) != tt.want {
+				t.Errorf("services %s, want %q", written.Services, tt.want)
+			}
+		})
 	}
 }
 
