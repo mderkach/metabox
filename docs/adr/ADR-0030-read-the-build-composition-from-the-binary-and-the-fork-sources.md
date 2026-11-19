@@ -82,6 +82,6 @@ The `singbox_build` field is optional: without it the panel shows no warning. Ro
 
 ## Links
 
-- `docs/PRD.md`, AC-47;
+- [`config-editor`](../../openspec/specs/config-editor/spec.md): AC-47;
 - [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md);
 - `tools/schemagen/gates.go`, `apps/metaboxd/internal/singbox/singbox.go`, `apps/web/src/entities/Config/model/Config.build.ts`.

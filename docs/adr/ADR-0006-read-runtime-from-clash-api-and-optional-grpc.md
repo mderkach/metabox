@@ -115,7 +115,7 @@ Rollback: remove the gRPC branch from the daemon. The contract with the frontend
 
 ## Links
 
-- [PRD](../PRD.md): US-2, AC-10…AC-12, AC-30…AC-32, NFR-1, NFR-2, section 8, closed questions OQ-5 and OQ-9;
+- [PRD](../PRD.md): US-2, AC-30, section 8, closed questions OQ-5 and OQ-9; [`overview`](../../openspec/specs/overview/spec.md): AC-10; [`proxies`](../../openspec/specs/proxies/spec.md): AC-11; [`connections`](../../openspec/specs/connections/spec.md): AC-12; [`clash-api`](../../openspec/specs/clash-api/spec.md): AC-31, AC-32; [`non-functional`](../../openspec/specs/non-functional/spec.md): NFR-1, NFR-2;
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md): the Apply protocol and config ownership;
 - [ADR-0007](./ADR-0007-explain-route-without-own-rule-evaluator.md): explaining the route from this data;
 - [sing-box-extended](https://github.com/shtorm-7/sing-box-extended): the fork, version `v1.14.0-extended-2.7.1`: `service/api/server.go`, `daemon/started_service.proto`, `experimental/clashapi/server.go`, `experimental/clashapi/rules.go`, `experimental/clashapi/connections.go`, `experimental/clashapi/dns.go`;

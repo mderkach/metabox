@@ -89,7 +89,7 @@ Rollback is to restore `json.Valid(data)` and navigation over `data` in `Ensure`
 
 ## Links
 
-- [PRD, AC-1 and AC-2](../PRD.md);
+- [`config-editor`](../../openspec/specs/config-editor/spec.md): AC-1, AC-2;
 - [ADR-0002. Apply protocol and config ownership](./ADR-0002-apply-protocol-and-config-ownership.md);
 - [ADR-0004. Edit the config text in place on the client](./ADR-0004-edit-config-text-in-place-on-the-client.md);
 - `apps/metaboxd/internal/clashapi/jsonc.go`, `apps/metaboxd/internal/clashapi/clashapi.go`;

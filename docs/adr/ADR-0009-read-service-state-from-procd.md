@@ -103,6 +103,6 @@ Rollback: remove the procd dependency from the service client. The response goes
 
 ## Links
 
-- [PRD](../PRD.md): AC-16, AC-27, NFR-1;
+- [`service`](../../openspec/specs/service/spec.md): AC-16, AC-27; [`non-functional`](../../openspec/specs/non-functional/spec.md): NFR-1;
 - [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md): service control through procd;
 - [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md): the panel's runtime data sources.

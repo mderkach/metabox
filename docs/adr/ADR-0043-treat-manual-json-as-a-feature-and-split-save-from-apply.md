@@ -75,5 +75,5 @@ Not applicable: the decision has been in effect since the start of the project a
 
 ## Links
 
-- [`../PRD.md`](../PRD.md): US-8, AC-23…AC-26, UX-2…UX-4, SM-4, section 8, section A.8 (superseded by this ADR);
+- [`../PRD.md`](../PRD.md): US-8, UX-2…UX-4, SM-4, section 8, section A.8 (superseded by this ADR); [`json-editing`](../../openspec/specs/json-editing/spec.md): AC-23…AC-26;
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md), [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md), [ADR-0017](./ADR-0017-read-the-config-in-the-dialect-the-binary-accepts.md), [ADR-0018](./ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md), [ADR-0039](./ADR-0039-separate-the-ui-from-the-fork-schema-by-an-adapter-layer.md).

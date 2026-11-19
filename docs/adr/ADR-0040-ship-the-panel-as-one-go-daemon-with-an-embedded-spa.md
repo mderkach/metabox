@@ -73,6 +73,6 @@ Not applicable: the decision has been in effect since the start of the project a
 
 ## Links
 
-- [`../PRD.md`](../PRD.md): AC-17, NFR-1, SM-3, sections 9 and 11, appendix B, section A.3 (superseded by this ADR);
+- [`../PRD.md`](../PRD.md): SM-3, sections 9 and 11, appendix B, section A.3 (superseded by this ADR); [`service`](../../openspec/specs/service/spec.md): AC-17; [`non-functional`](../../openspec/specs/non-functional/spec.md): NFR-1;
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md), [ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md), [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md), [ADR-0008](./ADR-0008-store-config-versions-as-numbered-copies.md), [ADR-0009](./ADR-0009-read-service-state-from-procd.md), [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md), [ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md);
 - [`../../apps/metaboxd`](../../apps/metaboxd): the implementation.

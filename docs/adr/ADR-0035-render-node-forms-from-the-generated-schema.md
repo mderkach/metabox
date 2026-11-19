@@ -90,7 +90,7 @@ Not applicable to data: the decision changes neither the config format nor the d
 
 ## Links
 
-- [PRD](../PRD.md): AC-5, AC-6;
+- [PRD](../PRD.md): AC-6; [`config-editor`](../../openspec/specs/config-editor/spec.md): AC-5;
 - [ADR-0039](./ADR-0039-separate-the-ui-from-the-fork-schema-by-an-adapter-layer.md): the three-layer config model.
 - [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md), [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md), [ADR-0018](./ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md), [ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md).
 - `apps/web/src/shared/api/generated.ts`: the registries' discriminated unions; `apps/web/src/features/Rule/RuleEdit`: the existing hand-written form on RHF + Zod.

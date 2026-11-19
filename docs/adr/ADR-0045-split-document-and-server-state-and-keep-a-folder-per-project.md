@@ -95,6 +95,6 @@ Not applicable: the decision has been in effect since OQ-1 and is moved from the
 
 ## Links
 
-- [`../PRD.md`](../PRD.md): section 9, NFR-2, UX-2, UX-3, UX-6, OQ-1 and OQ-6 in section 10.1, appendix B, section A.10 (superseded by this ADR);
+- [`../PRD.md`](../PRD.md): section 9, UX-2, UX-3, UX-6, OQ-1 and OQ-6 in section 10.1, appendix B, section A.10 (superseded by this ADR); [`non-functional`](../../openspec/specs/non-functional/spec.md): NFR-2;
 - [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md), [ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md), [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md), [ADR-0005](./ADR-0005-keep-foreign-api-adapters-in-the-api-segment.md), [ADR-0016](./ADR-0016-pin-tool-versions-where-tools-read-them.md), [ADR-0024](./ADR-0024-drop-the-immer-draft-from-frontend-stores.md);
 - [`../../apps/web/docs/`](../../apps/web/docs/README.md): the frontend guides.

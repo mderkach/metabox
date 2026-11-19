@@ -88,7 +88,7 @@ Rollback: revert the change; the options and flags return with their previous de
 
 ## Links
 
-- [PRD](../PRD.md): AC-36, AC-48, AC-56, AC-57;
+- [`service`](../../openspec/specs/service/spec.md): AC-36, AC-48, AC-56; [`dataplane`](../../openspec/specs/dataplane/spec.md): AC-57;
 - [ADR-0009](./ADR-0009-read-service-state-from-procd.md): the service state from procd, control through the init script;
 - [ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md): the working directory check for list files;
 - [ADR-0038](./ADR-0038-target-the-sing-box-extended-fork-schema-only.md), [ADR-0040](./ADR-0040-ship-the-panel-as-one-go-daemon-with-an-embedded-spa.md): the fork package's `/etc/init.d/sing-box` as the managed service, superseded;

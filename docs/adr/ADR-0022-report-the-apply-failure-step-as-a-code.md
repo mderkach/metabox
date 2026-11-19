@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-09-16
 - Deciders: repository owner
+- Superseded by (as to the closed set of step codes): [ADR-0047](./ADR-0047-set-up-lan-interception-in-the-singbox-init-script.md), which adds `dns_probe_failed` and `interception_missing`; [ADR-0061](./ADR-0061-skip-the-dns-check-when-dns-already-failed-before-the-restart.md), as to when `dns_probe_failed` is set
 
 ## Context and problem statement
 

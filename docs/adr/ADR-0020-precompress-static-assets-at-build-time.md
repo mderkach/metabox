@@ -92,7 +92,7 @@ Rollback: remove the plugin from the build: the daemon, finding no variants, fal
 
 ## Links
 
-- [NFR-4](../PRD.md) — the daemon's resource budget;
+- [`non-functional`](../../openspec/specs/non-functional/spec.md): NFR-4 — the daemon's resource budget;
 - [ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md) — the SPA is embedded in the binary;
 - [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md) — the daemon is installed as an apk package;
 - [ADR-0019](./ADR-0019-keep-interface-texts-in-the-slice-and-load-them-over-the-network.md) — localization dictionaries as static assets;

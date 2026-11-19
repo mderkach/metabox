@@ -71,7 +71,7 @@ No product migration: only tests and CI change. Rollback removes the integration
 
 ## Links
 
-- [PRD](../PRD.md): AC-13, AC-14, AC-22, AC-29.
+- [PRD](../PRD.md): AC-14, AC-29; [`apply`](../../openspec/specs/apply/spec.md): AC-13; [`dev-environment`](../../openspec/specs/dev-environment/spec.md): AC-22.
 - [Apply ownership and protocol](./ADR-0002-apply-protocol-and-config-ownership.md).
 - [Bench base](./ADR-0023-build-the-bench-from-the-device-firmware.md).
 - [HTTP integration test](../../apps/metaboxd/apply_integration_test.go).

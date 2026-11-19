@@ -72,7 +72,7 @@ Not applicable beyond reading: existing configs need no migration, and comments 
 
 ## Links
 
-- PRD: AC-2, AC-86.
+- [`config-editor`](../../openspec/specs/config-editor/spec.md): AC-2; [`routing-rules`](../../openspec/specs/routing-rules/spec.md): AC-86.
 - [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md), [ADR-0017](./ADR-0017-read-the-config-in-the-dialect-the-binary-accepts.md).
 - `apps/web/src/entities/Config/model/Config.array.ts`, `apps/web/src/entities/Rule/model/Rule.caption.ts`, `apps/web/src/entities/Rule/ui/useRuleTitle.ts`, `apps/web/src/entities/Rule/model/Rule.changes.ts`.
 - Issues: mderkach/metabox#137, mderkach/metabox#244.

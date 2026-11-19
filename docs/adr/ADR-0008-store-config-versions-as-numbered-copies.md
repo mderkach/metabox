@@ -111,6 +111,6 @@ Rolling back the decision: remove the save step from the cycle and the three end
 
 ## Links
 
-- [PRD](../PRD.md): AC-15, AC-2, milestone M1;
+- [PRD](../PRD.md): milestone M1; [`apply`](../../openspec/specs/apply/spec.md): AC-15; [`config-editor`](../../openspec/specs/config-editor/spec.md): AC-2;
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md): the Apply protocol, file ownership and the deferred history;
 - [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md): atomic write and the layout of service files.

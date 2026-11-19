@@ -165,7 +165,7 @@ The decision does not touch daemon data or contracts. To roll back:
 
 ## Links
 
-- PRD, AC-10 and AC-37 — overview, traffic and history;
+- [`overview`](../../openspec/specs/overview/spec.md): AC-10, AC-37 — overview, traffic and history;
 - [ADR-0015](./ADR-0015-keep-traffic-history-in-the-daemon.md) — traffic history in the daemon;
 - [ADR-0026](./ADR-0026-animate-screen-changes-with-the-router-and-in-page-changes-with-react.md) — screen transitions; chart animations are excluded from it;
 - `apps/web/src/shared/ui/Plot.tsx`, `apps/web/src/widgets/Daemon/DaemonTraffic/`, `apps/web/src/entities/Daemon/model/Daemon.store.ts`;

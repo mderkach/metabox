@@ -63,7 +63,7 @@ Not applicable: no stored data or contract changes. The test is removed together
 
 ## Links
 
-- [`docs/PRD.md`](../PRD.md), AC-64 (manual subscription update);
+- [`proxies`](../../openspec/specs/proxies/spec.md): AC-64 (manual subscription update);
 - [ADR-0078](./ADR-0078-gate-panel-design-with-the-impeccable-detector-a-brief-and-an-independent-critique.md), panel design gate;
 - [`tools/schemagen/provider_test.go`](../../tools/schemagen/provider_test.go);
 - issue [#254](https://github.com/mderkach/metabox/issues/254);

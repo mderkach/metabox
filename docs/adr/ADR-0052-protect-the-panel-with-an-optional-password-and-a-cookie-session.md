@@ -110,7 +110,7 @@ A daemon without `auth.json` behaves as before: there is no migration for router
 
 ## Links
 
-- [`../PRD.md`](../PRD.md): AC-69, risk R-1, milestone M6;
+- [`../PRD.md`](../PRD.md): risk R-1, milestone M6; [`access`](../../openspec/specs/access/spec.md): AC-69;
 - [ADR-0041](./ADR-0041-run-v1-without-authentication-behind-network-and-origin-checks.md): the access model this ADR changes;
 - [ADR-0048](./ADR-0048-keep-device-names-in-the-daemon-state-and-list-devices-from-dhcp.md): the service directory as the place for the daemon's own state;
 - [HTTPAPI](../../apps/metaboxd/docs/guides/HTTPAPI.md): the middleware chain and the origin check;

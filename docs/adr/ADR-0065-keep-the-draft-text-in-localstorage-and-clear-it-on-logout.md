@@ -84,7 +84,7 @@ A record of the old shape is migrated on read, see "Decision outcome". A panel o
 
 ## Links
 
-- [`../PRD.md`](../PRD.md): AC-70, UX-2, risk R-1;
+- [`../PRD.md`](../PRD.md): UX-2, risk R-1; [`json-editing`](../../openspec/specs/json-editing/spec.md): AC-70;
 - [ADR-0043](./ADR-0043-treat-manual-json-as-a-feature-and-split-save-from-apply.md): drafts survive a reload;
 - [ADR-0052](./ADR-0052-protect-the-panel-with-an-optional-password-and-a-cookie-session.md): the session token is not kept in `localStorage`;
 - [PR #107](https://github.com/mderkach/metabox/pull/107): one stored record, a document per tab;
