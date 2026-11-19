@@ -5,6 +5,7 @@
 - Deciders: repository owner
 - Supersedes: section A.1 of [`../PRD.md`](../PRD.md)
 - Superseded by (as to the init script and UCI section the daemon relies on, and the choice of the check mode): [ADR-0069](./ADR-0069-manage-only-the-metabox-singbox-service.md)
+- Superseded by (as to `SINGBOX_VERSION` as the bench pin; it is the file `sing-box-extended.sha256`): [ADR-0082](./ADR-0082-count-seven-schema-registries-and-pin-the-bench-sing-box-by-file.md)
 
 ## Context and problem statement
 

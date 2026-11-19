@@ -137,7 +137,7 @@ describe('useRuntimeStreams', () => {
 
   it('does not probe while the browser reconnects the stream', () => {
     const queryClient = new QueryClient();
-    const fetchQuery = vi.spyOn(queryClient, 'fetchQuery');
+    const query = vi.spyOn(queryClient, 'query');
 
     renderHook(useRuntimeStreams, {
       wrapper: ({ children }: { children: ReactNode }) => (
@@ -153,7 +153,7 @@ describe('useRuntimeStreams', () => {
       FakeEventSource.last?.drop();
     });
 
-    expect(fetchQuery).not.toHaveBeenCalled();
+    expect(query).not.toHaveBeenCalled();
   });
 
   describe('on a hidden tab', () => {
