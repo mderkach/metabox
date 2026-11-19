@@ -77,6 +77,41 @@ func TestForkFailsStartOnUnreadableCachedSubscription(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "cache.db")
 	writeCache(t, path, "", map[string]string{"sub": poisonedEntry}, nil)
 
+	err := startWithCache(t, path)
+	if err == nil || !strings.Contains(err.Error(), "provider/remote[sub]: restore cached outbound provider") {
+		t.Errorf("start error %v: the fork no longer fails the start on an unreadable cached subscription", err)
+	}
+}
+
+// The whole chain of issue 338 in one test: the link parsed the way the provider parses a
+// download, the entry written the way the provider saves it, and the start that restores it.
+func TestForkFailsStartOnItsOwnSavedXHTTPSubscription(t *testing.T) {
+	outbound, err := link.ParseSubscriptionLink(
+		"vless://11111111-1111-1111-1111-111111111111@127.0.0.1:443?type=xhttp&path=%2Fx&security=none#n1")
+	if err != nil {
+		t.Fatalf("parse link: %v", err)
+	}
+
+	// The provider saves json.Marshal of option.Options with the parsed outbounds.
+	content, err := json.Marshal(option.Options{Outbounds: []option.Outbound{outbound}})
+	if err != nil {
+		t.Fatalf("encode the saved subscription: %v", err)
+	}
+
+	path := filepath.Join(t.TempDir(), "cache.db")
+	writeCache(t, path, "", map[string]string{"sub": string(content)}, nil)
+
+	err = startWithCache(t, path)
+	if err == nil || !strings.Contains(err.Error(), "restore cached outbound provider") || !strings.Contains(err.Error(), "x_padding_bytes") {
+		t.Errorf("start error %v: the fork now reads back the xhttp subscription it saved", err)
+	}
+}
+
+// startWithCache starts a core with one remote provider sub and the cache file at path. The
+// provider URL never answers: the core starts from the cache.
+func startWithCache(t *testing.T, path string) error {
+	t.Helper()
+
 	ctx := service.ContextWithDefaultRegistry(include.Context(t.Context()))
 	raw := fmt.Sprintf(`{
 		"log": {"disabled": true},
@@ -95,10 +130,7 @@ func TestForkFailsStartOnUnreadableCachedSubscription(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = instance.Close() })
 
-	err = instance.Start()
-	if err == nil || !strings.Contains(err.Error(), "provider/remote[sub]: restore cached outbound provider") {
-		t.Errorf("start error %v: the fork no longer fails the start on an unreadable cached subscription", err)
-	}
+	return instance.Start()
 }
 
 // TestCacheFileFixture keeps the daemon's fixture equal to what the pinned fork writes. The
