@@ -161,7 +161,11 @@ jobs:
       - run: pnpm --filter web test:browser
 
       - name: E2E on the mock stand
-        run: pnpm --filter web test:e2e --grep @mock
+        run: pnpm --filter web test:e2e --project chromium --grep @mock
+
+      # Alone on the runner: it prints the longest main-thread task of the Connections screen.
+      - name: Connections under load on the mock stand
+        run: pnpm --filter web test:e2e --project load --grep @mock
 
       # The trace of a retried test and the HTML report: the only way to see a CI-only failure.
       - name: E2E report

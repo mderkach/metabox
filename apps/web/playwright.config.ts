@@ -7,6 +7,7 @@ const LIVE = process.env.METABOX_E2E_STAND === 'live';
 // A port of its own, so a dev server already running on the default one is never taken for the stand.
 const PORT = 5174;
 const BASE_URL = `http://localhost:${PORT}`;
+const LOAD_SCENARIO = '**/connectionsLoad.e2e.test.ts';
 
 export default defineConfig({
   testDir: './e2e',
@@ -27,7 +28,12 @@ export default defineConfig({
     reducedMotion: 'reduce',
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // The load scenario keeps the CPU busy and measures main-thread tasks: CI runs its project in a
+  // step of its own, so it neither slows the other scenarios down nor is slowed by them.
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: LOAD_SCENARIO },
+    { name: 'load', use: { ...devices['Desktop Chrome'] }, testMatch: LOAD_SCENARIO },
+  ],
   // A real Apply restarts sing-box, which takes longer than the default five seconds.
   expect: LIVE ? { timeout: 30_000 } : {},
   timeout: LIVE ? 120_000 : undefined,

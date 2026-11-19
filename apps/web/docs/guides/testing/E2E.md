@@ -64,7 +64,8 @@ Each scenario carries the tag of every stand it holds on: `E2E_TAG.Mock` for the
 
 ```bash
 pnpm --filter web test:e2e                  # all scenarios, the mock stand starts by itself
-pnpm --filter web test:e2e --grep @mock     # the mock stand only, as in CI
+pnpm --filter web test:e2e --grep @mock     # the mock stand only
+pnpm --filter web test:e2e --project load   # Connections under load alone, as CI runs it after the rest
 pnpm --filter web test:e2e --ui             # UI mode
 pnpm --filter web exec playwright show-report
 ```
