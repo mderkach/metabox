@@ -9,7 +9,7 @@
 
 The panel schema is generated from one pinned fork version ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md), [ADR-0038](./ADR-0038-target-the-sing-box-extended-fork-schema-only.md)). The fork publishes releases, and the schema diverges from them in two ways: the repository keeps the old version, and on the router the owner installs a different binary than the one the panel was built on. On a newer version the panel does not know new fields; on an older one it offers a field the binary does not understand, and `sing-box check` rejects the config on Apply. This is risk R-2.
 
-The owner's answer in interview `metabox-di-002`, Round 7: "CI watches + runtime warns."
+The owner's answer at the second requirements interview on 2026-08-30, asked how changes to the fork schema are tracked: "CI watches + runtime warns."
 
 In scope: how a divergence of the schema from fork releases and from the binary on the device becomes visible. Out of scope: how the schema is extracted ([ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md)) and which tags went into the binary build ([ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md)).
 
@@ -21,7 +21,7 @@ In scope: how a divergence of the schema from fork releases and from the binary 
 
 ## Considered options
 
-The transcript kept only the owner's answer; the arguments below are reconstructed from the text of A.9 and R-2.
+Only the owner's answer was recorded; the arguments below are reconstructed from the text of A.9 and R-2.
 
 1. **CI only.** The repository learns about a fork release, but the binary on the device is updated independently of the panel, and the divergence on the router stays invisible. **Rejected as the only mechanism.**
 2. **Runtime only.** The owner sees the divergence on the device, but the schema in the repository does not catch up with the fork by itself. **Rejected as the only mechanism.**

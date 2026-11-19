@@ -9,7 +9,7 @@
 
 OpenWrt runs on devices ranging from weak mips routers with megabytes of flash to boards with gigabytes of memory. The target hardware determines the daemon's language and size, the resource budget, the set of build architectures and what the test bench is checked on.
 
-The owner's answer in interview `metabox-di-001`, Round 11: "Banana Pi BPI-R4 Pro, the only device, we target it. Ideally, support low-power devices later if the community asks for it."
+The owner's answer at the requirements interview on 2026-08-30, asked which hardware v1 targets: "Banana Pi BPI-R4 Pro, the only device, we target it. Ideally, support low-power devices later if the community asks for it."
 
 In scope: the target device and the v1 build architecture. Out of scope: the package format ([ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md)) and the test bench setup ([ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md)).
 

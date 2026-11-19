@@ -10,7 +10,7 @@
 
 The panel controls routing for the router's whole network. It has to be decided who is allowed into it in v1.
 
-The owner's answer in interview `metabox-di-001`, Round 8: "No authentication in v1." This is the accepted risk R-1: any device in the LAN (guest Wi-Fi, IoT, a compromised client) gets full control over routing and can silently send traffic through its own outbound. Separately there is CSRF: a malicious web page in the owner's browser can send requests to the panel address without any password.
+The owner's answer at the requirements interview on 2026-08-30, asked about the access model of the panel: "No authentication in v1." This is the accepted risk R-1: any device in the LAN (guest Wi-Fi, IoT, a compromised client) gets full control over routing and can silently send traffic through its own outbound. Separately there is CSRF: a malicious web page in the owner's browser can send requests to the panel address without any password.
 
 In scope: the v1 access model and mandatory mitigations. Out of scope: HTTPS and external access, a roadmap item after v1.
 
