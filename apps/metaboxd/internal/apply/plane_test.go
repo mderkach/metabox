@@ -93,6 +93,16 @@ type fakeReloader struct {
 	checkErr error
 }
 
+// PID counts reloads: each one brings up a new sing-box process.
+func (r *fakeReloader) PID(context.Context) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return r.calls + 1, nil
+}
+
+func (r *fakeReloader) Crash(context.Context) (string, error) { return "", nil }
+
 func (r *fakeReloader) Reload(ctx context.Context) error {
 	if err := r.pass(ctx, "Reload"); err != nil {
 		return err

@@ -29,10 +29,13 @@ type PlaneEditor interface {
 	Chains(ctx context.Context) ([]string, dataplane.AppliedReason, error)
 }
 
-// PlaneService is the service that brings the dataplane to the model.
+// PlaneService is the service that brings the dataplane to the model. Reload restarts the
+// core, so the rollback checks the process the same way as the config rollback.
 type PlaneService interface {
 	Reload(ctx context.Context) error
 	CheckDataplane(ctx context.Context) error
+	PID(ctx context.Context) (int, error)
+	Crash(ctx context.Context) (string, error)
 }
 
 // PlaneStore is the applied config in which dns-in is looked up, and the state file
@@ -367,12 +370,17 @@ func (p *Plane) rollback(ctx context.Context, log *slog.Logger) {
 
 	restoreErr := p.editor.Restore(ctx, previous)
 
-	var reloadErr error
+	var reloadErr, upErr error
 	if restoreErr == nil {
+		before, pidErr := p.service.PID(ctx)
+
 		reloadErr = p.service.Reload(ctx)
+		if reloadErr == nil {
+			upErr = coreUp(ctx, log, p.service, p.health, p.store, p.gate.opts.ProcessInterval, before, pidErr)
+		}
 	}
 
-	if err := errors.Join(restoreErr, reloadErr); err != nil {
+	if err := errors.Join(restoreErr, reloadErr, upErr); err != nil {
 		log.Error("dataplane model rollback did not go through", "err", err)
 		p.release(PhaseFailed, stepFailed(ReasonRollbackFailed, err))
 

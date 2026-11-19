@@ -2,10 +2,11 @@ Each group is one commit topic. Groups 1 and 2 do not depend on each other; grou
 
 ## 1. Honest rollback (AC-91)
 
-- [ ] 1.1 AC-91: `Manager.rollback` waits for a new process (`awaitProcess` with the pid before the restart) and `health.Wait` with the Clash API settings of the restored config; a failure closes the transaction as `rollback_failed` with the crash reason, and `previous config restored` is logged only on success. New daemon messages go through `internal/locale` with Russian texts. Verified by `make test`: tests for a failing step, an expired window and a replay with a service that stays down, and with one that comes up. The reason text the panel shows for `rollback_failed` and for a dropped provider gets an Impeccable critique (`/impeccable`) by someone who did not write it.
-- [ ] 1.2 AC-91: `Plane` rollback gets the same check after `reload`. Verified by `make test`.
-- [ ] 1.3 AC-91: DeviceIO.md describes the healthcheck of the rollback; `docs/Recovery.md` and `docs/Recovery.ru.md`, "What an Apply undoes on its own", say that a rollback whose core does not start is reported as failed. Verified by manual: both copies say the same.
-- [ ] 1.4 AC-91: rows for the tests of 1.1-1.2 in `docs/Verification.md`. Verified by `make trace-check`.
+- [x] 1.1 AC-91: `Manager.rollback` waits for a new process (`awaitProcess` with the pid before the restart) and `health.Wait` with the Clash API settings of the restored config; a failure closes the transaction as `rollback_failed` with the crash reason, and `previous config restored` is logged only on success. New daemon messages go through `internal/locale` with Russian texts. Verified by `make test`: `TestRollbackWaitsForRestoredCore`, `TestRollbackReportsCoreThatDidNotComeUp`, `TestReplayedRollbackReportsCoreThatDidNotComeUp`; a failing step goes through the same rollback.
+- [x] 1.2 AC-91: `Plane` rollback gets the same check after `reload`. Verified by `make test`: `TestPlaneRollbackReportsCoreThatDidNotComeUp`.
+- [x] 1.3 AC-91: DeviceIO.md describes the healthcheck of the rollback; `docs/Recovery.md` and `docs/Recovery.ru.md`, "What an Apply undoes on its own", say that a rollback whose core does not start is reported as failed. Verified by manual: both copies say the same.
+- [x] 1.4 AC-91: rows for the tests of 1.1-1.2 in `docs/Verification.md`. Verified by `make trace-check`.
+- [ ] 1.5 AC-91, AC-92: the reason text the panel shows for `rollback_failed` and for a dropped provider gets an Impeccable critique (`/impeccable`) by someone who did not write it. Verified by manual: the critique is quoted in the pull request.
 
 ## 2. Fork pin test
 

@@ -236,6 +236,9 @@ type Service interface {
 	Launch(ctx context.Context) (procd.Launch, error)
 	// PID returns the pid of the service process that is up; zero means none is up.
 	PID(ctx context.Context) (int, error)
+	// Crash returns how the service explained its last crash while procd knows it and no
+	// instance is up; empty when it runs, is stopped or gave no reason.
+	Crash(ctx context.Context) (string, error)
 }
 
 // Health waits until the Clash API comes up after a restart.

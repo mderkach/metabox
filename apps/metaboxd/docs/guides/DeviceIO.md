@@ -116,6 +116,8 @@ State, pid and command of the service come from its procd instance `sing-box` (`
 
 The init script returns before procd replaces the process, and the first API requests may be served by the old one. So the service pid is taken from procd before the restart, and the API poll starts only after procd reports the started process with a different pid. Here the pid is only a "process changed" marker: no signals are sent to it. Without procd, or when procd does not know the service, there is nothing to compare with: the healthcheck stays on the API poll alone, and a warning goes to the log.
 
+A rollback that restarts the service, of the config or of the dataplane model, checks the result the same way: a new process, then the Clash API of the restored config. procd accepts a restart of a core that crashes on start, and without the check the transaction would read `rolled_back` while the device runs nothing. A core that does not come up within the cycle timeout closes the transaction as `rollback_failed`, with the crash reason of the service in the reason. DNS and interception are not probed again: there is nothing left to roll back to. A restored config without `external_controller`, possible for a config the owner wrote by hand, is checked by the process alone, with a warning.
+
 ## Dataplane
 
 LAN traffic interception is installed and removed by the init script of the [`metabox-singbox`](../../package/etc/init.d/metabox-singbox) service, not by the daemon: the dataplane lives without the daemon, survives a reboot and is removed by `stop` when the daemon is dead. The daemon edits the model in UCI, calls the service's `reload` and checks that the chains are in place.

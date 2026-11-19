@@ -345,6 +345,8 @@ type fakeService struct {
 	// restart.
 	lag   int
 	stale int
+	// crash is what the service left in the log about its last crash.
+	crash string
 }
 
 func (s *fakeService) Check(_ context.Context, config, workdir string) error {
@@ -396,6 +398,13 @@ func (s *fakeService) PID(context.Context) (int, error) {
 	}
 
 	return s.pid, nil
+}
+
+func (s *fakeService) Crash(context.Context) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.crash, nil
 }
 
 func (s *fakeService) Launch(context.Context) (procd.Launch, error) {

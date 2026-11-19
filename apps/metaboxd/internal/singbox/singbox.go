@@ -315,6 +315,17 @@ func (c *Client) State(ctx context.Context) (State, error) {
 	return state, nil
 }
 
+// Crash returns how the service explained its last crash while procd knows it and no instance
+// is up. Empty when the service runs, is stopped or left no reason.
+func (c *Client) Crash(ctx context.Context) (string, error) {
+	state, err := c.State(ctx)
+	if err != nil || !state.Failed {
+		return "", err
+	}
+
+	return state.LastError, nil
+}
+
 // Launch returns what procd starts the service with: the working directory and the config.
 // Empty fields without an error mean nowhere to learn it: there is no process manager, the service
 // is unfamiliar to it or started without flags and not running.

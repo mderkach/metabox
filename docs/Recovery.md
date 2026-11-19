@@ -27,6 +27,8 @@ After a passed check the panel asks to confirm the change within a confirmation 
 
 Changes of interception settings and of the device list on the Devices screen go through the same window and roll back to the previous settings.
 
+After a rollback the daemon checks that sing-box really started on the previous config: a new process and an answering Clash API. If it did not, the panel shows the rollback as failed with the reason sing-box gave, not as a successful rollback.
+
 The transaction is kept in `apply.json` in the daemon state directory (`/etc/metabox` by default) on persistent storage. If the router reboots or the daemon restarts during an Apply, the daemon finishes the transaction on start: an unfinished Apply is rolled back, and an open window starts again in full.
 
 The automatic rollback does not help when the config was already broken before the Apply, when the config was changed by hand, or when the rollback finds no previous config.

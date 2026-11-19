@@ -388,12 +388,16 @@ func (m *Manager) probeDNS(ctx context.Context, data []byte, port int) error {
 // A new process is an up process with a pid different from the previous one: before = 0
 // means the service was down before the restart, and any up one will do.
 func (m *Manager) awaitProcess(ctx context.Context, before int) error {
-	ticker := time.NewTicker(m.opts.ProcessInterval)
+	return awaitProcess(ctx, m.service, m.opts.ProcessInterval, before)
+}
+
+func awaitProcess(ctx context.Context, service core, interval time.Duration, before int) error {
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	var last error
 	for {
-		pid, err := m.service.PID(ctx)
+		pid, err := service.PID(ctx)
 
 		switch {
 		case err != nil:
@@ -443,12 +447,17 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 		restoreErr = nil
 	}
 
-	var restartErr error
+	var restartErr, upErr error
 	if restoreErr == nil && !noBackup {
+		before, pidErr := m.service.PID(ctx)
+
 		restartErr = m.service.Restart(ctx)
+		if restartErr == nil {
+			upErr = coreUp(ctx, log, m.service, m.health, m.store, m.opts.ProcessInterval, before, pidErr)
+		}
 	}
 
-	if err := errors.Join(restoreErr, restartErr); err != nil {
+	if err := errors.Join(restoreErr, restartErr, upErr); err != nil {
 		log.Error("rollback did not go through", "err", err)
 		m.release(PhaseFailed, stepFailed(ReasonRollbackFailed, err))
 
@@ -548,7 +557,9 @@ func (m *Manager) writeState(ctx context.Context, tx Transaction) error { return
 
 func (m *Manager) clearState(ctx context.Context) error { return m.store.ClearState(ctx) }
 
-func (m *Manager) reverted(ctx context.Context, tx Transaction) bool { return !m.appliedOnDisk(ctx, tx) }
+func (m *Manager) reverted(ctx context.Context, tx Transaction) bool {
+	return !m.appliedOnDisk(ctx, tx)
+}
 
 // restored takes the sum of a window raised from the journal as the daemon's own write.
 func (m *Manager) restored(tx Transaction, token uint64) {
