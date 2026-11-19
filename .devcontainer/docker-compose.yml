@@ -76,7 +76,8 @@ services:
     networks:
       # Docker Desktop 29 delivers the port published to the host not here but to the
       # address of the guest network, and gw_priority does not change that (measured 2026-10-09).
-      # So the guest zone of the test bench fw4 is open for input, like lan.
+      # So the guest zone of the test bench fw4 lets in the panel port, and the Clash API
+      # only from the host.
       lan:
         priority: 100
         ipv4_address: 192.168.210.2

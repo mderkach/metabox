@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-09-17
 - Deciders: repository owner
+- Superseded by (as to Docker alone isolating the networks, the published port arriving at the wired network's address, and fw4 being deferred and disabled on the bench): [ADR-0083](./ADR-0083-close-the-bench-guest-zone-like-a-router-guest-network.md)
 
 ## Context and problem statement
 

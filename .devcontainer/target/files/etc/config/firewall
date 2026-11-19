@@ -1,6 +1,6 @@
-# Test bench zones have the same roles as on the router: the wired and guest networks are local,
-# the external one is closed for input. Network names are UCI interfaces that stand-init
-# builds by address.
+# Test bench zones have the same roles as on the router: the wired network is open for input,
+# the guest one only for the listed services, the external one is closed. Network names are
+# UCI interfaces that stand-init builds by address.
 
 config defaults
 	option syn_flood '1'
@@ -15,13 +15,13 @@ config zone
 	option output 'ACCEPT'
 	option forward 'ACCEPT'
 
-# Input is open: the panel also listens on the guest network (listen_interface), and
-# Docker Desktop delivers the port published to the host to its address; without the zone
-# it fell under the default input REJECT.
+# As a typical OpenWrt guest network: the router is closed for input except the services
+# below. Docker Desktop delivers the ports published to the host to the address of this
+# network, so the panel port also serves the owner's browser.
 config zone
 	option name 'guest'
 	list network 'guest'
-	option input 'ACCEPT'
+	option input 'REJECT'
 	option output 'ACCEPT'
 	option forward 'REJECT'
 
@@ -41,3 +41,37 @@ config forwarding
 config forwarding
 	option src 'guest'
 	option dest 'wan'
+
+# DHCP does not run on the bench (Docker assigns the addresses); the rule keeps the zone the
+# same as on a router.
+config rule
+	option name 'Allow-Guest-DHCP'
+	option src 'guest'
+	option proto 'udp'
+	option dest_port '67-68'
+	option family 'ipv4'
+	option target 'ACCEPT'
+
+config rule
+	option name 'Allow-Guest-DNS'
+	option src 'guest'
+	option proto 'tcp udp'
+	option dest_port '53'
+	option target 'ACCEPT'
+
+config rule
+	option name 'Allow-Guest-Panel'
+	option src 'guest'
+	option proto 'tcp'
+	option dest_port '8080'
+	option target 'ACCEPT'
+
+# The Clash API published to the host arrives through this zone from the address of the
+# Docker Desktop host, which lies outside the guest subnet. Guest clients stay rejected.
+config rule
+	option name 'Allow-Host-Clash-API'
+	option src 'guest'
+	option src_ip '!192.168.220.0/24'
+	option proto 'tcp'
+	option dest_port '9090'
+	option target 'ACCEPT'

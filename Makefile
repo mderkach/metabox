@@ -194,17 +194,18 @@ apply-check:
 
 # The panel must be reachable from all local networks of the owner and from none of the
 # external ones. Checked from outside: a client starts in each test bench network.
-# Clash API listens on all addresses, and from the external network only the wan zone of
-# fw4 closes it: this checks the rules themselves, not just the address the panel listens on.
+# Clash API listens on all addresses, and only the fw4 zones close it to guest and external
+# clients: this checks the rules themselves, not just the address the panel listens on.
+# Its reply from the wired network shows that a refusal elsewhere comes from the firewall.
 reach-check:
 	@set -eu; \
 	docker inspect metabox-target-1 >/dev/null 2>&1 || { echo "test bench is not up: run make up first" >&2; exit 1; }; \
 	fail=0; \
 	for net in lan guest wan; do \
-		case "$$net" in lan) expect=reply ;; guest) expect=reply ;; wan) expect=refused ;; esac; \
 		addr=$$(docker inspect metabox-target-1 \
 			--format "{{ (index .NetworkSettings.Networks (printf \"metabox_%s\" \"$$net\")).IPAddress }}"); \
 		for target in 8080/healthz 9090/version; do \
+			case "$$net/$${target%%/*}" in lan/*|guest/8080) expect=reply ;; *) expect=refused ;; esac; \
 			if docker run --rm --network "metabox_$$net" alpine:3 \
 				wget -q -T 3 -O /dev/null "http://$$addr:$$target" >/dev/null 2>&1; \
 			then got=reply; else got=refused; fi; \
@@ -213,7 +214,7 @@ reach-check:
 		done; \
 	done; \
 	if [ "$$fail" = 1 ]; then echo "FAILED: network reachability is not as required" >&2; exit 1; fi; \
-	echo; echo "The panel is reachable from local networks and unreachable from the external one." 
+	echo; echo "The panel is reachable from local networks and unreachable from the external one; the guest network does not reach the Clash API."
 
 # Interception dataplane: wired-network clients routed through the test bench, nft
 # counters, fail-closed when sing-box dies, Apply without restarting dnsmasq and fw4,
