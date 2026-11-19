@@ -31,8 +31,8 @@ type subject interface {
 	free()
 }
 
-// windowLog is the subject's wording of the protocol events in the log. A text with the
-// error prefix empty returns the error unwrapped.
+// windowLog is the subject's wording of the protocol events in the log and of the replay
+// error prefixes.
 type windowLog struct {
 	opened             string
 	notSaved           string
@@ -348,7 +348,7 @@ func (w *window) Replay(ctx context.Context) error {
 }
 
 func wrap(prefix string, err error) error {
-	if err == nil || prefix == "" {
+	if err == nil {
 		return err
 	}
 
