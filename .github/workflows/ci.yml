@@ -109,12 +109,10 @@ jobs:
       - run: pnpm --filter web build
       - run: pnpm --filter web check:bundle
 
-      # Advice, not a check: `continue-on-error` keeps the build green. The step itself
-      # turns red on an error-level finding, and every finding, warnings included, is
-      # listed in the job summary for the reviewer. What the repository has already
-      # accepted as the norm is disabled in `apps/web/doctor.config.jsonc`.
+      # An error-level finding fails the build; warnings do not. Every finding, warnings
+      # included, is listed in the job summary for the reviewer. What the repository has
+      # already accepted as the norm is disabled in `apps/web/doctor.config.jsonc`.
       - name: React doctor
-        continue-on-error: true
         shell: bash
         run: |
           report="$RUNNER_TEMP/react-doctor.json"
