@@ -106,16 +106,18 @@ func Ensure(data []byte, port int) ([]byte, bool, error) {
 	// the lengths match, so the found offsets fit both.
 	parsed := mask(data)
 
+	// Before the validity check: an empty or non-object body is a client mistake with its
+	// own answer, and the general parse error would hide it.
+	top, err := objectStart(parsed)
+	if err != nil {
+		return nil, false, err
+	}
+
 	if !json.Valid(parsed) {
 		return nil, false, errNotJSON
 	}
 
 	address := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
-
-	top, err := objectStart(parsed)
-	if err != nil {
-		return nil, false, err
-	}
 
 	experimental, ok, err := findMember(parsed, top, "experimental")
 	if err != nil {

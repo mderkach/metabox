@@ -47,6 +47,7 @@ export const ERROR_CODE = [
   'nothing_to_confirm',
   'config_modified',
   'config_too_large',
+  'config_not_object',
   'list_invalid',
   'workdir_mismatch',
   'device_invalid',

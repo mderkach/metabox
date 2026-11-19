@@ -46,6 +46,9 @@ var ru = map[string]string{
 	"dataplane model rejected":                                                             "модель обвязки не принята",
 	"internal error":                                                                       "внутренняя ошибка",
 
+	"config is not a JSON object":              "конфиг не является объектом JSON",
+	"%w: it starts with %q":                    "%w: он начинается с %q",
+	"%w: it is empty":                          "%w: он пустой",
 	"no config file":                           "файла конфига нет",
 	"no config version":                        "версии конфига нет",
 	"apply already in progress":                "применение уже идёт",

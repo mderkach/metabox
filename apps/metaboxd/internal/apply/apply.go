@@ -150,6 +150,10 @@ var (
 	// error, not a race for the file: the config has one owner.
 	ErrBusy = locale.New("apply already in progress")
 
+	// ErrConfigNotObject means the config in the request is not a JSON object: it is empty or starts
+	// with a string, a number or an array. The apply does not start.
+	ErrConfigNotObject = clashapi.ErrNotObject
+
 	// ErrUnknownTransaction means the identifier does not match the active transaction.
 	ErrUnknownTransaction = locale.New("no transaction with this ID")
 
@@ -355,6 +359,10 @@ func (m *Manager) Start(ctx context.Context, cfg []byte, lists Lists, base, list
 	}
 
 	prepared, added, err := clashapi.Ensure(cfg, m.opts.ClashPort)
+	// Unwrapped: the operator sees this text, and a foreign layer over it would stay English.
+	if errors.Is(err, ErrConfigNotObject) {
+		return Transaction{}, err
+	}
 	if err != nil {
 		return Transaction{}, fmt.Errorf("ensure clash_api: %w", err)
 	}
