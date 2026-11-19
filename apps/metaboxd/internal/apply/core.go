@@ -20,7 +20,7 @@ type core interface {
 	Crash(ctx context.Context) (string, error)
 }
 
-// configReader is where the rollback takes the restored config from.
+// configReader is the config on disk, the one the core is checked against.
 type configReader interface {
 	Read(ctx context.Context) ([]byte, error)
 }
@@ -36,12 +36,12 @@ func (e *poisonedError) Error() string {
 	return "sing-box crashed on the cached subscription " + e.tag + ": " + e.reason
 }
 
-// coreUp waits until the core runs on the restored config: procd accepts a restart of a core
+// coreUp waits until the core runs on the config on disk: procd accepts a restart of a core
 // that then crashes on start, and a rollback that stops at the restart reports a previous
 // config the device does not run. before and pidErr are what PID returned before the restart.
 // A core that crashes on a cached subscription ends the wait early with *poisonedError.
 //
-// A restored config without a readable controller address leaves only the process check: a
+// A config without a readable controller address leaves only the process check: a
 // config the owner wrote by hand may have no clash_api section, and the core it runs is not
 // broken for that.
 func coreUp(
@@ -56,7 +56,7 @@ func coreUp(
 ) error {
 	data, err := store.Read(ctx)
 	if err != nil {
-		return locale.Errorf("read the restored config: %w", err)
+		return locale.Errorf("read the config to check sing-box: %w", err)
 	}
 
 	settings, err := clashapi.Read(data)
@@ -71,7 +71,7 @@ func coreUp(
 	}
 
 	if err != nil {
-		log.Warn("Clash API of the restored config not checked, only the process", "err", err)
+		log.Warn("Clash API of the config not checked, only the process", "err", err)
 
 		return nil
 	}
@@ -143,15 +143,15 @@ func watch(ctx context.Context, service core, interval time.Duration, wait func(
 }
 
 // notUp adds the crash reason of the service to a failed wait. The wait may have used up the
-// rollback context, so the reason is read under its own short one.
+// caller's context, so the reason is read under its own short one.
 func notUp(ctx context.Context, service core, err error) error {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), stateTimeout)
 	defer cancel()
 
 	reason, crashErr := service.Crash(ctx)
 	if crashErr != nil || reason == "" {
-		return locale.Errorf("previous config did not come up: %w", err)
+		return locale.Errorf("sing-box did not come up: %w", err)
 	}
 
-	return locale.Errorf("previous config did not come up: %w; sing-box: %s", err, reason)
+	return locale.Errorf("sing-box did not come up: %w; it said: %s", err, reason)
 }

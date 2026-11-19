@@ -2,6 +2,7 @@ package apply_test
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"path/filepath"
 	"slices"
@@ -352,8 +353,4 @@ func TestRecoverAtStart(t *testing.T) {
 	})
 }
 
-var procdUnknown = errorString("service not registered in procd")
-
-type errorString string
-
-func (e errorString) Error() string { return string(e) }
+var procdUnknown = errors.New("service not registered in procd")
