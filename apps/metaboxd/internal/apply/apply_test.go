@@ -825,6 +825,31 @@ func TestClashAPIIsGuaranteed(t *testing.T) {
 	}
 }
 
+// A syntax error in the draft is the client's mistake: it is reported before any step runs and
+// leaves the config on the device alone.
+func TestStartRejectsBrokenJSONBeforeAnyStep(t *testing.T) {
+	h := newHarness(t)
+
+	_, err := h.manager.Start(t.Context(), []byte("{\n  // log\n  \"log\": {\n}"), apply.Lists{}, "", "")
+	if !errors.Is(err, apply.ErrConfigNotJSON) {
+		t.Fatalf("error %v, expected ErrConfigNotJSON", err)
+	}
+
+	if got := h.rec.snapshot(); len(got) != 0 {
+		t.Errorf("steps ran for a broken config: %v", got)
+	}
+}
+
+// Comments and a comma before a closing bracket are part of the dialect, not a syntax error.
+func TestStartAcceptsJSONWithCommentsAndTrailingComma(t *testing.T) {
+	h := newHarness(t)
+
+	if _, err := h.manager.Start(t.Context(), []byte("{\n  // log\n  \"log\": {},\n}\n"), apply.Lists{}, "", ""); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	h.waitWindow(t)
+}
+
 // The failure reason goes to the panel as a step code: the panel takes the text in the user's
 // language by it and does not show the daemon error as is.
 func TestFailureCarriesStepCode(t *testing.T) {

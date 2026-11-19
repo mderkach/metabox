@@ -192,6 +192,8 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 		return http.StatusConflict, contract.ErrConfigModified
 	case errors.Is(err, apply.ErrConfigNotObject):
 		return http.StatusBadRequest, contract.ErrConfigNotObject
+	case errors.Is(err, apply.ErrConfigNotJSON):
+		return http.StatusBadRequest, contract.ErrConfigNotJSON
 	case errors.Is(err, apply.ErrListName), errors.Is(err, errBadApplyEnvelope):
 		return http.StatusBadRequest, contract.ErrListInvalid
 	case errors.Is(err, devices.ErrInvalidMAC), errors.Is(err, devices.ErrInvalidName),

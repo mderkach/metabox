@@ -154,6 +154,10 @@ var (
 	// with a string, a number or an array. The apply does not start.
 	ErrConfigNotObject = clashapi.ErrNotObject
 
+	// ErrConfigNotJSON means the config in the request is not valid JSON: the apply does not start,
+	// and the file on the device stays as it was.
+	ErrConfigNotJSON = clashapi.ErrNotJSON
+
 	// ErrUnknownTransaction means the identifier does not match the active transaction.
 	ErrUnknownTransaction = locale.New("no transaction with this ID")
 
@@ -360,7 +364,7 @@ func (m *Manager) Start(ctx context.Context, cfg []byte, lists Lists, base, list
 
 	prepared, added, err := clashapi.Ensure(cfg, m.opts.ClashPort)
 	// Unwrapped: the operator sees this text, and a foreign layer over it would stay English.
-	if errors.Is(err, ErrConfigNotObject) {
+	if errors.Is(err, ErrConfigNotObject) || errors.Is(err, ErrConfigNotJSON) {
 		return Transaction{}, err
 	}
 	if err != nil {

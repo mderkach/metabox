@@ -16,9 +16,13 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+
+	"metabox/internal/locale"
 )
 
-var errNotJSON = errors.New("config is not valid JSON")
+// ErrNotJSON means the config does not parse as JSON once comments and commas before closing brackets
+// are set aside.
+var ErrNotJSON = locale.New("config is not valid JSON")
 
 // Settings is what the daemon needs from the section to reach the Clash API.
 type Settings struct {
@@ -114,7 +118,7 @@ func Ensure(data []byte, port int) ([]byte, bool, error) {
 	}
 
 	if !json.Valid(parsed) {
-		return nil, false, errNotJSON
+		return nil, false, ErrNotJSON
 	}
 
 	address := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))

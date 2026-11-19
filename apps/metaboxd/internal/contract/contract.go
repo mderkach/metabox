@@ -206,6 +206,9 @@ const (
 	// ErrConfigNotObject means the config in the apply request is not a JSON object: the body is
 	// empty or starts with a string, a number or an array.
 	ErrConfigNotObject ErrorCode = "config_not_object"
+	// ErrConfigNotJSON means the config in the apply request is not valid JSON: it has a syntax
+	// error, comments and commas before closing brackets aside.
+	ErrConfigNotJSON ErrorCode = "config_not_json"
 	// ErrListInvalid means the list file was not accepted: the name is outside the rules of the
 	// rule-sets subdirectory or the apply envelope was not parsed.
 	ErrListInvalid ErrorCode = "list_invalid"
