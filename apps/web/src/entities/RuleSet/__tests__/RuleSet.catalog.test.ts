@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { toRuleSetCatalog } from '../model/RuleSet.adapter';
 import {
   buildRuleSetURL,
   describeURL,
@@ -7,9 +8,8 @@ import {
   findList,
   isCatalogCategory,
   suggestTag,
-  toRuleSetCatalog,
-  type RuleSetList,
-} from '../model';
+} from '../model/RuleSet.catalog';
+import type { RuleSetList } from '../model/RuleSet.model';
 import { RULE_SET_CATALOG_FIXTURE } from './RuleSet.fixture';
 
 const CATALOG = toRuleSetCatalog(RULE_SET_CATALOG_FIXTURE);

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { countRuleSetUsage, defaultFormatOf, describeURL, toRuleSetCatalog, toRuleSetRowsFromNodes } from '../model';
-import type { RuleSetFileStat } from '../model';
+import { countRuleSetUsage, toRuleSetCatalog, toRuleSetRowsFromNodes } from '../model/RuleSet.adapter';
+import { describeURL } from '../model/RuleSet.catalog';
+import { defaultFormatOf } from '../model/RuleSet.model';
+import type { RuleSetFileStat } from '../model/RuleSet.model';
 import { RULE_SET_CATALOG_FIXTURE } from './RuleSet.fixture';
 
 const CATALOG = toRuleSetCatalog(RULE_SET_CATALOG_FIXTURE);
