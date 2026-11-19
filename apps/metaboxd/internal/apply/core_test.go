@@ -99,6 +99,25 @@ func TestReplayedRollbackReportsCoreThatDidNotComeUp(t *testing.T) {
 	}
 }
 
+func TestRollbackChecksOnlyTheProcessWithoutController(t *testing.T) {
+	h := newHarness(t)
+	seedConfig(h, validConfig)
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	h.waitWindow(t)
+
+	// A Clash API that would never answer: the restored config names none to ask.
+	h.health.err = errors.New("connection refused")
+	h.clock.fire()
+	h.manager.Close()
+
+	if tx := h.manager.Current(); tx.Phase != apply.PhaseRolledBack {
+		t.Errorf("phase %q, code %q: want rolled_back on a new process alone", tx.Phase, tx.ReasonCode)
+	}
+}
+
 func TestPlaneRollbackReportsCoreThatDidNotComeUp(t *testing.T) {
 	h := newPlaneHarness(t, nil, controlledConfig, slog.New(slog.DiscardHandler))
 	t.Cleanup(h.plane.Close)

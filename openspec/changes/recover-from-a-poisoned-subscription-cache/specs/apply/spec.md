@@ -34,6 +34,18 @@ After restoring the previous config and restarting the service, the rollback SHA
 - **WHEN** the daemon starts again
 - **THEN** the replay restores the previous config, restarts the service and checks it again
 
+#### Scenario: A dataplane rollback is checked the same way
+
+- **GIVEN** a dataplane change left without confirmation and a service that fails after the rollback reload
+- **WHEN** the confirmation window ends
+- **THEN** the dataplane transaction closes as `rollback_failed`
+
+#### Scenario: A restored config without a controller is checked by the process
+
+- **GIVEN** a restored config without `experimental.clash_api.external_controller`
+- **WHEN** the rollback restarts the service
+- **THEN** a new process is enough for `rolled_back`, and the daemon logs that the Clash API was not checked
+
 #### Scenario: A rollback without a restart is not checked
 
 - **GIVEN** an apply with no config backup

@@ -46,6 +46,24 @@ When the service fails with `start provider/remote[<tag>]: restore cached outbou
 - **WHEN** the user starts or restarts the service in the panel and the core fails with the signature
 - **THEN** the daemon recovers the service and the panel receives the state after the recovery
 
+#### Scenario: A start during an Apply leaves the repair to the Apply
+
+- **GIVEN** an Apply in its confirmation window and a poisoned cache entry
+- **WHEN** the user restarts the service in the panel and the core fails with the signature
+- **THEN** the daemon does not touch the cache file; the rollback of the Apply repairs it
+
+#### Scenario: A config that keeps no subscriptions is not repaired
+
+- **GIVEN** a running config without `experimental.cache_file.store_subscriptions`
+- **WHEN** the core fails with the signature
+- **THEN** the cache file is not opened and the failure is reported
+
+#### Scenario: An absent entry stops the recovery
+
+- **GIVEN** a cache file without an entry for the provider the core names
+- **WHEN** the recovery runs
+- **THEN** the file is not changed, the service is started again and the failure is reported
+
 #### Scenario: Another crash is not touched
 
 - **GIVEN** a service that fails with a reason other than the signature
