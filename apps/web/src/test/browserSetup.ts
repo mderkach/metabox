@@ -11,3 +11,9 @@ configure({ asyncUtilTimeout: 10_000 });
 
 // Vitest globals are off, so Testing Library does not register its own cleanup.
 afterEach(cleanup);
+
+// Files of the browser project share one origin, so a draft the panel stored in the localStorage
+// of one file would open as a pending change in the next.
+afterEach(() => {
+  localStorage.clear();
+});
