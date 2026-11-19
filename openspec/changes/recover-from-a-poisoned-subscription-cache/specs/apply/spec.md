@@ -28,6 +28,12 @@ After restoring the previous config and restarting the service, the rollback SHA
 - **WHEN** the daemon starts and replays the transaction
 - **THEN** the transaction closes as `rollback_failed`
 
+#### Scenario: The panel answers while a replayed rollback waits for the core
+
+- **GIVEN** an unfinished apply on disk and a core that does not come up after the rollback restart
+- **WHEN** the daemon starts
+- **THEN** the HTTP server answers at once, the panel sees the replayed transaction, an Apply or a dataplane change gets `apply already in progress` and Confirm is refused until the rollback closes the transaction
+
 #### Scenario: A failed window rollback is retried at the next daemon start
 
 - **GIVEN** a window rollback that closed as `rollback_failed` because the core did not come up

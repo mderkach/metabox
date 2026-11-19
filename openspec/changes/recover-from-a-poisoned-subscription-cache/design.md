@@ -62,7 +62,9 @@ Triggers:
 
 - the rollback restart (AC-91 failure with the signature): recovery runs inside the rollback, under the same slot; success closes the transaction as `rolled_back` with the dropped tag in the reason;
 - `POST /api/service/start` and `/restart`: after the action the handler watches the service for up to 15 seconds (`Manager.Watch`), the time the core takes to fail on its cache; on the entry condition it runs recovery, then answers with the state. A core that starts answers as today, a few seconds later;
-- daemon start, after both replays: in a goroutine owned by `main`, cancelled by the root context. It polls the service without the apply slot and takes the slot only when the entry condition holds, so an Apply right after boot is not blocked by a healthy or stopped service.
+- daemon start, after both replays: in the goroutine of `Manager.Settle`, cancelled by the root context. It polls the service without the apply slot and takes the slot only when the entry condition holds, so an Apply right after boot is not blocked by a healthy or stopped service.
+
+The replays themselves move off the start path into the same goroutine. A replayed rollback now waits for the core up to `-cycle-timeout`; run before the HTTP server, it would keep the panel silent for two minutes after a reboot into a core that does not come up, which breaks AC-27 (the panel works while sing-box is down). `Settle` takes the apply slot before the server starts and holds it through both replays, so no Start lands before a rollback; a replayed rollback refuses Confirm, and the panel sees the transaction in its journal phase until the rollback closes it.
 
 ### Moving a file aside
 

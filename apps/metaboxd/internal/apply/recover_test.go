@@ -398,3 +398,76 @@ func TestPlaneRollbackDropsPoisonedSubscription(t *testing.T) {
 		t.Errorf("dropped %v, want sub", got)
 	}
 }
+
+// A replay that rolls back waits for the core up to the cycle timeout. The daemon serves the
+// panel meanwhile, so Settle returns at once and holds the apply until the replay is done.
+func TestSettleReplaysBesideTheServer(t *testing.T) {
+	h := newCacheHarness(t, cycleTimeout)
+	plane, _ := h.cachePlane(t)
+	h.health.silentWhile = nil
+
+	h.store.mu.Lock()
+	h.store.backup = []byte(cachedConfig)
+	h.store.mu.Unlock()
+	seedState(t, h.harness, apply.Transaction{ID: "истёкшая", Phase: apply.PhaseAwaitingConfirm, Window: 0})
+
+	// The restored core does not answer until the test lets it.
+	started, release := h.health.hold("Wait")
+
+	settled := h.manager.Settle(t.Context(), plane)
+
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the replay did not reach the core check")
+	}
+
+	if tx := h.manager.Current(); tx.ID != "истёкшая" || tx.Phase != apply.PhaseAwaitingConfirm {
+		t.Errorf("panel sees %q in %q during the replay, want the replayed transaction", tx.ID, tx.Phase)
+	}
+	if _, err := h.manager.Confirm(t.Context(), "истёкшая"); !errors.Is(err, apply.ErrNothingToConfirm) {
+		t.Errorf("confirm during the replayed rollback: %v, want ErrNothingToConfirm", err)
+	}
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
+		t.Errorf("apply during the replay: %v, want ErrBusy", err)
+	}
+	if _, err := plane.Start(t.Context(), aclChange(), "", admin); !errors.Is(err, apply.ErrBusy) {
+		t.Errorf("dataplane change during the replay: %v, want ErrBusy", err)
+	}
+
+	close(release)
+
+	select {
+	case <-settled:
+	case <-time.After(5 * time.Second):
+		t.Fatal("settle did not finish")
+	}
+
+	if tx := h.manager.Current(); tx.Phase != apply.PhaseRolledBack {
+		t.Errorf("phase %q, reason %q: want rolled_back", tx.Phase, tx.Reason)
+	}
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+		t.Errorf("apply after the replay: %v", err)
+	}
+}
+
+// Before the journal is read no Start may get in: the replay would roll back over it.
+func TestSettleHoldsTheApplyBeforeTheJournalIsRead(t *testing.T) {
+	h := newCacheHarness(t, cycleTimeout)
+	plane, _ := h.cachePlane(t)
+	h.health.silentWhile = nil
+	seedState(t, h.harness, apply.Transaction{ID: "прерванная", Phase: apply.PhaseApplying, Window: window, Sum: "новый"})
+	// A stopped service: the check of the core after the replay has nothing to watch.
+	h.service.pidErr = errProcdUnknown
+
+	started, release := h.store.hold("ReadState")
+	settled := h.manager.Settle(t.Context(), plane)
+	<-started
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
+		t.Errorf("apply before the journal is read: %v, want ErrBusy", err)
+	}
+
+	close(release)
+	<-settled
+}

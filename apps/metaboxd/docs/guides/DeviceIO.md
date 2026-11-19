@@ -160,7 +160,7 @@ The fork keeps remote subscriptions in its cache file with `experimental.cache_f
 
 - after the restart of a rollback, of the config or of the dataplane model, inside the same transaction;
 - after a start or restart from the panel (`Manager.Watch`): the handler watches the core for up to 15 seconds and answers after the repair;
-- at daemon start, after both replays (`Manager.RecoverAtStart`): a service procd does not know, stopped or never started, is left alone.
+- at daemon start, after both replays (`Manager.RecoverAtStart`, run by `Manager.Settle` beside the server): a service procd does not know, stopped or never started, is left alone.
 
 The repair takes the apply, so it never runs beside an Apply; a start from the panel during an Apply leaves the crash to the rollback of that Apply. It reads `experimental.cache_file` of the config on disk (`clashapi.ReadCacheFile`): without `enabled` and `store_subscriptions` the crash cannot come from the cache, and nothing is touched. The file is the configured path, `cache.db` by default, resolved from the working directory of the service. Then:
 
@@ -216,6 +216,8 @@ The state is written to disk **after** the backup and **before** the config is w
 The deadline is stored as a **duration** plus an "applied but not confirmed" flag, not as absolute time: the router has no real-time clock, after power-on it starts at the epoch and jumps during NTP sync.
 
 On start the daemon replays an unfinished transaction: an apply without completion means rollback to the backup, but only if the config was written (the file sha matches the sum in the state); otherwise the config on disk is of the previous generation, and the backup may be left from an earlier transaction, so a rollback from it would lose the confirmed version. Awaiting confirmation: the timer starts again for the full duration from the state, the remainder of the window is not stored (OQ-22 in the PRD); immediate rollback only with a window of 0. If the disk no longer carries the transaction (the config sum or a changed list differs), a window rollback broke off after `Restore`: the replay finishes it instead of opening a window over the previous config, which Confirm would keep. A missing service directory means no state, not a read failure. All branches are covered by tests.
+
+The replay runs beside the HTTP server (`Manager.Settle`): a rollback now waits for the core up to the cycle timeout, and the panel must answer while sing-box is down. `Settle` takes the apply before the server starts and keeps it until both replays are done, so a Start or a dataplane change gets `ErrBusy` and cannot get in ahead of a rollback; a window raised from the journal takes the apply over. During a replayed rollback the panel sees the transaction in its journal phase and Confirm gets a refusal. The check of the core for a crash on its cache file follows the replays in the same goroutine.
 
 A finished transaction removes the state file. If the removal failed, a terminal phase is written in its place: a leftover `awaiting_confirm` would roll back an already confirmed config after a reboot, while replay only removes a terminal phase.
 

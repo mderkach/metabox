@@ -213,6 +213,35 @@ func (m *Manager) RecoverAtStart(ctx context.Context) {
 	}
 }
 
+// Settle replays the unfinished transaction and dataplane change from the previous daemon
+// lifetime and then checks the core for a crash on its cache file. It returns at once and
+// works in the background: a rollback waits for the core up to the cycle timeout, and the
+// panel must answer while sing-box is down. The apply is taken before Settle returns, so no
+// Start gets in ahead of a replay; a window raised from the journal takes it over. The
+// channel closes when the work is done; cancelling ctx ends it early and leaves the journals
+// for the next start.
+func (m *Manager) Settle(ctx context.Context, plane *Plane) <-chan struct{} {
+	token := m.reserveRestored()
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		if err := m.Replay(ctx); err != nil {
+			m.log.Error("unfinished transaction not replayed", "err", err)
+		}
+
+		if err := plane.Replay(ctx); err != nil {
+			m.log.Error("unfinished dataplane change not replayed", "err", err)
+		}
+
+		m.unreserve(token)
+		m.RecoverAtStart(ctx)
+	}()
+
+	return done
+}
+
 // recoverHeld takes the apply for the repair. An Apply already running owns the service, and
 // its own rollback repairs the core.
 func (m *Manager) recoverHeld(ctx context.Context, poisoned *poisonedError) {

@@ -259,7 +259,11 @@ func (s *fakeStore) WriteLists(_ context.Context, put map[string][]byte, remove 
 	return nil
 }
 
-func (s *fakeStore) ReadState(context.Context) ([]byte, error) {
+func (s *fakeStore) ReadState(ctx context.Context) ([]byte, error) {
+	if err := s.pass(ctx, "ReadState"); err != nil {
+		return nil, err
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

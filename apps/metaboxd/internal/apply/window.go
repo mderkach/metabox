@@ -217,6 +217,17 @@ func (w *window) begin(tx Transaction) {
 	w.confirmed = make(chan struct{})
 }
 
+// replayRollback shows a replayed transaction already rolling back: Confirm gets a refusal while
+// the replay runs beside the server.
+func (w *window) replayRollback(tx Transaction) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	w.current = tx
+	w.confirmed = make(chan struct{})
+	w.rollingBack = true
+}
+
 func (w *window) release(phase Phase, err error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -323,19 +334,19 @@ func (w *window) Replay(ctx context.Context) error {
 		}
 
 		log.Warn(w.text.interruptedApply)
-		w.begin(tx)
+		w.replayRollback(tx)
 		w.subject.rollback(ctx, log)
 
 	case tx.Phase == PhaseAwaitingConfirm && tx.Window <= 0:
 		log.Warn(w.text.windowExpired)
-		w.begin(tx)
+		w.replayRollback(tx)
 		w.subject.rollback(ctx, log)
 
 	case tx.Phase == PhaseAwaitingConfirm && w.subject.reverted(ctx, tx):
 		// A window rollback broke off after the restore and before the state was cleared:
 		// a restored window would let Confirm keep the previous state as the change.
 		log.Warn(w.text.rollbackUnfinished)
-		w.begin(tx)
+		w.replayRollback(tx)
 		w.subject.rollback(ctx, log)
 
 	case tx.Phase == PhaseAwaitingConfirm:

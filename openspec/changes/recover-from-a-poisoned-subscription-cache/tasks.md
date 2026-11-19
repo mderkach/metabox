@@ -8,6 +8,8 @@ Each group is one commit topic. Groups 1 and 2 do not depend on each other; grou
 - [x] 1.4 AC-91: rows for the tests of 1.1-1.2 in `docs/Verification.md`. Verified by `make trace-check`.
 - [ ] 1.5 AC-91, AC-92: the reason text the panel shows for `rollback_failed` and for a dropped provider gets an Impeccable critique (`/impeccable`) by someone who did not write it. Verified by manual: the critique is quoted in the pull request.
 
+- [x] 1.6 AC-91: the replays at daemon start run beside the HTTP server, holding the apply slot until both are done; a replayed rollback refuses Confirm. Verified by `make test`: `TestSettleReplaysBesideTheServer`, `TestSettleHoldsTheApplyBeforeTheJournalIsRead`.
+
 ## 2. Fork pin test
 
 - [x] 2.1 AC-92: `tools/schemagen/cachefile_test.go`: the link parser leaves `x_padding_bytes` zero (`TestForkParsesXHTTPLinkWithoutPaddingAsZero`), a zero `x_padding_bytes` fails with `x_padding_bytes cannot be disabled` (`TestForkRejectsZeroXHTTPPadding`), a cached subscription entry the fork cannot parse fails the core start with `restore cached outbound provider` (`TestForkFailsStartOnUnreadableCachedSubscription`). Each fact is its own test. Verified by `make test-schemagen`.
