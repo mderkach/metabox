@@ -1,2 +1,2 @@
-export * from './api';
+export { useCloseAllConnections, useCloseConnection } from './api/ConnectionClose.api';
 export { ConnectionCloseConfirm } from './ui';

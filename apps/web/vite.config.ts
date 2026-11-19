@@ -207,9 +207,6 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         configure: sendDaemonOrigin,
-        // The connection and traffic stream goes under the same prefix: without this
-        // the WebSocket upgrade hits the dev server, not the daemon.
-        ws: true,
       },
       '/healthz': {
         target: daemonTarget,

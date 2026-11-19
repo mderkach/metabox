@@ -106,7 +106,8 @@ export type RuleFormModel = z.infer<typeof RuleFormSchema>;
 ```
 
 A reference for linking codes to texts: `features/Rule/RuleEdit`, codes in
-`model/RuleEdit.schema.ts`, the translation table in `ui/RuleEditForm.tsx`.
+`model/RuleEdit.schema.ts`, the translation tables in the field files of `ui`
+(`RuleConditionField.tsx`, `RuleOutboundField.tsx`).
 
 ### Generated schemas are untouchable
 

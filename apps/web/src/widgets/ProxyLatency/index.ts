@@ -1,1 +1,1 @@
-export * from './ui';
+export { ProxyLatency } from './ui/ProxyLatency';

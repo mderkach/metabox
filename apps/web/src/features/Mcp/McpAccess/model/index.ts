@@ -1,1 +1,1 @@
-export * from './McpAccess.model';
+export { toClaudeCodeCommand, toMcpUrl } from './McpAccess.model';

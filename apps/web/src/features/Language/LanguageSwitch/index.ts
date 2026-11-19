@@ -1,1 +1,1 @@
-export * from './ui';
+export { LanguageSwitch } from './ui/LanguageSwitch';

@@ -1,1 +1,1 @@
-export * from './ui';
+export { ProxiesPage } from './ui/ProxiesPage';

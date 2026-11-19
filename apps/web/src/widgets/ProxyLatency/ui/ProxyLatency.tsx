@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { DELAY_FAST, useProxies } from '@entities/Proxy';
+import { DELAY_FAST, toDelayLabel, useProxies } from '@entities/Proxy';
 import { useTestProxyDelays } from '@features/Proxy/ProxyDelay';
 import {
   Button,
@@ -17,7 +17,6 @@ import {
   ValueAxis,
 } from '@shared/ui';
 
-import { toDelayLabel } from '../lib/ProxyLatency.delay';
 import { toSelected } from '../model/ProxyLatency.model';
 import { SCALE_CEILING, SCALE } from '../model/ProxyLatency.scale';
 import { ProxyLatencyMeter } from './ProxyLatencyMeter';

@@ -70,7 +70,7 @@ function toServiceErrorCode(value: string | undefined): ServiceErrorCode | undef
   return SERVICE_ERROR_CODE.find((code) => code === value);
 }
 
-function toTransaction(wire: NonNullable<DaemonStatusWire['transaction']>): ApplyTransaction {
+export function toApplyTransaction(wire: ApplyTransactionWire): ApplyTransaction {
   return {
     id: wire.id,
     phase: toPhase(wire.phase),
@@ -82,10 +82,6 @@ function toTransaction(wire: NonNullable<DaemonStatusWire['transaction']>): Appl
   };
 }
 
-export function toApplyTransaction(wire: ApplyTransactionWire): ApplyTransaction {
-  return toTransaction(wire);
-}
-
 export function toDaemonStatus(wire: DaemonStatusWire): DaemonStatus {
   return {
     version: wire.version,
@@ -94,14 +90,14 @@ export function toDaemonStatus(wire: DaemonStatusWire): DaemonStatus {
     singboxTags: wire.core.build?.tags ?? null,
     configPath: wire.config_path,
     confirmWindowSeconds: wire.confirm_window_seconds,
-    transaction: wire.transaction === undefined ? undefined : toTransaction(wire.transaction),
+    transaction: wire.transaction === undefined ? undefined : toApplyTransaction(wire.transaction),
     transactionHref: wire.transaction_href,
     dataplaneTransaction:
-      wire.dataplane_transaction === undefined ? undefined : toTransaction(wire.dataplane_transaction),
+      wire.dataplane_transaction === undefined ? undefined : toApplyTransaction(wire.dataplane_transaction),
   };
 }
 
-function toState(wire: ServiceStateWire): ServiceState {
+export function toServiceState(wire: ServiceStateWire): ServiceState {
   return {
     status: toServiceStatus(wire.status),
     uptime: wire.uptime,
@@ -110,10 +106,6 @@ function toState(wire: ServiceStateWire): ServiceState {
     lastError: wire.lastError,
     lastErrorCode: toServiceErrorCode(wire.lastErrorCode),
   };
-}
-
-export function toServiceState(wire: ServiceStateWire): ServiceState {
-  return toState(wire);
 }
 
 export function toTrafficHistory(wire: TrafficHistoryWire): TrafficHistory {

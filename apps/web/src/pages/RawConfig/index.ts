@@ -1,1 +1,1 @@
-export * from './ui';
+export { RawConfigPage } from './ui/RawConfigPage';

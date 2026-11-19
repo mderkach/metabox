@@ -1,1 +1,1 @@
-export * from './McpAccess.api';
+export { useDisableMcp, useIssueMcpToken } from './McpAccess.api';

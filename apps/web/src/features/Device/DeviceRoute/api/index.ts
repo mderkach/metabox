@@ -1,1 +1,1 @@
-export * from './DeviceRoute.api';
+export { useChangeDeviceRoute, useConfirmDeviceRoute } from './DeviceRoute.api';

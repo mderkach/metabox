@@ -1,2 +1,2 @@
-export * from './ConfigRawEditor.lib';
-export * from './ConfigRawEditor.wrap';
+export { findMatches } from './ConfigRawEditor.lib';
+export { useRawEditorWrap } from './ConfigRawEditor.wrap';

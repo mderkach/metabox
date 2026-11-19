@@ -1,1 +1,1 @@
-export * from './AuthPassword.api';
+export { useRemovePassword, useSetPassword } from './AuthPassword.api';

@@ -1,1 +1,1 @@
-export * from './McpAccessSection';
+export { McpAccessSection } from './McpAccessSection';

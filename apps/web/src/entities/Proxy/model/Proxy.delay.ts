@@ -1,8 +1,9 @@
-import type { TFunction } from 'i18next';
+import type { Namespace, TFunction } from 'i18next';
 
-import { DELAY_TIMEOUT, type ProxyNode } from '@entities/Proxy';
+import { DELAY_TIMEOUT } from './Proxy.model';
 
-export function toDelayLabel(t: TFunction<'pages/Overview'>, node: ProxyNode | undefined): string {
+/** Latency text of a node; a missing node and a `null` delay both mean the node was not tested. */
+export function toDelayLabel(t: TFunction<Namespace>, node: { readonly delay: number | null } | undefined): string {
   const delay = node?.delay ?? null;
 
   if (delay === null) {

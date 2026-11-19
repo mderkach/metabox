@@ -15,6 +15,7 @@ import {
   RULE_TARGET,
   schemaActionFields,
   ruleSetsOf,
+  toHostAddress,
   toRuleRowsFromNodes,
   type RuleRow,
 } from '@entities/Rule';
@@ -217,16 +218,9 @@ export function toHostCidr(ip: string): string {
   return `${ip}${ip.includes(':') ? HOST_PREFIX.V6 : HOST_PREFIX.V4}`;
 }
 
-/** Address of a source condition value if it is exactly one host; a subnet does not count as a device. */
-function toHostIp(value: string): string {
-  return value.endsWith(HOST_PREFIX.V4) || value.endsWith(HOST_PREFIX.V6)
-    ? value.slice(0, value.lastIndexOf('/'))
-    : value;
-}
-
 /** Device name for a source condition chip; a device known only by its address has none. */
 export function sourceDeviceName(value: string, devices: DeviceIndex): string | undefined {
-  const ip = toHostIp(value);
+  const ip = toHostAddress(value);
   const label = deviceLabel(ip, devices);
 
   return label === ip ? undefined : label;
@@ -235,7 +229,7 @@ export function sourceDeviceName(value: string, devices: DeviceIndex): string | 
 /** Names of the source devices whose dynamic lease may move them to another address. */
 export function dynamicSourceNames(values: readonly string[], devices: DeviceIndex): string[] {
   const names = values.flatMap((value) => {
-    const ip = toHostIp(value);
+    const ip = toHostAddress(value);
     const device = devices.get(ip);
 
     return device === undefined || device.static ? [] : [deviceLabel(ip, devices)];

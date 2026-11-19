@@ -13,9 +13,6 @@ const GATEWAY_TIMEOUT = 504;
 /** Without a daemon body they mean the same as a broken request: an intermediary answered. */
 const GATEWAY_STATUS = new Set([BAD_GATEWAY, SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT]);
 
-/** The daemon's refusal body comes from its contract. */
-const ApiErrorBodySchema = ErrorSchema;
-
 /**
  * A Clash API refusal that the daemon proxies verbatim: it has no code. The core
  * also returns 503 for it — a subscription did not update — and without parsing the body such a response
@@ -48,7 +45,7 @@ function readRetryAfter(response: AxiosResponse<unknown>): number | null {
 }
 
 function fromResponse(response: AxiosResponse<unknown>): ApiError {
-  const body = ApiErrorBodySchema.safeParse(asErrorBody(response.data));
+  const body = ErrorSchema.safeParse(asErrorBody(response.data));
 
   // A body in the daemon format is parsed before the status: the daemon sets
   // the gateway code itself too — that is how it reports the sing-box runtime is unavailable, not itself.

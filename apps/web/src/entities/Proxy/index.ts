@@ -8,6 +8,7 @@ export {
   useProxies,
   useProxyProviders,
 } from './api/Proxy.query';
+export { toDelayLabel } from './model/Proxy.delay';
 export { isProbeFailure, toProxyRuntime, withSelectedNode } from './model/Proxy.adapter';
 export { useProviderNodeChanges } from './model/Proxy.hooks';
 export { NODE_DROP } from './model/Proxy.nodeDrop';

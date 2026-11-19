@@ -1,13 +1,11 @@
 import type { JSONPath } from 'jsonc-parser';
 
+import { isRecord } from '@shared/lib/isRecord';
+
 /** Edit of one document leaf; `value: undefined` deletes the key. */
 export interface NodeEdit {
   path: JSONPath;
   value: unknown;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**
