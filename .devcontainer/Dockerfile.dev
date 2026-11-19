@@ -37,4 +37,8 @@ ENV CGO_ENABLED=0 \
     npm_config_confirm_modules_purge=false
 RUN mkdir -p /cache/go/mod /cache/go/build /cache/pnpm
 
+# The checkout is mounted from the host and on Linux belongs to the host user, not to root in the
+# container: git refuses such a directory, and the `lefthook install` of pnpm install fails with it.
+RUN git config --system --add safe.directory /workspace
+
 WORKDIR /workspace
