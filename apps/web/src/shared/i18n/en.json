@@ -173,6 +173,8 @@
     "nothing_to_confirm": "there is nothing to confirm: the confirmation window is closed",
     "config_modified": "the config file was changed outside metabox",
     "config_too_large": "the config is larger than allowed",
+    "config_not_object": "the config is empty or is not a JSON object",
+    "config_not_json": "the config has a syntax error and is not valid JSON",
     "device_invalid": "the daemon rejected the device name",
     "dataplane_invalid": "the traffic interception settings in UCI contain errors",
     "dataplane_modified": "the traffic interception settings changed on the device, the list was reloaded",

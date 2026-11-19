@@ -5,7 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"metabox/internal/locale"
 )
+
+// ErrNotObject means the config does not start with a JSON object: it is empty or begins with a
+// string, a number or an array.
+var ErrNotObject = locale.New("config is not a JSON object")
 
 // errNotObject: the value turned out not to be an object, there is no member to insert into it.
 var errNotObject = errors.New("value is not an object")
@@ -23,13 +29,13 @@ func objectStart(data []byte) (int, error) {
 			continue
 		}
 		if b != '{' {
-			return 0, fmt.Errorf("config starts with %q, not with an object", b)
+			return 0, locale.Errorf("%w: it starts with %q", ErrNotObject, b)
 		}
 
 		return i, nil
 	}
 
-	return 0, errors.New("config is empty")
+	return 0, locale.Errorf("%w: it is empty", ErrNotObject)
 }
 
 // findMember looks for a member of the object starting at data[start] and returns the boundaries of

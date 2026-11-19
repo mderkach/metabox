@@ -623,6 +623,8 @@ func TestApplyMapsDomainErrors(t *testing.T) {
 	}{
 		{"apply already running", apply.ErrBusy, http.StatusConflict, contract.ErrApplyInProgress},
 		{"config edited from outside", apply.ErrConfigModified, http.StatusConflict, contract.ErrConfigModified},
+		{"config is not an object", apply.ErrConfigNotObject, http.StatusBadRequest, contract.ErrConfigNotObject},
+		{"config is not JSON", apply.ErrConfigNotJSON, http.StatusBadRequest, contract.ErrConfigNotJSON},
 	}
 
 	for _, tt := range tests {

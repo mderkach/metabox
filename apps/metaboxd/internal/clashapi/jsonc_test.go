@@ -2,6 +2,7 @@ package clashapi
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -148,5 +149,31 @@ func TestReadAcceptsConfigWithComments(t *testing.T) {
 	}
 	if settings.Address != "127.0.0.1:9090" || settings.Secret != "s3cret" {
 		t.Errorf("read %+v", settings)
+	}
+}
+
+// A draft sent as a quoted string, an array or nothing is a client mistake, and the error
+// says so instead of reporting a generic parse failure.
+func TestEnsureRejectsConfigThatIsNotAnObject(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+	}{
+		{"quoted string", `"{\n  // log\n}"`},
+		{"array", `[]`},
+		{"number", `1`},
+		{"empty", ``},
+		{"only a comment", "// nothing\n"},
+		{"string after a comment", "// c\n\"x\""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, err := Ensure([]byte(tt.in), 9090)
+
+			if !errors.Is(err, ErrNotObject) {
+				t.Fatalf("error %v, expected ErrNotObject", err)
+			}
+		})
 	}
 }
