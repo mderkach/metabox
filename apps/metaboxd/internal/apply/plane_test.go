@@ -25,11 +25,12 @@ import (
 type fakeEditor struct {
 	gates
 
-	mu       sync.Mutex
-	section  dataplane.Snapshot
-	written  []dataplane.Model
-	restored []dataplane.Snapshot
-	chains   []string
+	mu         sync.Mutex
+	section    dataplane.Snapshot
+	written    []dataplane.Model
+	restored   []dataplane.Snapshot
+	restoreErr error
+	chains     []string
 }
 
 func (e *fakeEditor) Snapshot(context.Context) (dataplane.Snapshot, error) {
@@ -61,6 +62,9 @@ func (e *fakeEditor) Restore(_ context.Context, snap dataplane.Snapshot) error {
 	defer e.mu.Unlock()
 
 	e.restored = append(e.restored, snap)
+	if e.restoreErr != nil {
+		return e.restoreErr
+	}
 	e.section = snap
 
 	return nil
