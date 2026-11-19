@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"metabox/internal/cachefile"
 	"metabox/internal/clashapi"
 	"metabox/internal/locale"
 )
@@ -19,6 +20,8 @@ type Cache interface {
 	// Drop deletes the cached subscription of tag from the file at path, in the bucket of
 	// cacheID. It returns cachefile.ErrNoEntry, ErrLocked or ErrUnreadable when it cannot.
 	Drop(ctx context.Context, path, cacheID, tag string) error
+	// MoveAside renames the whole file next to itself and returns the new path.
+	MoveAside(ctx context.Context, path string) (string, error)
 }
 
 // serviceWatch is how long a start from the panel is watched for a crash on the cache file:
@@ -60,7 +63,7 @@ func (m *Manager) recover(ctx context.Context, log *slog.Logger, poisoned *poiso
 			return dropped, locale.Errorf("sing-box still crashes on the cached subscription %q: %s", poisoned.tag, poisoned.reason)
 		}
 
-		if err := m.dropEntry(ctx, path, cache.CacheID, poisoned.tag); err != nil {
+		if err := m.dropEntry(ctx, log, path, cache.CacheID, poisoned.tag); err != nil {
 			return dropped, err
 		}
 
@@ -79,10 +82,13 @@ func (m *Manager) recover(ctx context.Context, log *slog.Logger, poisoned *poiso
 	}
 }
 
-// dropEntry stops the sing-box process, deletes the entry and starts the process again. The
-// start runs even when the delete did not: the core must not stay stopped because of the
-// daemon, and it runs detached so a daemon shutdown does not leave it so either.
-func (m *Manager) dropEntry(ctx context.Context, path, cacheID, tag string) error {
+// dropEntry stops the sing-box process, deletes the entry and starts the process again. A file
+// the daemon cannot open as a database goes aside whole: the core cannot have read the entry
+// from it either, unless the two bbolt implementations disagree, and then nothing short of a
+// fresh file brings the core back. A held lock never counts as such a file. The start runs
+// even when the delete did not: the core must not stay stopped because of the daemon, and it
+// runs detached so a daemon shutdown does not leave it so either.
+func (m *Manager) dropEntry(ctx context.Context, log *slog.Logger, path, cacheID, tag string) error {
 	if err := m.service.Halt(ctx); err != nil {
 		return locale.Errorf("stop sing-box for the cache file: %w", err)
 	}
@@ -90,6 +96,15 @@ func (m *Manager) dropEntry(ctx context.Context, path, cacheID, tag string) erro
 	m.awaitDown(ctx)
 
 	dropErr := m.opts.Cache.Drop(ctx, path, cacheID, tag)
+	if errors.Is(dropErr, cachefile.ErrUnreadable) {
+		aside, err := m.opts.Cache.MoveAside(ctx, path)
+		if err == nil {
+			log.Warn("cache file moved aside: it does not open as a database", "cache_file", path, "moved_to", aside, "err", dropErr)
+		}
+
+		dropErr = err
+	}
+
 	if dropErr != nil {
 		dropErr = locale.Errorf("drop the cached subscription %q: %w", tag, dropErr)
 	}

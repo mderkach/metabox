@@ -37,7 +37,7 @@ The automatic rollback does not help when the config was already broken before t
 
 sing-box keeps downloaded subscriptions in its cache file (`cache.db` next to the config) when `experimental.cache_file.store_subscriptions` is on. It can save a node it then refuses to read back, and from then on every start of sing-box fails, a router reboot included. The log shows `restore cached outbound provider` with the name of the subscription.
 
-The daemon repairs this by itself: after a rollback, after a start or restart of sing-box in the panel and when the daemon starts, it stops sing-box without removing interception, deletes the entry of that one subscription from the cache file and starts sing-box again. Other subscriptions and remote rule sets stay in the cache. The daemon log names the dropped subscription, and a rollback names it in its reason.
+The daemon repairs this by itself: after a rollback, after a start or restart of sing-box in the panel and when the daemon starts, it stops sing-box without removing interception, deletes the entry of that one subscription from the cache file and starts sing-box again. Other subscriptions and remote rule sets stay in the cache. The daemon log names the dropped subscription, and a rollback names it in its reason. If the cache file does not open at all, the daemon renames it to `cache.db.broken` next to it and starts sing-box without a cache; the log names the moved file, and it can be deleted by hand.
 
 If the crash happened before an Apply, the Apply itself fails its check for a reason it did not cause, and its rollback repairs the cache: apply the change again. If the subscription keeps serving the same node, the crash comes back on the next restart, and so does the repair.
 

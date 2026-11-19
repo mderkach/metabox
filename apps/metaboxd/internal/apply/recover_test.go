@@ -35,6 +35,18 @@ type fakeCache struct {
 	mu    sync.Mutex
 	calls []dropCall
 	err   error
+	moved []string
+}
+
+func (c *fakeCache) MoveAside(_ context.Context, path string) (string, error) {
+	c.rec.add("MoveAside")
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.moved = append(c.moved, path)
+
+	return path + ".broken", nil
 }
 
 func (c *fakeCache) Drop(_ context.Context, path, cacheID, tag string) error {
@@ -197,7 +209,29 @@ func TestRecoveryStartsTheCoreWhenTheEntryStays(t *testing.T) {
 			if halted {
 				t.Error("the core stayed stopped after a failed drop")
 			}
+			if len(h.cache.moved) != 0 {
+				t.Errorf("moved %v: a file that opens is never moved", h.cache.moved)
+			}
 		})
+	}
+}
+
+func TestRecoveryMovesAnUnreadableFileAside(t *testing.T) {
+	h := newCacheHarness(t, cycleTimeout)
+	h.cache.err = cachefile.ErrUnreadable
+
+	tx := h.rollBack(t, poisonedLine("sub"))
+
+	if tx.Phase != apply.PhaseRolledBack {
+		t.Errorf("phase %q, reason %q: want rolled_back", tx.Phase, tx.Reason)
+	}
+	if want := filepath.Join(configDir, "cache.db"); !slices.Equal(h.cache.moved, []string{want}) {
+		t.Errorf("moved %v, want %s", h.cache.moved, want)
+	}
+
+	steps := h.rec.snapshot()
+	if moved, start := slices.Index(steps, "MoveAside"), slices.Index(steps, "Start"); moved < 0 || moved > start {
+		t.Errorf("steps %v: want the file moved before the start", steps)
 	}
 }
 

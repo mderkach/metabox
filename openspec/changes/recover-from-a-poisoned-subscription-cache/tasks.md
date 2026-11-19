@@ -27,9 +27,9 @@ Each group is one commit topic. Groups 1 and 2 do not depend on each other; grou
 
 ## 4. Fallback (AC-93)
 
-- [ ] 4.1 AC-93: a file that does not open as bbolt for a reason other than the lock is renamed to `<file>.broken`, replacing an earlier one, and the service starts. Verified by `make test`: a garbage file is moved, a held lock is not.
-- [ ] 4.2 AC-93: `docs/Recovery.md` and `docs/Recovery.ru.md` name the moved file. Verified by manual: both copies say the same.
-- [ ] 4.3 AC-93: rows for 4.1 in `docs/Verification.md`. Verified by `make trace-check`.
+- [x] 4.1 AC-93: a file that does not open as bbolt for a reason other than the lock is renamed to `<file>.broken`, replacing an earlier one, and the service starts. Verified by `make test`: `TestRecoveryMovesAnUnreadableFileAside`, `TestMoveAside`; a held lock is not moved (`TestRecoveryStartsTheCoreWhenTheEntryStays`).
+- [x] 4.2 AC-93: `docs/Recovery.md` and `docs/Recovery.ru.md` name the moved file. Verified by manual: both copies say the same.
+- [x] 4.3 AC-93: rows for 4.1 in `docs/Verification.md`. Verified by `make trace-check`.
 
 ## 5. Integration
 

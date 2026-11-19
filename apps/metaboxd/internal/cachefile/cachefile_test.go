@@ -191,3 +191,39 @@ func TestPoisonedProvider(t *testing.T) {
 		})
 	}
 }
+
+func TestMoveAside(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "cache.db")
+
+	for _, content := range []string{"first", "second"} {
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		aside, err := editor.MoveAside(t.Context(), path)
+		if err != nil {
+			t.Fatalf("move aside: %v", err)
+		}
+		if aside != path+".broken" {
+			t.Errorf("moved to %s, want %s.broken", aside, path)
+		}
+	}
+
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("the file stayed in place: %v", err)
+	}
+
+	// One fixed name: the second move replaced the first.
+	if got, err := os.ReadFile(path + ".broken"); err != nil || string(got) != "second" {
+		t.Errorf("moved file %q, %v; want the last one", got, err)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 {
+		t.Errorf("directory holds %d files, want one moved file", len(entries))
+	}
+}
