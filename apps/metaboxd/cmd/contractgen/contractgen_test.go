@@ -14,7 +14,7 @@ const moduleRoot = "../.."
 // an already-camel tag and on an abbreviation, and optionality comes both from
 // omitempty and from a pointer.
 func TestGenerateSample(t *testing.T) {
-	out, err := generate("testdata", []rootType{{pkg: "internal/sample", name: "Sample"}})
+	out, err := generate("testdata", []rootType{{pkg: "internal/sample", name: "Sample"}}, nil)
 	if err != nil {
 		t.Fatalf("generation: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestGenerateSeparatesSameNamedEnums(t *testing.T) {
 	out, err := generate("testdata", []rootType{
 		{pkg: "internal/sample", name: "Tagged"},
 		{pkg: "internal/twin", name: "Holder"},
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("generation: %v", err)
 	}
@@ -86,11 +86,36 @@ func TestGenerateSeparatesSameNamedEnums(t *testing.T) {
 	}
 }
 
+// A pinned name outranks the package prefix: the panel keeps importing the same constant
+// when the type moves to another package.
+func TestGeneratePinsEnumNames(t *testing.T) {
+	out, err := generate("testdata", []rootType{
+		{pkg: "internal/sample", name: "Tagged"},
+		{pkg: "internal/twin", name: "Holder"},
+	}, map[string]string{"internal/sample.Kind": "TAG_KIND"})
+	if err != nil {
+		t.Fatalf("generation: %v", err)
+	}
+
+	for _, want := range []string{
+		"export const TAG_KIND = [\n  'first',\n  'second',\n] as const",
+		"export const TWIN_KIND = [\n  'other',\n] as const",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("schema lacks %q", want)
+		}
+	}
+
+	if strings.Contains(out, "SAMPLE_KIND") {
+		t.Error("the pinned enum kept its package prefix")
+	}
+}
+
 // The values of a named type go out as a list, and a constant without a type is not a member of
 // the enum: attributing it to a neighbour means inventing a value the type does not
 // have.
 func TestGenerateEmitsEnumValues(t *testing.T) {
-	out, err := generate("testdata", []rootType{{pkg: "internal/sample", name: "Tagged"}})
+	out, err := generate("testdata", []rootType{{pkg: "internal/sample", name: "Tagged"}}, nil)
 	if err != nil {
 		t.Fatalf("generation: %v", err)
 	}
@@ -113,7 +138,7 @@ func TestGenerateEmitsEnumValues(t *testing.T) {
 // An enum from another package is printed with the same list as an own one: a field
 // that refers to it must not stop generation.
 func TestGenerateEmitsForeignEnum(t *testing.T) {
-	out, err := generate("testdata", []rootType{{pkg: "internal/twin", name: "Borrower"}})
+	out, err := generate("testdata", []rootType{{pkg: "internal/twin", name: "Borrower"}}, nil)
 	if err != nil {
 		t.Fatalf("generation: %v", err)
 	}
@@ -126,12 +151,12 @@ func TestGenerateEmitsForeignEnum(t *testing.T) {
 // TestGenerateIsStable: two runs on one tree give one file, otherwise
 // `make schema-daemon` makes noise in the diff without daemon changes.
 func TestGenerateIsStable(t *testing.T) {
-	first, err := generate("testdata", []rootType{{pkg: "internal/sample", name: "Sample"}})
+	first, err := generate("testdata", []rootType{{pkg: "internal/sample", name: "Sample"}}, nil)
 	if err != nil {
 		t.Fatalf("first run: %v", err)
 	}
 
-	second, err := generate("testdata", []rootType{{pkg: "internal/sample", name: "Sample"}})
+	second, err := generate("testdata", []rootType{{pkg: "internal/sample", name: "Sample"}}, nil)
 	if err != nil {
 		t.Fatalf("second run: %v", err)
 	}
@@ -144,7 +169,7 @@ func TestGenerateIsStable(t *testing.T) {
 // TestGenerateContract: the daemon contract itself is taken whole and contains
 // the shapes the panel stands on.
 func TestGenerateContract(t *testing.T) {
-	out, err := generate(moduleRoot, roots)
+	out, err := generate(moduleRoot, roots, pinnedEnums)
 	if err != nil {
 		t.Fatalf("contract generation: %v", err)
 	}
@@ -172,7 +197,7 @@ func TestGeneratedFileIsFresh(t *testing.T) {
 		t.Skipf("no artifact: %v", err)
 	}
 
-	fresh, err := generate(moduleRoot, roots)
+	fresh, err := generate(moduleRoot, roots, pinnedEnums)
 	if err != nil {
 		t.Fatalf("generation: %v", err)
 	}
