@@ -13,6 +13,28 @@ import { initI18n, preloadNamespaces } from '../i18n';
 
 afterEach(() => {
   localStorage.removeItem('metabox.language');
+  vi.restoreAllMocks();
+});
+
+describe('language on start', () => {
+  it('on the first visit takes the browser language, not the fallback', async () => {
+    vi.spyOn(navigator, 'languages', 'get').mockReturnValue(['en-US', 'ru']);
+
+    await initI18n();
+
+    expect(i18next.language).toBe('en');
+    expect(document.documentElement.lang).toBe('en');
+  });
+
+  it('a saved choice wins over the browser language', async () => {
+    vi.spyOn(navigator, 'languages', 'get').mockReturnValue(['en-US']);
+    localStorage.setItem('metabox.language', 'ru');
+
+    await initI18n();
+
+    expect(i18next.language).toBe('ru');
+    expect(document.documentElement.lang).toBe('ru');
+  });
 });
 
 describe('production locale backend', () => {

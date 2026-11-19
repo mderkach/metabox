@@ -12,6 +12,7 @@ import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import {
   CLASH_CONFIGS_FIXTURE,
   DAEMON_STATUS_FIXTURE,
+  SERVICE_FAILED_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
   TRAFFIC_HISTORY_FIXTURE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
@@ -237,6 +238,20 @@ describe('panel routes', () => {
     renderRouter('/config/raw');
 
     expect(await screen.findByRole('link', { name: 'К формам' })).toHaveAttribute('href', '/config');
+  });
+
+  it('with sing-box down the config text editor opens and an edit goes into the draft', async () => {
+    serveDaemon();
+    server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_FAILED_FIXTURE)));
+    const user = userEvent.setup();
+
+    renderRouter('/config/raw');
+
+    await user.type(await screen.findByLabelText('Конфиг sing-box текстом'), ' ');
+
+    await waitFor(() => {
+      expect(ConfigDocumentState.getState().draft).toBe(`${MINIMAL_CONFIG} `);
+    });
   });
 
   // A dictionary not preloaded by the loader pushes part of the screen into `Suspense`: the

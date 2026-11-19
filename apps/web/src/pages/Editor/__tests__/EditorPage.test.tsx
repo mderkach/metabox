@@ -98,6 +98,24 @@ describe('rules screen', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Показано 1 из 3');
   });
 
+  it('filtering down to nothing and back keeps the draft clean and the rule the schema did not accept', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(EditorPage);
+
+    const search = await screen.findByRole('textbox', { name: 'Поиск по правилам' });
+
+    await user.type(search, 'no-such-rule');
+
+    expect(screen.queryByRole('button', { name: /, правило 3(,|$)/ })).not.toBeInTheDocument();
+
+    await user.clear(search);
+
+    expect(await screen.findByRole('button', { name: /, правило 3(,|$)/ })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /, правило \d+(,|$)/ })).toHaveLength(3);
+    expect(ConfigDocumentState.getState().draft).toBeNull();
+  });
+
   it('opens the panel from a rule row and closes it', async () => {
     const user = userEvent.setup();
 
