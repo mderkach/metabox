@@ -343,7 +343,7 @@ func TestRecoverAtStart(t *testing.T) {
 	t.Run("a service procd does not know is left alone", func(t *testing.T) {
 		h := newCacheHarness(t, cycleTimeout)
 		h.crash(poisonedLine("sub"))
-		h.service.pidErr = procdUnknown
+		h.service.pidErr = errProcdUnknown
 
 		h.manager.RecoverAtStart(t.Context())
 
@@ -353,4 +353,4 @@ func TestRecoverAtStart(t *testing.T) {
 	})
 }
 
-var procdUnknown = errors.New("service not registered in procd")
+var errProcdUnknown = errors.New("service not registered in procd")
