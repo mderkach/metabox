@@ -64,7 +64,7 @@ Issue #245 asks for the update time and size of remote rule sets, which the fork
 ### Positive
 
 - A poisoned subscription entry no longer leaves the router without a core until someone uses SSH.
-- Remote rule sets and other subscriptions survive the repair.
+- Remote rule sets and other subscriptions survive the repair, except an entry under the same tag as the dropped subscription: the fork keeps them under one key.
 
 ### Negative
 
