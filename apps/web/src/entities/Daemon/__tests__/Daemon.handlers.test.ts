@@ -33,18 +33,20 @@ describe('mock POST /api/apply', () => {
   });
 
   it.each([
-    ['a config sent through JSON.stringify', JSON.stringify(COMMENTED)],
-    ['a bare array', '[]'],
-    ['a bare number', '1'],
-    ['an empty body', ''],
-    ['text that is not JSONC', '{"log":'],
-  ])('rejects %s with 400', async (_name, body) => {
+    ['a config sent through JSON.stringify', JSON.stringify(COMMENTED), 'config_not_object'],
+    ['a bare array', '[]', 'config_not_object'],
+    ['a bare number', '1', 'config_not_object'],
+    ['an empty body', '', 'config_not_object'],
+    ['text that is not JSON at all', 'abc', 'config_not_object'],
+    ['an object with a syntax error', '{"log":', 'config_not_json'],
+    ['a commented object with a syntax error', '{\n  // log\n  "log": {\n}', 'config_not_json'],
+  ])('rejects %s with 400 and its code', async (_name, body, code) => {
     server.use(...createStatefulDaemonHandlers());
 
     const response = await post(body);
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ code: 'config_not_object' });
+    expect(await response.json()).toMatchObject({ code });
   });
 
   it.each([

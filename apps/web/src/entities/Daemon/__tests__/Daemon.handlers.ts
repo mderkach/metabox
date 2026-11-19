@@ -18,11 +18,24 @@ const CONFIRM_WINDOW_NS = 60_000_000_000;
 /** Apply envelope type: the daemon reads the config from its `config` field. */
 const APPLY_ENVELOPE_TYPE = 'application/vnd.metabox.apply+json';
 
-/** True when the text is a JSONC object, the dialect and the check the panel parses the config with. */
-function isConfigObject(text: string): boolean {
+function isObject(value: unknown): boolean {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The daemon's answer to a config text, in the same order it checks: first that the text starts
+ * with an object, then that it parses. The dialect is the one the panel parses the config with.
+ * The parser keeps the part it read before a syntax error, so a broken text that starts with an
+ * object still reads as one.
+ */
+function configFailure(text: string): { code: string; message: string } | null {
   const { value, failure } = parseJsonc(text);
 
-  return failure === null && typeof value === 'object' && value !== null && !Array.isArray(value);
+  if (!isObject(value)) {
+    return { code: 'config_not_object', message: 'конфиг должен быть объектом JSON' };
+  }
+
+  return failure === null ? null : { code: 'config_not_json', message: 'конфиг не является корректным JSON' };
 }
 
 /** The config text of an apply body, or `null` when an envelope carries none. */
@@ -84,11 +97,10 @@ export function createStatefulDaemonHandlers(extraStatus: () => Partial<DaemonSt
     http.post(DAEMON_ENDPOINT.apply(), async ({ request }) => {
       const config = await readApplyConfig(request);
 
-      if (config === null || !isConfigObject(config)) {
-        return HttpResponse.json(
-          { code: 'config_not_object', message: 'конфиг должен быть объектом JSON' },
-          { status: 400 }
-        );
+      const rejected = configFailure(config ?? '');
+
+      if (rejected !== null) {
+        return HttpResponse.json(rejected, { status: 400 });
       }
 
       return HttpResponse.json(start(), { status: 202 });
