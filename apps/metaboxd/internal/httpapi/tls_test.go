@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"metabox/internal/auth"
@@ -13,7 +14,11 @@ import (
 
 const rootPEM = "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n"
 
-func newTLSServer(t *testing.T) *browser {
+func ownRoot() []byte { return []byte(rootPEM) }
+
+// newTLSServer serves the panel over TLS; a nil ca is the owner's certificate pair, which
+// comes with no root to hand out.
+func newTLSServer(t *testing.T, ca func() []byte) *browser {
 	t.Helper()
 
 	guard, err := auth.New(t.Context(), &memoryAuthStore{}, auth.Options{Iterations: 1000})
@@ -25,7 +30,7 @@ func newTLSServer(t *testing.T) *browser {
 		Version: "test",
 		Auth:    guard,
 		HTTPS:   true,
-		CA:      func() []byte { return []byte(rootPEM) },
+		CA:      ca,
 	}))
 	srv.StartTLS()
 	t.Cleanup(srv.Close)
@@ -34,7 +39,7 @@ func newTLSServer(t *testing.T) *browser {
 }
 
 func TestSessionCookieIsSecureOverTLS(t *testing.T) {
-	b := newTLSServer(t)
+	b := newTLSServer(t, ownRoot)
 
 	r := b.setPassword("", panelPassword)
 	if r.status != http.StatusNoContent {
@@ -51,7 +56,7 @@ func TestSessionCookieIsSecureOverTLS(t *testing.T) {
 }
 
 func TestRootCertificateOpensWithoutASession(t *testing.T) {
-	b := newTLSServer(t)
+	b := newTLSServer(t, ownRoot)
 
 	if r := b.setPassword("", panelPassword); r.status != http.StatusNoContent {
 		t.Fatalf("set password: %d %s", r.status, r.body)
@@ -80,5 +85,15 @@ func TestRootCertificateOpensWithoutASession(t *testing.T) {
 
 	if string(body) != rootPEM {
 		t.Errorf("body %q, want the root PEM", body)
+	}
+}
+
+func TestRootCertificateIsNotServedWithTheOwnerPair(t *testing.T) {
+	b := newTLSServer(t, nil)
+
+	r := b.do(http.MethodGet, "/metabox-ca.crt", nil)
+
+	if r.contentType == "application/x-x509-ca-cert" || strings.Contains(r.body, "BEGIN CERTIFICATE") {
+		t.Errorf("a root was served with the owner pair: %d %s %q", r.status, r.contentType, r.body)
 	}
 }

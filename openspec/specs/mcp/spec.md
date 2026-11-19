@@ -8,7 +8,7 @@ The MCP endpoint the daemon serves to agents such as Claude Code: how it is turn
 
 ### Requirement: AC-71 MCP endpoint with its own token, off by default
 
-The daemon SHALL serve an MCP endpoint for agents (Claude Code and other MCP clients) on the same address as the panel. It is off by default: while it is off, the endpoint answers as an unknown path. It is enabled and disabled in the panel; enabling generates an access token that is shown once and can be regenerated, which invalidates the old one. A request without the token or with a wrong one gets 401, a request with a foreign `Origin` gets 403, the `Host` check of AC-19 applies; a request without `Origin` is accepted, because the token cannot be sent by a foreign page. The token does not depend on the panel password (AC-69): it works with or without one, the panel session does not open the endpoint and the token does not open the panel API. MCP is disabled over SSH without reinstalling the package; turning it on or off and changing the token restart neither sing-box nor the daemon.
+The daemon SHALL serve an MCP endpoint for agents (Claude Code and other MCP clients) on the same address as the panel. It is off by default: while it is off, the endpoint answers as an unknown path. It is enabled and disabled in the panel; enabling generates an access token that is shown once and can be regenerated, which invalidates the old one. Regenerating the token and disabling MCP in the panel ask for a confirmation first; a cancelled confirmation leaves the token as it was. A request without the token or with a wrong one gets 401, a request with a foreign `Origin` gets 403, the `Host` check of AC-19 applies; a request without `Origin` is accepted, because the token cannot be sent by a foreign page. The token does not depend on the panel password (AC-69): it works with or without one, the panel session does not open the endpoint and the token does not open the panel API. MCP is disabled over SSH without reinstalling the package; turning it on or off and changing the token restart neither sing-box nor the daemon.
 
 #### Scenario: The endpoint answers as an unknown path while MCP is off
 
@@ -51,6 +51,18 @@ The daemon SHALL serve an MCP endpoint for agents (Claude Code and other MCP cli
 - **GIVEN** the MCP access section of the panel
 - **WHEN** the operator enables MCP and closes the token with "Done"
 - **THEN** the token is shown after enabling and is not shown again
+
+#### Scenario: Regenerating the token asks for a confirmation
+
+- **GIVEN** MCP is on in the panel
+- **WHEN** the operator asks to regenerate the token
+- **THEN** the panel warns that the old token stops working and issues a new one only after the confirmation; a cancel issues nothing
+
+#### Scenario: Disabling MCP asks for a confirmation
+
+- **GIVEN** MCP is on in the panel
+- **WHEN** the operator disables MCP and confirms
+- **THEN** MCP is off
 
 ### Requirement: AC-72 Read-only tools of phase 1
 
