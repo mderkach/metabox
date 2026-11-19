@@ -13,6 +13,7 @@ import (
 
 	"metabox/internal/apply"
 	"metabox/internal/cachefile"
+	"metabox/internal/dataplane"
 	"metabox/internal/procd"
 )
 
@@ -354,3 +355,46 @@ func TestRecoverAtStart(t *testing.T) {
 }
 
 var errProcdUnknown = errors.New("service not registered in procd")
+
+// cachePlane gives the cache harness a dataplane transaction on the same apply.
+func (h *cacheHarness) cachePlane(t *testing.T) (*apply.Plane, *fakeReloader) {
+	t.Helper()
+
+	reloader := &fakeReloader{}
+	plane := apply.NewPlane(h.manager, &fakeEditor{section: previousSection(), chains: dataplane.ExpectedChains()},
+		reloader, &fakePlaneStore{cfg: []byte(cachedConfig)}, h.health, h.clock, slog.New(slog.DiscardHandler),
+		apply.PlaneOptions{Window: window, CycleTimeout: cycleTimeout})
+	t.Cleanup(plane.Close)
+
+	return plane, reloader
+}
+
+func TestPlaneRollbackDropsPoisonedSubscription(t *testing.T) {
+	h := newCacheHarness(t, cycleTimeout)
+	plane, reloader := h.cachePlane(t)
+
+	if _, err := plane.Start(t.Context(), aclChange(), "", admin); err != nil {
+		t.Fatalf("dataplane change: %v", err)
+	}
+	h.waitWindow(t)
+
+	// The reload brings up a core that crashes on its cache until the entry is gone.
+	reloader.mu.Lock()
+	reloader.crash = poisonedLine("sub")
+	reloader.mu.Unlock()
+	h.health.silentWhile = func() bool { return len(h.cache.dropped()) == 0 }
+
+	h.clock.fire()
+	plane.Close()
+
+	tx := plane.Current()
+	if tx.Phase != apply.PhaseRolledBack {
+		t.Fatalf("phase %q, code %q, reason %q: want rolled_back", tx.Phase, tx.ReasonCode, tx.Reason)
+	}
+	if !strings.Contains(tx.Reason, "sub") {
+		t.Errorf("reason %q does not name the dropped subscription", tx.Reason)
+	}
+	if got := h.cache.dropped(); !slices.Equal(got, []string{"sub"}) {
+		t.Errorf("dropped %v, want sub", got)
+	}
+}
