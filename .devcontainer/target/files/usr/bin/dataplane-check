@@ -209,6 +209,7 @@ dataplane)
 	;;
 forget-state) rm -f /var/run/metabox/dataplane.state ;;
 stop) /etc/init.d/$SERVICE stop ;;
+halt) /etc/init.d/$SERVICE halt ;;
 start) /etc/init.d/$SERVICE start ;;
 service-check) /etc/init.d/$SERVICE dataplane_check ;;
 config-missing)

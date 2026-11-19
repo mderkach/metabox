@@ -204,6 +204,49 @@ func TestServiceAction(t *testing.T) {
 	}
 }
 
+// fakeRecovery records which actions ran under the recovery.
+type fakeRecovery struct{ watched int }
+
+func (r *fakeRecovery) Watch(ctx context.Context, start func(context.Context) error) error {
+	r.watched++
+
+	return start(ctx)
+}
+
+func TestServiceStartIsWatched(t *testing.T) {
+	tests := []struct {
+		action  string
+		watched int
+	}{
+		{"start", 1},
+		{"restart", 1},
+		{"stop", 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.action, func(t *testing.T) {
+			service := &fakeService{}
+			recovery := &fakeRecovery{}
+
+			srv := httptest.NewServer(httpapi.NewServer(&fakeApplier{}, fakeReader{}, testLogger(t),
+				httpapi.Options{Version: "test", Service: service, Recovery: recovery}))
+			t.Cleanup(srv.Close)
+
+			got := request(t, srv, http.MethodPost, "/api/service/"+tt.action, srv.URL, nil)
+
+			if got.status != http.StatusOK {
+				t.Fatalf("response code: got %d, expected %d", got.status, http.StatusOK)
+			}
+			if recovery.watched != tt.watched {
+				t.Errorf("%s ran under the recovery %d times, expected %d", tt.action, recovery.watched, tt.watched)
+			}
+			if !slices.Contains(service.calls, tt.action) {
+				t.Errorf("init script calls %v, expected %q", service.calls, tt.action)
+			}
+		})
+	}
+}
+
 func TestServiceActionRejected(t *testing.T) {
 	t.Run("unknown action", func(t *testing.T) {
 		service := &fakeService{running: true}

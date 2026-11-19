@@ -33,6 +33,14 @@ The transaction is kept in `apply.json` in the daemon state directory (`/etc/met
 
 The automatic rollback does not help when the config was already broken before the Apply, when the config was changed by hand, or when the rollback finds no previous config.
 
+### A subscription that crashes sing-box
+
+sing-box keeps downloaded subscriptions in its cache file (`cache.db` next to the config) when `experimental.cache_file.store_subscriptions` is on. It can save a node it then refuses to read back, and from then on every start of sing-box fails, a router reboot included. The log shows `restore cached outbound provider` with the name of the subscription.
+
+The daemon repairs this by itself: after a rollback, after a start or restart of sing-box in the panel and when the daemon starts, it stops sing-box without removing interception, deletes the entry of that one subscription from the cache file and starts sing-box again. Other subscriptions and remote rule sets stay in the cache. The daemon log names the dropped subscription, and a rollback names it in its reason.
+
+If the crash happened before an Apply, the Apply itself fails its check for a reason it did not cause, and its rollback repairs the cache: apply the change again. If the subscription keeps serving the same node, the crash comes back on the next restart, and so does the repair.
+
 ## Getting back without the panel
 
 Connect to the router over SSH by its IP address (`ssh root@<router IP>`). SSH does not depend on sing-box: it works while the LAN is up, even when DNS and the internet are not.

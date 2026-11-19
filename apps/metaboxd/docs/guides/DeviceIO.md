@@ -154,6 +154,23 @@ Every change has a window. An ACL change that removes the request's source addre
 
 Replay on start comes after the config replay: `applying` with the section equal to the snapshot means the write did not happen, the state is removed; otherwise rollback. `awaiting_confirm`: the window starts again for its full duration, as for the config; immediate rollback only with a window of 0. If the section already equals the snapshot, a window rollback broke off after the write-back: the replay finishes it instead of opening a window over the previous section. The state holds no target model, so a change that left the section as it was is rolled back too, to the same section. A rollback failure leaves the state file, and the next start tries again. On router boot the service manages to bring up the dataplane with the unconfirmed model, and the daemon rolls it back in the next step.
 
+## Cache file recovery
+
+The fork keeps remote subscriptions in its cache file with `experimental.cache_file.store_subscriptions`, and it can write an entry it refuses to read back on the next start: the provider fails, and the whole core exits with `start provider/remote[<tag>]: restore cached outbound provider`. Every restart then crashes the same way, a router reboot included. `internal/apply` repairs it when it sees that line as the last crash reason of the service:
+
+- after the restart of a rollback, of the config or of the dataplane model, inside the same transaction;
+- after a start or restart from the panel (`Manager.Watch`): the handler watches the core for up to 15 seconds and answers after the repair;
+- at daemon start, after both replays (`Manager.RecoverAtStart`): a service procd does not know, stopped or never started, is left alone.
+
+The repair takes the apply, so it never runs beside an Apply; a start from the panel during an Apply leaves the crash to the rollback of that Apply. It reads `experimental.cache_file` of the config on disk (`clashapi.ReadCacheFile`): without `enabled` and `store_subscriptions` the crash cannot come from the cache, and nothing is touched. The file is the configured path, `cache.db` by default, resolved from the working directory of the service. Then:
+
+1. `/etc/init.d/metabox-singbox halt` stops the sing-box instance and keeps the dataplane: `stop` would let listed devices out directly. The daemon waits until procd reports no process.
+2. `internal/cachefile` opens the file with bbolt with a 5-second lock timeout and deletes the key of the provider in the `rule_set` bucket, under the bucket `0x00` + `cache_id` when the config sets one. Other subscriptions, remote rule sets and other cache ids stay. A missing key or a held lock changes nothing and ends the repair.
+3. `start` runs whatever happened in step 2, detached from the request: the core must not stay stopped because of the daemon.
+4. The healthcheck of the restored core runs again. A crash on another provider repeats the steps; a crash on the same provider ends the repair as a failure.
+
+The dropped provider is logged as a warning, and a rollback names it in the transaction reason. The next update of the subscription writes the entry again: if the subscription still serves the same node, the next restart crashes again and is repaired again.
+
 ## Service crash reason
 
 procd explains a crashed service only by the fact: the instance is known but not running. What the process actually said is known to the device logger, so on `failed` the daemon reads `logread` and selects the lines of its process, by the binary name as procd named it.

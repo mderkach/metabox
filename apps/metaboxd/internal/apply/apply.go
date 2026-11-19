@@ -239,6 +239,9 @@ type Service interface {
 	// Crash returns how the service explained its last crash while procd knows it and no
 	// instance is up; empty when it runs, is stopped or gave no reason.
 	Crash(ctx context.Context) (string, error)
+	// Halt stops the sing-box process and keeps the dataplane; Start brings it up again.
+	Halt(ctx context.Context) error
+	Start(ctx context.Context) error
 }
 
 // Health waits until the Clash API comes up after a restart.
@@ -299,6 +302,9 @@ type Options struct {
 	DNS DNSProber
 	// Lang is the language of Transaction.Reason; the zero value is English.
 	Lang locale.Lang
+	// Cache repairs the sing-box cache file when the core crashes on a cached subscription;
+	// nil leaves such a crash to the owner.
+	Cache Cache
 }
 
 // Manager is the only owner of the apply cycle.

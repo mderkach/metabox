@@ -1,7 +1,7 @@
 // Package clashapi handles the experimental.clash_api section: it guarantees its
 // presence in the applied config and extracts from the config the address and secret for
-// the healthcheck, the dns-in address for the DNS probe and the log file for the failure reason
-// of the service.
+// the healthcheck, the dns-in address for the DNS probe, the log file for the failure reason
+// of the service and the cache file a crashed core is repaired in.
 //
 // This is the only place where the daemon touches the config content, and it does so
 // surgically: the section is inserted by a byte edit, the rest of the file stays as it was.

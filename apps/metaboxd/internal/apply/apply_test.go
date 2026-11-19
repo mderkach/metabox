@@ -345,8 +345,11 @@ type fakeService struct {
 	// restart.
 	lag   int
 	stale int
-	// crash is what the service left in the log about its last crash.
-	crash string
+	// crash is what the service left in the log about its last crash; crashes are the
+	// reasons of the next starts, one per start, and an empty one means the start comes up.
+	crash   string
+	crashes []string
+	halted  bool
 }
 
 func (s *fakeService) Check(_ context.Context, config, workdir string) error {
@@ -389,6 +392,10 @@ func (s *fakeService) PID(context.Context) (int, error) {
 		return 0, s.pidErr
 	}
 
+	if s.halted {
+		return 0, nil
+	}
+
 	if s.stale != 0 {
 		if s.stale > 0 {
 			s.stale--
@@ -398,6 +405,34 @@ func (s *fakeService) PID(context.Context) (int, error) {
 	}
 
 	return s.pid, nil
+}
+
+func (s *fakeService) Halt(context.Context) error {
+	s.rec.add("Halt")
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.halted = true
+
+	return nil
+}
+
+func (s *fakeService) Start(context.Context) error {
+	s.rec.add("Start")
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.halted = false
+	s.pid++
+
+	s.crash = ""
+	if len(s.crashes) > 0 {
+		s.crash, s.crashes = s.crashes[0], s.crashes[1:]
+	}
+
+	return nil
 }
 
 func (s *fakeService) Crash(context.Context) (string, error) {
@@ -423,6 +458,9 @@ type fakeHealth struct {
 
 	rec *recorder
 	err error
+	// silentWhile, when set, keeps the Clash API silent while it reports true, the way a
+	// crashing core never answers.
+	silentWhile func() bool
 }
 
 func (h *fakeHealth) Wait(ctx context.Context, _ clashapi.Settings) error {
@@ -430,6 +468,14 @@ func (h *fakeHealth) Wait(ctx context.Context, _ clashapi.Settings) error {
 
 	if err := h.pass(ctx, "Wait"); err != nil {
 		return err
+	}
+
+	for h.silentWhile != nil && h.silentWhile() {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Millisecond):
+		}
 	}
 
 	return h.err

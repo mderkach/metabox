@@ -201,6 +201,19 @@ func TestRestartUsesInitScript(t *testing.T) {
 	}
 }
 
+func TestHaltUsesInitScript(t *testing.T) {
+	runner := &fakeRunner{}
+
+	if err := newClient(t, runner).Halt(t.Context()); err != nil {
+		t.Fatalf("halt: %v", err)
+	}
+
+	want := []string{initScript, "halt"}
+	if len(runner.calls) != 1 || !slices.Equal(runner.calls[0], want) {
+		t.Errorf("called %v, expected %v: stop would remove the dataplane", runner.calls, want)
+	}
+}
+
 func TestRestartFails(t *testing.T) {
 	runner := &fakeRunner{result: singbox.Result{ExitCode: 1, Stderr: "no such service\nподробности"}}
 

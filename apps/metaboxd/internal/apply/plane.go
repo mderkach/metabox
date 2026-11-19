@@ -370,13 +370,20 @@ func (p *Plane) rollback(ctx context.Context, log *slog.Logger) {
 
 	restoreErr := p.editor.Restore(ctx, previous)
 
-	var reloadErr, upErr error
+	var (
+		reloadErr, upErr error
+		dropped          []string
+	)
 	if restoreErr == nil {
 		before, pidErr := p.service.PID(ctx)
 
 		reloadErr = p.service.Reload(ctx)
 		if reloadErr == nil {
 			upErr = coreUp(ctx, log, p.service, p.health, p.store, p.gate.opts.ProcessInterval, before, pidErr)
+		}
+
+		if poisoned, ok := errors.AsType[*poisonedError](upErr); ok {
+			dropped, upErr = p.gate.recover(context.WithoutCancel(ctx), log, poisoned)
 		}
 	}
 
@@ -389,6 +396,7 @@ func (p *Plane) rollback(ctx context.Context, log *slog.Logger) {
 
 	p.mu.Lock()
 	p.current.Phase = PhaseRolledBack
+	p.current.Reason = recovered(p.lang, p.current.Reason, dropped)
 	p.current.Window = 0
 	p.windowEndsAt = time.Time{}
 	p.rollingBack = false

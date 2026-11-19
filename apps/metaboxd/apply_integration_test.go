@@ -11,9 +11,13 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	bolt "go.etcd.io/bbolt"
 
 	"metabox/internal/apply"
 	"metabox/internal/contract"
@@ -129,7 +133,109 @@ func TestApplyHTTPOnEphemeralBench(t *testing.T) {
 	waitBenchService(t, "running")
 	assertBenchRuntime(t, "apply-http-replay.metabox.example")
 	assertBenchReachable(t)
-	t.Log("HTTP Apply, confirmation, timeout, replay, interrupted-write recovery and a restart of a stopped service passed")
+
+	t.Log("cache file: a start from the panel drops the cached subscription sing-box crashes on")
+	cached := benchCachedCandidate(t, baseline)
+	tx = startBenchApply(t, cached)
+	waitBenchPhase(t, tx.ID, apply.PhaseAwaitingConfirm, 45*time.Second)
+	benchRequest(t, http.MethodPost, "/api/apply/"+tx.ID+"/confirm", nil, http.StatusOK)
+	waitBenchPhase(t, tx.ID, apply.PhaseConfirmed, 10*time.Second)
+	benchExec(t, nil, "/etc/init.d/metabox-singbox", "halt")
+	benchCommand(t, nil, "cp", "internal/cachefile/testdata/cache.db", "metabox-target-1:"+benchCacheFile)
+	benchServiceStart(t)
+	assertBenchCacheKeys(t, []string{"geo", "other"})
+	assertBenchRuntimeUp(t)
+	assertBenchReachable(t)
+	t.Log("HTTP Apply, confirmation, timeout, replay, interrupted-write recovery, a restart of a stopped service and cache file recovery passed")
+}
+
+// benchCacheFile is where the cached candidate keeps its cache: relative to the config
+// directory, the working directory of the service.
+const benchCacheFile = "/etc/sing-box/cache.db"
+
+// benchCachedCandidate keeps subscriptions in the cache file and has a provider named like the
+// poisoned entry of the fixture. Its address never answers: the core starts from the cache.
+func benchCachedCandidate(t *testing.T, baseline []byte) []byte {
+	t.Helper()
+	var cfg map[string]any
+	decodeBench(t, baseline, &cfg)
+	experimental, _ := cfg["experimental"].(map[string]any)
+	if experimental == nil {
+		experimental = map[string]any{}
+	}
+	experimental["cache_file"] = map[string]any{"enabled": true, "path": "cache.db", "store_subscriptions": true}
+	cfg["experimental"] = experimental
+	cfg["providers"] = []any{map[string]any{
+		"type": "remote", "tag": "sub", "url": "http://127.0.0.1:1/", "update_interval": "24h",
+	}}
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return append(data, '\n')
+}
+
+// benchServiceStart starts the service from the panel. The daemon answers after it watched the
+// start and repaired the cache, which takes longer than an ordinary request.
+func benchServiceStart(t *testing.T) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(t.Context(), 90*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, benchURL+"/api/service/start", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Origin", benchURL)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("service start: status %d", resp.StatusCode)
+	}
+}
+
+// assertBenchCacheKeys reads the top-level subscriptions and rule sets of the bench cache file.
+func assertBenchCacheKeys(t *testing.T, want []string) {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "cache.db")
+	benchCommand(t, nil, "cp", "metabox-target-1:"+benchCacheFile, path)
+	db, err := bolt.Open(path, 0o600, &bolt.Options{ReadOnly: true, Timeout: time.Second})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	var got []string
+	err = db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("rule_set"))
+		if b == nil {
+			return nil
+		}
+		return b.ForEach(func(k, _ []byte) error {
+			got = append(got, string(k))
+			return nil
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	slices.Sort(got)
+	if !slices.Equal(got, want) {
+		t.Fatalf("cache file keys %v, want %v", got, want)
+	}
+}
+
+func assertBenchRuntimeUp(t *testing.T) {
+	t.Helper()
+	waitBench(t, 30*time.Second, "the sing-box runtime after the cache repair", func() bool {
+		_, status := benchRequestStatus(t, http.MethodGet, "/api/clash/version", nil)
+		return status == http.StatusOK
+	})
 }
 
 func benchHistory(t *testing.T) contract.History {
@@ -393,7 +499,7 @@ func restoreBench(t *testing.T, baseline []byte) {
 		{nil, []string{"/etc/init.d/metaboxd", "stop"}},
 		{nil, []string{"sh", "-c", restoreInitScript}},
 		{baseline, []string{"sh", "-c", "cat > /etc/sing-box/config.json"}},
-		{nil, []string{"rm", "-f", "/etc/metabox/apply.json"}},
+		{nil, []string{"rm", "-f", "/etc/metabox/apply.json", benchCacheFile, benchCacheFile + ".broken"}},
 		{nil, []string{"/etc/init.d/metabox-singbox", "restart"}},
 		{nil, []string{"/etc/init.d/metaboxd", "start"}},
 		{nil, []string{"rm", "-rf", "/tmp/metabox-apply-integration"}},

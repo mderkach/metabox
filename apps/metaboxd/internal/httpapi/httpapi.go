@@ -68,6 +68,12 @@ type Service interface {
 	Restart(ctx context.Context) error
 }
 
+// Recovery runs a start of the sing-box service and repairs a core that crashes on its cache
+// file right after it. The interface is declared here, at the consumer.
+type Recovery interface {
+	Watch(ctx context.Context, start func(context.Context) error) error
+}
+
 // Restarter restarts the daemon's own service. The interface is declared here, at the
 // consumer.
 type Restarter interface {
@@ -122,6 +128,8 @@ type Options struct {
 	// Service controls the sing-box service. nil means control
 	// is unavailable: the panel opens, but the service card does not show.
 	Service Service
+	// Recovery watches a start and a restart of the service. nil means they run unwatched.
+	Recovery Recovery
 	// Restart restarts the daemon's own service. nil means there is nothing to restart it
 	// with: there is no restart handler.
 	Restart Restarter
@@ -239,6 +247,7 @@ type Server struct {
 	allowedOrigin  string
 	spa            http.Handler
 	service        Service
+	recovery       Recovery
 	restart        Restarter
 	events         EventStream
 	clash          http.Handler
@@ -276,6 +285,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		allowedOrigin:  opts.AllowedOrigin,
 		spa:            opts.SPA,
 		service:        opts.Service,
+		recovery:       opts.Recovery,
 		restart:        opts.Restart,
 		events:         opts.Events,
 		clash:          opts.Clash,
@@ -964,11 +974,11 @@ func (s *Server) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 
 	switch r.PathValue("action") {
 	case "start":
-		run = s.service.Start
+		run = s.watched(s.service.Start)
 	case "stop":
 		run = s.service.Stop
 	case "restart":
-		run = s.service.Restart
+		run = s.watched(s.service.Restart)
 	default:
 		fail(s.log, w, r, errNotFound)
 
@@ -982,6 +992,16 @@ func (s *Server) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.handleServiceState(w, r)
+}
+
+// watched runs start under the recovery: a core that crashes on its cache file right after a
+// start from the panel is repaired before the panel reads the state.
+func (s *Server) watched(start func(context.Context) error) func(context.Context) error {
+	if s.recovery == nil {
+		return start
+	}
+
+	return func(ctx context.Context) error { return s.recovery.Watch(ctx, start) }
 }
 
 // handleDaemonRestart launches the restart of the daemon's own service and answers 202 before

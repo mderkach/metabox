@@ -196,6 +196,12 @@ func (c *Client) CheckDataplane(ctx context.Context) error {
 	return c.service(ctx, "dataplane_check")
 }
 
+// Halt stops only the sing-box process and keeps the dataplane: stop would let the traffic of
+// listed devices out directly while the daemon edits a file the core holds.
+func (c *Client) Halt(ctx context.Context) error {
+	return c.service(ctx, "halt")
+}
+
 // Start brings the service up. An already running service is a regular path: the procd
 // init script does not complain about a repeated start.
 func (c *Client) Start(ctx context.Context) error {

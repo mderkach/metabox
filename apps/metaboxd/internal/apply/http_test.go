@@ -222,6 +222,10 @@ func (s *scriptedService) Launch(context.Context) (procd.Launch, error) {
 
 func (s *scriptedService) Crash(context.Context) (string, error) { return "", nil }
 
+func (s *scriptedService) Halt(context.Context) error { return nil }
+
+func (s *scriptedService) Start(context.Context) error { return nil }
+
 func (s *scriptedService) PID(context.Context) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

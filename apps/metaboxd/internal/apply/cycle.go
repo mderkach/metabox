@@ -447,13 +447,20 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 		restoreErr = nil
 	}
 
-	var restartErr, upErr error
+	var (
+		restartErr, upErr error
+		dropped           []string
+	)
 	if restoreErr == nil && !noBackup {
 		before, pidErr := m.service.PID(ctx)
 
 		restartErr = m.service.Restart(ctx)
 		if restartErr == nil {
 			upErr = coreUp(ctx, log, m.service, m.health, m.store, m.opts.ProcessInterval, before, pidErr)
+		}
+
+		if poisoned, ok := errors.AsType[*poisonedError](upErr); ok {
+			dropped, upErr = m.recover(context.WithoutCancel(ctx), log, poisoned)
 		}
 	}
 
@@ -493,6 +500,7 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 		}
 	} else {
 		m.current.Phase = PhaseRolledBack
+		m.current.Reason = recovered(m.opts.Lang, m.current.Reason, dropped)
 		m.lastSum = ""
 		m.lastListsSum = ""
 	}

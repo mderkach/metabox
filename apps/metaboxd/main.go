@@ -19,6 +19,7 @@ import (
 
 	"metabox/internal/apply"
 	"metabox/internal/auth"
+	"metabox/internal/cachefile"
 	"metabox/internal/cert"
 	"metabox/internal/clashapi"
 	"metabox/internal/config"
@@ -53,6 +54,10 @@ const (
 
 	healthRequestTimeout = 5 * time.Second
 	healthPollInterval   = 500 * time.Millisecond
+
+	// How long the cache file repair waits for sing-box to let go of the file after its process
+	// was stopped.
+	cacheLockTimeout = 5 * time.Second
 
 	// DNS probe: the first query after a restart brings up the connection to upstream and
 	// may take seconds, so there are several attempts. A failure of all three is about
@@ -207,6 +212,18 @@ func run(log *slog.Logger, s settings) error {
 	if err := planeTx.Replay(ctx); err != nil {
 		log.Error("unfinished dataplane change not replayed", "err", err)
 	}
+
+	// The router may have booted into a core that crashes on its cache file. The check runs
+	// beside the server; on the way out it is cancelled and waited for before the manager closes.
+	recovered := make(chan struct{})
+	go func() {
+		defer close(recovered)
+		manager.RecoverAtStart(ctx)
+	}()
+	defer func() {
+		stop()
+		<-recovered
+	}()
 
 	spa, err := webui.Handler()
 	if errors.Is(err, webui.ErrNotBuilt) {
@@ -391,6 +408,7 @@ func run(log *slog.Logger, s settings) error {
 		AllowedOrigin:  s.allowedOrigin,
 		SPA:            spa,
 		Service:        service,
+		Recovery:       manager,
 		Restart:        self,
 		Events:         hub,
 		Clash:          clashHandler,
@@ -522,6 +540,7 @@ func build(
 		Dataplane:       plane,
 		DNS:             dns,
 		Lang:            s.lang,
+		Cache:           cachefile.Editor{LockTimeout: cacheLockTimeout},
 	})
 
 	planeTx := apply.NewPlane(manager, plane, service, store, health, nil, log, apply.PlaneOptions{
