@@ -94,7 +94,7 @@ A new endpoint, the contract of existing ones does not change. Rollback: remove 
 
 ## Links
 
-- `docs/PRD.md`, AC-46;
+- [`routing-rules`](../../openspec/specs/routing-rules/spec.md): AC-46;
 - [ADR-0007](./ADR-0007-explain-route-without-own-rule-evaluator.md) — matching a rule without an own evaluator;
 - [ADR-0010](./ADR-0010-stream-runtime-to-the-panel-over-sse.md) — the runtime stream; its rule of no polling without a reader is superseded for the hit counter;
 - `apps/metaboxd/internal/route/hits.go`, `apps/metaboxd/internal/httpapi/httpapi.go`;

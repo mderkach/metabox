@@ -98,7 +98,7 @@ The migration is one-off: `make stand-base` builds the base, `make up` rebuilds 
 ## Links
 
 - [ADR-0042](./ADR-0042-target-the-bpi-r4-pro-and-build-for-aarch64-only.md) — the target device;
-- [`docs/PRD.md`](../PRD.md), criteria AC-14, AC-17, AC-18, AC-21, AC-22;
+- [`docs/PRD.md`](../PRD.md): AC-14; [`service`](../../openspec/specs/service/spec.md): AC-17; [`access`](../../openspec/specs/access/spec.md): AC-18; [`dev-environment`](../../openspec/specs/dev-environment/spec.md): AC-21, AC-22;
 - [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md) — shipping the panel as an apk package;
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) — config ownership and the Apply protocol;
 - [`.devcontainer/target/Dockerfile`](../../.devcontainer/target/Dockerfile), [`.devcontainer/target/device-base/Dockerfile`](../../.devcontainer/target/device-base/Dockerfile), [`.devcontainer/docker-compose.yml`](../../.devcontainer/docker-compose.yml).

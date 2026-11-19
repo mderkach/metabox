@@ -118,7 +118,7 @@ A package update turns HTTPS on: the next `http://192.168.1.1:8088` opens the pa
 
 ## Links
 
-- [`../PRD.md`](../PRD.md): AC-74, AC-69, AC-71, risk R-1, milestone M6;
+- [`../PRD.md`](../PRD.md): risk R-1, milestone M6; [`access`](../../openspec/specs/access/spec.md): AC-74, AC-69; [`mcp`](../../openspec/specs/mcp/spec.md): AC-71;
 - [ADR-0041](./ADR-0041-run-v1-without-authentication-behind-network-and-origin-checks.md): the `Host` and `Origin` checks the redirect sits between;
 - [ADR-0052](./ADR-0052-protect-the-panel-with-an-optional-password-and-a-cookie-session.md): the session cookie that gets `Secure`;
 - [ADR-0055](./ADR-0055-embed-a-read-only-mcp-server-in-the-daemon-with-the-official-go-sdk.md): the MCP token that now travels over TLS;

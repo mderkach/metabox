@@ -4,6 +4,7 @@
 - Date: 2026-10-09
 - Deciders: repository owner
 - Superseded by (as to the DNS probe of the healthcheck): [ADR-0061](./ADR-0061-skip-the-dns-check-when-dns-already-failed-before-the-restart.md)
+- Supersedes (as to the closed set of Apply step codes): [ADR-0022](./ADR-0022-report-the-apply-failure-step-as-a-code.md)
 
 ## Context and problem statement
 
@@ -110,7 +111,7 @@ Dataplane rollback: `/etc/init.d/metabox-singbox stop` or `enabled '0'` with `re
 
 ## Links
 
-- [PRD](../PRD.md): US-11, AC-48…AC-57, AC-67, OQ-16, OQ-19, item 8 of the roadmap after v1;
+- [PRD](../PRD.md): US-11, OQ-16, OQ-19, item 8 of the roadmap after v1; [`service`](../../openspec/specs/service/spec.md): AC-48, AC-55, AC-56; [`dataplane`](../../openspec/specs/dataplane/spec.md): AC-49…AC-54, AC-57; [`setup`](../../openspec/specs/setup/spec.md): AC-67;
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md), [ADR-0009](./ADR-0009-read-service-state-from-procd.md), [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md), [ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md), [ADR-0046](./ADR-0046-check-the-candidate-the-way-the-service-runs.md);
 - [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md), sections "Service through procd" and "Dataplane";
 - [`metabox-singbox`](../../apps/metaboxd/package/etc/init.d/metabox-singbox), [`metabox`](../../apps/metaboxd/package/etc/config/metabox), [`dataplane.go`](../../apps/metaboxd/internal/dataplane/dataplane.go), [`cycle.go`](../../apps/metaboxd/internal/apply/cycle.go);

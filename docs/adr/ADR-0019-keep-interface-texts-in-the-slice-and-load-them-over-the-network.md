@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-09-16
 - Deciders: repository owner
+- Superseded by (as to the daemon having no language setting, for the texts the operator sees): [ADR-0062](./ADR-0062-translate-operator-texts-with-an-english-keyed-catalogue-chosen-in-uci.md)
 
 ## Context and problem statement
 
@@ -113,7 +114,7 @@ Rollback is reverting the commit: artifacts, dictionaries and the plugin go away
 
 ## Links
 
-- [PRD, AC-43](../PRD.md) — the interface language requirement;
+- [`localization`](../../openspec/specs/localization/spec.md): AC-43 — the interface language requirement;
 - [ADR-0003](./ADR-0003-embed-the-spa-from-a-staging-directory.md) — the SPA is embedded in the daemon binary;
 - [ADR-0020](./ADR-0020-precompress-static-assets-at-build-time.md) — how dictionaries and other static assets reach the browser;
 - [Frontend architecture and style guide](../../apps/web/docs/guides/Architecture&Style.md) — section "Localization";

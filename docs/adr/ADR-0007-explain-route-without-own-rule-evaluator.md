@@ -139,7 +139,7 @@ Rollback: remove the reason retrieval and keep only the observed core. The origi
 
 ## Links
 
-- [PRD](../PRD.md): US-2, SM-2, AC-12, UX-4, UX-5, risk R-2;
+- [PRD](../PRD.md): US-2, SM-2, UX-4, UX-5, risk R-2; [`connections`](../../openspec/specs/connections/spec.md): AC-12;
 - [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md): runtime data sources;
 - [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md): editing the config as text and keeping unrecognized nodes;
 - [sing-box-extended](https://github.com/shtorm-7/sing-box-extended): the fork, version `v1.14.0-extended-2.7.1`: `experimental/clashapi/rules.go`, `experimental/clashapi/connections.go`, `route/router.go`, `route/rule/rule_abstract.go`, `route/route.go`, `adapter/router.go`, `cmd/sing-box/cmd_rule_set_match.go`, `daemon/started_service.proto`.

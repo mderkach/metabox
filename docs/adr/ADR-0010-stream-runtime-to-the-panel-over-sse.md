@@ -4,6 +4,7 @@
 - Date: 2026-09-11
 - Deciders: repository owner
 - Superseded by (as to no polling without a reader): [ADR-0015](./ADR-0015-keep-traffic-history-in-the-daemon.md) for the `/traffic` accounting, [ADR-0029](./ADR-0029-count-rule-hits-in-the-daemon-from-connection-snapshots.md) for the `/connections` rule hit counter
+- Superseded by (as to the set of stream topics: `system` is the fifth, after `traffic`, `memory`, `connections`, `service`): [ADR-0014](./ADR-0014-read-device-metrics-and-identify-the-running-singbox.md)
 
 ## Context and problem statement
 
@@ -110,6 +111,6 @@ Rollback: remove `/api/events` and the stream package. The panel stays on the pa
 
 - [ADR-0006](./ADR-0006-read-runtime-from-clash-api-and-optional-grpc.md): runtime sources and the shape requirement;
 - [ADR-0009](./ADR-0009-read-service-state-from-procd.md): the service state that goes into the `service` topic;
-- [PRD](../PRD.md): AC-10…AC-12, AC-30, NFR-1, NFR-2;
+- [PRD](../PRD.md): AC-30; [`overview`](../../openspec/specs/overview/spec.md): AC-10; [`proxies`](../../openspec/specs/proxies/spec.md): AC-11; [`connections`](../../openspec/specs/connections/spec.md): AC-12; [`non-functional`](../../openspec/specs/non-functional/spec.md): NFR-1, NFR-2;
 - [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md): the ban on background polling without a consumer;
 - [HTTPAPI](../../apps/metaboxd/docs/guides/HTTPAPI.md): why `WriteTimeout` is not set globally.

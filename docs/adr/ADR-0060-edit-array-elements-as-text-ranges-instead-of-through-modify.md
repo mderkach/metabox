@@ -72,7 +72,7 @@ Not applicable for data: the file format does not change, only which bytes an ed
 
 ## Links
 
-- [PRD](../PRD.md): AC-2, AC-3;
+- [`config-editor`](../../openspec/specs/config-editor/spec.md): AC-2, AC-3;
 - [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md): editing the config text in place;
 - `apps/web/src/entities/Config/model/Config.array.ts`, `apps/web/src/entities/Config/model/Config.model.ts`;
 - [microsoft/node-jsonc-parser](https://github.com/microsoft/node-jsonc-parser): `parseTree`, `createScanner`, `applyEdits`.

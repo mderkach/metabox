@@ -66,5 +66,5 @@ Not applicable: the decision has been in effect since the start of the project a
 
 ## Links
 
-- [`../PRD.md`](../PRD.md): AC-28, risk R-2, milestone M4, section A.9 (superseded by this ADR);
+- [`../PRD.md`](../PRD.md): risk R-2, milestone M4, section A.9 (superseded by this ADR); [`service`](../../openspec/specs/service/spec.md): AC-28;
 - [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md), [ADR-0030](./ADR-0030-read-the-build-composition-from-the-binary-and-the-fork-sources.md), [ADR-0038](./ADR-0038-target-the-sing-box-extended-fork-schema-only.md).

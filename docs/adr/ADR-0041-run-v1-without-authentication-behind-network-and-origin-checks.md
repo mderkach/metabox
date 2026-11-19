@@ -79,7 +79,7 @@ Not applicable: the decision has been in effect since the start of the project a
 
 ## Links
 
-- [`../PRD.md`](../PRD.md): AC-18, AC-19, risk R-1, section 9, the roadmap after v1, section A.6 (superseded by this ADR);
+- [`../PRD.md`](../PRD.md): risk R-1, section 9, the roadmap after v1, section A.6 (superseded by this ADR); [`access`](../../openspec/specs/access/spec.md): AC-18, AC-19;
 - [HTTPAPI](../../apps/metaboxd/docs/guides/HTTPAPI.md): the origin check and listen addresses;
 - [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md), [ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md): the package and the test bench with wired, guest and external networks;
 - [`../../apps/metaboxd/internal/httpapi`](../../apps/metaboxd/internal/httpapi): the implementation.

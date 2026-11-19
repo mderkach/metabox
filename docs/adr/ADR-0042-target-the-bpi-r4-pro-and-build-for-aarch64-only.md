@@ -61,6 +61,6 @@ Not applicable: the decision has been in effect since the start of the project a
 
 ## Links
 
-- [`../PRD.md`](../PRD.md): section 9, NFR-2, NFR-4, NFR-5, risk R-6, the roadmap after v1, section A.7 (superseded by this ADR);
+- [`../PRD.md`](../PRD.md): section 9, risk R-6, the roadmap after v1, section A.7 (superseded by this ADR); [`non-functional`](../../openspec/specs/non-functional/spec.md): NFR-2, NFR-4, NFR-5;
 - [ADR-0011](./ADR-0011-ship-the-daemon-as-an-apk-package.md), [ADR-0023](./ADR-0023-build-the-bench-from-the-device-firmware.md);
 - [`../../Makefile`](../../Makefile): the `daemon-device` target.

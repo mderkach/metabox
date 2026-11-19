@@ -71,7 +71,7 @@ The problem: a per-connection sum over snapshots misses the bytes a connection s
 
 ## Links
 
-- `docs/PRD.md`, AC-35, AC-37, AC-89; issue #209;
+- [`docs/PRD.md`](../PRD.md): AC-89; [`overview`](../../openspec/specs/overview/spec.md): AC-35, AC-37; issue #209;
 - [ADR-0015](./ADR-0015-keep-traffic-history-in-the-daemon.md), [ADR-0029](./ADR-0029-count-rule-hits-in-the-daemon-from-connection-snapshots.md);
 - `apps/metaboxd/internal/history/volume.go`, `apps/metaboxd/internal/route/volume.go`, `apps/metaboxd/internal/device/share.go`;
 - `apps/web/src/pages/Overview/ui/OverviewTraffic.tsx`.

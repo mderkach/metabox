@@ -93,7 +93,7 @@ Not applicable to existing configs: the panel has not created custom lists yet, 
 
 ## Links
 
-- [PRD](../PRD.md): AC-8, OQ-3 and OQ-11 in section 10.1, appendix A.5; [ADR-0039](./ADR-0039-separate-the-ui-from-the-fork-schema-by-an-adapter-layer.md) — the config model.
+- [PRD](../PRD.md): OQ-3 and OQ-11 in section 10.1, appendix A.5; [`rule-sets`](../../openspec/specs/rule-sets/spec.md): AC-8; [ADR-0039](./ADR-0039-separate-the-ui-from-the-fork-schema-by-an-adapter-layer.md) — the config model.
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) — the Apply protocol and directory mode.
 - [ADR-0008](./ADR-0008-store-config-versions-as-numbered-copies.md) — config version history.
 - Fork `sing-box-extended` `v1.14.0-extended-2.7.1`: `option/rule_set.go`, `route/rule/rule_set_local.go`, `cmd/sing-box/cmd_run.go`.

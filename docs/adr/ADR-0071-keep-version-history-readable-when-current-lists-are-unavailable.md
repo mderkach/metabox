@@ -73,7 +73,7 @@ These checks define the required evidence; they do not claim a device run:
 
 ## Links
 
-- [PRD](../PRD.md): AC-15.
+- [`apply`](../../openspec/specs/apply/spec.md): AC-15.
 - [ADR-0036](./ADR-0036-keep-rule-set-snapshots-beside-config-versions.md): snapshot storage, metadata and restore safety.
 - [Versions handler](../../apps/metaboxd/internal/httpapi/httpapi.go), [daemon contract](../../apps/metaboxd/internal/contract/contract.go).
 - Issue: mderkach/metabox#164.

@@ -99,5 +99,5 @@ Not applicable: the decision has been in effect since the start of the project a
 
 ## Links
 
-- [`../PRD.md`](../PRD.md): AC-1…AC-5, UX-3, risk R-3, section 8, section A.2 (superseded by this ADR);
+- [`../PRD.md`](../PRD.md): UX-3, risk R-3, section 8, section A.2 (superseded by this ADR); [`config-editor`](../../openspec/specs/config-editor/spec.md): AC-1…AC-5;
 - [ADR-0001](./ADR-0001-generate-schema-from-fork-registries.md), [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md), [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md), [ADR-0005](./ADR-0005-keep-foreign-api-adapters-in-the-api-segment.md), [ADR-0018](./ADR-0018-generate-strict-schemas-and-mark-what-the-panel-does-not-know.md), [ADR-0035](./ADR-0035-render-node-forms-from-the-generated-schema.md).

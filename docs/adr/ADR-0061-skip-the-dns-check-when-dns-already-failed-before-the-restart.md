@@ -4,6 +4,7 @@
 - Date: 2026-10-24
 - Deciders: repository owner
 - Supersedes (as to the DNS probe of the healthcheck): [ADR-0047](./ADR-0047-set-up-lan-interception-in-the-singbox-init-script.md)
+- Supersedes (as to when `dns_probe_failed` is set): [ADR-0022](./ADR-0022-report-the-apply-failure-step-as-a-code.md)
 
 ## Context and problem statement
 
@@ -61,7 +62,7 @@ No change to the API, the transaction state or the reason codes. Rollback of the
 
 ## Links
 
-- [PRD](../PRD.md): AC-54, NFR-5;
+- [`dataplane`](../../openspec/specs/dataplane/spec.md): AC-54; [`non-functional`](../../openspec/specs/non-functional/spec.md): NFR-5;
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md), [ADR-0022](./ADR-0022-report-the-apply-failure-step-as-a-code.md), [ADR-0047](./ADR-0047-set-up-lan-interception-in-the-singbox-init-script.md);
 - [DeviceIO](../../apps/metaboxd/docs/guides/DeviceIO.md), section "Service through procd";
 - [`cycle.go`](../../apps/metaboxd/internal/apply/cycle.go), [`probe_test.go`](../../apps/metaboxd/internal/apply/probe_test.go);

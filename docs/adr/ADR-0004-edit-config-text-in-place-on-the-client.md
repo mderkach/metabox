@@ -111,7 +111,7 @@ Rollback is to go back to option 4 or 5 at the cost of AC-2; the changes are con
 
 ## Links
 
-- [PRD](../PRD.md): AC-2, AC-3, AC-13, AC-26; [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md): the frontend stack;
+- [`config-editor`](../../openspec/specs/config-editor/spec.md): AC-2, AC-3; [`apply`](../../openspec/specs/apply/spec.md): AC-13; [`json-editing`](../../openspec/specs/json-editing/spec.md): AC-26; [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md): the frontend stack;
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md): config ownership and the Apply protocol;
 - `apps/web/src/entities/Config/api/Config.query.ts`: the current parsing of the response with the schema;
 - `apps/metaboxd/internal/clashapi/splice.go`: targeted byte edit on the daemon side;

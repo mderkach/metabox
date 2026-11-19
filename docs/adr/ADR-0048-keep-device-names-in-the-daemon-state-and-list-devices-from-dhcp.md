@@ -92,7 +92,7 @@ Rollback: delete `<state_dir>/devices.json`; labels return to static leases and 
 
 ## Links
 
-- [PRD](../PRD.md): US-12, AC-58…AC-62, AC-50 and OQ-19 (the `dhcp` UCI is not edited);
+- [PRD](../PRD.md): US-12, OQ-19 (the `dhcp` UCI is not edited); [`devices`](../../openspec/specs/devices/spec.md): AC-58…AC-62; [`dataplane`](../../openspec/specs/dataplane/spec.md): AC-50;
 - [ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md): custom lists in the sing-box config, not in the daemon state;
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md): the Apply protocol, which names bypass;
 - [ADR-0047](./ADR-0047-set-up-lan-interception-in-the-singbox-init-script.md): the dataplane ACL, where the AC-61 toggle writes;

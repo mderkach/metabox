@@ -97,7 +97,7 @@ The endpoint is new, existing ones do not change. The frontend snapshot `RuleSet
 
 ## Links
 
-- [PRD](../PRD.md): AC-7.
+- [`rule-sets`](../../openspec/specs/rule-sets/spec.md): AC-7.
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md) — the router clock and the state directory.
 - [ADR-0012](./ADR-0012-generate-daemon-contract-schemas-from-sources.md) — generating contract schemas.
 - [ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md) — the user's custom lists.

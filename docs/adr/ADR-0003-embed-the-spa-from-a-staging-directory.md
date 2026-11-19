@@ -82,7 +82,7 @@ Rollback means going back to a binary without a UI and costs removing the `inter
 
 ## Links
 
-- [`../PRD.md`](../PRD.md): AC-17;
+- [`service`](../../openspec/specs/service/spec.md): AC-17;
 - [ADR-0040](./ADR-0040-ship-the-panel-as-one-go-daemon-with-an-embedded-spa.md): single delivery artifact, [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md): repository structure;
 - [HTTPAPI](../../apps/metaboxd/docs/guides/HTTPAPI.md): the "Serving the SPA" section: caching rules and behaviour on unknown paths;
 - [`../../Makefile`](../../Makefile): the `web`, `daemon`, `daemon-target` and `clean` targets;

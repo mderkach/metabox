@@ -92,7 +92,7 @@ Rollback: return `z.looseObject` in the generator's `writeObject` and regenerate
 
 ## Links
 
-- [PRD, AC-3 and AC-25](../PRD.md);
+- [`config-editor`](../../openspec/specs/config-editor/spec.md): AC-3; [`json-editing`](../../openspec/specs/json-editing/spec.md): AC-25;
 - [ADR-0001. Generate the schema from the fork registries](./ADR-0001-generate-schema-from-fork-registries.md);
 - [ADR-0004. Edit the config text in place on the client](./ADR-0004-edit-config-text-in-place-on-the-client.md);
 - `tools/schemagen/schema.go`, `apps/web/src/shared/lib/schemaIssues.ts`, `apps/web/src/entities/Config/api/Config.query.ts`.

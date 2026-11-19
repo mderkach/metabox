@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-10-24
 - Deciders: repository owner
+- Supersedes (as to the daemon having no language setting, for the texts the operator sees): [ADR-0019](./ADR-0019-keep-interface-texts-in-the-slice-and-load-them-over-the-network.md)
 
 ## Context and problem statement
 
@@ -110,7 +111,7 @@ A router without `option lang` gets English, the current behaviour. The flag is 
 
 ## Links
 
-- [PRD, AC-43 and AC-75](../PRD.md);
+- [`localization`](../../openspec/specs/localization/spec.md): AC-43, AC-75;
 - [ADR-0019](./ADR-0019-keep-interface-texts-in-the-slice-and-load-them-over-the-network.md): the panel language and the deferred daemon setting;
 - [ADR-0022](./ADR-0022-report-the-apply-failure-step-as-a-code.md): codes stay the contract;
 - [ADR-0058](./ADR-0058-install-on-a-clean-router-with-a-script-on-top-of-the-apk-repository.md): `install.sh`;

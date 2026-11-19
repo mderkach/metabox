@@ -96,7 +96,7 @@ Rollback: return `immer` to the dependencies and to the middleware set, return `
 
 ## Links
 
-- [PRD](../PRD.md), section 9, and [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md) — the frontend stack; NFR-2 — the responsiveness budget;
+- [PRD](../PRD.md), section 9, and [ADR-0045](./ADR-0045-split-document-and-server-state-and-keep-a-folder-per-project.md) — the frontend stack; [`non-functional`](../../openspec/specs/non-functional/spec.md): NFR-2 — the responsiveness budget;
 - [ADR-0004](./ADR-0004-edit-config-text-in-place-on-the-client.md) — the config document is edited as text, not as a tree;
 - [State management](../../apps/web/docs/guides/StateManagement.md);
 - `apps/web/src/shared/lib/state/stateCreator.ts`, `apps/web/src/entities/Connection/model/Connection.store.ts`.

@@ -121,7 +121,7 @@ The contract is extended with two optional fields (`lists_sum`, `current_lists_s
 
 ## Links
 
-- [PRD](../PRD.md): AC-8, AC-15;
+- [`rule-sets`](../../openspec/specs/rule-sets/spec.md): AC-8; [`apply`](../../openspec/specs/apply/spec.md): AC-15;
 - [ADR-0008](./ADR-0008-store-config-versions-as-numbered-copies.md): version history as numbered copies, refined by this decision;
 - [ADR-0033](./ADR-0033-keep-custom-rule-lists-in-the-singbox-config.md): custom lists as files in `rule-sets/` and the requirement to keep them in the history;
 - [ADR-0002](./ADR-0002-apply-protocol-and-config-ownership.md): the Apply protocol;

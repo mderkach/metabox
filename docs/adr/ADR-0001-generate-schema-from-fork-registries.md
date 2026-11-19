@@ -118,7 +118,7 @@ The fork version is bumped by editing the tag in the `replace` block of `tools/s
 
 ## Links
 
-- [`../PRD.md`](../PRD.md): section A.2.1 (superseded by this ADR), criteria AC-1…AC-6, AC-26, AC-28, risk R-2;
+- [`../PRD.md`](../PRD.md): section A.2.1 (superseded by this ADR), AC-6, risk R-2; [`config-editor`](../../openspec/specs/config-editor/spec.md): AC-1…AC-5; [`json-editing`](../../openspec/specs/json-editing/spec.md): AC-26; [`service`](../../openspec/specs/service/spec.md): AC-28;
 - [`../../tools/schemagen`](../../tools/schemagen): implementation;
 - [`../../web/docs/guides/Form&Validation.md`](../../apps/web/docs/guides/Form&Validation.md): rules for handling generated schemas on the frontend;
 - [sing-box-extended](https://github.com/shtorm-7/sing-box-extended): the fork, version `v1.13.18-extended-2.6.5`.
