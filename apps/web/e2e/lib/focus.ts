@@ -2,8 +2,8 @@ import type { Page } from '@playwright/test';
 
 /** What one Tab press focused. */
 export interface FocusStop {
-  /** The element's place in the document: a walk ends when it comes back to one it has passed. */
-  id: number;
+  /** The element's tab stop, stable across re-renders of its neighbours; radios of one group share it. */
+  key: string;
   name: string;
   /** The focused element looks different from the same element without focus. */
   drawn: boolean;
@@ -114,7 +114,43 @@ export const FOCUS_METER = String.raw`
       }))
       .find((layer) => layer.color && layer.spread > 0 && rgba(layer.color)[3] > 0)?.color;
 
+  const keys = new WeakMap();
+  let nextKey = 0;
+  /** A native radio group is one tab stop; any other element is its own, keyed for its lifetime. */
+  const keyOf = (element) => {
+    if (element instanceof HTMLInputElement && element.type === 'radio' && element.name) {
+      return 'radio:' + element.name;
+    }
+
+    if (!keys.has(element)) {
+      keys.set(element, 'element:' + nextKey++);
+    }
+
+    return keys.get(element);
+  };
+  const tabbable = (element) =>
+    element instanceof HTMLElement &&
+    element.tabIndex >= 0 &&
+    element.isConnected &&
+    !element.matches(':disabled, [aria-hidden="true"], [aria-hidden="true"] *, [inert] *') &&
+    element.checkVisibility({ visibilityProperty: true });
+  let expected = new Map();
+
   window.focusMeter = {
+    /** Remembers the tab stops on the screen now: a walk is complete when it has visited each of them. */
+    snapshotTabStops() {
+      expected = new Map([...document.querySelectorAll('*')].filter(tabbable).map((element) => [keyOf(element), element]));
+
+      return expected.size;
+    },
+
+    /** The remembered tab stops a walk has not visited, of those still on the screen and still tabbable. */
+    missedTabStops(visited) {
+      const seen = new Set(visited);
+
+      return [...expected].filter(([key, element]) => !seen.has(key) && tabbable(element)).map(([, element]) => name(element));
+    },
+
     /** The element in focus: whether it looks different from itself blurred, and the contrast of its ring. */
     describeFocus() {
       const element = document.activeElement;
@@ -128,14 +164,13 @@ export const FOCUS_METER = String.raw`
       const outlined = focused.outlineStyle !== 'none' && Number.parseFloat(focused.outlineWidth) > 0;
       const mark = outlined ? focused.outlineColor : ringColor(focused);
       const ringContrast = mark ? contrast(mark, element.parentElement) : null;
-      const index = [...document.querySelectorAll('*')].indexOf(element);
 
       element.blur();
       const plain = getComputedStyle(element);
       const drawn = LOOK.some((key, position) => plain[key] !== look[position]);
       element.focus({ focusVisible: true });
 
-      return { id: index, name: name(element), drawn, ringContrast };
+      return { key: keyOf(element), name: name(element), drawn, ringContrast };
     },
 
     /** Controls a user can operate that Tab cannot reach: not tabbable and not in a roving group. */
@@ -173,6 +208,16 @@ export const FOCUS_METER = String.raw`
 
 export async function describeFocus(page: Page) {
   return page.evaluate<FocusStop | null>('window.focusMeter.describeFocus()');
+}
+
+/** Remembers the tab stops on the screen and returns their number. */
+export async function snapshotTabStops(page: Page) {
+  return page.evaluate<number>('window.focusMeter.snapshotTabStops()');
+}
+
+/** Names the remembered tab stops a walk did not visit. */
+export async function missedTabStops(page: Page, visited: string[]) {
+  return page.evaluate<string[]>(`window.focusMeter.missedTabStops(${JSON.stringify(visited)})`);
 }
 
 export async function untabbableControls(page: Page) {
