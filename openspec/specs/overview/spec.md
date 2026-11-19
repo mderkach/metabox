@@ -8,7 +8,7 @@ The Overview screen: live traffic, the summary of connections, device readings a
 
 ### Requirement: AC-10 Overview shows live traffic and a summary of the connection snapshot
 
-Overview SHALL show up/down traffic in real time, counters, memory and service state. It also shows a summary of the live connection snapshot: rule action, network type, top proxy nodes and LAN devices, number of opened connections per minute and latency of the nodes selected by groups. The summary is computed by the panel from the snapshot and marked as computed (UX-8); the summary has no history of its own — it describes the snapshot, not a period. Traffic and board readings history — AC-37.
+Overview SHALL show up/down traffic in real time, counters, memory and service state. It also shows a summary of the live connection snapshot: rule action, network type, top proxy nodes and LAN devices, number of opened connections per minute and latency of the nodes selected by groups. The summary is computed by the panel from the snapshot and marked as computed (UX-8); the summary has no history of its own — it describes the snapshot, not a period. Without live connections the summary cards say there are none, and without groups with a selected node the latency card says so. Traffic and board readings history — AC-37.
 
 #### Scenario: Speed comes from the stream
 
@@ -39,6 +39,12 @@ Overview SHALL show up/down traffic in real time, counters, memory and service s
 - **GIVEN** groups with selected nodes
 - **WHEN** the overview opens
 - **THEN** the summary shows the latency of each selected node
+
+#### Scenario: The summary without data
+
+- **GIVEN** no live connections and no group with a selected node
+- **WHEN** the overview opens
+- **THEN** the summary cards say there are no live connections and the latency card says there is no group with a selected node
 
 ### Requirement: AC-35 Overview shows device readings
 
