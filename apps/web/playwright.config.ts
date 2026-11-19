@@ -3,6 +3,8 @@ import { defineConfig, devices } from '@playwright/test';
 const CI = process.env.CI !== undefined;
 // `METABOX_E2E_STAND=live` points the panel at the bench daemon from `METABOX_API_TARGET` instead of the mocks.
 const LIVE = process.env.METABOX_E2E_STAND === 'live';
+// `METABOX_E2E_STAND=load` is the mock stand with the production build of React, for timing the panel.
+const LOAD = process.env.METABOX_E2E_STAND === 'load';
 
 // A port of its own, so a dev server already running on the default one is never taken for the stand.
 const PORT = 5174;
@@ -13,7 +15,8 @@ export default defineConfig({
   testMatch: '**/*.e2e.test.ts',
   // The daemon state is shared: scenarios on it must not apply edits at the same time.
   fullyParallel: !LIVE,
-  workers: LIVE ? 1 : undefined,
+  // A timed scenario does not share the CPU with another one.
+  workers: LIVE || LOAD ? 1 : undefined,
   forbidOnly: CI,
   // The retry is there for its trace: a test that passes only on it still fails the run.
   retries: CI ? 1 : 0,
@@ -35,7 +38,8 @@ export default defineConfig({
   webServer: {
     command: `vite --port ${PORT} --strictPort`,
     url: BASE_URL,
-    env: LIVE ? {} : { METABOX_MOCK: 'all' },
-    reuseExistingServer: !CI,
+    env: LIVE ? {} : { METABOX_MOCK: 'all', ...(LOAD ? { METABOX_REACT: 'production' } : {}) },
+    // A running dev server has the development build of React and would time the wrong panel.
+    reuseExistingServer: !CI && !LOAD,
   },
 });

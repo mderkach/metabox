@@ -8,6 +8,14 @@ import { worker } from './browser';
  */
 const APP_ENTRY = '/src/app/main.tsx';
 
+const load = window.__METABOX_CONNECTION_LOAD__;
+
+if (load !== undefined) {
+  const { installConnectionLoad } = await import('./connectionLoad');
+
+  installConnectionLoad(load);
+}
+
 await worker.start({
   onUnhandledRequest: 'warn',
   serviceWorker: { url: '/mockServiceWorker.js' },

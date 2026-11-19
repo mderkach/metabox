@@ -49,9 +49,10 @@ The stand runs in English (`locale: 'en-US'`). A panel text is taken by its dict
 
 ## Stands and tags
 
-Each scenario carries the tag of every stand it holds on: `E2E_TAG.Mock` for the mock stand (`METABOX_MOCK=all`), `E2E_TAG.Live` for the CI bench daemon. A run picks its stand with `--grep` on the command line, not with `grep` in the config; a filter that matches no scenario fails the run.
+Each scenario carries the tag of every stand it holds on: `E2E_TAG.Mock` for the mock stand (`METABOX_MOCK=all`), `E2E_TAG.Live` for the CI bench daemon, `E2E_TAG.Load` for the load stand. A run picks its stand with `--grep` on the command line, not with `grep` in the config; a filter that matches no scenario fails the run.
 
 - `METABOX_E2E_STAND=live` runs the stand without mocks, proxying `/api` to `METABOX_API_TARGET`, with one worker: the daemon state is shared. CI runs it in the `integration` job against the bench daemon.
+- `METABOX_E2E_STAND=load` is the mock stand with the production build of React (`METABOX_REACT=production`) and one worker, for scenarios that time the main thread: the development build renders several times slower. It never reuses a running dev server. The `connections-load` workflow runs it nightly and by hand; it blocks no merge.
 - The mock stand keeps its state in each browser context, so scenarios on it are isolated and run in parallel. The dev config handler is static: after Apply is confirmed the mock config reverts, so a scenario on mocks does not check that an edit stayed.
 - A scenario on the live daemon finds its data by name and does not depend on the mock fixture. Data the bench lacks makes a fixture fail with what to fix; the scenario is not skipped, because a skip turns an unchecked flow green.
 
@@ -65,6 +66,7 @@ Each scenario carries the tag of every stand it holds on: `E2E_TAG.Mock` for the
 ```bash
 pnpm --filter web test:e2e                  # all scenarios, the mock stand starts by itself
 pnpm --filter web test:e2e --grep @mock     # the mock stand only, as in CI
+METABOX_E2E_STAND=load pnpm --filter web test:e2e --grep @load   # the load stand
 pnpm --filter web test:e2e --ui             # UI mode
 pnpm --filter web exec playwright show-report
 ```
