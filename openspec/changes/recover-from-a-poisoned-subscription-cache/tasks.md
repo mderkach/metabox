@@ -34,7 +34,7 @@ Each group is one commit topic. Groups 1 and 2 do not depend on each other; grou
 ## 5. Integration
 
 - [ ] 5.1 AC-92: manual on the router, with the owner's go-ahead and the state saved to `.omc/device/` first: a subscription entry with `x_padding_bytes: 0` makes the core fail on restart, the daemon recovers it, interception stays during the recovery. Verified by a manual row in `docs/Verification.md`.
-- [ ] 5.2 AC-91, AC-92, AC-93: if a Russian translation of `openspec/specs/apply` or `openspec/specs/service` exists by then, it gets the new requirements. Verified by manual.
+- [x] 5.2 AC-91, AC-92, AC-93: if a Russian translation of `openspec/specs/apply` or `openspec/specs/service` exists by then, it gets the new requirements. Verified by manual: the repository has no Russian translation of either spec on 2026-11-19.
 
 ## Workflow follow-up
 
