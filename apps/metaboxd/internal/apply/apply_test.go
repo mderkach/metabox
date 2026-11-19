@@ -361,6 +361,10 @@ type fakeService struct {
 	crashAt int
 	// quiet keeps the crash line in the log while starts come up: an older crash.
 	quiet bool
+	// hangAfterCrash makes Crash hang once it has reported a crash, the way a stuck ubus or
+	// logread does.
+	hangAfterCrash bool
+	reported       bool
 }
 
 // relog writes the current crash to the log again, the way a broken core does on a start.
@@ -439,8 +443,12 @@ func (s *fakeService) Halt(context.Context) error {
 	return nil
 }
 
-func (s *fakeService) Start(context.Context) error {
+func (s *fakeService) Start(ctx context.Context) error {
 	s.rec.add("Start")
+
+	if err := s.pass(ctx, "Start"); err != nil {
+		return err
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -464,9 +472,18 @@ func (s *fakeService) CrashMark(context.Context) string {
 	return strconv.Itoa(s.logged)
 }
 
-func (s *fakeService) Crash(_ context.Context, mark string) (string, error) {
+func (s *fakeService) Crash(ctx context.Context, mark string) (string, error) {
 	s.mu.Lock()
+
+	if s.hangAfterCrash && s.reported {
+		s.mu.Unlock()
+		<-ctx.Done()
+
+		return "", ctx.Err()
+	}
+
 	defer s.mu.Unlock()
+	defer func() { s.reported = s.reported || s.crash != "" }()
 
 	if after, err := strconv.Atoi(mark); err == nil && s.crashAt <= after {
 		return "", nil

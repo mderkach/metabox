@@ -670,3 +670,116 @@ func TestSettleHoldsTheApplyBeforeTheJournalIsRead(t *testing.T) {
 	close(release)
 	<-settled
 }
+
+// The start at daemon start takes the apply: an Apply right after boot must not run its
+// restart and health check beside it.
+func TestRecoverAtStartStartsUnderTheApply(t *testing.T) {
+	h := newCacheHarness(t, cycleTimeout)
+	h.service.mu.Lock()
+	h.service.halted = true
+	h.service.mu.Unlock()
+
+	started, release := h.service.hold("Start")
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		h.manager.RecoverAtStart(t.Context())
+	}()
+
+	<-started
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
+		t.Errorf("apply during the start at daemon start: %v, want ErrBusy", err)
+	}
+
+	close(release)
+	<-done
+}
+
+// A rollback restarts the core itself: a crash kept from its window must not be taken up
+// after a later Confirm, when the old line would read as new.
+func TestRollbackForgetsAKeptCrash(t *testing.T) {
+	h := newCacheHarness(t, cycleTimeout)
+
+	if _, err := h.manager.Start(t.Context(), []byte(cachedConfig), apply.Lists{}, "", ""); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	h.waitWindow(t)
+
+	err := h.manager.Watch(t.Context(), func(ctx context.Context) error {
+		h.crash(poisonedLine("sub"))
+
+		return h.service.Restart(ctx)
+	})
+	if err != nil {
+		t.Fatalf("watch: %v", err)
+	}
+
+	// The core comes up on the rollback restart without a repair; the old line stays.
+	h.service.mu.Lock()
+	h.service.quiet = true
+	h.service.mu.Unlock()
+	h.health.silentWhile = nil
+	h.clock.fire()
+	h.waitRolledBack(t)
+
+	tx, err := h.manager.Start(t.Context(), []byte(cachedConfig), apply.Lists{}, "", "")
+	if err != nil {
+		t.Fatalf("second apply: %v", err)
+	}
+	h.waitWindow(t)
+	h.health.silentWhile = startsSlowly()
+
+	if _, err := h.manager.Confirm(t.Context(), tx.ID); err != nil {
+		t.Fatalf("confirm: %v", err)
+	}
+
+	// Longer than the core stays silent: a kept crash would be found and dropped by then.
+	time.Sleep(200 * time.Millisecond)
+	h.manager.Close()
+
+	if got := h.cache.dropped(); len(got) != 0 {
+		t.Errorf("dropped %v on a crash the rollback had already dealt with", got)
+	}
+}
+
+// waitRolledBack waits for the window rollback to close the transaction.
+func (h *cacheHarness) waitRolledBack(t *testing.T) {
+	t.Helper()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if tx := h.manager.Current(); !tx.Active() {
+			return
+		}
+
+		time.Sleep(time.Millisecond)
+	}
+
+	t.Fatal("the rollback did not finish")
+}
+
+// The panel waits 15 seconds for a request. A stuck read of the crash reason must not keep
+// the answer: the panel reads the reason from the service state anyway.
+func TestWatchDoesNotWaitForTheCrashReason(t *testing.T) {
+	h := newCacheHarness(t, cycleTimeout)
+	h.service.mu.Lock()
+	h.service.hangAfterCrash = true
+	h.service.mu.Unlock()
+
+	begin := time.Now()
+
+	err := h.manager.Watch(t.Context(), func(ctx context.Context) error {
+		h.crash(crashLine)
+
+		return h.service.Restart(ctx)
+	})
+	if err != nil {
+		t.Fatalf("watch: %v", err)
+	}
+
+	if took := time.Since(begin); took > 2*time.Second {
+		t.Errorf("the handler answered after %v", took)
+	}
+}

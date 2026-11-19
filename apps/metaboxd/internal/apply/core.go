@@ -100,6 +100,11 @@ func coreUp(
 	if poisoned, ok := errors.AsType[*poisonedError](upErr); ok {
 		return poisoned
 	}
+	if upErr != nil && anyCrash {
+		// The panel reads the reason from the service state; reading it here could keep
+		// the request past the panel's timeout.
+		return upErr
+	}
 	if upErr != nil {
 		return notUp(ctx, service, from.mark, upErr)
 	}

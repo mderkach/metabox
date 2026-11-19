@@ -425,6 +425,8 @@ func (m *Manager) rollback(ctx context.Context, log *slog.Logger) {
 	ctx, cancel := context.WithTimeout(ctx, m.opts.CycleTimeout)
 	defer cancel()
 
+	m.dropPending()
+
 	restoreErr := m.store.Restore(ctx)
 
 	// There is no config backup: the device had no config before the apply. A restart would return

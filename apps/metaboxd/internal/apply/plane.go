@@ -376,6 +376,8 @@ func (p *Plane) rollback(ctx context.Context, log *slog.Logger) {
 	ctx, cancel := context.WithTimeout(ctx, p.opts.CycleTimeout)
 	defer cancel()
 
+	p.gate.dropPending()
+
 	p.mu.Lock()
 	previous := p.previous
 	p.mu.Unlock()

@@ -245,10 +245,20 @@ func (m *Manager) RecoverAtStart(ctx context.Context) {
 	}
 
 	if from.pid == 0 {
+		// An Apply right after boot writes the config and restarts the core: a start in the
+		// middle of it would race its health check, and the Apply brings the core up anyway.
+		token, err := m.reserveExclusive()
+		if err != nil {
+			return
+		}
+
 		m.log.Warn("sing-box is known to procd but has no process, starting it")
 
-		if err := m.service.Start(ctx); err != nil {
-			m.log.Error("sing-box not started", "err", err)
+		startErr := m.service.Start(ctx)
+		m.unreserve(token)
+
+		if startErr != nil {
+			m.log.Error("sing-box not started", "err", startErr)
 
 			return
 		}
@@ -349,6 +359,14 @@ func (m *Manager) holdForRepair(poisoned *poisonedError, mark string) (uint64, b
 	m.mu.Unlock()
 
 	return 0, false
+}
+
+// dropPending forgets a kept crash: a rollback restarts the core and repairs it itself, and a
+// kept mark older than that restart would take an old crash line for a new one.
+func (m *Manager) dropPending() {
+	m.mu.Lock()
+	m.pending = nil
+	m.mu.Unlock()
 }
 
 // afterConfirm runs the repair kept while the confirmed transaction held the apply, if the
