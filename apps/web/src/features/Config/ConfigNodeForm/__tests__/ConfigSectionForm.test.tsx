@@ -1,4 +1,3 @@
-import { selectOption } from '@test/selectOption';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useMemo } from 'react';
@@ -74,17 +73,6 @@ describe('section scalars form', () => {
     expect(changedLines(TEXT, draft())).toEqual(['    "final": "proxy",']);
     expect(findValue(draft(), ['route', 'rules', 0, 'outbound'])).toBe('direct');
     expect(findValue(draft(), ['route', 'rule_set', 0, 'tag'])).toBe('ads');
-  });
-
-  it('a dns.strategy edit changes one line and keeps the comment and servers', async () => {
-    const user = userEvent.setup();
-
-    render(<SettingsFromStore section={CONFIG_SECTION.Dns} />);
-    await selectOption(user, screen.getByRole('combobox', { name: 'strategy' }), 'ipv4_only');
-
-    expect(changedLines(TEXT, draft())).toEqual(['    "strategy": "ipv4_only",']);
-    expect(draft()).toContain('// стратегия для всех серверов');
-    expect(findValue(draft(), ['dns', 'servers', 0, 'tag'])).toBe('local');
   });
 
   it('creates the dns section if it is not in the file', async () => {

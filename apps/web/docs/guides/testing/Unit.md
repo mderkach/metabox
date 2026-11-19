@@ -26,7 +26,7 @@ import { ROUTE_EXPLANATION_FIXTURE } from '@entities/Route/__tests__/Route.fixtu
 
 For the same reason a test may use the Public API of a neighbouring slice of its own layer: a mock drives a scenario across several slices at once; the apply cycle lives in the daemon mocks together with the config rollback endpoint. For production code this rule still applies.
 
-`src/test` keeps only tooling without domain knowledge: `setup`, render wrappers with `QueryClient` and the router, the virtualizer size override, the runtime stream override (`fakeEventSource`), the chart override (`fakePlot`), the test dictionary, the list selection helper, the end-of-transition helpers for the side panel and the apply bar (`finishSidePanelTransition`, `finishApplyBarTransition`: jsdom does not play transitions), the MSW server instance and the handler assembly point for dev mode. A fixture of a specific API never moves there.
+`src/test` keeps only tooling without domain knowledge: `setup`, render wrappers with `QueryClient` and the router, the virtualizer size override, the runtime stream override (`fakeEventSource`), the chart override (`fakePlot`), the test dictionary, the end-of-transition helpers for the side panel and the apply bar (`finishSidePanelTransition`, `finishApplyBarTransition`: jsdom does not play transitions), the MSW server instance and the handler assembly point for dev mode. A fixture of a specific API never moves there.
 
 - File name: `<TestedFile>.test.<ts|tsx>`, matching `include: ["src/**/*.test.{ts,tsx}"]` from `vite.config.ts`. A browser test is `<TestedFile>.browser.test.tsx`.
 - Test titles are in English and read as a specification: `it("rejects an empty domain")`.
@@ -134,14 +134,14 @@ A set of real `config.json` files is parsed, edited at specific points and compa
 - A tick of the real clock between fake clock steps is an exception, and it is needed: msw responses and React's deferred render run outside the replaced timers, so `advanceTimersByTimeAsync` alone does not reach them. The reference to the real `setTimeout` is captured **before** the replacement (`ConfigApplyBar.test.tsx`), otherwise it turns out fake too.
 - The runtime stream is replaced with `fakeEventSource` from `src/test`: the test sends topic frames and checks the store state, not the handler internals. The handler takes a `StreamSource`, so there is no need to imitate the `EventSource` protocol; jsdom has none at all.
 - Virtualized lists: jsdom does not compute sizes, the container and row heights are supplied by a mock, otherwise zero elements render.
-- Dropdowns: a new select test goes to the browser project (below) and opens and picks with the mouse. The jsdom tests that still have dropdowns go through `selectOption` from `src/test`; do not reproduce it by hand: the Base UI popup has two pitfalls in jsdom, and both are described in the helper's TSDoc.
+- Dropdowns: a test that opens a select and picks an option goes to the browser project (below) and picks with the mouse; the Base UI popup does not behave in jsdom.
 
 ## Browser tests
 
 The `browser` project runs the test file in headless Chromium through `@vitest/browser-playwright`. When a test belongs here rather than in jsdom: [the testing index](./README.md#choosing-a-level).
 
 - The file is `*.browser.test.tsx` next to the jsdom tests of the same slice. It is typed by `tsconfig.browser.json`: the browser mode declares its own matchers, and in one program with `@testing-library/jest-dom` they break the types of jsdom tests.
-- Clicks and typing go through `userEvent` from `vitest/browser`: it drives Playwright, so the click is a real mouse click. `@testing-library/user-event` dispatches synthetic events and is not used here. A dropdown is opened by a click on the trigger and an option is picked by a click on it (`ConfigNodeAddManual.browser.test.tsx`), without `selectOption`.
+- Clicks and typing go through `userEvent` from `vitest/browser`: it drives Playwright, so the click is a real mouse click. `@testing-library/user-event` dispatches synthetic events and is not used here. A dropdown is opened by a click on the trigger and an option is picked by a click on it (`ConfigNodeAddManual.browser.test.tsx`).
 - Queries are the same Testing Library `screen` queries; matchers are the browser mode's own, `@testing-library/jest-dom` is not loaded.
 - `src/test/browserSetup.ts` loads the panel styles and the test dictionary. The jsdom stubs and `msw/node` from `setup.ts` are not there.
 - The network is mocked by the msw service worker (`msw/browser`); the browser project serves its script the same way the dev server does with mocks. `worker` from `@test/browserWorker` starts it for a file and resets its handlers after each test; a test adds handlers with `worker.use(...)`, as jsdom tests do with `server.use(...)`.
