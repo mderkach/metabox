@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"metabox/internal/apply"
+	"metabox/internal/contract"
 )
 
 const benchURL = "http://127.0.0.1:8080"
@@ -75,13 +76,21 @@ func TestApplyHTTPOnEphemeralBench(t *testing.T) {
 	assertBenchStateCleared(t)
 	assertBenchReachable(t)
 
-	t.Log("replay: restarting the daemon restores the durable confirmation window")
+	t.Log("replay: restarting the daemon restores the durable confirmation window and starts the runtime history over")
 	replayed := benchCandidate(t, baseline, "apply-http-replay.metabox.example")
 	tx = startBenchApply(t, replayed)
 	waitBenchPhase(t, tx.ID, apply.PhaseAwaitingConfirm, 45*time.Second)
 	assertBenchJournal(t, tx.ID, apply.PhaseAwaitingConfirm)
+	waitBench(t, 30*time.Second, "runtime history before the restart", func() bool {
+		history := benchHistory(t)
+		return len(history.Points) > 0 && len(history.Device) > 0
+	})
 	benchExec(t, nil, "/etc/init.d/metaboxd", "restart")
 	waitBenchReady(t)
+	// A point closes ten seconds of readings, and the daemon answers its health check well before that.
+	if history := benchHistory(t); len(history.Points) != 0 || len(history.Device) != 0 {
+		t.Fatalf("history after the restart has %d traffic and %d board points, want none", len(history.Points), len(history.Device))
+	}
 	waitBenchPhase(t, tx.ID, apply.PhaseAwaitingConfirm, 20*time.Second)
 	assertBenchConfig(t, replayed)
 	benchRequest(t, http.MethodPost, "/api/apply/"+tx.ID+"/confirm", nil, http.StatusOK)
@@ -121,6 +130,13 @@ func TestApplyHTTPOnEphemeralBench(t *testing.T) {
 	assertBenchRuntime(t, "apply-http-replay.metabox.example")
 	assertBenchReachable(t)
 	t.Log("HTTP Apply, confirmation, timeout, replay, interrupted-write recovery and a restart of a stopped service passed")
+}
+
+func benchHistory(t *testing.T) contract.History {
+	t.Helper()
+	var history contract.History
+	decodeBench(t, benchRequest(t, http.MethodGet, "/api/history", nil, http.StatusOK), &history)
+	return history
 }
 
 func waitBenchService(t *testing.T, status string) {
