@@ -12,6 +12,7 @@ e2e/
 │   ├── pages.ts        # page objects as fixtures
 │   └── pageErrors.ts   # fails a test on an uncaught page exception
 ├── lib/
+│   ├── focus.ts        # in-page measures: the focus a Tab press lands on, ring and icon contrast
 │   └── i18n.ts         # translate: panel text by dictionary key
 ├── pages/              # page objects, one class per screen or panel part
 └── *.e2e.test.ts       # scenarios
