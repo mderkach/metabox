@@ -81,7 +81,7 @@ The password is optional. Without `auth.json` or with an empty hash in it, the p
 - A session idle past 24 hours ends when it is next looked at, so an open stream of such a session is not cut by the expiry alone. A stream opened while the panel had no password survives the first password being set.
 - Without HTTPS the password and the cookie travel in clear text inside the LAN.
 - The lockout counts by `RemoteAddr`: behind the dev server proxy all clients share one address. In a home LAN one /24 or /64 is the whole segment, so five wrong passwords from any device lock out every client of that segment, the owner included, for 5 minutes; a guest network on its own segment locks only itself. A device with aliases in several networks gets five guesses per network, and ten such networks only slow every login by 2 seconds: a distributed guess loses latency, not attempts, and its rate is bounded by the lockout and the hashing slots alone. A login waiting for a hashing slot is bounded only by its connection: the daemon sets no handler timeout.
-- PBKDF2 at 600 000 iterations takes a noticeable CPU slice on each login and password change; this was not measured on the BPI-R4.
+- PBKDF2 at 600 000 iterations takes a noticeable CPU slice on each login and password change: on the BPI-R4 Pro one hash takes 0.40 s of one core (measured on 2026-11-19 with `crypto/pbkdf2` from Go 1.27.0 in a standalone binary, seven runs between 402 and 410 ms).
 
 ### Neutral or deferred
 

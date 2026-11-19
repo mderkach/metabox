@@ -125,6 +125,7 @@ Backward compatible: MCP is off by default, the panel API and its middleware do 
 - `cd apps/metaboxd && go test ./...`: tests through an SDK client session for every tool; a request without a token or with a wrong one gets 401; with MCP disabled `/mcp` answers as an unknown path; a foreign `Origin` gets 403; a foreign `Host` is rejected; a panel session cookie does not open `/mcp`, and the MCP token does not open `/api/*`; with a read-only token `tools/list` has no tool without `ReadOnlyHint`; a panicking tool returns a tool error and the server keeps answering; a config fragment with a known secret comes back masked.
 - `make lint` and the daemon build for `linux/arm64`: the size of the stripped binary grows by no more than 2.2 MB.
 - Manual: Claude Code connected to `/mcp` with the token on the test bench and on the router lists the phase 1 tools and calls each of them.
+- On the device, measured on 2026-11-19 with the `0.1.0-rc.11` package, which carries the dependency: the installed binary is 14.5 MB, RSS 21–22 MB, peak RSS 30 MB over 25 hours of uptime, 0.85% of one core with no panel open at about 200 live connections. That is within NFR-4 (the daemon resource budget: RSS at most 64 MB, idle CPU at most 1% of one core), with little margin on CPU. No measurement was taken before the dependency arrived, so its own share of these numbers is unknown.
 
 ## Links
 

@@ -64,7 +64,7 @@ Out of scope: an exact count of every connection and keeping the count across da
 ### Negative
 
 - The count is observed, not exact: a connection that opened and closed between two snapshots does not get into it. Short DNS and QUIC connections are undercounted.
-- A permanent idle cost: one `/connections` snapshot per second. With 5000 connections that is parsing a megabyte of JSON per second regardless of whether anyone looks at the panel. There is no measurement on the device.
+- A permanent idle cost: one `/connections` snapshot per second. With 5000 connections that is parsing a megabyte of JSON per second regardless of whether anyone looks at the panel. On the device it is measured only at about 200 connections, see Validation.
 - With the panel open `/connections` is polled by two — the hub and the counter: requests per second double.
 - Rules with identical conditions and action that differ only in fields Clash API does not show merge into one count.
 
@@ -90,7 +90,7 @@ A new endpoint, the contract of existing ones does not change. Rollback: remove 
   - the column and the count window are visible;
   - a process on another config does not hand out the count;
   - a changed rule is marked and gets no count.
-- On the device — measure the daemon RSS and CPU at idle with 5000 connections.
+- On the device, measured on 2026-11-19 with the `0.1.0-rc.11` package, no panel open, 190–262 live connections and about 25 Mbit/s through sing-box: over 6 minutes the daemon used 0.85% of one core (0.51 s of CPU per minute), RSS 21–22 MB, peak RSS 30 MB over 25 hours of uptime. With the panel event stream (`/api/events`) open on the same load: 1.7% of one core. With 5000 connections: not measured.
 
 ## Links
 
