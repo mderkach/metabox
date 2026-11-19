@@ -3,6 +3,7 @@ import { test as base } from '@playwright/test';
 import { ApplyBar } from '../pages/ApplyBar.ts';
 import { ConfigPage } from '../pages/ConfigPage.ts';
 import { ConnectionsPage } from '../pages/ConnectionsPage.ts';
+import { OverviewPage } from '../pages/OverviewPage.ts';
 import { ProxiesPage } from '../pages/ProxiesPage.ts';
 import { SectionPage } from '../pages/SectionPage.ts';
 import { SettingsPage } from '../pages/SettingsPage.ts';
@@ -11,6 +12,7 @@ export const test = base.extend<{
   applyBar: ApplyBar;
   configPage: ConfigPage;
   connectionsPage: ConnectionsPage;
+  overviewPage: OverviewPage;
   proxiesPage: ProxiesPage;
   sectionPage: SectionPage;
   settingsPage: SettingsPage;
@@ -23,6 +25,9 @@ export const test = base.extend<{
   },
   connectionsPage: async ({ page }, use) => {
     await use(new ConnectionsPage(page));
+  },
+  overviewPage: async ({ page }, use) => {
+    await use(new OverviewPage(page));
   },
   proxiesPage: async ({ page }, use) => {
     await use(new ProxiesPage(page));

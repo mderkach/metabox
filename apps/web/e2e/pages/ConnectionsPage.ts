@@ -5,7 +5,7 @@ import { translate } from '../lib/i18n.ts';
 const CONNECTIONS = 'pages/Connections';
 const CONNECTION_TABLE = 'widgets/ConnectionTable';
 
-/** The connections screen: its tabs, the search and the sortable column headers. */
+/** The connections screen: its tabs, the search, the sortable column headers and the row actions. */
 export class ConnectionsPage {
   readonly page: Page;
   readonly activeTab: Locator;
@@ -28,5 +28,10 @@ export class ConnectionsPage {
     return this.page
       .getByRole('columnheader')
       .getByRole('button', { name: translate(CONNECTION_TABLE, column), exact: true });
+  }
+
+  /** A connection is found by its address through the button that explains its route. */
+  explainButton(host: string): Locator {
+    return this.page.getByRole('button', { name: translate(CONNECTION_TABLE, 'row.explain', { host }) });
   }
 }
