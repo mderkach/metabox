@@ -209,6 +209,12 @@ func TestPlaneReplayConfirmsRestoredWindow(t *testing.T) {
 		t.Errorf("phase %q, expected confirmation", confirmed.Phase)
 	}
 
+	// Before Close: the window goroutine also releases the apply on its exit, and
+	// only Confirm itself must be what frees it here.
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
+		t.Errorf("config apply right after the restored dataplane window was confirmed: %v", err)
+	}
+
 	h.plane.Close()
 
 	if _, restored := h.editor.counts(); restored != 0 {
@@ -217,8 +223,47 @@ func TestPlaneReplayConfirmsRestoredWindow(t *testing.T) {
 	if h.pstore.saved() != nil {
 		t.Error("state of the confirmed change stayed on disk")
 	}
+}
+
+// Both journals carry a live window at start: a failed config rollback keeps its state, and
+// a dataplane change could follow it. Confirming the config window must not release the
+// apply while the dataplane window still holds it.
+func TestConfirmLeavesApplyHeldByOtherWindow(t *testing.T) {
+	h := newPlaneHarness(t, nil, validConfig, slog.New(slog.DiscardHandler))
+	t.Cleanup(h.plane.Close)
+	h.store.mu.Lock()
+	h.store.sum = "сумма-из-состояния"
+	h.store.mu.Unlock()
+	seedState(t, h.harness, apply.Transaction{ID: "конфиг", Phase: apply.PhaseAwaitingConfirm, Window: 30 * time.Second, Sum: "сумма-из-состояния"})
+	h.editor.section = changedSection()
+	seedPlaneState(t, h, apply.Transaction{ID: "плоскость", Phase: apply.PhaseAwaitingConfirm, Window: 30 * time.Second}, previousSection())
+
+	if err := h.manager.Replay(t.Context()); err != nil {
+		t.Fatalf("config replay: %v", err)
+	}
+	if err := h.plane.Replay(t.Context()); err != nil {
+		t.Fatalf("dataplane replay: %v", err)
+	}
+	h.waitWindow(t)
+	h.waitWindow(t)
+
+	if _, err := h.manager.Confirm(t.Context(), "конфиг"); err != nil {
+		t.Fatalf("confirm of the config window: %v", err)
+	}
+
+	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); !errors.Is(err, apply.ErrBusy) {
+		t.Errorf("config apply inside the open dataplane window: got %v, expected ErrBusy", err)
+	}
+	if _, err := h.plane.Start(t.Context(), aclChange(), "", admin); !errors.Is(err, apply.ErrBusy) {
+		t.Errorf("dataplane change inside the open dataplane window: got %v, expected ErrBusy", err)
+	}
+
+	if _, err := h.plane.Confirm(t.Context(), "плоскость"); err != nil {
+		t.Fatalf("confirm of the dataplane window: %v", err)
+	}
+
 	if _, err := h.manager.Start(t.Context(), []byte(validConfig), apply.Lists{}, "", ""); err != nil {
-		t.Errorf("config apply after the restored dataplane window was confirmed: %v", err)
+		t.Errorf("config apply after both windows were confirmed: %v", err)
 	}
 }
 
