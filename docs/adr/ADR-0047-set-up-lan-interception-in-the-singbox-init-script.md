@@ -8,7 +8,7 @@
 
 ## Context and problem statement
 
-On the router, routing is owned by another package: its service runs sing-box and sets up nft rules, `ip rule` and the dnsmasq upstream. US-11 of the [PRD](../PRD.md) requires metabox to own interception, DNS and the sing-box service itself, rather than keep a second package next to it that competes for the same nft and dnsmasq rules. The dataplane requirements are AC-48…AC-57 of the "Dataplane" section: the `redirect_tproxy` mode, the `all`/`listed` ACL by IP and MAC, the dnsmasq upstream as a conf-dir fragment without editing the `dhcp` UCI (OQ-19), fail-closed (OQ-16), coexistence with other daemons that mark router traffic.
+On the router, routing is owned by another package: its service runs sing-box and sets up nft rules, `ip rule` and the dnsmasq upstream. US-11 of the [PRD](../PRD.md) requires metabox to own interception, DNS and the sing-box service itself, rather than keep a second package next to it that competes for the same nft and dnsmasq rules. The dataplane requirements are AC-48…AC-57 of the [`dataplane`](../../openspec/specs/dataplane/spec.md) and [`service`](../../openspec/specs/service/spec.md) specs: the `redirect_tproxy` mode, the `all`/`listed` ACL by IP and MAC, the dnsmasq upstream as a conf-dir fragment without editing the `dhcp` UCI (OQ-19), fail-closed (OQ-16), coexistence with other daemons that mark router traffic.
 
 The open question of this decision is who sets up the dataplane on the device and how. Constraints already set by the code and other decisions:
 

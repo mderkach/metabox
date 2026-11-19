@@ -8,7 +8,7 @@
 
 ## Context and problem statement
 
-The Apply healthcheck ([ADR-0047](./ADR-0047-set-up-lan-interception-in-the-singbox-init-script.md), "Daemon") sends a DNS probe to the candidate's dns-in after the restart and rolls the config back with `dns_probe_failed` when no answer with an address comes (AC-54 of the [PRD](../PRD.md)).
+The Apply healthcheck ([ADR-0047](./ADR-0047-set-up-lan-interception-in-the-singbox-init-script.md), "Daemon") sends a DNS probe to the candidate's dns-in after the restart and rolls the config back with `dns_probe_failed` when no answer with an address comes (AC-54 of the [`dataplane`](../../openspec/specs/dataplane/spec.md) spec).
 
 The probe cannot tell a DNS section broken by the edit from an upstream that is down for both configs. When every provider node is dead and the uplink is alive, a dns-in whose upstream goes through those nodes (a `detour` to a proxy outbound, DoH or DoT routed through one) answers nothing: the fork writes no response when the exchange fails. `TestAllNodesDeadRollsBackOnDNSProbe` recorded the result: the edit is rejected with a reason that blames the new config, the service restarts twice, and the restored config fails the same way (issue [#79](https://github.com/mderkach/metabox/issues/79)).
 

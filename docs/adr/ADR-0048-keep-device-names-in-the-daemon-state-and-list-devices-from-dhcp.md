@@ -6,7 +6,7 @@
 
 ## Context and problem statement
 
-US-12 of the [PRD](../PRD.md): see network devices by names from DHCP or set by the owner, and pick them in rules instead of IPs. The requirements are in the "Devices" section: AC-58 (a list from dnsmasq leases and static entries), AC-59 (a custom name by MAC survives a daemon restart, label priority), AC-60 (one label across the whole panel), AC-62 (a rule condition by device is written as `source_ip_cidr`).
+US-12 of the [PRD](../PRD.md): see network devices by names from DHCP or set by the owner, and pick them in rules instead of IPs. The requirements are in the [`devices`](../../openspec/specs/devices/spec.md) spec: AC-58 (a list from dnsmasq leases and static entries), AC-59 (a custom name by MAC survives a daemon restart, label priority), AC-60 (one label across the whole panel), AC-62 (a rule condition by device is written as `source_ip_cidr`).
 
 What the device and the code provide:
 

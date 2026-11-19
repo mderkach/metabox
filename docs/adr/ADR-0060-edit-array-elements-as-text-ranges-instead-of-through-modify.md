@@ -14,7 +14,7 @@
 - in a list with a comma before the closing bracket, removing a rule expands the next one: rules 0, 1, 3 and 4 of `handwritten.jsonc` give two to five new lines each;
 - a move inserts the value, not the text: a one-line rule becomes multi-line, and comments inside and above it are lost.
 
-AC-2 of the [PRD](../PRD.md) requires the diff after an edit to contain only the edited node. In scope: insertion, removal and moving of array elements in `apps/web/src/entities/Config/model`. Out of scope: object members, field writes (`setValue`), the apply protocol.
+AC-2 of the [`config-editor`](../../openspec/specs/config-editor/spec.md) spec requires the diff after an edit to contain only the edited node. In scope: insertion, removal and moving of array elements in `apps/web/src/entities/Config/model`. Out of scope: object members, field writes (`setValue`), the apply protocol.
 
 ## Decision drivers
 

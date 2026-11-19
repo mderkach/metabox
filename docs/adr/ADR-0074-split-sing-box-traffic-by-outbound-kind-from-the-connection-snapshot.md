@@ -6,7 +6,7 @@
 
 ## Context and problem statement
 
-AC-89 requires the overview to split the traffic that passed through sing-box into "through a proxy", "direct" and "rejected", and to count the channel share over the proxied part only. The daemon accumulates the split together with the AC-37 history ([ADR-0015](./ADR-0015-keep-traffic-history-in-the-daemon.md)).
+AC-89, a proposal in [`traffic-split-by-outbound`](../../openspec/changes/traffic-split-by-outbound/proposal.md), requires the overview to split the traffic that passed through sing-box into "through a proxy", "direct" and "rejected", and to count the channel share over the proxied part only. The daemon accumulates the split together with the AC-37 history ([ADR-0015](./ADR-0015-keep-traffic-history-in-the-daemon.md)).
 
 Facts from the code and the fork:
 

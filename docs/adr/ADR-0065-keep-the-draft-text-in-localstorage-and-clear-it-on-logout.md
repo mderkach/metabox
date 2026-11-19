@@ -6,7 +6,7 @@
 
 ## Context and problem statement
 
-[ADR-0043](./ADR-0043-treat-manual-json-as-a-feature-and-split-save-from-apply.md) and AC-70 of [`../PRD.md`](../PRD.md) require the config draft to survive a page reload. The panel keeps it in `localStorage` under `metabox.config.draft`. Until this decision the record held `{ base, draft, lists }`, where `base` was the full config text the draft was made from and `draft` the full edited text: two copies of a config with node UUIDs, passwords and Reality private keys, in clear text, surviving logout and the browser being closed.
+[ADR-0043](./ADR-0043-treat-manual-json-as-a-feature-and-split-save-from-apply.md) and AC-70 of the [`json-editing`](../../openspec/specs/json-editing/spec.md) spec require the config draft to survive a page reload. The panel keeps it in `localStorage` under `metabox.config.draft`. Until this decision the record held `{ base, draft, lists }`, where `base` was the full config text the draft was made from and `draft` the full edited text: two copies of a config with node UUIDs, passwords and Reality private keys, in clear text, surviving logout and the browser being closed.
 
 [ADR-0052](./ADR-0052-protect-the-panel-with-an-optional-password-and-a-cookie-session.md) refused to keep the session token in `localStorage` because any script on the page can read it. The config is worth more than the token. At the same time logout (`features/Auth/AuthLogout`) only dropped the Query cache: the document store and the stored record stayed behind the login screen.
 

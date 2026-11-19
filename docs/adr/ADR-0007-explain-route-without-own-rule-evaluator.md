@@ -6,7 +6,7 @@
 
 ## Context and problem statement
 
-US-2 requires showing, for a specific connection, which rule fired and through which proxy chain it went; SM-2 gives two minutes for this without reading the config and logs over SSH. AC-12 requires the same from the Connections screen. Why this is what sets the product apart is stated in the PRD, section 1.3.
+US-2 requires showing, for a specific connection, which rule fired and through which proxy chain it went; SM-2 gives two minutes for this without reading the config and logs over SSH. AC-12 of the [`connections`](../../openspec/specs/connections/spec.md) spec requires the same from the Connections screen. Why this is what sets the product apart is stated in the PRD, section 1.3.
 
 The straightforward path to such an explanation is an evaluator of our own: metabox reads `route.rules`, runs the input through them and tells what matched and why. This path has a cost that must be named before choosing. The sing-box rule language covers domains, suffixes, keywords, regex, CIDR, ports and ranges, protocols, processes, neighbours, clash mode, rule sets, logical combinations with `&&`, `||` and inversion, all with their own semantics in a specific fork version. Repeating these semantics in TypeScript or Go violates UX-4 directly: the metabox schema becomes the arbiter instead of the binary, and it creates exactly the drift R-2 guards against.
 

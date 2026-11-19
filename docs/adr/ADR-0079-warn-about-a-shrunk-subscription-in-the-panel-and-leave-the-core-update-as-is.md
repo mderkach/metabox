@@ -6,7 +6,7 @@
 
 ## Context and problem statement
 
-Subscriptions are the fork's `providers` with `type: remote`; the core fetches and replaces their node set itself, on `update_interval` and on a manual update from the panel through the Clash API (AC-64 in [`docs/PRD.md`](../PRD.md)). Issue #254 asked what the core does when a provider briefly serves a stub list.
+Subscriptions are the fork's `providers` with `type: remote`; the core fetches and replaces their node set itself, on `update_interval` and on a manual update from the panel through the Clash API (AC-64 in the [`proxies`](../../openspec/specs/proxies/spec.md) spec). Issue #254 asked what the core does when a provider briefly serves a stub list.
 
 Confirmed on the pinned fork `sing-box-extended v1.14.3-extended-2.7.3` (`provider/remote/provider.go`, `fetch` and `updateProviderFromOptions`) and pinned by a test against it:
 

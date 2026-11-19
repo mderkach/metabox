@@ -28,7 +28,7 @@ In scope: what service the daemon manages and what goes away with the support fo
 
 ## Decision drivers
 
-1. **One supported setup**: the PRD describes only the package service (AC-48); code paths outside it are untested on the device.
+1. **One supported setup**: the [`service`](../../openspec/specs/service/spec.md) spec describes only the package service (AC-48); code paths outside it are untested on the device.
 2. **Apply safety for metabox-singbox stays identical**: the check command, the path base and the healthcheck do not change for it.
 3. **Cost of the contract**: every error code is a panel text in two languages and a compile-time table entry.
 4. **Startup compatibility**: an existing `/etc/config/metabox` with the old options must not stop the daemon.
