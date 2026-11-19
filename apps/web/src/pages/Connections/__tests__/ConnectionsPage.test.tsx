@@ -215,6 +215,48 @@ describe('connections screen', () => {
     expect(screen.getByRole('button', { name: 'Действие: напрямую' })).toBeInTheDocument();
   });
 
+  it('exports only the filtered rows, from the panel data without a request', async () => {
+    const user = userEvent.setup();
+    const files: Blob[] = [];
+    const requests = vi.fn<() => void>();
+
+    vi.spyOn(URL, 'createObjectURL').mockImplementation((file) => {
+      if (file instanceof Blob) {
+        files.push(file);
+      }
+
+      return 'blob:export';
+    });
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+    ConnectionStore.getState().apply(makeConnectionsSnapshot(8));
+    renderScreen();
+
+    const kinds = await openFacet(user, /^Действие$/);
+
+    await user.click(within(kinds).getByRole('option', { name: /напрямую/ }));
+    await waitFor(() => {
+      expect(screen.getByText('Показано 4 из 8')).toHaveAttribute('role', 'status');
+    });
+    await user.keyboard('{Escape}');
+
+    server.events.on('request:start', requests);
+
+    await user.click(screen.getByRole('button', { name: 'Выгрузить CSV' }));
+    await user.click(screen.getByRole('button', { name: 'Выгрузить JSON' }));
+
+    server.events.removeListener('request:start', requests);
+
+    expect(files).toHaveLength(2);
+
+    const [csv, json] = await Promise.all(files.map(async (file) => file.text()));
+
+    expect(csv.trim().split('\n')).toHaveLength(1 + 4);
+    expect(JSON.parse(json)).toHaveLength(4);
+    expect(requests).not.toHaveBeenCalled();
+  });
+
   it('several values of one facet are added, not narrowed', async () => {
     const user = userEvent.setup();
 

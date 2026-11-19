@@ -81,6 +81,42 @@ describe('ConfigRawEditor', () => {
     expect(input).toHaveValue('{ "log": ');
   });
 
+  it('the next and previous buttons move the selection from match to match and wrap around', async () => {
+    const user = userEvent.setup();
+    const text = '{\n  "tag": "a",\n  "tag": "b",\n  "tag": "c"\n}';
+    const first = text.indexOf('"tag"');
+    const second = text.indexOf('"tag"', first + 1);
+    const third = text.indexOf('"tag"', second + 1);
+
+    render(<ConfigRawEditor text={text} onChange={vi.fn<(next: string) => void>()} issues={[]} />);
+
+    const input = screen.getByLabelText('Конфиг sing-box текстом');
+    const next = async () => {
+      await user.click(screen.getByRole('button', { name: 'Следующее совпадение' }));
+    };
+    const previous = async () => {
+      await user.click(screen.getByRole('button', { name: 'Предыдущее совпадение' }));
+    };
+
+    await user.type(screen.getByLabelText('Поиск по тексту конфига'), '"tag"');
+    await next();
+
+    expect(screen.getByRole('status')).toHaveTextContent('2 из 3');
+    expect(input).toHaveProperty('selectionStart', second);
+    expect(input).toHaveProperty('selectionEnd', second + '"tag"'.length);
+
+    await previous();
+    await previous();
+
+    expect(screen.getByRole('status')).toHaveTextContent('3 из 3');
+    expect(input).toHaveProperty('selectionStart', third);
+
+    await next();
+
+    expect(input).toHaveProperty('selectionStart', first);
+    expect(input).toHaveValue(text);
+  });
+
   describe('table of contents', () => {
     const ROUTED =
       '{\n  // логи\n  "log": {},\n  "route": {\n    "rules": [{ "outbound": "direct" }],\n    "final": "direct",\n  },\n}';
