@@ -208,7 +208,7 @@ describe('rules screen', () => {
 
     const panel = await screen.findByRole('complementary');
 
-    expect(within(panel).getByText('панель не знает')).toBeInTheDocument();
+    expect(within(panel).getByText('только текстом')).toBeInTheDocument();
     expect(within(panel).getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-disabled', 'true');
     expect(within(panel).getByRole('textbox', { name: 'Правило 3 текстом' })).toBeInTheDocument();
   });
@@ -276,7 +276,7 @@ describe('rules screen', () => {
       expect(ConfigDocumentState.getState().draft).not.toBeNull();
     });
 
-    expect(within(panel).getByText('Панель не знает часть полей — правило записано как есть')).toBeInTheDocument();
+    expect(within(panel).getByText('Правило записано в черновик как JSON')).toBeInTheDocument();
     const draft: unknown = JSON.parse(ConfigDocumentState.getState().draft ?? '');
 
     expect(findValue(JSON.stringify(draft), ['route', 'rules', 2])).toEqual({

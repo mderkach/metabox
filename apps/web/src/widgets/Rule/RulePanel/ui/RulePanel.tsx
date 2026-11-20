@@ -118,8 +118,12 @@ export function RulePanel({
             </h2>
           )}
           {!creating && title !== number && <p className='text-xs text-muted-foreground'>{number}</p>}
+          {!recognized && (
+            <Badge variant='outline' className='mt-1 h-auto min-h-5 max-w-full whitespace-normal'>
+              {t('rule.uncovered', { ns: 'shared' })}
+            </Badge>
+          )}
         </div>
-        {!recognized && <Badge variant='outline'>{t('rule.uncovered', { ns: 'shared' })}</Badge>}
         {actions !== null && <div className='flex shrink-0 items-center gap-0.5'>{actions}</div>}
         <Button
           variant='outline'

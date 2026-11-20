@@ -42,7 +42,7 @@ describe('RulePanel', () => {
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('tab', { name: 'JSON' })).toHaveAttribute('aria-selected', 'true');
     expect(
-      screen.getByText('Форма не знает действие «resolve» — править правило можно на вкладке JSON.')
+      screen.getByText('Действие «resolve» недоступно в форме. Редактируйте правило на вкладке JSON.')
     ).toBeInTheDocument();
   });
 
@@ -54,6 +54,6 @@ describe('RulePanel', () => {
     );
 
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.queryByText(/Форма не знает действие/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/недоступно в форме/)).not.toBeInTheDocument();
   });
 });

@@ -8,7 +8,7 @@
   "row": {
     "label": "{{title}}, rule {{index}}",
     "unconditional": "no conditions — applies to all traffic",
-    "unknown": "conditions not shown: the panel does not know this rule",
+    "unknown": "conditions not shown",
     "edited": "changed in the draft"
   },
   "group": {

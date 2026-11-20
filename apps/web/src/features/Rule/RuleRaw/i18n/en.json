@@ -2,5 +2,5 @@
   "editor": {
     "label": "Rule {{index}} as text"
   },
-  "unknownNode": "The panel does not know some fields: the rule is written as is"
+  "unknownNode": "Rule written to the draft as JSON"
 }
