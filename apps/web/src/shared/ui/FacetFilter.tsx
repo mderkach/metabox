@@ -23,7 +23,7 @@ export interface FacetText {
 const TOUCH_TARGET = 'max-md:h-11';
 
 const OPTION =
-  'flex cursor-default items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none select-none hover:bg-muted focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 max-md:min-h-11';
+  'flex cursor-default items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none select-none hover:bg-muted focus-visible:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 max-md:min-h-11';
 
 /** Where a key moves focus in the list; `-1` means back to the search. */
 const OPTION_MOVE: Readonly<Partial<Record<string, (index: number, last: number) => number>>> = {

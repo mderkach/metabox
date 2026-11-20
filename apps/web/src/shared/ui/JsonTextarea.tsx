@@ -159,7 +159,7 @@ export function JsonTextarea({
 
   return (
     <div
-      className={cn('flex min-h-0 overflow-hidden focus-within:ring-2 focus-within:ring-ring/50', SURFACE, className)}
+      className={cn('flex min-h-0 overflow-hidden focus-within:ring-3 focus-within:ring-ring/50', SURFACE, className)}
     >
       {!wrap && (
         <div

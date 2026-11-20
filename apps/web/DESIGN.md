@@ -191,7 +191,9 @@ A dark, cold, near-neutral base where color is a vocabulary of packet fates and 
 
 ### Primary
 
-- **Signal Azure** (`primary`): the only accent. Primary buttons, focus rings, the selected-item edge, the active tab underline, the check mark on the chosen proxy node, the caret. In the light theme it becomes `light-primary`.
+- **Signal Azure** (`primary`): the only accent. Primary buttons, the selected-item edge, the active tab underline, the check mark on the chosen proxy node, the caret. In the light theme it becomes `light-primary`.
+
+- **Keyboard focus** (`ring`): a dedicated azure tone per theme. The standard ring is 3px at 50% opacity and must reach 3:1 against its adjacent surface. Forced colors substitute a 2px inset outline in the system highlight color.
 
 ### Secondary: route actions
 
@@ -296,7 +298,7 @@ Quiet and compact; the primary action is rare.
 - **Outline (the default in practice):** translucent white fill (16% white over the surface) with a hairline edge; "Restart", "Check", "Version history".
 - **Destructive outline:** Alarm Coral text and a coral edge at 40%, no fill; "Stop", "Close all connections", "Discard changes". A filled coral button would read as an error message.
 - **Ghost:** no fill until hover.
-- **Hover / Focus:** hover adds a muted fill; focus shows a 3px azure ring at 50%; press nudges down 1px.
+- **Hover / Focus:** hover adds a muted fill; focus shows a 3px ring in the keyboard focus tone; press nudges down 1px.
 
 ### Chips and Badges
 
@@ -315,7 +317,7 @@ Quiet and compact; the primary action is rare.
 ### Inputs / Fields
 
 - **Style:** 32px tall, 14px corners, Field Edge stroke, translucent fill in dark, transparent in light. Search fields carry a leading magnifier and a trailing `/` key hint.
-- **Focus:** azure border and a 3px azure ring at 50%.
+- **Focus:** a border and a 3px ring in the keyboard focus tone (deep blue in the light theme, pale azure in the dark one).
 - **Error / Disabled:** coral border with a coral ring at 20–40%; disabled drops to 50% opacity.
 
 ### Navigation

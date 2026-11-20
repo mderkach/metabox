@@ -20,7 +20,15 @@ const LINK_CLASS =
  * footer — service state, theme and language — as a sheet
  * from the bottom. On a phone there is no room for them next to the sections, and they cannot be lost.
  */
-export function AppSidebarMore({ className, active }: { className: string; active: string | null }) {
+export function AppSidebarMore({
+  className,
+  active,
+  current,
+}: {
+  className: string;
+  active: string | null;
+  current: boolean;
+}) {
   const { t } = useTranslation('widgets/AppSidebar');
   // The sheet is controlled: navigating to a section from it must close it.
   const [open, setOpen] = useState(false);
@@ -32,6 +40,7 @@ export function AppSidebarMore({ className, active }: { className: string; activ
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         className={className}
+        data-current={current ? '' : undefined}
         aria-label={down === null ? undefined : t('more.withStatus', { status: t(SERVICE_LABEL[down]) })}
       >
         <span className='relative'>

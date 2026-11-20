@@ -32,6 +32,7 @@ export function AppSidebarBottomNav() {
   const { t } = useTranslation('widgets/AppSidebar');
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const active = pickActiveNav(pathname, NAV_TARGETS);
+  const moreIsCurrent = MORE_TARGETS.includes(active ?? '');
 
   return (
     <nav
@@ -62,7 +63,8 @@ export function AppSidebarBottomNav() {
         <li className='min-w-11 flex-auto'>
           <AppSidebarMore
             active={active}
-            className={cn(ITEM_CLASS, MORE_TARGETS.includes(active ?? '') ? ACTIVE_CLASS : IDLE_CLASS)}
+            current={moreIsCurrent}
+            className={cn(ITEM_CLASS, moreIsCurrent ? ACTIVE_CLASS : IDLE_CLASS)}
           />
         </li>
       </ul>
