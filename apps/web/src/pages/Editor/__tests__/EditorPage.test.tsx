@@ -75,7 +75,7 @@ describe('rules screen', () => {
       expect(dnsRow).toHaveTextContent('—');
     });
     expect(
-      within(dnsRow).getByRole('button', { name: /^sing-box не считает срабатывания таких правил/ })
+      within(dnsRow).getByRole('button', { name: /^ядро не считает срабатывания таких правил/ })
     ).toBeInTheDocument();
   });
 
@@ -84,7 +84,9 @@ describe('rules screen', () => {
 
     renderWithRouter(EditorPage);
 
-    expect(await screen.findByText('sing-box работает на другой версии конфига — счёт не показан')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Ядро работает с другой версией конфига. Счётчики срабатываний скрыты.')
+    ).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Сработало' })).not.toBeInTheDocument();
   });
 

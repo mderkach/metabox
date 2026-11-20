@@ -10,10 +10,10 @@
     "silent": "not responding"
   },
   "service": {
-    "running": "sing-box is running",
-    "stopped": "sing-box is stopped",
-    "failed": "sing-box crashed",
-    "unknown": "sing-box state is unknown"
+    "running": "core is running",
+    "stopped": "core is stopped",
+    "failed": "core crashed",
+    "unknown": "core status unknown"
   },
   "more": {
     "label": "More",
@@ -26,7 +26,7 @@
     "config": "Config"
   },
   "drift": {
-    "newer": "forms lag behind sing-box",
-    "older": "sing-box is older than the forms"
+    "newer": "forms target an older core",
+    "older": "core is older than the forms"
   }
 }

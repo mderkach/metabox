@@ -75,7 +75,7 @@ func coreUp(
 ) error {
 	data, err := store.Read(ctx)
 	if err != nil {
-		return locale.Errorf("read the config to check sing-box: %w", err)
+		return locale.Errorf("read the configuration to check the routing core: %w", err)
 	}
 
 	settings, settingsErr := clashapi.Read(data)
@@ -183,8 +183,8 @@ func notUp(ctx context.Context, service core, mark string, err error) error {
 
 	reason, crashErr := service.Crash(ctx, mark)
 	if crashErr != nil || reason == "" {
-		return locale.Errorf("sing-box did not start: %w", err)
+		return locale.Errorf("the routing core did not start: %w", err)
 	}
 
-	return locale.Errorf("sing-box did not start: %w. Last error in its log: %s", err, reason)
+	return locale.Errorf("the routing core did not start: %w. Last error in its log: %s", err, reason)
 }

@@ -45,7 +45,7 @@ describe('ConfigRawEditor', () => {
 
     await user.click(screen.getByRole('button', { name: ISSUE_TEXT }));
 
-    const input = screen.getByLabelText('Конфиг sing-box текстом');
+    const input = screen.getByLabelText('Конфиг текстом');
 
     expect(input).toHaveFocus();
     expect(input).toHaveProperty('selectionStart', offset);
@@ -70,7 +70,7 @@ describe('ConfigRawEditor', () => {
 
     renderEditor();
 
-    const input = screen.getByLabelText('Конфиг sing-box текстом');
+    const input = screen.getByLabelText('Конфиг текстом');
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
@@ -90,7 +90,7 @@ describe('ConfigRawEditor', () => {
 
     render(<ConfigRawEditor text={text} onChange={vi.fn<(next: string) => void>()} issues={[]} />);
 
-    const input = screen.getByLabelText('Конфиг sing-box текстом');
+    const input = screen.getByLabelText('Конфиг текстом');
     const next = async () => {
       await user.click(screen.getByRole('button', { name: 'Следующее совпадение' }));
     };
@@ -140,7 +140,7 @@ describe('ConfigRawEditor', () => {
         expect(screen.queryByRole('list', { name: 'Секции конфига' })).not.toBeInTheDocument();
       });
 
-      const input = screen.getByLabelText('Конфиг sing-box текстом');
+      const input = screen.getByLabelText('Конфиг текстом');
 
       expect(input).toHaveFocus();
       expect(input).toHaveProperty('selectionStart', ROUTED.indexOf('"rules"'));
@@ -162,7 +162,7 @@ describe('ConfigRawEditor', () => {
       renderEditor();
 
       expect(screen.getByRole('button', { name: 'Перенос строк' })).toHaveAttribute('aria-pressed', 'false');
-      expect(screen.getByLabelText('Конфиг sing-box текстом')).toHaveAttribute('wrap', 'off');
+      expect(screen.getByLabelText('Конфиг текстом')).toHaveAttribute('wrap', 'off');
     });
 
     it('on a narrow screen is on by default', () => {
@@ -170,7 +170,7 @@ describe('ConfigRawEditor', () => {
       renderEditor();
 
       expect(screen.getByRole('button', { name: 'Перенос строк' })).toHaveAttribute('aria-pressed', 'true');
-      expect(screen.getByLabelText('Конфиг sing-box текстом')).toHaveAttribute('wrap', 'soft');
+      expect(screen.getByLabelText('Конфиг текстом')).toHaveAttribute('wrap', 'soft');
     });
 
     it('the choice survives a page reload', async () => {
@@ -179,20 +179,20 @@ describe('ConfigRawEditor', () => {
 
       await user.click(screen.getByRole('button', { name: 'Перенос строк' }));
 
-      expect(screen.getByLabelText('Конфиг sing-box текстом')).toHaveAttribute('wrap', 'soft');
+      expect(screen.getByLabelText('Конфиг текстом')).toHaveAttribute('wrap', 'soft');
 
       first.unmount();
       renderEditor();
 
       expect(screen.getByRole('button', { name: 'Перенос строк' })).toHaveAttribute('aria-pressed', 'true');
-      expect(screen.getByLabelText('Конфиг sing-box текстом')).toHaveAttribute('wrap', 'soft');
+      expect(screen.getByLabelText('Конфиг текстом')).toHaveAttribute('wrap', 'soft');
     });
 
     it('returned line numbers stand on the field scroll', async () => {
       mockNarrowScreen();
       const user = userEvent.setup();
       renderEditor();
-      const input = screen.getByLabelText('Конфиг sing-box текстом');
+      const input = screen.getByLabelText('Конфиг текстом');
 
       // jsdom does not compute scrolling: the value is set on the field directly, and
       // the write to the number column is caught on the setter.
@@ -223,7 +223,7 @@ describe('ConfigRawEditor', () => {
       mockNarrowScreen();
       renderEditor();
 
-      expect(screen.getByLabelText('Конфиг sing-box текстом')).toHaveAttribute('wrap', 'off');
+      expect(screen.getByLabelText('Конфиг текстом')).toHaveAttribute('wrap', 'off');
     });
   });
 });

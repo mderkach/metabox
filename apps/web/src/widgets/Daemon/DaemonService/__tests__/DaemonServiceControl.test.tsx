@@ -182,7 +182,7 @@ describe('service state', () => {
     expect(called).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: 'Остановить' }));
-    await user.click(screen.getByRole('button', { name: 'Остановить sing-box' }));
+    await user.click(screen.getByRole('button', { name: 'Остановить ядро' }));
 
     await waitFor(() => {
       expect(called).toHaveBeenCalledWith('stop');
@@ -205,7 +205,7 @@ describe('service state', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Перезапустить' }));
 
-    expect(screen.getByRole('alertdialog', { name: 'Перезапустить sing-box?' })).toHaveTextContent(
+    expect(screen.getByRole('alertdialog', { name: 'Перезапустить ядро?' })).toHaveTextContent(
       'соединения всех устройств оборвутся'
     );
 
@@ -214,7 +214,7 @@ describe('service state', () => {
     expect(called).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: 'Перезапустить' }));
-    await user.click(screen.getByRole('button', { name: 'Перезапустить sing-box' }));
+    await user.click(screen.getByRole('button', { name: 'Перезапустить ядро' }));
 
     await waitFor(() => {
       expect(called).toHaveBeenCalledWith('restart');

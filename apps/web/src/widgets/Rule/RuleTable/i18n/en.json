@@ -18,8 +18,8 @@
   },
   "hits": {
     "failed": "Hit count unavailable",
-    "mismatch": "sing-box runs another config version: the count is not shown",
+    "mismatch": "The core runs another config version. Hit counts are hidden.",
     "unobservedCell": "—",
-    "unobserved": "sing-box does not count hits of such rules"
+    "unobserved": "The core does not count hits for these rules"
   }
 }

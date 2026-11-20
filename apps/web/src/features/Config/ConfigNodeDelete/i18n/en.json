@@ -4,7 +4,7 @@
     "title": "Delete “{{name}}”?",
     "description": "The node leaves the draft. It can be brought back only by discarding the whole draft.",
     "referenced": "It is referenced by:",
-    "broken": "These references stay, and sing-box will not accept the config until they are fixed.",
+    "broken": "These references remain in the config. Fix them before applying it.",
     "action": "Delete"
   },
   "reference": {

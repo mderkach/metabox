@@ -10,10 +10,10 @@
     "silent": "не отвечает"
   },
   "service": {
-    "running": "sing-box работает",
-    "stopped": "sing-box остановлен",
-    "failed": "sing-box упал",
-    "unknown": "состояние sing-box неизвестно"
+    "running": "ядро работает",
+    "stopped": "ядро остановлено",
+    "failed": "сбой ядра",
+    "unknown": "состояние ядра неизвестно"
   },
   "more": {
     "label": "Ещё",
@@ -26,7 +26,7 @@
     "config": "Конфиг"
   },
   "drift": {
-    "newer": "формы отстают от sing-box",
-    "older": "sing-box старше форм"
+    "newer": "формы для более старого ядра",
+    "older": "ядро старше форм"
   }
 }

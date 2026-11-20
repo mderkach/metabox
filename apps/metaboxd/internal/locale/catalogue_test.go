@@ -138,11 +138,11 @@ func readFile(t *testing.T, path string) string {
 }
 
 func TestCatalogueHasCLIHelp(t *testing.T) {
-	if got, want := T(Russian, "sing-box config directory"), "каталог конфига sing-box"; got != want {
+	if got, want := T(Russian, "routing core configuration directory"), "каталог конфига ядра маршрутизации"; got != want {
 		t.Errorf("Russian: got %q, want %q", got, want)
 	}
 
-	if got, want := T(English, "sing-box config directory"), "sing-box config directory"; got != want {
+	if got, want := T(English, "routing core configuration directory"), "routing core configuration directory"; got != want {
 		t.Errorf("English: got %q, want %q", got, want)
 	}
 }

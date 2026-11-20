@@ -60,7 +60,7 @@
   "inboundDescription": {
     "tun": "Virtual network interface: takes the traffic of the whole router or its devices",
     "mixed": "One port for SOCKS4, SOCKS5 and HTTP proxy clients",
-    "redirect": "Takes TCP connections the firewall redirects to sing-box",
+    "redirect": "Receives TCP connections that the firewall redirects to the core",
     "tproxy": "Takes TCP and UDP traffic the firewall passes on transparently",
     "anytls": "Server for AnyTLS clients",
     "call": "Server for the tunnel through video calls",
@@ -87,8 +87,8 @@
     "failover": "Receiving end of the failover outbound"
   },
   "unbuilt": {
-    "badge": "not available in this sing-box build",
-    "hint": "sing-box on the device is built without this type ({{tag}}): the node is saved, but the check rejects a config with it"
+    "badge": "unavailable in this core build",
+    "hint": "The core on the router was built without this type ({{tag}}). You can save the node to the draft, but the config check will reject it."
   },
   "submit": "Add",
   "submitLink": "Add from link",

@@ -21,8 +21,8 @@ afterEach(async () => {
 
 describe('failureText', () => {
   it.each([
-    ['ru', 'sing-box не отвечает'],
-    ['en', 'sing-box does not respond'],
+    ['ru', 'ядро не отвечает'],
+    ['en', 'the core does not respond'],
   ])('translates a failure by code instead of taking the daemon message (%s)', async (language, text) => {
     await i18next.changeLanguage(language);
 
@@ -45,7 +45,7 @@ describe('showQueryError', () => {
       failure('runtime_unavailable', 'sing-box runtime unavailable')
     );
 
-    expect(toast.error).toHaveBeenCalledWith('Проверить задержку не удалось: sing-box не отвечает');
+    expect(toast.error).toHaveBeenCalledWith('Проверить задержку не удалось: ядро не отвечает');
   });
 
   it('an unknown code leaves the daemon message as fallback text', () => {

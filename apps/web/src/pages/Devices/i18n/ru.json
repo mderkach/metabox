@@ -6,7 +6,7 @@
     "mac": "MAC",
     "lease": "Аренда",
     "online": "В сети",
-    "route": "Через sing-box"
+    "route": "Через ядро"
   },
   "nameSource": {
     "custom": "имя задано в панели",

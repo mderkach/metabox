@@ -121,7 +121,7 @@ The cost of a mistake is asymmetric: a bad routing edit cuts off access both to 
 
 **metabox** is a web panel for a router that combines two things that today live in separate tools:
 
-1. **graphical creation and editing of the sing-box-extended configuration** — so that working with JSON is a choice, not a necessity;
+1. **graphical creation and editing of the routing core configuration** — so that working with JSON is a choice, not a necessity;
 2. **runtime monitoring and control** of the proxy in the spirit of Clash API dashboards (written independently, not a fork).
 
 It ships as a single Go daemon with an embedded web interface, installed on the router. Today it works with OpenWrt and the sing-box-extended core; other cores and platforms are roadmap items 1 and 10.
@@ -132,11 +132,11 @@ Product formula: **one place where you can see what the router does with traffic
 
 Checked against the projects' READMEs as of 2026-10-13, not verified on a device.
 
-| Project                | What is claimed                                                                                                                                             | How it differs from metabox                                |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| Clash API dashboards   | Clash API dashboard, profile editor with a check before activation                                                                                          | mihomo core, not sing-box                                  |
-| LuCI apps for sing-box | LuCI apps: JSON editing, templates, forms for part of the settings, dashboard; one of them checks and rolls back on profile activation                      | the "connection → rule → config node" chain is not claimed |
-| **metabox**            | **forms built from the sing-box-extended schema for supported nodes, raw JSON on any node, dashboard, rule sets, route explanation from a live connection** | —                                                          |
+| Project                | What is claimed                                                                                                                                              | How it differs from metabox                                  |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| Clash API dashboards   | Clash API dashboard, profile editor with a check before activation                                                                                           | metabox opens the matched config rule from a live connection |
+| LuCI apps for sing-box | LuCI apps: JSON editing, templates, forms for part of the settings, dashboard; one of them checks and rolls back on profile activation                       | the "connection → rule → config node" chain is not claimed   |
+| **metabox**            | **forms built from the core configuration schema for supported nodes, raw JSON on any node, dashboard, rule sets, route explanation from a live connection** | —                                                            |
 
 A form editor is reproducible and is not an advantage by itself. The difference rests on what none of the projects above claims: the "live connection → matched rule → config node" chain and safe application of an edit. How this is built on observable core data — [ADR-0007](./adr/ADR-0007-explain-route-without-own-rule-evaluator.md).
 

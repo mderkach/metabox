@@ -9,7 +9,7 @@
     "next": "Next match"
   },
   "editor": {
-    "label": "sing-box config as text"
+    "label": "Config as text"
   },
   "lines_one": "{{count}} line",
   "lines_other": "{{count}} lines",

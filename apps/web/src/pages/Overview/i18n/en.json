@@ -1,13 +1,13 @@
 {
   "verdict": {
-    "waiting": "Waiting for the first data from sing-box",
+    "waiting": "Waiting for data from the core",
     "waitingHint": "The daemon stream has just opened: the numbers will appear in a couple of seconds.",
     "offline": "No connection to the daemon",
     "offlineHint": "The numbers below are not updating. The panel reconnects on its own; if it does not, check that the router is reachable over the network.",
-    "silent": "sing-box is silent",
-    "silentHint": "The daemon responds, but no data comes from sing-box: the numbers below are frozen. Look for the cause in the log.",
-    "stopped": "sing-box is not running",
-    "stoppedHint": "No traffic goes through sing-box. Start it in the status panel below; the reason it stopped is in the log.",
+    "silent": "No data from the core",
+    "silentHint": "The daemon responds, but the core is sending no data. The readings below are frozen. Check the log for the cause.",
+    "stopped": "The core is not running",
+    "stoppedHint": "Traffic is not passing through the core. Start it in the status panel below. Check the log for the cause.",
     "nodeDown": "The selected node does not respond",
     "nodeDownHint": "Traffic through this node does not get through. Pick another node or test the latency again.",
     "hot": "The router is overheating: {{celsius}} °C",
@@ -15,7 +15,7 @@
     "warm": "The router is warm: {{celsius}} °C",
     "warmHint": "There is headroom before {{limit}} °C, where the board lowers its clock. The temperature is in the Router section below.",
     "ok": "Everything works",
-    "okHint": "sing-box is running, data is flowing, the selected nodes are not failing.",
+    "okHint": "The routing core is running and data is coming in.",
     "action": {
       "logs": "Open logs",
       "proxies": "Open proxies"
@@ -36,7 +36,7 @@
     "action": "Run check",
     "pending": "Checking…",
     "target": "through {{target}} and directly",
-    "hint": "Sends packets from the router and leaves lines in the sing-box log.",
+    "hint": "Sends packets from the router and records the check in the core log.",
     "details": "Details in diagnostics",
     "label": "Check results",
     "area": {
@@ -60,14 +60,14 @@
     "note": "link {{link}} now: inbound {{down}}, outbound {{up}}",
     "label": "Rate",
     "proxy": "Through a proxy",
-    "direct": "Direct through sing-box",
+    "direct": "Direct through the core",
     "linkShare": "{{percent}}% of the link",
     "linkShareRejected": "{{percent}}% of the link, {{volume}} rejected",
     "linkUnknown": "the link has not been measured yet",
     "uplink": "Uplink",
     "uplinkSince": "over {{age}} since daemon start",
-    "down": "sing-box inbound",
-    "up": "sing-box outbound",
+    "down": "Core inbound",
+    "up": "Core outbound",
     "peak": "peak this minute {{value}}",
     "noPeak": "no peak yet"
   },
@@ -106,7 +106,7 @@
     "schema": "Form schema",
     "config": "Config",
     "memory": "Daemon memory",
-    "singboxHistory": "sing-box process memory over the daemon uptime",
+    "singboxHistory": "Core process memory over the daemon uptime",
     "daemonHistory": "Daemon memory over its uptime"
   },
   "announce": {

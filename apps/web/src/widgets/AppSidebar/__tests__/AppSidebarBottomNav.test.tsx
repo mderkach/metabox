@@ -43,7 +43,7 @@ describe('AppSidebarBottomNav', () => {
 
     const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
 
-    expect(await within(nav).findByRole('button', { name: 'Ещё, sing-box остановлен' })).toBeInTheDocument();
+    expect(await within(nav).findByRole('button', { name: 'Ещё, ядро остановлено' })).toBeInTheDocument();
   });
 
   it('leaves the "More" item unmarked while sing-box runs', async () => {
@@ -97,7 +97,7 @@ describe('AppSidebarBottomNav', () => {
 
     const sheet = await screen.findByRole('dialog', { name: 'Состояние и настройки' });
 
-    expect(await within(sheet).findByText('sing-box работает')).toBeInTheDocument();
+    expect(await within(sheet).findByText('ядро работает')).toBeInTheDocument();
     expect(within(sheet).queryByRole('combobox')).not.toBeInTheDocument();
     expect(within(sheet).getByRole('group', { name: 'Оформление' })).toBeInTheDocument();
     expect(within(sheet).getByRole('group', { name: 'Язык интерфейса' })).toBeInTheDocument();

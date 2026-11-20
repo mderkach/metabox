@@ -42,7 +42,7 @@ describe('DaemonModeSwitch', () => {
     );
     renderWithQuery(<DaemonModeSwitch />);
 
-    expect(await screen.findByText('режим не прочитан: sing-box не отвечает')).toBeInTheDocument();
+    expect(await screen.findByText('режим не прочитан: ядро не отвечает')).toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 

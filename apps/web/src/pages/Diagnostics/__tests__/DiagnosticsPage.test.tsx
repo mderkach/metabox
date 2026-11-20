@@ -62,7 +62,7 @@ describe('diagnostics screen', () => {
 
     expect(within(redirect).getByText('не пройдено')).toBeInTheDocument();
     expect(
-      within(redirect).getByText('порт никто не слушает: sing-box остановлен или в конфиге нет такого inbound')
+      within(redirect).getByText('порт никто не слушает. Возможно, ядро остановлено или в конфиге нет нужного инбаунда')
     ).toBeInTheDocument();
     expect(within(redirect).getByText('dial tcp 127.0.0.1:5331: connection refused')).toBeInTheDocument();
 

@@ -142,28 +142,28 @@ func main() {
 	flag.StringVar(&s.httpsCert, "https-cert", "",
 		"path to a ready panel certificate in PEM, used with -https-key; the daemon then issues no root of its own")
 	flag.StringVar(&s.httpsKey, "https-key", "", "path to the key of the -https-cert certificate")
-	flag.StringVar(&s.configDir, "config-dir", "/etc/sing-box", "sing-box config directory")
+	flag.StringVar(&s.configDir, "config-dir", "/etc/sing-box", "routing core configuration directory")
 	flag.StringVar(&s.configName, "config-name", "config.json", "config file name in that directory")
 	flag.StringVar(&s.serviceDir, "state-dir", "/etc/metabox",
-		"daemon state directory for the backup and transaction state; outside the config directory")
-	flag.StringVar(&s.binary, "singbox", "/usr/bin/sing-box", "path to the sing-box binary")
+		"daemon state directory outside the configuration directory, used for saved copies and apply progress")
+	flag.StringVar(&s.binary, "singbox", "/usr/bin/sing-box", "path to the routing core executable")
 	flag.StringVar(&s.ubus, "ubus", "/bin/ubus", "path to ubus, used to read the service state from procd")
 	flag.StringVar(&s.logread, "logread", "/sbin/logread",
-		"path to logread, the source of the log and the reason sing-box crashed; empty disables reading")
+		"path to logread, used to read system logs and diagnose core startup failures. Leave empty to disable log reading")
 	flag.StringVar(&s.dhcpLeases, "dhcp-leases", "/tmp/dhcp.leases", "dnsmasq lease file, the source of LAN devices")
 	flag.StringVar(&s.uci, "uci", "/sbin/uci",
 		"path to uci, used to read static leases from UCI dhcp and to read and write the plumbing model in UCI metabox")
 	flag.StringVar(&s.nft, "nft", "/usr/sbin/nft",
-		"path to nft, used to see whether the plumbing rules are in place; empty disables the check")
+		"path to the nft command that checks the firewall rules for traffic interception. Leave empty to skip the check")
 	flag.StringVar(&s.healthDNSName, "health-dns-name", "cloudflare.com",
-		"name the sing-box dns-in must resolve after a restart, otherwise the change is rolled back; empty disables the DNS probe")
+		"domain name to resolve through the core DNS listener after restart. A failed lookup rolls back the change. Leave empty to skip the DNS check")
 	flag.StringVar(&s.diagURL, "diag-url", "https://www.gstatic.com/generate_204",
 		"URL diagnostics uses to check internet access through the node and directly")
 	flag.IntVar(&s.clashPort, "clash-port", 9090, "Clash API port, used when the daemon creates the section itself")
 	flag.DurationVar(&s.confirmWindow, "confirm-window", time.Minute,
 		"how long to wait for connectivity confirmation before the automatic rollback")
 	flag.DurationVar(&s.cycleTimeout, "cycle-timeout", 2*time.Minute,
-		"time limit for the apply steps from backup to healthcheck")
+		"time limit for applying changes, from saving a copy of the current configuration to checking that the core works")
 	flag.DurationVar(&s.ruleSetPeriod, "rule-set-refresh", 24*time.Hour,
 		"how often to sync the rule set catalog with providers; 0 disables syncing: the catalog comes from the cache or the built-in snapshot")
 

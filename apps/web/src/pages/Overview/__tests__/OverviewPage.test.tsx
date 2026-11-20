@@ -80,11 +80,11 @@ describe('overview screen', () => {
     const tiles = within(await screen.findByRole('list', { name: 'Скорость' }));
     const items = tiles.getAllByRole('listitem');
     const proxy = items.find((item) => within(item).queryByText('Через прокси') !== null);
-    const direct = items.find((item) => within(item).queryByText('Напрямую через sing-box') !== null);
+    const direct = items.find((item) => within(item).queryByText('Напрямую через ядро') !== null);
 
     expect(stripWordJoiners(proxy?.textContent ?? '')).toBe('Через прокси30.0 МБ12% от канала');
-    expect(stripWordJoiners(direct?.textContent ?? '')).toBe('Напрямую через sing-box16.2 МБ7% от канала');
-    expect(tiles.queryByText('Через sing-box')).not.toBeInTheDocument();
+    expect(stripWordJoiners(direct?.textContent ?? '')).toBe('Напрямую через ядро16.2 МБ7% от канала');
+    expect(tiles.queryByText('Через ядро')).not.toBeInTheDocument();
   });
 
   it('names the rejected volume next to the direct share', async () => {
@@ -249,9 +249,7 @@ describe('overview screen', () => {
 
     renderWithRouter(OverviewPage);
 
-    expect(
-      await screen.findByRole('img', { name: 'Память процесса sing-box за время работы демона' })
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: 'Память процесса ядра за время работы демона' })).toBeInTheDocument();
     expect(screen.getAllByText(/^за 13 мин · от /)).toHaveLength(5);
   });
 
@@ -270,7 +268,7 @@ describe('overview screen', () => {
   it('before the first runtime data says it is waiting for it', async () => {
     renderWithRouter(OverviewPage);
 
-    expect(await screen.findByText('Ждём первые данные от sing-box')).toBeInTheDocument();
+    expect(await screen.findByText('Ждём данные от ядра')).toBeInTheDocument();
   });
 
   // The daemon serves `stopped` also when procd simply did not answer: such a response
@@ -282,7 +280,7 @@ describe('overview screen', () => {
     renderWithRouter(OverviewPage);
 
     expect(await screen.findByText('Всё работает')).toBeInTheDocument();
-    expect(screen.queryByText('sing-box не работает')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ядро не работает')).not.toBeInTheDocument();
   });
 
   it('names a confirmed service crash as the verdict', async () => {
@@ -291,7 +289,7 @@ describe('overview screen', () => {
 
     renderWithRouter(OverviewPage);
 
-    expect(await screen.findByText('sing-box не работает')).toBeInTheDocument();
+    expect(await screen.findByText('Ядро не работает')).toBeInTheDocument();
   });
 
   // The stream is closed while the runtime screens are not open. A frame from a previous
@@ -302,8 +300,8 @@ describe('overview screen', () => {
 
     renderWithRouter(OverviewPage);
 
-    expect(await screen.findByText('Ждём первые данные от sing-box')).toBeInTheDocument();
-    expect(screen.queryByText('sing-box молчит')).not.toBeInTheDocument();
+    expect(await screen.findByText('Ждём данные от ядра')).toBeInTheDocument();
+    expect(screen.queryByText('Нет данных от ядра')).not.toBeInTheDocument();
   });
 
   // Traffic stalling while device snapshots are live means sing-box is silent, not the link:
@@ -315,7 +313,7 @@ describe('overview screen', () => {
 
     renderWithRouter(OverviewPage);
 
-    expect(await screen.findByText('sing-box молчит')).toBeInTheDocument();
+    expect(await screen.findByText('Нет данных от ядра')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Открыть логи' })).toHaveAttribute('href', '/logs');
   });
 
@@ -328,7 +326,7 @@ describe('overview screen', () => {
     renderWithRouter(OverviewPage);
 
     expect(await screen.findByText('Нет связи с демоном')).toBeInTheDocument();
-    expect(screen.queryByText('sing-box молчит')).not.toBeInTheDocument();
+    expect(screen.queryByText('Нет данных от ядра')).not.toBeInTheDocument();
   });
 
   it('with the service stopped advises where to look for the cause', async () => {
@@ -365,7 +363,7 @@ describe('overview screen', () => {
         ...WITHOUT_WORD_JOINERS,
       })
     ).toBeInTheDocument();
-    expect(screen.getByText('sing-box: входящий')).toBeInTheDocument();
+    expect(screen.getByText('Ядро: входящий')).toBeInTheDocument();
   });
 
   it('shows daemon availability and stream liveness', async () => {

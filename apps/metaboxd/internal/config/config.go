@@ -31,11 +31,11 @@ var (
 
 	// ErrNoBackup means nothing to roll back to, the device had neither a config
 	// nor list files before the apply.
-	ErrNoBackup = locale.New("no backup")
+	ErrNoBackup = locale.New("no previous configuration or rule-set files to restore")
 
 	// ErrListsOnly means the rollback returned only the list files: the device had no
 	// config before the apply, and the written one stays in place.
-	ErrListsOnly = locale.New("no config before the apply, only the lists were restored")
+	ErrListsOnly = locale.New("there was no configuration before applying, so only the rule-set files were restored")
 
 	// ErrNoState means there is no unfinished transaction, nothing to replay.
 	ErrNoState = errors.New("no transaction state")

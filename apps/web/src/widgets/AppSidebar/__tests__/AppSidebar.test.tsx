@@ -26,8 +26,8 @@ describe('AppSidebar', () => {
 
     renderWithRouter(AppSidebar);
 
-    expect(await screen.findByText('состояние sing-box неизвестно')).toBeInTheDocument();
-    expect(screen.queryByText('sing-box работает')).not.toBeInTheDocument();
+    expect(await screen.findByText('состояние ядра неизвестно')).toBeInTheDocument();
+    expect(screen.queryByText('ядро работает')).not.toBeInTheDocument();
   });
 
   // Details of the mismatch are in the configuration section, and the fact itself is visible from any screen.
@@ -39,7 +39,7 @@ describe('AppSidebar', () => {
 
     renderWithRouter(AppSidebar);
 
-    expect(await screen.findByText('sing-box старше форм')).toBeInTheDocument();
+    expect(await screen.findByText('ядро старше форм')).toBeInTheDocument();
   });
 
   it('the daemon responds: the service dot shows the service state', async () => {
@@ -50,7 +50,7 @@ describe('AppSidebar', () => {
 
     renderWithRouter(AppSidebar);
 
-    expect(await screen.findByText('sing-box работает')).toBeInTheDocument();
+    expect(await screen.findByText('ядро работает')).toBeInTheDocument();
   });
 
   // A daemon that did not read procd serves `stopped` with a reason code: that is not a stop.
@@ -62,8 +62,8 @@ describe('AppSidebar', () => {
 
     renderWithRouter(AppSidebar);
 
-    expect(await screen.findByText('состояние sing-box неизвестно')).toBeInTheDocument();
-    expect(screen.queryByText('sing-box остановлен')).not.toBeInTheDocument();
+    expect(await screen.findByText('состояние ядра неизвестно')).toBeInTheDocument();
+    expect(screen.queryByText('ядро остановлено')).not.toBeInTheDocument();
   });
 
   // The Clash API mode is switched on "Overview", the shell does not show it.
@@ -75,7 +75,7 @@ describe('AppSidebar', () => {
 
     renderWithRouter(AppSidebar);
 
-    expect(await screen.findByText('sing-box работает')).toBeInTheDocument();
+    expect(await screen.findByText('ядро работает')).toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 

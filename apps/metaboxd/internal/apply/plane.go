@@ -320,7 +320,7 @@ func (p *Plane) checkChains(ctx context.Context, log *slog.Logger, enabled bool)
 
 		return nil
 	case !enabled && len(chains) > 0:
-		return stepFailed(ReasonRestartFailed, locale.New("interception chains remain after the dataplane was turned off"))
+		return stepFailed(ReasonRestartFailed, locale.New("the firewall rules for traffic interception are still in place after interception was turned off"))
 	case !enabled:
 		return nil
 	}
@@ -334,7 +334,7 @@ func (p *Plane) checkChains(ctx context.Context, log *slog.Logger, enabled bool)
 	}
 
 	if len(missing) > 0 {
-		return stepFailed(ReasonInterceptionMissing, locale.Errorf("interception chains missing in nft: %v", missing))
+		return stepFailed(ReasonInterceptionMissing, locale.Errorf("the firewall is missing these chains for traffic interception: %v", missing))
 	}
 
 	return nil
@@ -346,7 +346,7 @@ func (p *Plane) checkChains(ctx context.Context, log *slog.Logger, enabled bool)
 func (p *Plane) probeDNS(ctx context.Context, port int) error {
 	cfg, err := p.store.Read(ctx)
 	if err != nil {
-		return locale.Errorf("config for the DNS probe: %w", err)
+		return locale.Errorf("read the configuration for the DNS check: %w", err)
 	}
 
 	settings, err := clashapi.Read(cfg)
@@ -364,7 +364,7 @@ func (p *Plane) probeDNS(ctx context.Context, port int) error {
 	}
 
 	if !ok {
-		return locale.Errorf("no dns-in on port %d in the config", port)
+		return locale.Errorf("the configuration has no DNS listener on port %d", port)
 	}
 
 	return p.opts.DNS.Probe(ctx, inbound)

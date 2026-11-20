@@ -77,7 +77,7 @@ describe('RouteExplanation', () => {
     // Daemon indexes count from zero, rules on the screen are numbered from one.
     expect(await screen.findByText('Сработало правило 7')).toBeInTheDocument();
     expect(screen.getByText('Сет правил: google-ip')).toHaveAttribute('title', 'rule_set=google-ip');
-    expect(screen.getAllByText('от sing-box').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('от ядра').length).toBeGreaterThan(0);
   });
 
   it('leads to the rule in the editor when the process list matches the config', async () => {
@@ -115,13 +115,13 @@ describe('RouteExplanation', () => {
       />
     ));
 
-    expect(await screen.findByText('sing-box работает на другой версии конфига')).toBeInTheDocument();
+    expect(await screen.findByText('Ядро работает с другой версией конфига')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Открыть правило в редакторе' })).not.toBeInTheDocument();
     // The node number of a foreign document is not shown at all: it would point to
     // a different rule.
     expect(screen.queryByText('Сработало правило 7')).not.toBeInTheDocument();
     // The rule sing-box reported stays visible by its conditions, with its origin.
-    expect(screen.getByText('Сработавшее правило по данным sing-box')).toBeInTheDocument();
+    expect(screen.getByText('Сработавшее правило по данным ядра')).toBeInTheDocument();
     expect(screen.getByText('Сет правил: google-ip')).toBeInTheDocument();
     expect(screen.queryByText('Правило не определено')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Открыть конфигурацию' })).toHaveAttribute('href', '/config');
@@ -163,7 +163,7 @@ describe('RouteExplanation', () => {
 
     expect(await screen.findByText('Правило не определено')).toBeInTheDocument();
     // The reason is the panel translation by the daemon code, not its string: it is in its language.
-    expect(screen.getByText('правила этого соединения нет в списке работающего sing-box')).toBeInTheDocument();
+    expect(screen.getByText('в списке правил работающего ядра нет правила для этого соединения')).toBeInTheDocument();
     expect(screen.queryByText(ROUTE_UNKNOWN_FIXTURE.match.reason ?? '')).not.toBeInTheDocument();
     expect(screen.getByText('неизвестно')).toBeInTheDocument();
   });

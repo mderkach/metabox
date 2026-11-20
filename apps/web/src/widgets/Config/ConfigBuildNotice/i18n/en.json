@@ -1,7 +1,7 @@
 {
-  "title_one": "sing-box on the router does not support {{count}} config item",
-  "title_other": "sing-box on the router does not support {{count}} config items",
-  "description": "While they are in the config, it will not apply. Remove them or update sing-box.",
+  "title_one": "The core on the router does not support {{count}} config item",
+  "title_other": "The core on the router does not support {{count}} config items",
+  "description": "Apply is blocked. Remove these items or update the core.",
   "node": "{{name}} — {{type}}, needs a build with {{tag}}",
   "option": "{{path}} — needs a build with {{tag}}"
 }

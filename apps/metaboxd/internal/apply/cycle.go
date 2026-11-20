@@ -174,7 +174,7 @@ func (m *Manager) prepare(ctx context.Context, tx Transaction) error {
 		// removed it. There is then nothing to roll back to, but the apply is not
 		// stopped either.
 		if !errors.Is(err, config.ErrNoConfig) {
-			return stepFailed(ReasonBackupFailed, locale.Errorf("backup: %w", err))
+			return stepFailed(ReasonBackupFailed, locale.Errorf("save a copy of the configuration and rule-set files: %w", err))
 		}
 		m.log.Warn("no config on the device, config backup not taken")
 	}
@@ -354,7 +354,7 @@ func (m *Manager) checkInterception(ctx context.Context, before planeState) erro
 
 		return nil
 	case !applied:
-		return locale.New("no interception chains in nft after the restart")
+		return locale.New("the firewall rules for traffic interception are missing after restart")
 	}
 
 	return nil
