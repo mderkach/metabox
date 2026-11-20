@@ -317,7 +317,7 @@ Quiet and compact; the primary action is rare.
 ### Inputs / Fields
 
 - **Style:** 32px tall, 14px corners, Field Edge stroke, translucent fill in dark, transparent in light. Search fields carry a leading magnifier and a trailing `/` key hint.
-- **Focus:** azure border and a 3px ring in the keyboard focus tone.
+- **Focus:** a border and a 3px ring in the keyboard focus tone (deep blue in the light theme, pale azure in the dark one).
 - **Error / Disabled:** coral border with a coral ring at 20–40%; disabled drops to 50% opacity.
 
 ### Navigation
