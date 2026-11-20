@@ -191,6 +191,13 @@ export const FOCUS_METER = String.raw`
         .map(name);
     },
 
+    async textContrast(element) {
+      const button = element.closest('button');
+      await Promise.allSettled(button?.getAnimations().map((animation) => animation.finished) ?? []);
+
+      return contrast(getComputedStyle(element).color, element);
+    },
+
     /** The icon contrast of every visible control with an icon and no text: there the icon alone says what it does. */
     iconContrasts() {
       return [...document.querySelectorAll('button, a[href]')]

@@ -93,7 +93,7 @@ export function DeviceRouteSubnets({
               {fieldState.error?.message === DEVICE_ROUTE_ERROR.SourceIpInvalid ? (
                 <DeviceRouteSubnetsError id={hintId} entries={field.value} />
               ) : (
-                <p id={hintId} className='text-xs text-muted-foreground'>
+                <p id={hintId} className='max-w-help-text text-xs text-pretty text-muted-foreground'>
                   {t('subnets.hint')}
                 </p>
               )}

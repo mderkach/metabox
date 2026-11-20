@@ -25,14 +25,14 @@ export function ProxyGroupManualChoice({ group }: { group: string }) {
       <div className='flex min-w-0 gap-2'>
         <Hand aria-hidden='true' className='mt-0.5 size-4 shrink-0 text-muted-foreground' />
         <div className='flex min-w-0 flex-col gap-0.5'>
-          <p className='text-pretty'>{t('auto.reason')}</p>
+          <p className='max-w-help-text text-pretty'>{t('auto.reason')}</p>
           {/* Only the line that changes after the action is announced: the reason is read with the card. It also
               takes focus from the button the action removes, otherwise the keyboard falls back to the page start. */}
           <p
             ref={noteRef}
             role='status'
             tabIndex={-1}
-            className='-mx-1 rounded-sm px-1 text-xs text-pretty text-muted-foreground outline-none empty:hidden focus-visible:ring-3 focus-visible:ring-ring/50'
+            className='-mx-1 max-w-help-text rounded-sm px-1 text-xs text-pretty text-muted-foreground outline-none empty:hidden focus-visible:ring-3 focus-visible:ring-ring/50'
           >
             {note === null ? null : t(note)}
           </p>

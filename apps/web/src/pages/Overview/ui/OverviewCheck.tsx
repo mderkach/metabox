@@ -54,7 +54,7 @@ export function OverviewCheck({ onChecked }: { onChecked: (message: string) => v
     <div className='flex flex-col gap-3'>
       <div className='flex flex-wrap items-center gap-x-3 gap-y-2'>
         <div className='flex min-w-0 grow flex-col gap-0.5'>
-          <h3 className={CARD_TITLE}>{t('check.title')}</h3>
+          <h2 className={CARD_TITLE}>{t('check.title')}</h2>
           {target !== '' && <p className='truncate text-xs text-muted-foreground'>{t('check.target', { target })}</p>}
         </div>
         <Button

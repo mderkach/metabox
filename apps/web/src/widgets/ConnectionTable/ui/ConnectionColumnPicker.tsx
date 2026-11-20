@@ -122,7 +122,7 @@ export function ConnectionColumnPicker({
                 <Label htmlFor={id} className='text-sm font-normal'>
                   {label}
                 </Label>
-                {def.meta.required && <span className='text-2xs text-muted-foreground'>{t('fields.always')}</span>}
+                {def.meta.required && <span className='text-xs text-muted-foreground'>{t('fields.always')}</span>}
                 <span className='ml-auto flex'>
                   <Button
                     id={toMoveButtonId(def.id, MOVE.Up)}

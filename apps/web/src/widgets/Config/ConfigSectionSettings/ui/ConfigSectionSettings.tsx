@@ -60,7 +60,9 @@ export function ConfigSectionSettings({ section }: { section: ListSettingsSectio
       </header>
 
       <div id={bodyId} hidden={!open} className='flex max-h-[60vh] flex-col gap-3 overflow-y-auto'>
-        <p className='text-xs text-pretty text-muted-foreground'>{t(recognized ? 'hint' : 'uncovered', { section })}</p>
+        <p className='max-w-help-text text-xs text-pretty text-muted-foreground'>
+          {t(recognized ? 'hint' : 'uncovered', { section })}
+        </p>
         {/* The revision in the key recreates the form on an update not from the user:
             after discarding changes the field must not keep the discarded value. */}
         {recognized && <ConfigSectionForm key={document.revision} section={section} settings={settings} />}
