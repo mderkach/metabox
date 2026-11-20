@@ -9,7 +9,7 @@
     "next": "Следующее совпадение"
   },
   "editor": {
-    "label": "Конфиг sing-box текстом"
+    "label": "Конфиг текстом"
   },
   "lines_one": "{{count}} строка",
   "lines_few": "{{count}} строки",

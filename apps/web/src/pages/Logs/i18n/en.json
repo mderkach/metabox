@@ -1,5 +1,5 @@
 {
-  "title": "sing-box log",
+  "title": "Core log",
   "column": {
     "time": "Time",
     "level": "Level",
@@ -34,7 +34,7 @@
   },
   "empty": {
     "title": "No lines",
-    "description": "sing-box has not written anything at level {{level}} or above yet, or the log was cleared. New lines appear here on their own."
+    "description": "The log is empty at level {{level}} or above. New lines appear here automatically."
   },
   "footer": {
     "rows_one": "{{count}} line",

@@ -89,7 +89,7 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	if checkErr, ok := errors.AsType[*singbox.CheckError](err); ok {
 		writeJSON(log, w, http.StatusUnprocessableEntity, contract.Error{
 			Code:    contract.ErrCheckFailed,
-			Message: locale.T(lang, "sing-box rejected the config"),
+			Message: locale.T(lang, "the routing core rejected the configuration"),
 			Details: contract.CheckDetails{
 				Stdout:   checkErr.Stdout,
 				Stderr:   checkErr.Stderr,
@@ -105,7 +105,7 @@ func fail(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
 	if workdirErr, ok := errors.AsType[*apply.WorkdirError](err); ok {
 		writeJSON(log, w, http.StatusConflict, contract.Error{
 			Code:    contract.ErrWorkdirMismatch,
-			Message: locale.T(lang, "the sing-box service working directory does not match the config directory"),
+			Message: locale.T(lang, "the routing service working directory does not match the configuration directory"),
 			Details: contract.WorkdirDetails{
 				Workdir:   workdirErr.Workdir,
 				ConfigDir: workdirErr.ConfigDir,

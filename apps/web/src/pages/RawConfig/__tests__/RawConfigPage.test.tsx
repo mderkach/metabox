@@ -35,7 +35,7 @@ describe('config as text', () => {
 
     renderWithRouter(RawConfigPage);
 
-    const editor = await screen.findByRole('textbox', { name: 'Конфиг sing-box текстом' });
+    const editor = await screen.findByRole('textbox', { name: 'Конфиг текстом' });
 
     expect(editor).toHaveValue(VALID_CONFIG);
   });
@@ -46,7 +46,7 @@ describe('config as text', () => {
     renderWithRouter(RawConfigPage);
 
     expect(await screen.findByText('Панель не разобрала этот конфиг')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Конфиг sing-box текстом' })).toHaveValue(UNPARSED_CONFIG);
+    expect(screen.getByRole('textbox', { name: 'Конфиг текстом' })).toHaveValue(UNPARSED_CONFIG);
   });
 
   it('a parse error does not erase the typed text', async () => {
@@ -56,7 +56,7 @@ describe('config as text', () => {
 
     renderWithRouter(RawConfigPage);
 
-    const editor = await screen.findByRole('textbox', { name: 'Конфиг sing-box текстом' });
+    const editor = await screen.findByRole('textbox', { name: 'Конфиг текстом' });
 
     await user.clear(editor);
     await user.type(editor, '{{ "route": ');
@@ -72,7 +72,7 @@ describe('config as text', () => {
 
     renderWithRouter(RawConfigPage);
 
-    const editor = await screen.findByRole('textbox', { name: 'Конфиг sing-box текстом' });
+    const editor = await screen.findByRole('textbox', { name: 'Конфиг текстом' });
 
     await user.type(editor, ' ');
 
@@ -88,7 +88,7 @@ describe('config as text', () => {
 
     renderWithRouter(RawConfigPage);
 
-    await screen.findByRole('textbox', { name: 'Конфиг sing-box текстом' });
+    await screen.findByRole('textbox', { name: 'Конфиг текстом' });
 
     expect(screen.queryByRole('button', { name: 'Вернуть версию с устройства' })).not.toBeInTheDocument();
   });
@@ -100,7 +100,7 @@ describe('config as text', () => {
 
     renderWithRouter(RawConfigPage);
 
-    const editor = await screen.findByRole('textbox', { name: 'Конфиг sing-box текстом' });
+    const editor = await screen.findByRole('textbox', { name: 'Конфиг текстом' });
 
     await user.type(editor, 'ЛИШНЕЕ');
 
@@ -115,7 +115,7 @@ describe('config as text', () => {
 
     // The editor is recreated together with the document, so the field is looked up again.
     await waitFor(async () => {
-      expect(await screen.findByRole('textbox', { name: 'Конфиг sing-box текстом' })).toHaveValue(VALID_CONFIG);
+      expect(await screen.findByRole('textbox', { name: 'Конфиг текстом' })).toHaveValue(VALID_CONFIG);
     });
   });
 });

@@ -22,7 +22,7 @@
     "slow": "over {{value}} ms"
   },
   "auto": {
-    "reason": "sing-box picks the node of this group by itself, so it cannot be switched here.",
+    "reason": "The core chooses the node for this group automatically.",
     "hint": "Manual choice puts a selector in front of the group in the draft. Until you pick a node, traffic goes the same way.",
     "action": "Add manual choice",
     "actionLabel": "Add manual choice over group {{group}}",

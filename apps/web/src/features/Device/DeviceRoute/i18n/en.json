@@ -1,6 +1,6 @@
 {
   "switch": {
-    "label": "Through sing-box: {{device}}",
+    "label": "Through the core: {{device}}",
     "forAll": "interception for everyone"
   },
   "reason": {
@@ -16,15 +16,15 @@
     "excludedSubnetFull": "The {{subnet}} subnet is in the exclusion list, so the device goes direct. The toggle cannot lift it: the exclusion covers other devices of the subnet too. To change it, remove {{subnet}} from source_ip_exclude in the UCI section metabox.dataplane on the router."
   },
   "dialog": {
-    "on": "Route {{device}} through sing-box?",
-    "off": "Route {{device}} around sing-box?",
-    "description": "sing-box restarts and all devices lose their connections. Then confirm the connection works, or everything reverts when the countdown ends.",
+    "on": "Route {{device}} through the core?",
+    "off": "Route {{device}} around the core?",
+    "description": "The core restarts and all devices lose their connections. Confirm that the connection works before the countdown ends. Otherwise, the previous settings will be restored.",
     "apply": "Apply",
     "cancel": "Cancel"
   },
   "bar": {
     "label": "Interception change",
-    "applying": "Changing interception and restarting sing-box…",
+    "applying": "Changing interception and restarting the core…",
     "prompt": "Interception changed. Confirm the connection works,",
     "left": "<time>{{seconds}} s</time> left",
     "rollback": "otherwise the daemon restores the previous one",
@@ -38,17 +38,17 @@
       "backup_failed": "the snapshot of the previous interception settings was not saved, so the daemon did not change them without a way back",
       "write_failed": "the interception settings were not written to UCI",
       "restart_failed": "the service did not restart with the new interception settings",
-      "healthcheck_failed": "the service came up, but sing-box did not respond",
-      "dns_probe_failed": "sing-box did not answer a DNS query through dns-in on the port from the interception settings",
+      "healthcheck_failed": "the service started, but the core did not respond",
+      "dns_probe_failed": "the core did not answer a DNS query on the interception port",
       "interception_missing": "after the restart the nft interception rules are not in place",
-      "rollback_failed": "rollback failed: the previous interception settings were not restored, or sing-box did not start on them. Reason below",
+      "rollback_failed": "rollback failed. The previous interception settings were not restored, or the core did not start with them. See the reason below",
       "no_backup": "there was nothing to roll back to: the device had no previous interception settings",
       "lists_restored": "only the rule-set files were restored: the device had no previous config"
     }
   },
   "subnets": {
-    "title": "Addresses and subnets through sing-box",
-    "description": "Every device whose address falls into the list goes through sing-box: <code>192.168.1.20</code> is one device, <code>192.168.1.0/24</code> the whole 192.168.1.x range. A device inside a subnet is excluded with its toggle below.",
+    "title": "Addresses and subnets through the core",
+    "description": "Traffic from devices with addresses on this list goes through the core. <code>192.168.1.20</code> matches one device and <code>192.168.1.0/24</code> matches the whole 192.168.1.x range. To exclude a device in a subnet, use its switch below.",
     "forAll": "Interception for everyone is on: the list takes effect only when interception is limited to listed devices.",
     "placeholder": "192.168.1.0/24",
     "hint": "Enter, a comma or a space adds an entry. To change one, remove it and type it again.",

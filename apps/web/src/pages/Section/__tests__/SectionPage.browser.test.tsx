@@ -148,7 +148,7 @@ describe('section screen picked with the mouse', () => {
 
     await pick(panel.getByRole('combobox', { name: 'Тип' }), /^hysteria2/);
 
-    expect(panel.getByText(/собран без этого типа \(with_quic\)/)).toBeInTheDocument();
+    expect(panel.getByText(/нет этого типа \(with_quic\)/)).toBeInTheDocument();
 
     await userEvent.type(panel.getByRole('textbox', { name: 'Тег' }), 'hy2');
     await userEvent.click(panel.getByRole('button', { name: 'Добавить' }));

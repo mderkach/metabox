@@ -42,11 +42,11 @@ type tools struct {
 func (t tools) addRead(server *sdk.Server, log *slog.Logger) {
 	addTool(server, log, t.opts.Lang, &sdk.Tool{
 		Name: "metabox_status",
-		Description: locale.T(t.opts.Lang, "State of the router running metabox: whether the sing-box service runs and who owns the process "+
-			"(managed=false with status running means sing-box was started outside that service), the daemon, sing-box binary and "+
-			"panel schema versions, the dataplane routing mode, the runtime sources the daemon reads, and the "+
-			"permissions of this MCP token. An empty version means it could not be read or was not built in. "+
-			"Does not tell whether traffic actually flows: use metabox_diagnostics for that."),
+		Description: locale.T(t.opts.Lang, "State of the router running metabox: whether the routing core service is running and whether metabox manages it "+
+			"(managed=false with status running means the core was started outside that service), the daemon version, "+
+			"core type and version, panel schema version, traffic interception mode, the sources of runtime data, "+
+			"and the permissions of this MCP token. An empty version means it could not be read or was not built in. "+
+			"Use metabox_diagnostics to check whether traffic flows."),
 	}, t.status)
 
 	addTool(server, log, t.opts.Lang, &sdk.Tool{
@@ -63,8 +63,8 @@ func (t tools) addRead(server *sdk.Server, log *slog.Logger) {
 	if t.opts.Runtime != nil {
 		addTool(server, log, t.opts.Lang, &sdk.Tool{
 			Name: "metabox_connections",
-			Description: locale.T(t.opts.Lang, "Live sing-box connections, newest data from the Clash API, filtered by host, device, rule, "+
-				"chain and network. Filters are case-insensitive substrings, except network (exact tcp or udp) and "+
+			Description: locale.T(t.opts.Lang, "Live connections from the Clash API, filtered by host, device, rule, chain and network. "+
+				"Filters are case-insensitive substrings, except network (exact tcp or udp) and "+
 				"device (a source IP, a MAC or a device name from DHCP). total counts all matches, connections holds "+
 				"at most limit of them (default 50, at most 500). An empty list means no live connection matches "+
 				"right now; it says nothing about connections that already closed."),
@@ -72,7 +72,7 @@ func (t tools) addRead(server *sdk.Server, log *slog.Logger) {
 
 		addTool(server, log, t.opts.Lang, &sdk.Tool{
 			Name: "metabox_proxies",
-			Description: locale.T(t.opts.Lang, "Proxy groups with their selected member, and nodes with the last latency sing-box recorded. "+
+			Description: locale.T(t.opts.Lang, "Proxy groups with their selected member, and nodes with the last latency recorded by the routing core. "+
 				"Does not run a latency check: a failed check erases the node's delay history. last_delay_ms is "+
 				"absent when the node was never checked; 0 means the last check failed."),
 		}, t.proxies)
@@ -81,9 +81,9 @@ func (t tools) addRead(server *sdk.Server, log *slog.Logger) {
 	if t.opts.Runtime != nil && t.opts.Explain != nil {
 		addTool(server, log, t.opts.Lang, &sdk.Tool{
 			Name: "metabox_explain_domain",
-			Description: locale.T(t.opts.Lang, "Explains how sing-box routed a domain: for live connections whose host is the domain or its "+
+			Description: locale.T(t.opts.Lang, "Explains how the routing core routed a domain: for live connections whose host is the domain or its "+
 				"subdomain, the matched rule (its index in route.rules, conditions and action) and the outbound chain, "+
-				"as sing-box reported them. found=false means there is no live connection to the domain: the tool "+
+				"as the core reported them. found=false means there is no live connection to the domain: the tool "+
 				"does not evaluate rules on its own, so open the site first and ask again. At most limit connections "+
 				"are explained (default 5, at most 20)."),
 		}, t.explainDomain)
@@ -92,7 +92,7 @@ func (t tools) addRead(server *sdk.Server, log *slog.Logger) {
 	if t.opts.Config != nil {
 		addTool(server, log, t.opts.Lang, &sdk.Tool{
 			Name: "metabox_config_versions",
-			Description: locale.T(t.opts.Lang, "History of applied sing-box configs, newest first: id, size, sha256 and save time. The save "+
+			Description: locale.T(t.opts.Lang, "History of applied configurations, newest first: id, size, sha256 and save time. The save "+
 				"time is the router clock and is wrong before NTP sync. An empty list means nothing was applied "+
 				"through metabox yet."),
 		}, t.versions)
@@ -109,24 +109,25 @@ func (t tools) addRead(server *sdk.Server, log *slog.Logger) {
 	if t.opts.Logs != nil {
 		addTool(server, log, t.opts.Lang, &sdk.Tool{
 			Name: "metabox_log_tail",
-			Description: locale.T(t.opts.Lang, "Last lines of the sing-box log, oldest first, the same text the panel log screen shows. "+
+			Description: locale.T(t.opts.Lang, "Last lines of the routing core log, oldest first, the same text the panel log screen shows. "+
 				"level is the minimum level: trace, debug, info, notice, warn, error, fatal or panic (default: all). "+
 				"lines is 1 to 1000, default 200. Lines without a level (stack traces, continuations) pass the filter. "+
 				"URLs are hidden after the host; the rest of the line is not masked and may contain addresses and "+
-				"whatever sing-box itself prints. An empty list means no line at this level since the last clear in the panel."),
+				"whatever else the core logs. An empty list means no line at this level since the last clear in the panel."),
 		}, t.logTail)
 	}
 
 	if t.opts.Diag != nil {
 		addTool(server, log, t.opts.Lang, &sdk.Tool{
 			Name: "metabox_diagnostics",
-			Description: locale.T(t.opts.Lang, "Dataplane checks of the router, nothing is changed: sing-box listeners on the redirect, tproxy "+
-				"and DNS ports, a DNS query to sing-box dns-in, the nft interception chains, and a direct internet "+
-				"request bypassing interception. Each check is ok, fail or skipped with a reason; skipped is not a "+
-				"failure. proxy names a node for the proxy check: it reports the latency sing-box last recorded for "+
-				"it, as metabox_proxies does, where the time of that record is. not_measured means there is no "+
-				"record: the node was never tested, or its last test failed and erased it; sing-box does not tell "+
-				"the two apart, so it is not a sign of health. No latency check is run, that is done from the panel."),
+			Description: locale.T(t.opts.Lang, "Read-only checks of traffic interception on the router. Checks whether the routing core is listening on "+
+				"the configured TCP, UDP and DNS ports, whether its DNS listener answers a query, whether the firewall "+
+				"rules for traffic interception are in place, and whether a direct request bypassing interception reaches the internet. "+
+				"Each check reports ok, fail or skipped with a reason. A skipped check leaves that part of the setup unverified. "+
+				"proxy names a node for the proxy check, which "+
+				"reports the last latency recorded by the routing core. Use metabox_proxies for the time of that "+
+				"measurement. not_measured means there is no record, either because the node has never been tested "+
+				"or because the last test failed and erased it, so it says nothing about the node's health. To measure the node now, run a latency check from the panel."),
 		}, t.diagnostics)
 	}
 }

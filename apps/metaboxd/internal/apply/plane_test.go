@@ -566,8 +566,8 @@ func TestPlaneReasonFollowsLang(t *testing.T) {
 	m.DNSPort = 5444
 
 	for lang, want := range map[locale.Lang]string{
-		locale.English: "no dns-in on port 5444 in the config",
-		locale.Russian: "dns-in на порту 5444 в конфиге нет",
+		locale.English: "the configuration has no DNS listener on port 5444",
+		locale.Russian: "в конфиге не настроен приём DNS-запросов на порту 5444",
 	} {
 		t.Run(string(lang), func(t *testing.T) {
 			h := newPlaneHarness(t, failingProber{}, configWithDNSIn(5333), slog.New(slog.DiscardHandler))

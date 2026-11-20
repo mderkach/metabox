@@ -29,13 +29,13 @@
     "service_state_unread": "procd did not answer the daemon: the service state is unknown"
   },
   "restart": {
-    "title": "Restart sing-box?",
-    "description": "Current connections of all devices will drop: downloads and calls will break. sing-box comes back in a few seconds.",
-    "confirm": "Restart sing-box"
+    "title": "Restart the core?",
+    "description": "All devices will lose their current connections. Downloads and calls will be interrupted. The core will restart in a few seconds.",
+    "confirm": "Restart the core"
   },
   "stop": {
-    "title": "Stop sing-box?",
-    "description": "Routing will stop: devices on the network lose internet access until sing-box is started again.",
-    "confirm": "Stop sing-box"
+    "title": "Stop the core?",
+    "description": "Routing will stop. Devices on the network will lose internet access until the core starts again.",
+    "confirm": "Stop the core"
   }
 }

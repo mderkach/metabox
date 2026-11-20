@@ -16,7 +16,7 @@
     "draft": "draft"
   },
   "error": {
-    "description": "This section failed to open because of an error in the panel itself. The config and sing-box on the router are not affected.",
+    "description": "An error in the panel prevented this section from opening. The router config and routing core are unaffected.",
     "reload": "Reload the page",
     "details": "Details for a bug report"
   },

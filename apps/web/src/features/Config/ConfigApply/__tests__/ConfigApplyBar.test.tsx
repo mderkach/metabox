@@ -342,7 +342,7 @@ describe('ConfigApplyBar', () => {
         HttpResponse.json(
           {
             code: 'workdir_mismatch',
-            message: 'the sing-box service working directory does not match the config directory',
+            message: 'the routing service working directory does not match the config directory',
             details: { workdir: '/usr/share/sing-box', config_dir: '/etc/sing-box' },
           },
           { status: 409 }
@@ -358,7 +358,7 @@ describe('ConfigApplyBar', () => {
     await applyFromSummary();
 
     expect(
-      await screen.findByText('Служба sing-box запущена из другого каталога — применение остановлено')
+      await screen.findByText('Служба маршрутизации запущена из другого каталога — применение остановлено')
     ).toBeInTheDocument();
     expect(screen.getByText(/служба ищет их в \/usr\/share\/sing-box/)).toBeInTheDocument();
     expect(

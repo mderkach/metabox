@@ -220,7 +220,7 @@ describe('proxies screen', () => {
 
     renderWithQuery(<ProxiesPage />);
 
-    expect((await screen.findAllByText(/sing-box выбирает сам/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/Ядро само выбирает узел/)).length).toBeGreaterThan(0);
 
     // `us` is not an outbound of the file: there is nothing to wrap, and no action is offered.
     expect(screen.queryByRole('button', { name: 'Добавить ручной выбор для группы us' })).not.toBeInTheDocument();

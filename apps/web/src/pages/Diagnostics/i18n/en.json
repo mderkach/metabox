@@ -12,7 +12,7 @@
   "run": {
     "action": "Check",
     "pending": "Checking…",
-    "hint": "The check sends packets from the router and leaves lines in the sing-box log."
+    "hint": "The check sends packets from the router and leaves entries in the core log."
   },
   "idle": {
     "title": "No check has run yet",
@@ -41,9 +41,9 @@
   "reason": {
     "model_unavailable": "the metabox.dataplane interception settings in UCI could not be read",
     "interception_disabled": "interception is off — there is no need for ports and chains",
-    "not_listening": "nothing listens on the port: sing-box is stopped or the config has no such inbound",
+    "not_listening": "nothing is listening on the port. The core may be stopped, or the config may lack a matching inbound",
     "proc_unavailable": "could not read the socket list in /proc/net",
-    "config_missing": "there is no sing-box config on the device",
+    "config_missing": "there is no core config on the device",
     "no_dns_inbound": "the config has no dns-in on the interception DNS port: dnsmasq sends queries to an empty port",
     "dns_name_unset": "no name is set for the DNS probe",
     "no_answer": "the DNS probe got no answer",
@@ -51,9 +51,9 @@
     "nft_unparsed": "the nft output could not be parsed",
     "chains_missing": "nft has no interception chains:",
     "proxy_unset": "no node is chosen",
-    "proxy_missing": "the running sing-box has no such node",
-    "not_measured": "sing-box has no latency recorded for the node: it was never tested, or the last test failed",
-    "runtime_unavailable": "sing-box does not respond",
+    "proxy_missing": "the running core has no such node",
+    "not_measured": "the core has no latency reading for this node. It was never tested, or the last check failed",
+    "runtime_unavailable": "the core does not respond",
     "request_failed": "the request failed",
     "unsupported": "the check is not supported on this system"
   },

@@ -48,7 +48,7 @@ const (
 var (
 	// ErrUnavailable means the log source cannot be read: logread is not set or
 	// exited with an error, the log.output file did not open.
-	ErrUnavailable = locale.New("sing-box log unavailable")
+	ErrUnavailable = locale.New("the routing core log is unavailable")
 	// ErrTooManyStreams means MaxStreams streams are open, a new one is not started.
 	ErrTooManyStreams = locale.New("too many log streams open")
 	// ErrClearForbidden means the log.output file lies outside the directories in which the daemon

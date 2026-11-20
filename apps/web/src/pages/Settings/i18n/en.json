@@ -12,7 +12,7 @@
     "core": "sing-box",
     "schema": "Form schema",
     "config": "Config",
-    "devices": "Which devices go through sing-box is set on the Devices screen.",
+    "devices": "Choose which devices go through the core on the Devices screen.",
     "devicesLink": "Open devices"
   }
 }

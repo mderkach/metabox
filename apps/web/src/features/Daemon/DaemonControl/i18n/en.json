@@ -3,7 +3,7 @@
     "action": "Restart",
     "pending": "Restarting…",
     "title": "Restart the panel?",
-    "description": "The panel goes silent for a few seconds and reconnects on its own. Charts and rule hit counts start over: the daemon keeps them in memory. sing-box and routing keep working.",
+    "description": "The panel will disconnect for a few seconds and reconnect automatically. Charts and rule hit counts start over because the daemon keeps them in memory. The routing core keeps working.",
     "confirm": "Restart the panel"
   }
 }

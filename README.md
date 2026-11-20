@@ -20,9 +20,11 @@ Edit the config in forms, apply it with automatic rollback, see where every conn
 
 ---
 
-metabox is a web panel for sing-box on an OpenWrt router. It is for router owners who route traffic through sing-box and want to manage it in a browser instead of editing JSON by hand over SSH.
+metabox is a web panel for managing traffic on your router. It is for router owners who route traffic through a routing core and want to manage it in a browser instead of editing JSON by hand over SSH.
 
-A hand-edited config breaks easily: one wrong field, and the router loses internet until you fix it from a terminal. metabox shows the config as forms and checks every value before saving. Apply restarts sing-box, checks that it works, and rolls back to the previous version if a check fails. It also rolls back if you do not confirm in the panel within a minute that the connection is still alive.
+Today metabox works with OpenWrt and the sing-box-extended routing core.
+
+A hand-edited config breaks easily: one wrong field, and the router loses internet until you fix it from a terminal. metabox shows the config as forms and checks every value before saving. Apply restarts the routing core, checks that it works, and rolls back to the previous version if a check fails. It also rolls back if you do not confirm in the panel within a minute that the connection is still alive.
 
 metabox installs on the router as one apk package. It contains the `metaboxd` daemon with the built-in panel, the service that runs sing-box, and optional interception of LAN traffic.
 
@@ -39,9 +41,9 @@ metabox installs on the router as one apk package. It contains the `metaboxd` da
 - Apply with health checks and automatic rollback; version history with restore
 - Connections: live list with filters, CSV and JSON export, and which rule routed each connection
 - Proxies: node groups with latency tests, subscription updates
-- Devices from DHCP leases, with a per-device switch to route it through sing-box
-- Overview: sing-box state with restart and stop, node switch and a quick check up top; traffic, connections, top devices and nodes, router load, temperature and memory below
-- sing-box log and interception diagnostics
+- Devices from DHCP leases, with a per-device switch to route traffic through the core
+- Overview: core status and controls, node switch, quick check, traffic, connections, top devices and nodes, and router load, temperature and memory
+- Core logs and traffic interception diagnostics
 - Read-only MCP endpoint for AI agents such as Claude Code
 - Light and dark theme, English and Russian, desktop and phone layouts
 

@@ -27,7 +27,7 @@
   "closedNote": "Closed connections are kept while this tab is open.",
   "empty": {
     "title": "No connections",
-    "description": "Rows appear as soon as traffic goes through sing-box."
+    "description": "Connections appear here when traffic goes through the core."
   },
   "export": {
     "menu": "Export",

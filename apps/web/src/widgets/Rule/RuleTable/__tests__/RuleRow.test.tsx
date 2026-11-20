@@ -100,7 +100,7 @@ describe('RuleRow', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
     renderRow(RULE_HIT.Unobserved);
-    const hint = screen.getByRole('button', { name: 'sing-box не считает срабатывания таких правил' });
+    const hint = screen.getByRole('button', { name: 'ядро не считает срабатывания таких правил' });
 
     await user.tab();
     await user.tab();
@@ -109,7 +109,7 @@ describe('RuleRow', () => {
     await user.keyboard('{Enter}');
 
     expect(
-      screen.getByText('sing-box не считает срабатывания таких правил', { selector: '[data-slot=popover-content]' })
+      screen.getByText('ядро не считает срабатывания таких правил', { selector: '[data-slot=popover-content]' })
     ).toBeVisible();
   });
 });

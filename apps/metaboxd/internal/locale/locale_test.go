@@ -155,17 +155,17 @@ func TestMessageTranslatesJoinedParts(t *testing.T) {
 
 func TestPrintDefaults(t *testing.T) {
 	withCatalogue(t, map[string]string{
-		"Usage of %s:":               "Использование %s:",
-		" (default %q)":              " (по умолчанию %q)",
-		" (default %v)":              " (по умолчанию %v)",
-		"sing-box config directory":  "каталог конфига sing-box",
-		"how long to wait":           "сколько ждать",
-		"serve the panel over HTTPS": "обслуживать панель по HTTPS",
+		"Usage of %s:":                         "Использование %s:",
+		" (default %q)":                        " (по умолчанию %q)",
+		" (default %v)":                        " (по умолчанию %v)",
+		"routing core configuration directory": "каталог конфига ядра маршрутизации",
+		"how long to wait":                     "сколько ждать",
+		"serve the panel over HTTPS":           "обслуживать панель по HTTPS",
 	})
 
 	newSet := func() *flag.FlagSet {
 		fs := flag.NewFlagSet("metaboxd", flag.ContinueOnError)
-		fs.String("config-dir", "/etc/sing-box", "sing-box config directory")
+		fs.String("config-dir", "/etc/sing-box", "routing core configuration directory")
 		fs.Duration("confirm-window", 60_000_000_000, "how long to wait")
 		fs.Bool("https", false, "serve the panel over HTTPS")
 
@@ -177,11 +177,11 @@ func TestPrintDefaults(t *testing.T) {
 		want string
 	}{
 		{English, "Usage of metaboxd:\n" +
-			"  -config-dir string\n    \tsing-box config directory (default \"/etc/sing-box\")\n" +
+			"  -config-dir string\n    \trouting core configuration directory (default \"/etc/sing-box\")\n" +
 			"  -confirm-window duration\n    \thow long to wait (default 1m0s)\n" +
 			"  -https\n    \tserve the panel over HTTPS\n"},
 		{Russian, "Использование metaboxd:\n" +
-			"  -config-dir string\n    \tкаталог конфига sing-box (по умолчанию \"/etc/sing-box\")\n" +
+			"  -config-dir string\n    \tкаталог конфига ядра маршрутизации (по умолчанию \"/etc/sing-box\")\n" +
 			"  -confirm-window duration\n    \tсколько ждать (по умолчанию 1m0s)\n" +
 			"  -https\n    \tобслуживать панель по HTTPS\n"},
 	}

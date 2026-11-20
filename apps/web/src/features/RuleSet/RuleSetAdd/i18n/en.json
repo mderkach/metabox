@@ -4,7 +4,7 @@
       "label": "Category",
       "placeholder": "ru-blocked, for example",
       "hint": "Not in the suggestions? Type the name and the URL is built for you.",
-      "offCatalog": "This category is not in the provider's list. If the provider has no such file, sing-box will not start when the config is applied.",
+      "offCatalog": "This category is not in the provider’s list. If the provider does not have the file, the core will not start when the config is applied.",
       "checked": "The list was checked against the provider on {{date}}.",
       "snapshot": "The list comes from the panel build of {{date}} and has not been checked against the provider yet.",
       "undated": "The list date is unknown."

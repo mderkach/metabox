@@ -33,7 +33,7 @@ function isLocked(toggle: HTMLElement): boolean {
 
 /** The device toggle when the model is read and it became available. */
 async function readySwitch(device: string): Promise<HTMLElement> {
-  const toggle = await screen.findByRole('switch', { name: `Через sing-box: ${device}` });
+  const toggle = await screen.findByRole('switch', { name: `Через ядро: ${device}` });
 
   await waitFor(() => {
     expect(isLocked(toggle)).toBe(false);
@@ -44,7 +44,7 @@ async function readySwitch(device: string): Promise<HTMLElement> {
 
 /** The device toggle when the model is read and it shows interception. */
 async function readySwitchChecked(device: string): Promise<HTMLElement> {
-  const toggle = await screen.findByRole('switch', { name: `Через sing-box: ${device}` });
+  const toggle = await screen.findByRole('switch', { name: `Через ядро: ${device}` });
 
   await waitFor(() => {
     expect(toggle).toBeChecked();
@@ -322,16 +322,16 @@ describe('devices screen', () => {
       server.use(...createDeviceHandlers());
       renderScreen();
 
-      expect(await screen.findByRole('switch', { name: 'Через sing-box: iphone-guest' })).toBeChecked();
-      expect(await screen.findByRole('switch', { name: 'Через sing-box: tv-living' })).toBeChecked();
-      expect(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' })).not.toBeChecked();
+      expect(await screen.findByRole('switch', { name: 'Через ядро: iphone-guest' })).toBeChecked();
+      expect(await screen.findByRole('switch', { name: 'Через ядро: tv-living' })).toBeChecked();
+      expect(screen.getByRole('switch', { name: 'Через ядро: Ноутбук' })).not.toBeChecked();
 
       expect(within(rowOf('iphone-guest')).getByText('по MAC')).toBeInTheDocument();
-      expect(screen.getByRole('switch', { name: 'Через sing-box: iphone-guest' })).toHaveAccessibleDescription(
+      expect(screen.getByRole('switch', { name: 'Через ядро: iphone-guest' })).toHaveAccessibleDescription(
         'MAC устройства записан в список перехвата'
       );
       expect(within(rowOf('tv-living')).getByText('по адресу')).toBeInTheDocument();
-      expect(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' })).not.toHaveAccessibleDescription();
+      expect(screen.getByRole('switch', { name: 'Через ядро: Ноутбук' })).not.toHaveAccessibleDescription();
     });
 
     it('shows a device from a source_ip subnet as enabled, available and names the subnet', async () => {
@@ -362,15 +362,15 @@ describe('devices screen', () => {
       expect(laptop).toHaveAccessibleDescription(
         'Устройство входит в подсеть 192.168.1.60/31 из списка перехвата. Выключение исключит его из подсети.'
       );
-      expect(screen.getByRole('switch', { name: 'Через sing-box: iphone-guest' })).toBeChecked();
-      expect(screen.getByRole('switch', { name: 'Через sing-box: tv-living' })).toBeChecked();
+      expect(screen.getByRole('switch', { name: 'Через ядро: iphone-guest' })).toBeChecked();
+      expect(screen.getByRole('switch', { name: 'Через ядро: tv-living' })).toBeChecked();
 
       // A /32 host does not count as a subnet: its toggle clears it.
       const host = await readySwitch('192.168.1.36');
 
       expect(host).toBeChecked();
       expect(within(rowOf('aa:bb:cc:00:00:40')).getByText('по адресу')).toBeInTheDocument();
-      expect(screen.getByRole('switch', { name: 'Через sing-box: Принтер' })).not.toBeChecked();
+      expect(screen.getByRole('switch', { name: 'Через ядро: Принтер' })).not.toBeChecked();
     });
 
     it('after the warning sends a model with the MAC in source_mac and opens the confirmation window', async () => {
@@ -387,9 +387,12 @@ describe('devices screen', () => {
 
       await user.click(await readySwitch('192.168.1.36'));
 
-      const dialog = await screen.findByRole('alertdialog', { name: 'Пустить 192.168.1.36 через sing-box?' });
+      const dialog = await screen.findByRole('alertdialog', {
+        name: 'Направить трафик устройства 192.168.1.36 через ядро?',
+      });
 
-      expect(dialog).toHaveTextContent('sing-box перезапустится, соединения всех устройств оборвутся');
+      expect(dialog).toHaveTextContent('Ядро перезапустится, и соединения всех устройств оборвутся');
+      expect(dialog).toHaveTextContent('Иначе вернутся прежние настройки.');
       expect(changed).not.toHaveBeenCalled();
 
       await user.click(within(dialog).getByRole('button', { name: 'Применить' }));
@@ -410,9 +413,9 @@ describe('devices screen', () => {
       expect(bar).toHaveTextContent('Перехват изменён');
       expect(within(bar).getByRole('button', { name: 'Связь есть, оставить' })).toBeEnabled();
       // While a change awaits confirmation, a second cannot start.
-      expect(isLocked(screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' }))).toBe(true);
+      expect(isLocked(screen.getByRole('switch', { name: 'Через ядро: Ноутбук' }))).toBe(true);
       await waitFor(() => {
-        expect(screen.getByRole('switch', { name: 'Через sing-box: 192.168.1.36' })).toBeChecked();
+        expect(screen.getByRole('switch', { name: 'Через ядро: 192.168.1.36' })).toBeChecked();
       });
     });
 
@@ -431,7 +434,9 @@ describe('devices screen', () => {
 
       await user.click(await readySwitch('Ноутбук'));
       await user.click(
-        within(await screen.findByRole('alertdialog', { name: 'Пустить Ноутбук мимо sing-box?' })).getByRole('button', {
+        within(
+          await screen.findByRole('alertdialog', { name: 'Направить трафик устройства Ноутбук в обход ядра?' })
+        ).getByRole('button', {
           name: 'Применить',
         })
       );
@@ -460,7 +465,7 @@ describe('devices screen', () => {
 
       expect(laptop).not.toBeChecked();
       expect(within(rowOf('Ноутбук')).getByText('исключено из 192.168.1.0/24')).toBeInTheDocument();
-      expect(screen.getByRole('switch', { name: 'Через sing-box: iphone-guest' })).toBeChecked();
+      expect(screen.getByRole('switch', { name: 'Через ядро: iphone-guest' })).toBeChecked();
     });
 
     it('an exclusion wider than the device keeps the toggle off and unavailable, and names the subnet', async () => {
@@ -471,7 +476,7 @@ describe('devices screen', () => {
       });
       renderScreen();
 
-      const laptop = await screen.findByRole('switch', { name: 'Через sing-box: Ноутбук' });
+      const laptop = await screen.findByRole('switch', { name: 'Через ядро: Ноутбук' });
 
       expect(within(rowOf('Ноутбук')).getByText('в исключениях: 192.168.1.0/26')).toBeInTheDocument();
       expect(laptop).not.toBeChecked();
@@ -556,7 +561,7 @@ describe('devices screen', () => {
         expect(within(rowOf('Ноутбук')).getByText('перехват для всех')).toBeInTheDocument();
       });
 
-      const toggle = screen.getByRole('switch', { name: 'Через sing-box: Ноутбук' });
+      const toggle = screen.getByRole('switch', { name: 'Через ядро: Ноутбук' });
 
       expect(isLocked(toggle)).toBe(true);
       expect(toggle).toBeChecked();
@@ -587,7 +592,7 @@ describe('devices screen', () => {
       });
       await readySwitch('192.168.1.36');
       expect(screen.queryByRole('region', { name: 'Смена перехвата' })).not.toBeInTheDocument();
-      expect(screen.getByRole('switch', { name: 'Через sing-box: 192.168.1.36' })).not.toBeChecked();
+      expect(screen.getByRole('switch', { name: 'Через ядро: 192.168.1.36' })).not.toBeChecked();
     });
   });
 
@@ -604,12 +609,12 @@ describe('devices screen', () => {
       );
       renderScreen();
 
-      const list = await screen.findByRole('list', { name: 'Адреса и подсети через sing-box: значения' });
+      const list = await screen.findByRole('list', { name: 'Адреса и подсети через ядро: значения' });
 
       expect(within(list).getByText('192.168.1.180')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Применить список' })).toBeDisabled();
 
-      await user.type(screen.getByRole('textbox', { name: 'Адреса и подсети через sing-box' }), '10.0.0.0/8{Enter}');
+      await user.type(screen.getByRole('textbox', { name: 'Адреса и подсети через ядро' }), '10.0.0.0/8{Enter}');
       await user.click(screen.getByRole('button', { name: 'Применить список' }));
 
       const dialog = await screen.findByRole('alertdialog', { name: 'Применить новый список адресов и подсетей?' });
@@ -637,7 +642,7 @@ describe('devices screen', () => {
       );
       renderScreen();
 
-      const input = await screen.findByRole('textbox', { name: 'Адреса и подсети через sing-box' });
+      const input = await screen.findByRole('textbox', { name: 'Адреса и подсети через ядро' });
 
       await user.type(input, '192.168.1.5/24{Enter}');
 
@@ -657,10 +662,7 @@ describe('devices screen', () => {
       server.use(...createDeviceHandlers());
       renderScreen();
 
-      await user.type(
-        await screen.findByRole('textbox', { name: 'Адреса и подсети через sing-box' }),
-        'fd00::1{Enter}'
-      );
+      await user.type(await screen.findByRole('textbox', { name: 'Адреса и подсети через ядро' }), 'fd00::1{Enter}');
 
       expect(await screen.findByRole('alert')).toHaveTextContent('«fd00::1» — не IPv4-адрес и не подсеть.');
 

@@ -4,16 +4,16 @@
   "from": "from {{device}}",
   "close": "Close the explanation",
   "drift": {
-    "title": "sing-box runs another config version",
-    "description": "Running sing-box has {{running}} rules, the applied file has {{document}}, so the rule number is not shown. Apply the config to make them match.",
+    "title": "The core runs another config version",
+    "description": "The core uses {{running}} rules. The applied file contains {{document}}, so the rule number is hidden. Apply the config to make the lists match.",
     "notCompared": "The applied config was not read, so there is no link to the rule.",
     "open": "Open the config"
   },
   "origin": {
-    "observed": "from sing-box",
+    "observed": "from the core",
     "computed": "computed",
     "unknown": "unknown",
-    "note": "“From sing-box” means sing-box reported the value; the panel did not compute it."
+    "note": "“From the core” marks values reported by the core. The panel shows them as received."
   },
   "final": {
     "title": "No rule matched",
@@ -21,16 +21,16 @@
   },
   "unknown": {
     "title": "The rule is undetermined",
-    "missing": "The rule of this connection is not in the sing-box rule list.",
+    "missing": "The rule for this connection is missing from the core’s rule list.",
     "reason": {
-      "not_in_process_list": "the rule of this connection is not in the running sing-box rule list"
+      "not_in_process_list": "the core’s active rule list does not contain the rule for this connection"
     }
   },
   "matched": {
     "title": "Rule {{number}} matched",
     "action": "Action",
     "open": "Open the rule in the editor",
-    "observed": "The rule that hit, as sing-box reports it",
+    "observed": "The matched rule reported by the core",
     "unmapped": "The number of this rule in the file is unknown."
   },
   "chain": {

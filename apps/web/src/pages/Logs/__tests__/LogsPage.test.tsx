@@ -45,7 +45,7 @@ describe('logs screen', () => {
     // The default level is info: the daemon does not serve debug lines at all.
     expect(screen.queryByText('dns: exchanged example.com A 93.184.215.14')).not.toBeInTheDocument();
     expect(screen.getByText('источник: logread')).toBeInTheDocument();
-    expect(screen.getByRole('table', { name: 'Лог sing-box' })).toHaveAttribute('aria-rowcount', '5');
+    expect(screen.getByRole('table', { name: 'Лог ядра' })).toHaveAttribute('aria-rowcount', '5');
   });
 
   it('stream lines are appended under the tail', async () => {
@@ -227,8 +227,8 @@ describe('logs screen', () => {
 
     renderScreen();
 
-    expect(await screen.findByText('Не удалось получить лог sing-box')).toBeInTheDocument();
-    expect(screen.getByText(/лог sing-box недоступен/)).toBeInTheDocument();
+    expect(await screen.findByText('Не удалось прочитать лог ядра')).toBeInTheDocument();
+    expect(screen.getByText(/лог ядра недоступен/)).toBeInTheDocument();
     expect(screen.queryByText('Строк нет')).not.toBeInTheDocument();
   });
 });

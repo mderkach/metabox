@@ -61,7 +61,7 @@ var (
 
 	// ErrRuntimeUnavailable means the runtime did not answer. This is a source failure, not the
 	// panel's: the screen must tell "no data" from "the daemon is broken".
-	ErrRuntimeUnavailable = locale.New("sing-box runtime unavailable")
+	ErrRuntimeUnavailable = locale.New("the routing core is unavailable")
 
 	// errNotInProcessList is the text of ReasonNotInProcessList.
 	errNotInProcessList = locale.New("the connection rule is not in the rule list of the running process")

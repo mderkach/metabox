@@ -247,7 +247,7 @@ describe('panel routes', () => {
 
     renderRouter('/config/raw');
 
-    await user.type(await screen.findByLabelText('Конфиг sing-box текстом'), ' ');
+    await user.type(await screen.findByLabelText('Конфиг текстом'), ' ');
 
     await waitFor(() => {
       expect(ConfigDocumentState.getState().draft).toBe(`${MINIMAL_CONFIG} `);
