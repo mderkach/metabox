@@ -120,8 +120,8 @@
     "notWritten": "Строка {{line}}: {{reason}}. В черновик не записано"
   },
   "schema": {
-    "unknownFields": "панель не знает поля: {{fields}}",
-    "unknownFieldsAt": "{{path}}: панель не знает поля: {{fields}}",
+    "unknownFields": "для этих полей нет формы: {{fields}}",
+    "unknownFieldsAt": "{{path}}: для этих полей нет формы: {{fields}}",
     "issue": "{{path}}: {{message}}",
     "issueAtLine": "строка {{line}}, {{path}}: {{message}}"
   },
@@ -254,7 +254,7 @@
   },
   "rule": {
     "unconditional": "без условий",
-    "uncovered": "панель не знает",
+    "uncovered": "только текстом",
     "conditions": "Условия",
     "numbered": "Правило {{index}}",
     "allTraffic": "весь трафик",

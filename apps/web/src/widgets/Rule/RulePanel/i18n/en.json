@@ -2,15 +2,15 @@
   "titleNew": "New rule · position {{index}}",
   "creating": "The rule appears in the draft once it has a condition or a rule set: without conditions it would take all traffic.",
   "unknown": {
-    "title": "The panel does not know this rule",
-    "description": "It can be edited only as JSON. It is kept unchanged."
+    "title": "Form unavailable for this rule",
+    "description": "Edit this rule on the JSON tab. Edits to other rules leave its JSON unchanged."
   },
-  "formlessAction": "The form does not know the “{{action}}” action: edit the rule on the JSON tab.",
+  "formlessAction": "The form does not support the “{{action}}” action. Edit the rule on the JSON tab.",
   "tab": {
     "form": "Form"
   },
   "conditions": {
-    "unknown": "Conditions are not shown: the panel does not know this rule’s fields. Edit them on the JSON tab.",
+    "unknown": "This rule’s conditions are only visible in JSON.",
     "empty": "No conditions: the rule takes all traffic, and the rules below never fire.",
     "group": "Conditions are joined with “{{mode}}” in nested rules. Edit them on the JSON tab.",
     "inverted": "The condition is inverted: the rule fires when it does not hold."

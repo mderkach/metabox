@@ -120,8 +120,8 @@
     "notWritten": "Line {{line}}: {{reason}}. Not written to the draft"
   },
   "schema": {
-    "unknownFields": "the panel does not know the fields: {{fields}}",
-    "unknownFieldsAt": "{{path}}: the panel does not know the fields: {{fields}}",
+    "unknownFields": "fields not covered by the UI: {{fields}}",
+    "unknownFieldsAt": "{{path}}: fields not covered by the UI: {{fields}}",
     "issue": "{{path}}: {{message}}",
     "issueAtLine": "line {{line}}, {{path}}: {{message}}"
   },
@@ -245,7 +245,7 @@
   },
   "rule": {
     "unconditional": "no conditions",
-    "uncovered": "unknown to the panel",
+    "uncovered": "not covered by the UI",
     "conditions": "Conditions",
     "numbered": "Rule {{index}}",
     "allTraffic": "all traffic",
