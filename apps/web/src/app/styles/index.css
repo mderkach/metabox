@@ -227,7 +227,7 @@
   --destructive: oklch(0.53 0.2 24);
   --border: oklch(0.895 0.006 265);
   --input: oklch(0.865 0.008 265);
-  --ring: oklch(0.53 0.16 240);
+  --ring: oklch(0.22 0.11 240);
   --radius: 0.875rem;
 
   --selected: oklch(0.925 0.028 240);
@@ -274,7 +274,7 @@
   --sidebar-accent: oklch(0.915 0.022 245);
   --sidebar-accent-foreground: oklch(0.255 0.014 265);
   --sidebar-border: oklch(0.895 0.006 265);
-  --sidebar-ring: oklch(0.53 0.16 240);
+  --sidebar-ring: var(--ring);
 }
 
 .dark {
@@ -296,7 +296,7 @@
   --destructive: oklch(0.665 0.195 22);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.72 0.155 235);
+  --ring: oklch(0.87 0.115 235);
   --radius: 0.875rem;
 
   --selected: oklch(0.295 0.026 245);
@@ -337,7 +337,7 @@
   --sidebar-accent: oklch(0.245 0.012 250);
   --sidebar-accent-foreground: oklch(0.97 0.002 265);
   --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.72 0.155 235);
+  --sidebar-ring: var(--ring);
 }
 
 @layer base {
@@ -391,6 +391,26 @@
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--input) transparent;
+  }
+}
+
+@media (forced-colors: active) {
+  /* Forced colors suppress box shadows, including the Tailwind focus ring. */
+  :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  a[aria-current='page']::before,
+  [data-slot='sheet-trigger'][data-current]::before,
+  [role='tab'][aria-selected='true']::after,
+  [data-slot='switch-thumb'] {
+    background-color: ButtonText;
+  }
+
+  [data-slot='switch'],
+  [data-slot='toggle-group-item'][aria-pressed='true'] {
+    border: 1px solid ButtonText;
   }
 }
 

@@ -7,6 +7,8 @@ export interface FocusStop {
   name: string;
   /** The focused element looks different from the same element without focus. */
   drawn: boolean;
+  /** A CSS outline survives forced colors when box shadows are suppressed. */
+  outlined: boolean;
   /** Contrast of the ring against the background around the element; null when there is no ring to measure. */
   ringContrast: number | null;
 }
@@ -105,14 +107,15 @@ export const FOCUS_METER = String.raw`
     element.tagName.toLowerCase() + ' "' + (element.getAttribute('aria-label') ?? element.textContent.trim().slice(0, NAME_LENGTH)) + '"';
 
   /** The ring of a focused element: a box-shadow layer with a spread and a visible color; Tailwind keeps empty layers. */
-  const ringColor = (style) =>
+  const focusRing = (style) =>
     style.boxShadow
       .split(/,(?![^(]*\))/)
       .map((layer) => ({
         color: COLOR.exec(layer)?.[0],
+        inset: layer.includes('inset'),
         spread: Number.parseFloat(layer.replace(COLOR, '').trim().split(/\s+/)[SPREAD_INDEX] ?? '0'),
       }))
-      .find((layer) => layer.color && layer.spread > 0 && rgba(layer.color)[3] > 0)?.color;
+      .find((layer) => layer.color && layer.spread > 0 && rgba(layer.color)[3] > 0);
 
   const keys = new WeakMap();
   let nextKey = 0;
@@ -162,15 +165,17 @@ export const FOCUS_METER = String.raw`
       const focused = getComputedStyle(element);
       const look = LOOK.map((key) => focused[key]);
       const outlined = focused.outlineStyle !== 'none' && Number.parseFloat(focused.outlineWidth) > 0;
-      const mark = outlined ? focused.outlineColor : ringColor(focused);
-      const ringContrast = mark ? contrast(mark, element.parentElement) : null;
+      const ring = outlined ? undefined : focusRing(focused);
+      const mark = outlined ? focused.outlineColor : ring?.color;
+      const inset = outlined ? Number.parseFloat(focused.outlineOffset) < 0 : ring?.inset;
+      const ringContrast = mark ? contrast(mark, inset ? element : element.parentElement) : null;
 
       element.blur();
       const plain = getComputedStyle(element);
       const drawn = LOOK.some((key, position) => plain[key] !== look[position]);
       element.focus({ focusVisible: true });
 
-      return { key: keyOf(element), name: name(element), drawn, ringContrast };
+      return { key: keyOf(element), name: name(element), drawn, outlined, ringContrast };
     },
 
     /** Controls a user can operate that Tab cannot reach: not tabbable and not in a roving group. */

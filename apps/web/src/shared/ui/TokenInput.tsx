@@ -171,7 +171,7 @@ export function TokenInput({
                       <button
                         type='button'
                         aria-label={t('tokenInput.remove', { value: token })}
-                        className='inline-flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none pointer-coarse:size-7'
+                        className='inline-flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none pointer-coarse:size-7'
                         onClick={() => {
                           remove(index);
                         }}
