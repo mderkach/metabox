@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { ConnectionShare } from '@entities/Connection';
@@ -14,7 +15,14 @@ const PROTOCOL_TONES: Readonly<Record<string, string>> = {
 
 const OTHER_TONE = 'bg-muted-foreground';
 
-export function ConnectionSummaryNetwork({ shares }: { shares: ConnectionShare[] }) {
+export function ConnectionSummaryNetwork({
+  shares,
+  placeholder,
+}: {
+  shares: ConnectionShare[];
+  /** Replaces the card body when the page knows the data is missing or still loading. */
+  placeholder?: ReactNode;
+}) {
   const { t } = useTranslation('widgets/ConnectionSummary');
   const slices: SplitSlice[] = shares.toSorted(byProtocol).map((share) => ({
     key: share.key,
@@ -26,7 +34,7 @@ export function ConnectionSummaryNetwork({ shares }: { shares: ConnectionShare[]
 
   return (
     <ConnectionSummaryPanel title={t('network.title')}>
-      <ConnectionSummarySplit slices={slices} empty={t('empty')} />
+      {placeholder ?? <ConnectionSummarySplit slices={slices} empty={t('empty')} />}
     </ConnectionSummaryPanel>
   );
 }

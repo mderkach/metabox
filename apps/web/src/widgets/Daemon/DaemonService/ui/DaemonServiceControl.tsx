@@ -1,9 +1,11 @@
 import type { ParseKeys } from 'i18next';
 import { CircleAlert, Info } from 'lucide-react';
+import { useLayoutEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
   SERVICE_ACTION,
+  SERVICE_STATUS,
   toConfirmedStatus,
   useServiceState,
   type ServiceErrorCode,
@@ -61,6 +63,24 @@ export function DaemonServiceControl({ heading: Heading = 'h3' }: { heading?: 'h
   const service = useServiceState();
   const action = useServiceAction();
   const shown = useLastConfirmedService(service.data);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const startButton = useRef<HTMLButtonElement>(null);
+  const running = shown?.status === SERVICE_STATUS.Running;
+
+  useLayoutEffect(
+    function restoreStartFocus() {
+      const button = startButton.current;
+      if (!running || button === null) {
+        return;
+      }
+
+      startButton.current = null;
+      if (document.activeElement === button || document.activeElement === document.body) {
+        headingRef.current?.focus();
+      }
+    },
+    [running]
+  );
 
   if (service.isLoadingError) {
     return (
@@ -80,12 +100,20 @@ export function DaemonServiceControl({ heading: Heading = 'h3' }: { heading?: 'h
   const known = toConfirmedStatus(state) !== null;
   const status = shown?.status ?? null;
   const managed = shown?.managed ?? false;
-  const running = status === 'running';
 
   return (
     <div className='flex flex-col gap-3'>
       <div className='flex flex-wrap items-baseline gap-x-2.5 gap-y-1'>
-        <Heading className={CARD_TITLE}>sing-box</Heading>
+        <Heading
+          ref={headingRef}
+          tabIndex={-1}
+          className={cn(
+            '-mx-1 rounded-md px-1 outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+            CARD_TITLE
+          )}
+        >
+          sing-box
+        </Heading>
         <p className='flex items-center gap-1.5 self-center text-sm'>
           <span
             aria-hidden='true'
@@ -131,8 +159,25 @@ export function DaemonServiceControl({ heading: Heading = 'h3' }: { heading?: 'h
               variant='outline'
               size='sm'
               disabled={action.isPending}
-              onClick={() => {
-                action.mutate(SERVICE_ACTION.Start);
+              onClick={(event) => {
+                startButton.current = document.activeElement === event.currentTarget ? event.currentTarget : null;
+                action.mutate(SERVICE_ACTION.Start, {
+                  onError: () => {
+                    startButton.current = null;
+                  },
+                  onSuccess: (next) => {
+                    const button = startButton.current;
+                    startButton.current = null;
+                    const focused = document.activeElement;
+                    if (
+                      button !== null &&
+                      next.status === SERVICE_STATUS.Running &&
+                      (focused === button || focused === document.body)
+                    ) {
+                      headingRef.current?.focus();
+                    }
+                  },
+                });
               }}
             >
               {t('action.start')}

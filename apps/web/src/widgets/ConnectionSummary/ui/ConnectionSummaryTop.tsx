@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { ConnectionShare } from '@entities/Connection';
@@ -18,6 +19,7 @@ export function ConnectionSummaryTop({
   shares,
   empty,
   label,
+  placeholder,
 }: {
   title: string;
   href?: string;
@@ -26,6 +28,8 @@ export function ConnectionSummaryTop({
   empty?: string;
   /** Group caption by key — a device name instead of an address; without it, the key itself. */
   label?: (key: string) => string;
+  /** Replaces the card body when the page knows the data is missing or still loading. */
+  placeholder?: ReactNode;
 }) {
   const { t } = useTranslation('widgets/ConnectionSummary');
   const bars: SummaryBar[] = shares.map((share) => ({
@@ -38,7 +42,7 @@ export function ConnectionSummaryTop({
 
   return (
     <ConnectionSummaryPanel title={title} href={href}>
-      <ConnectionSummaryBars bars={bars} empty={empty ?? t('empty')} format={formatBytes} />
+      {placeholder ?? <ConnectionSummaryBars bars={bars} empty={empty ?? t('empty')} format={formatBytes} />}
     </ConnectionSummaryPanel>
   );
 }

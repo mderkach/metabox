@@ -42,7 +42,7 @@ export function OverviewPage() {
       <LiveRegion message={message} />
 
       <div className='flex min-h-0 grow flex-col gap-6 overflow-y-auto px-4 py-5 *:shrink-0 sm:px-6'>
-        <OverviewStatus onAnnounce={announce} />
+        <OverviewStatus onAnnounce={announce} stopped={runtime.stopped} />
         <OverviewTraffic runtime={runtime} />
         <OverviewConnections runtime={runtime} onLatencyTested={onLatencyTested} />
         <OverviewDevice system={runtime.system} collapsible={narrow} />

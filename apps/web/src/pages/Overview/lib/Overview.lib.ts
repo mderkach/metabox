@@ -1,5 +1,5 @@
 import type { LinkProps } from '@tanstack/react-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -42,6 +42,14 @@ const FRESHNESS_TICK = TICK_SECONDS * MS_IN_SECOND;
 
 const NO_SHARE: TrafficShare = { link: 0, proxy: 0, split: { proxy: 0, direct: 0, block: 0 }, seconds: 0 };
 
+/** Why core data is missing: the service is confirmed stopped, or the core sends nothing past the drop threshold. */
+export const CORE_GAP = {
+  Stopped: 'stopped',
+  Silent: 'silent',
+} as const;
+
+export type CoreGap = (typeof CORE_GAP)[keyof typeof CORE_GAP];
+
 export interface OverviewRuntime {
   traffic: TrafficSample[];
   now: TrafficSample;
@@ -65,18 +73,39 @@ export interface OverviewRuntime {
   counts: { active: number; closed: number };
   /** Runtime frames are arriving right now. */
   live: boolean;
-  /** No frame has arrived yet: the screen shows waiting, not zeros. */
+  /** No frame of the current core run has arrived yet: the screen shows waiting, not zeros. */
   awaiting: boolean;
   /** Device snapshots are arriving right now: the daemon sends them even without sing-box. */
   daemonLive: boolean;
-  /** The screen has been open longer than the drop threshold and there is still no first traffic frame. */
+  /** The drop threshold has passed since the screen opened or the core started, and there is still no first traffic frame. */
   overdue: boolean;
-  /** When the last traffic frame arrived, epoch milliseconds. */
+  /** When the last traffic frame of the current core run arrived, epoch milliseconds. */
   sampledAt: number | null;
   /** When the last traffic point was received: the chart time is counted from it. */
   trafficAt: number | null;
   /** No connection snapshot yet: counters show loading, not zero. */
   connectionsAwaiting: boolean;
+  /** Traffic from the core will not arrive or is not current: its blocks say why instead of loading or showing old numbers. */
+  coreGap: CoreGap | null;
+  /** The same for the connection snapshot, which the core sends apart from traffic. */
+  connectionsGap: CoreGap | null;
+  /** The core was started from a confirmed stop and its first frame has not arrived yet. */
+  starting: boolean;
+  /** The daemon confirmed that the core service is not running. */
+  stopped: boolean;
+}
+
+function toCoreGap(stopped: boolean, silent: boolean): CoreGap | null {
+  if (stopped) {
+    return CORE_GAP.Stopped;
+  }
+
+  return silent ? CORE_GAP.Silent : null;
+}
+
+/** A frame from before the last start describes the previous run, not the current one. */
+function sinceStart(at: number | null, startedAt: number | null): number | null {
+  return at !== null && (startedAt === null || at >= startedAt) ? at : null;
 }
 
 function isFresh(at: number | null, checkedAt: number): boolean {
@@ -103,6 +132,8 @@ export function useOverviewRuntime(): OverviewRuntime {
   const historyAt = ConnectionState.use.historyAt();
   const counts = useConnectionCounts();
   const connectionsAt = ConnectionState.use.sampledAt();
+  const service = useServiceState();
+  const reachable = useDaemonReachable();
   const trafficHistory = useTrafficHistory();
   const recent = trafficHistory.data?.recent;
   const connectionCounts = trafficHistory.data?.connections;
@@ -147,13 +178,47 @@ export function useOverviewRuntime(): OverviewRuntime {
     };
   }, [traffic]);
   const historyPeak = useMemo(() => Math.max(0, ...history.slice(-HISTORY_WINDOW_POINTS)), [history]);
+  const status = service.data === undefined ? null : toConfirmedStatus(service.data);
+  const lastStatus = useRef(status);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+
+  // Before paint: otherwise the first render after a start would show the previous run's frames as current.
+  useLayoutEffect(
+    function markStart() {
+      if (status === null) {
+        return;
+      }
+
+      // Only a confirmed stop followed by a confirmed run is a start: the first read and an unread state are not.
+      if (status === SERVICE_STATUS.Running && lastStatus.current !== null && lastStatus.current !== status) {
+        setStartedAt(Date.now());
+      }
+
+      lastStatus.current = status;
+    },
+    [status]
+  );
+
+  const frameAt = sinceStart(sampledAt, startedAt);
+  const snapshotAt = sinceStart(connectionsAt, startedAt);
+  const overdue = frameAt === null && checkedAt - (startedAt ?? openedAt) >= STALE_AFTER;
+  // With the daemon unreachable its last service state is not current either: the verdict ignores it too.
+  const stopped = reachable && status !== null && status !== SERVICE_STATUS.Running;
+  const daemonLive = isFresh(systemAt, checkedAt);
+  // Silence after frames is the core's only while the daemon still sends its own snapshots;
+  // otherwise the link to the daemon is lost, and the screen keeps the last numbers.
+  const coreGap = toCoreGap(stopped, overdue || (frameAt !== null && !isFresh(frameAt, checkedAt) && daemonLive));
+  const connectionsGap = toCoreGap(
+    stopped,
+    (overdue && snapshotAt === null) || (snapshotAt !== null && !isFresh(snapshotAt, checkedAt) && daemonLive)
+  );
 
   return {
     traffic,
     now,
     peakDown: peaks.down,
     peakUp: peaks.up,
-    memory,
+    memory: coreGap === null ? memory : 0,
     totals,
     system,
     uplink,
@@ -163,13 +228,17 @@ export function useOverviewRuntime(): OverviewRuntime {
     historyAt,
     historyPeak,
     counts,
-    live: isFresh(sampledAt, checkedAt),
-    awaiting: sampledAt === null,
-    daemonLive: isFresh(systemAt, checkedAt),
-    overdue: sampledAt === null && checkedAt - openedAt >= STALE_AFTER,
-    sampledAt,
+    live: isFresh(frameAt, checkedAt),
+    awaiting: frameAt === null,
+    daemonLive,
+    overdue,
+    sampledAt: frameAt,
     trafficAt,
-    connectionsAwaiting: connectionsAt === null,
+    connectionsAwaiting: snapshotAt === null,
+    coreGap,
+    connectionsGap,
+    starting: startedAt !== null && frameAt === null && !overdue,
+    stopped,
   };
 }
 
@@ -206,7 +275,7 @@ export interface Verdict {
  * the daemon sends device snapshots but there is no traffic from sing-box.
  */
 export function useOverviewVerdict(
-  runtime: Pick<OverviewRuntime, 'system' | 'live' | 'awaiting' | 'daemonLive' | 'overdue'>
+  runtime: Pick<OverviewRuntime, 'system' | 'live' | 'awaiting' | 'daemonLive' | 'overdue' | 'starting'>
 ): Verdict {
   const { t } = useTranslation('pages/Overview');
   const reachable = useDaemonReachable();
@@ -226,7 +295,9 @@ export function useOverviewVerdict(
 
   if (!runtime.live) {
     if (runtime.awaiting && !runtime.overdue) {
-      return { tone: VERDICT_TONE.Idle, title: t('verdict.waiting'), hint: t('verdict.waitingHint'), action: null };
+      const hint = runtime.starting ? t('verdict.startingHint') : t('verdict.waitingHint');
+
+      return { tone: VERDICT_TONE.Idle, title: t('verdict.waiting'), hint, action: null };
     }
 
     return runtime.daemonLive

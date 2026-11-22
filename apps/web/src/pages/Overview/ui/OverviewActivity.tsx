@@ -6,6 +6,7 @@ import { PENDING_REVEAL, Skeleton } from '@shared/ui';
 import { ConnectionSummaryPanel } from '@widgets/ConnectionSummary';
 
 import type { OverviewRuntime } from '../lib';
+import { OverviewCoreGap } from './OverviewCoreGap';
 import { OverviewTrend } from './OverviewTrend';
 
 /**
@@ -16,13 +17,16 @@ import { OverviewTrend } from './OverviewTrend';
 export function OverviewActivity({ runtime }: { runtime: OverviewRuntime }) {
   const { t } = useTranslation('pages/Overview');
   const minute = runtime.history.slice(-HISTORY_WINDOW_POINTS);
+  const gap = runtime.connectionsGap;
 
   return (
     <ConnectionSummaryPanel title={t('connections.title')} href='/connections'>
       <div className='flex flex-col gap-1'>
-        {runtime.connectionsAwaiting ? (
+        {gap !== null && <OverviewCoreGap gap={gap} />}
+        {gap === null && runtime.connectionsAwaiting && (
           <Skeleton aria-hidden='true' className={cn('h-7 w-32', PENDING_REVEAL)} />
-        ) : (
+        )}
+        {gap === null && !runtime.connectionsAwaiting && (
           <p className='flex flex-wrap items-baseline gap-x-3 gap-y-0.5'>
             <data value={runtime.counts.active} className='text-xl font-semibold tabular-nums'>
               {runtime.counts.active}
@@ -33,14 +37,16 @@ export function OverviewActivity({ runtime }: { runtime: OverviewRuntime }) {
           </p>
         )}
         {/* The minute is seeded from the daemon history: it is drawn before the first snapshot. */}
-        <OverviewTrend
-          samples={minute}
-          stepSeconds={HISTORY_STEP_SECONDS}
-          capacity={Math.max(runtime.historyPeak, 1)}
-          format={String}
-          label={t('connections.history')}
-        />
-        {!runtime.connectionsAwaiting && (
+        {gap === null && (
+          <OverviewTrend
+            samples={minute}
+            stepSeconds={HISTORY_STEP_SECONDS}
+            capacity={Math.max(runtime.historyPeak, 1)}
+            format={String}
+            label={t('connections.history')}
+          />
+        )}
+        {gap === null && !runtime.connectionsAwaiting && (
           <p className='text-xs text-muted-foreground tabular-nums'>
             {t('connections.closedSince', { count: runtime.counts.closed })}
           </p>

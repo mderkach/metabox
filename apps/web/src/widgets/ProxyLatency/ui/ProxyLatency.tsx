@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DELAY_FAST, toDelayLabel, useProxies } from '@entities/Proxy';
@@ -24,9 +25,12 @@ import { ProxyLatencyMeter } from './ProxyLatencyMeter';
 /** The measurement is made by sing-box: from the browser the channel to the panel would be measured. */
 export function ProxyLatency({
   onTested,
+  placeholder,
 }: {
   /** The measurement passed for all selected nodes: a failure in at least one shows an error toast. */
   onTested: () => void;
+  /** Replaces the latencies and disables the test when the page knows they cannot be measured now. */
+  placeholder?: ReactNode;
 }) {
   const { t } = useTranslation('widgets/ProxyLatency');
   const proxies = useProxies();
@@ -47,7 +51,7 @@ export function ProxyLatency({
         <Button
           variant='outline'
           size='sm'
-          disabled={selected.length === 0 || delay.isPending}
+          disabled={placeholder !== undefined || selected.length === 0 || delay.isPending}
           onClick={() => {
             void delay.test(selected.map((entry) => entry.node.name)).then(function announceTested(success) {
               if (success) onTested();
@@ -59,16 +63,19 @@ export function ProxyLatency({
       </CardHeader>
 
       <CardContent>
-        {proxies.isPending && <SkeletonRows rows={2} className='p-0' />}
-        {proxies.isLoadingError && <QueryFailure messageKey='source.proxies' query={proxies} />}
-        {proxies.isSuccess && selected.length === 0 && (
+        {placeholder}
+        {placeholder === undefined && proxies.isPending && <SkeletonRows rows={2} className='p-0' />}
+        {placeholder === undefined && proxies.isLoadingError && (
+          <QueryFailure messageKey='source.proxies' query={proxies} />
+        )}
+        {placeholder === undefined && proxies.isSuccess && selected.length === 0 && (
           <Empty className={EMPTY_INLINE}>
             <EmptyHeader>
               <EmptyDescription>{t('empty')}</EmptyDescription>
             </EmptyHeader>
           </Empty>
         )}
-        {selected.length > 0 && (
+        {placeholder === undefined && selected.length > 0 && (
           <div className='flex flex-col gap-2.5'>
             <ul className='flex flex-col gap-2.5'>
               {selected.map((entry) => (

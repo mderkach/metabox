@@ -17,12 +17,21 @@ import {
 } from '@shared/ui';
 import { DELAY_TONE } from '@widgets/ProxyGroups';
 
+import { OverviewCoreGap } from './OverviewCoreGap';
+
 /**
  * The node the traffic leaves through, switched in place: from a phone this is
  * the reason to open the panel. Only selector groups are offered: a URL test
  * picks its node itself, and its choice is on the proxies screen.
  */
-export function OverviewNode({ onSelected }: { onSelected: (message: string) => void }) {
+export function OverviewNode({
+  onSelected,
+  stopped,
+}: {
+  onSelected: (message: string) => void;
+  /** The core is confirmed stopped and cannot switch a group. */
+  stopped: boolean;
+}) {
   const { t } = useTranslation('pages/Overview');
   const proxies = useProxies();
   const select = useSelectProxy();
@@ -41,15 +50,16 @@ export function OverviewNode({ onSelected }: { onSelected: (message: string) => 
         </Link>
       </h2>
 
-      {proxies.isPending && <SkeletonRows rows={1} className='p-0' />}
-      {proxies.isLoadingError && <QueryFailure messageKey='source.proxies' query={proxies} />}
-      {proxies.isSuccess && groups.length === 0 && (
+      {stopped && <OverviewCoreGap gap='stopped' />}
+      {!stopped && proxies.isPending && <SkeletonRows rows={1} className='p-0' />}
+      {!stopped && proxies.isLoadingError && <QueryFailure messageKey='source.proxies' query={proxies} />}
+      {!stopped && proxies.isSuccess && groups.length === 0 && (
         <p className='text-sm text-pretty text-muted-foreground'>
           {t(configGroups.length === 0 ? 'node.noGroups' : 'node.none')}
         </p>
       )}
 
-      {groups.length > 0 && (
+      {!stopped && groups.length > 0 && (
         <ul className='flex flex-col gap-2'>
           {groups.map((group) => {
             const current = group.nodes.find((node) => node.name === group.now);

@@ -162,6 +162,85 @@ describe('service state', () => {
     expect(await screen.findByText('работает')).toBeInTheDocument();
   });
 
+  // A started service hides "Start": focus must stay in the card, not fall to the page.
+  it('after a start moves focus from the vanished button to the card title', async () => {
+    server.use(
+      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_FAILED_FIXTURE)),
+      http.post(DAEMON_ENDPOINT.serviceAction(':action'), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
+    );
+
+    const user = userEvent.setup();
+
+    renderWithQuery(<DaemonServiceControl />);
+
+    await user.click(await screen.findByRole('button', { name: 'Запустить' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'sing-box' })).toHaveFocus();
+    });
+  });
+
+  // A start that did not take keeps the button: focus stays on it.
+  it('leaves focus on Start when the service did not start', async () => {
+    server.use(
+      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_FAILED_FIXTURE)),
+      http.post(DAEMON_ENDPOINT.serviceAction(':action'), () => HttpResponse.json(SERVICE_FAILED_FIXTURE))
+    );
+
+    const user = userEvent.setup();
+
+    renderWithQuery(<DaemonServiceControl />);
+
+    const start = await screen.findByRole('button', { name: 'Запустить' });
+
+    await user.click(start);
+
+    await waitFor(() => {
+      expect(start).toBeEnabled();
+    });
+    expect(start).toHaveFocus();
+  });
+
+  // The stream may bring the new state before the command response arrives: the button is already gone then.
+  it('keeps focus in the card when the new state arrives before the command response', async () => {
+    let finishResponse: (() => void) | undefined;
+    const reply = new Promise<void>((resolve) => {
+      finishResponse = resolve;
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    server.use(
+      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_FAILED_FIXTURE)),
+      http.post(DAEMON_ENDPOINT.serviceAction(':action'), async () => {
+        await act(async () => {
+          queryClient.setQueryData(getServiceStateOptions().queryKey, SERVICE_RUNNING_FIXTURE);
+          await Promise.resolve();
+        });
+
+        await reply;
+        return HttpResponse.json(SERVICE_RUNNING_FIXTURE);
+      })
+    );
+
+    const user = userEvent.setup();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <DaemonServiceControl />
+      </QueryClientProvider>
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Запустить' }));
+
+    try {
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'sing-box' })).toHaveFocus();
+      });
+    } finally {
+      finishResponse?.();
+    }
+  });
+
   it('stops the service only after confirmation', async () => {
     const called = vi.fn<(action: string) => void>();
     const user = userEvent.setup();
