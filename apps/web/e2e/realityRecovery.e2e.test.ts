@@ -218,8 +218,16 @@ test(
         applyBar.confirmDiff(),
       ]);
       expect(submission.postDataJSON()).toEqual({ outbounds: [REALITY_OUTBOUND] });
-      await applyBar.keep();
-      await expect(applyBar.confirmed).toBeVisible();
+      const [confirmation] = await Promise.all([
+        page.waitForResponse(
+          (response) =>
+            response.request().method() === 'POST' &&
+            new URL(response.url()).pathname === '/api/apply/reality-2/confirm'
+        ),
+        applyBar.keep(),
+      ]);
+      expect(await confirmation.json()).toMatchObject({ phase: 'confirmed' });
+      await expect(applyBar.region).toBeHidden();
     });
   }
 );
