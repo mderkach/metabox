@@ -45,8 +45,8 @@ In scope: what the daemon accumulates, from which source, how bounded, and what 
 
 - **Blocked connections are counted from the core log**, not from the snapshot (owner, 2026-11-20). A `reject` rule action returns before the connection trackers (`route/route.go`, `RuleActionReject`), so it never reaches `/connections`, and a connection to a `block` outbound closes before most snapshots.
   - Lines counted: `connection closed: rejected` from the router at `debug` level, for a `reject` rule; `blocked connection to` and `blocked packet connection to` from `protocol/block/outbound.go` at `info` level, for a `block` outbound. Each line is one connection.
-  - A follower over the log reader of the log screen (`internal/logs`) runs from daemon start and reads new lines only. It holds one stream slot of that reader and reopens the stream after a core restart or a log rotation without counting a line twice.
-  - From the running config the daemon reports per kind whether `log.level` and `log.disabled` let the lines through; an empty `log.level` means `trace` in the fork (`log/log.go`). Only the kinds the config uses count (rules with the `reject` action, outbounds of type `block`); a hidden kind in use makes the whole count unavailable, not zero and not partial.
+  - A follower over the log reader of the log screen (`internal/logs`) runs from daemon start and reads new lines only. It holds one stream slot of that reader. If the stream stays open across a core restart, the count continues. File rotation starts at the beginning of the new file without replaying the old file. If the old tail may have been lost, the uptime total is unavailable.
+  - From the applied config on disk the daemon reports per kind whether `log.level` and `log.disabled` let the lines through; an empty `log.level` means `trace` in the fork (`log/log.go`). It projects `reject` rules and `block` outbounds, including outbounds defined by inline providers. The projection describes the file on disk. It does not prove what an independently started core loaded. A hidden kind in use makes the uptime count unavailable. Enabling those lines later cannot recover the missing part of that uptime.
   - Not counted: rejects of DNS rules (they answer a query, not a connection) and rejects a `tun` inbound makes in pre-match without a log line; metabox intercepts by redirect and tproxy, not `tun`.
   - The follower holds one of the four stream slots of the log reader (`MaxStreams`) for the daemon's uptime.
   - The count lives with the AC-37 history, resets with the daemon and carries `origin: computed`.
@@ -73,7 +73,7 @@ In scope: what the daemon accumulates, from which source, how bounded, and what 
   The daemon returns the ring and the computed values. Every computed value carries `origin: computed` in the AC-34 sense.
 
 - Contract:
-  - The `system` topic gains `outbounds` and `servers` (bytes and rate per tag), and the blocked count with its availability per kind.
+  - The `system` topic gains `outbounds` and `servers` arrays with the tag, bytes, combined rate in bytes per second, and origin. The outbound entry carries a separate default-route value when present. Array entries preserve tags that are reserved JavaScript object keys. The blocked count includes availability per kind and whether an earlier part of the period is incomplete.
   - `GET /api/latency` returns the rings, norms and levels.
   - Both reset with the daemon.
 - Non-goals: per-outbound history charts; per-device volume; keeping anything on flash.

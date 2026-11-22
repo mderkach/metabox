@@ -216,3 +216,28 @@ export const SYSTEM_FIXTURE: SystemStatWire = {
   daemon: { rss: 12_582_912, heap: 5_242_880, goroutines: 38 },
   uptime: 68_239,
 };
+
+const MEBIBYTE = 1024 ** 2;
+const PROXY_VOLUME = 30 * MEBIBYTE;
+const DIRECT_VOLUME = 20 * MEBIBYTE;
+
+export const OUTBOUND_SYSTEM_FIXTURE = {
+  ...SYSTEM_FIXTURE,
+  share: {
+    ...SYSTEM_FIXTURE.share,
+    link: 100 * MEBIBYTE,
+    proxy: PROXY_VOLUME + DIRECT_VOLUME,
+    split: { proxy: PROXY_VOLUME, direct: DIRECT_VOLUME, block: 0 },
+  },
+  outbounds: [
+    { tag: 'direct', bytes: DIRECT_VOLUME, rate: 256, origin: 'observed' },
+    { tag: 'proxy', bytes: PROXY_VOLUME, rate: 512.5, origin: 'computed' },
+  ],
+  servers: [{ tag: 'sub-eu/eu-reality', bytes: PROXY_VOLUME, rate: 512.5, origin: 'computed' }],
+  blocked: {
+    count: 3,
+    origin: 'computed',
+    reject: { used: true, visible: true },
+    block: { used: false, visible: true },
+  },
+} satisfies SystemStatWire;

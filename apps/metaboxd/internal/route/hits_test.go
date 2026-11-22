@@ -1,6 +1,7 @@
 package route
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -320,10 +321,12 @@ type fakeVolumes struct {
 	flows  [][]history.Flow
 }
 
-func (f *fakeVolumes) Observe(total int64, flows []history.Flow) {
+func (f *fakeVolumes) ObserveTraffic(total int64, flows []history.Flow, _ map[string]struct{}) {
 	f.totals = append(f.totals, total)
 	f.flows = append(f.flows, flows)
 }
+
+func (f *fakeVolumes) HasTraffic(string) bool { return false }
 
 // The kind comes from the type of the final outbound, the first chain node: a tag
 // named like a proxy can be a direct exit, and the reverse.
@@ -333,11 +336,12 @@ func TestCounterSplitsVolumeByOutboundType(t *testing.T) {
 		"/proxies": `{"proxies":{
 			"wan-ru":{"type":"Direct"},
 			"proxy":{"type":"Selector"},
+			"nested":{"type":"URLTest"},
 			"nl":{"type":"VLESS"},
 			"drop":{"type":"Reject"}
 		}}`,
 		"/connections": `{"uploadTotal":700,"downloadTotal":900,"connections":[
-			{"id":"a","rule":"final","chains":["nl","proxy"],"upload":100,"download":200},
+			{"id":"a","rule":"rule_set=google-ip => route(proxy)","chains":["nl","nested","proxy"],"upload":100,"download":200},
 			{"id":"b","rule":"final","chains":["wan-ru"],"upload":10,"download":20},
 			{"id":"c","rule":"final","chains":["drop"]},
 			{"id":"d","rule":"final","chains":["from-subscription"],"upload":1,"download":2}
@@ -355,10 +359,10 @@ func TestCounterSplitsVolumeByOutboundType(t *testing.T) {
 	}
 
 	want := []history.Flow{
-		{ID: "a", Kind: history.KindProxy, Bytes: 300},
-		{ID: "b", Kind: history.KindDirect, Bytes: 30},
-		{ID: "c", Kind: history.KindBlock, Bytes: 0},
-		{ID: "d", Kind: history.KindProxy, Bytes: 3},
+		{ID: "a", Kind: history.KindProxy, Bytes: 300, Outbound: "proxy", Server: "nl"},
+		{ID: "b", Kind: history.KindDirect, Bytes: 30, Outbound: "wan-ru", Final: true},
+		{ID: "c", Kind: history.KindBlock, Outbound: "drop", Final: true},
+		{ID: "d", Kind: history.KindProxy, Bytes: 3, Outbound: "from-subscription", Server: "from-subscription", Final: true},
 	}
 	if !slices.Equal(volumes.flows[0], want) {
 		t.Errorf("flows: got %+v, want %+v", volumes.flows[0], want)
@@ -401,4 +405,147 @@ func TestCounterRereadsOutboundsOnUnknownTag(t *testing.T) {
 	if reads != 2 {
 		t.Errorf("outbound list reads: got %d, want 2", reads)
 	}
+}
+
+func TestCounterPrunesTrafficOnlyAfterConfigAndRuntimeConfirmRemoval(t *testing.T) {
+	source := &fakeSource{bodies: map[string]string{
+		"/rules":       rulesBody,
+		"/proxies":     `{"proxies":{"direct":{"type":"Direct"},"from-config":{"type":"VLESS"},"from-runtime":{"type":"VLESS"},"removed":{"type":"VLESS"}}}`,
+		"/connections": `{"connections":[]}`,
+	}}
+	volume := &history.Volume{}
+	revision := "v1"
+	tags := map[string]struct{}{"direct": {}, "from-config": {}, "removed": {}}
+	counter := NewCounter(source, discardLogger(), CounterOptions{
+		Interval: time.Second,
+		Volumes:  volume,
+		TrafficConfig: func(context.Context) (string, map[string]struct{}, error) {
+			return revision, tags, nil
+		},
+	})
+
+	if err := counter.observe(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	source.bodies["/connections"] = `{"downloadTotal":50,"connections":[
+		{"id":"a","rule":"final","chains":["from-config"],"download":10},
+		{"id":"b","rule":"final","chains":["from-runtime"],"download":10},
+		{"id":"c","rule":"final","chains":["removed"],"download":10},
+		{"id":"d","rule":"final","chains":["direct"],"download":20}
+	]}`
+	if err := counter.observe(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+
+	revision = "v2"
+	tags = map[string]struct{}{"direct": {}, "from-config": {}}
+	source.bodies["/connections"] = `{"downloadTotal":50,"connections":[]}`
+	source.bodies["/proxies"] = `{}`
+	if err := counter.observe(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if _, kept := volume.Traffic().Outbounds["removed"]; !kept {
+		t.Fatal("a response without a runtime list pruned traffic")
+	}
+
+	source.bodies["/proxies"] = `{"proxies":{"direct":{"type":"Direct"},"from-runtime":{"type":"VLESS"}}}`
+	if err := counter.observe(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	traffic := volume.Traffic()
+	if _, exists := traffic.Outbounds["removed"]; exists {
+		t.Errorf("removed outbound remains in %+v", traffic.Outbounds)
+	}
+	if _, exists := traffic.Servers["removed"]; exists {
+		t.Errorf("removed server remains in %+v", traffic.Servers)
+	}
+	if len(traffic.Outbounds) != 3 || len(traffic.Servers) != 2 || traffic.Split != (history.Split{Proxy: 30, Direct: 20}) {
+		t.Errorf("rows or kind split after removal: got %+v, want rows kept for both config and runtime tags", traffic)
+	}
+}
+
+func TestCounterRetriesRetainedTrafficUntilTheRemovedTagLeavesRuntime(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		source := &fakeSource{bodies: map[string]string{
+			"/rules":       rulesBody,
+			"/proxies":     `{"proxies":{"old":{"type":"VLESS"}}}`,
+			"/connections": `{"connections":[]}`,
+		}}
+		var volume history.Volume
+		revision := "v1"
+		tags := map[string]struct{}{"old": {}}
+		counter := NewCounter(source, discardLogger(), CounterOptions{
+			Volumes: &volume,
+			TrafficConfig: func(context.Context) (string, map[string]struct{}, error) {
+				return revision, tags, nil
+			},
+		})
+
+		if err := counter.observe(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+		source.bodies["/connections"] = `{"downloadTotal":10,"connections":[{"id":"a","rule":"final","chains":["old"],"download":10}]}`
+		if err := counter.observe(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+		// The applied file is newer than the core that supplied this snapshot.
+		revision = "v2"
+		tags = map[string]struct{}{}
+		if err := counter.observe(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+		if _, exists := volume.Traffic().Outbounds["old"]; !exists {
+			t.Fatal("tag still present in runtime was pruned")
+		}
+
+		source.bodies["/connections"] = `{"downloadTotal":10,"connections":[]}`
+		source.bodies["/proxies"] = `{}`
+		time.Sleep(time.Second)
+		if err := counter.observe(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+		if _, exists := volume.Traffic().Outbounds["old"]; !exists {
+			t.Fatal("runtime list was polled again before the delayed refresh")
+		}
+
+		time.Sleep(4 * time.Second)
+		if err := counter.observe(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+		if !volume.HasTraffic("old") {
+			t.Fatal("failed delayed refresh pruned traffic")
+		}
+
+		source.bodies["/proxies"] = `{"proxies":{"old":{"type":"VLESS"},"subscription":{"type":"VLESS"}}}`
+		time.Sleep(5 * time.Second)
+		if err := counter.observe(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+		if !volume.HasTraffic("old") {
+			t.Fatal("successful retry pruned a tag still present in the old runtime")
+		}
+
+		source.bodies["/proxies"] = `{"proxies":{"subscription":{"type":"VLESS"}}}`
+		time.Sleep(5 * time.Second)
+		if err := counter.observe(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+		if traffic := volume.Traffic(); len(traffic.Outbounds) != 0 || traffic.Split.Proxy != 10 {
+			t.Errorf("volumes after delayed refresh: got %+v, want no rows and retained kind split", traffic)
+		}
+
+		time.Sleep(5 * time.Second)
+		if err := counter.observe(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+		reads := 0
+		for _, call := range source.calls {
+			if call == "/proxies" {
+				reads++
+			}
+		}
+		if reads != 5 {
+			t.Errorf("runtime list reads: got %d, want 5", reads)
+		}
+	})
 }

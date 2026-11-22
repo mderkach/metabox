@@ -47,8 +47,8 @@ type Hits struct {
 // to the rule "no background polling without a consumer", after traffic accounting:
 // a connection not noticed in time is not restored retroactively.
 // The price at idle is one connections snapshot per interval, the rule list when
-// a rule is met that is not in the remembered list, and the outbound list when the
-// volume split meets an outbound tag it does not know. The runtime stream reads this same snapshot
+// a rule is met that is not in the remembered list, and the outbound list when
+// tags or the running config change. The runtime stream reads this same snapshot
 // through Snapshots: the daemon has no second `/connections` poll.
 //
 // The count is kept by the rule conditions and action, not by number: after an
@@ -58,10 +58,14 @@ type Counter struct {
 	log    *slog.Logger
 	opts   CounterOptions
 
-	seen  map[string]struct{}
-	rules []Rule
-	// outbounds is the outbound type by tag from `/proxies`, read for the volume split.
-	outbounds map[string]string
+	seen             map[string]struct{}
+	rules            []Rule
+	outbounds        map[string]string
+	outboundRevision string
+	outboundRefresh  time.Time
+	outboundConfig   map[string]struct{}
+	outboundPending  map[string]struct{}
+	volumeTotal      int64
 
 	mu      sync.Mutex
 	started time.Time
@@ -96,6 +100,9 @@ type CounterOptions struct {
 	// Volumes accepts the bytes of each snapshot split by outbound kind; nil means
 	// not needed, and then `/proxies` is not read either.
 	Volumes VolumeRecorder
+	// TrafficConfig returns the config revision and its tags from the existing runtime
+	// resolver. A read error leaves retained volumes intact.
+	TrafficConfig func(context.Context) (string, map[string]struct{}, error)
 }
 
 // NewCounter assembles the counter. It starts no polling: Start brings it up.

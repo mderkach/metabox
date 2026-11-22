@@ -13,8 +13,8 @@ import { connectionHandlers } from '@entities/Connection/__tests__/Connection.ha
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import {
   MEMORY_SAMPLES,
+  OUTBOUND_SYSTEM_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
-  SYSTEM_FIXTURE,
   TRAFFIC_HISTORY_FIXTURE,
   TRAFFIC_STREAM_SAMPLES,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
@@ -146,7 +146,7 @@ export function createMissingHandlers(connections = 0) {
             return streamSampleAt(0);
           },
         },
-        { topic: RUNTIME_TOPIC.System, data: () => SYSTEM_FIXTURE },
+        { topic: RUNTIME_TOPIC.System, data: () => OUTBOUND_SYSTEM_FIXTURE },
         {
           topic: RUNTIME_TOPIC.Memory,
           data: () => {

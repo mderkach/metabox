@@ -38,7 +38,7 @@ Issue: #259 (no browser measurement of main-thread blocks); issue #238 covers th
 - NFR-2 (up to 500 rules and 5000 connections, no main-thread block over 100 ms): in `openspec/specs/non-functional/spec.md`; this change supplies the measurement both lack.
 - The login cost on the device (the other half of issue #238).
 - AC-12 (the Connections screen lists and closes connections): built, in `openspec/specs/connections/spec.md`.
-- Overview and its traffic split (AC-89, `openspec/changes/traffic-split-by-outbound/`): it shares the connection poll, and its memory at 5000 connections is measured there.
+- Overview and its traffic split (AC-97, `openspec/changes/overview-for-newcomers/`): it shares the connection poll, and its memory at 5000 connections is measured there.
 
 ## Open questions
 

@@ -525,6 +525,42 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-110 | vitest  | `apps/web/src/pages/RuleSets/__tests__/RuleSetsPage.test.tsx`     | `shows a draft-only set without requesting cache metadata`                         |
 | AC-110 | vitest  | `apps/web/tools/mockStand.test.js`                                | `serves remote rule set cache states on the stand`                                 |
 
+### Overview telemetry
+
+| ID     | Kind    | File                                                            | Check                                                                             |
+| ------ | ------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| AC-97  | go-test | `apps/metaboxd/internal/history/volume_test.go`                 | `TestVolumeSplitsLiveConnections`                                                 |
+| AC-97  | go-test | `apps/metaboxd/internal/history/volume_test.go`                 | `TestVolumeKeepsConnectionBetweenSnapshots`                                       |
+| AC-97  | go-test | `apps/metaboxd/internal/history/volume_test.go`                 | `TestVolumeGivesClosedConnectionItsTail`                                          |
+| AC-97  | go-test | `apps/metaboxd/internal/route/hits_test.go`                     | `TestCounterSplitsVolumeByOutboundType`                                           |
+| AC-97  | go-test | `apps/metaboxd/internal/device/device_test.go`                  | `TestShareCarriesSplit`                                                           |
+| AC-97  | go-test | `apps/metaboxd/internal/device/traffic_test.go`                 | `TestSystemFrameCarriesTrafficAndBlocking`                                        |
+| AC-101 | go-test | `apps/metaboxd/internal/clashapi/outbound_tags_test.go`         | `TestOutboundTagsFollowControllerConfigReads`                                     |
+| AC-101 | go-test | `apps/metaboxd/internal/history/volume_test.go`                 | `TestVolumeReconcilesOutboundRowsAndRetainsKindTotals`                            |
+| AC-101 | go-test | `apps/metaboxd/internal/history/volume_test.go`                 | `TestVolumeSpreadsRemainderWithinKindAndSeparatesDefaultRule`                     |
+| AC-101 | go-test | `apps/metaboxd/internal/history/volume_test.go`                 | `TestVolumeRebasesOutboundRowsWhenProcessTotalDecreases`                          |
+| AC-101 | go-test | `apps/metaboxd/internal/route/hits_test.go`                     | `TestCounterPrunesTrafficOnlyAfterConfigAndRuntimeConfirmRemoval`                 |
+| AC-101 | go-test | `apps/metaboxd/internal/device/traffic_test.go`                 | `TestSystemFrameCarriesTrafficAndBlocking`                                        |
+| AC-101 | vitest  | `apps/web/src/entities/Daemon/__tests__/Daemon.adapter.test.ts` | `keeps the uplink share and the outbound and server counters from the same frame` |
+| AC-97  | go-test | `apps/metaboxd/internal/clashapi/blocked_log_test.go`           | `TestReadBlockedLog`                                                              |
+| AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficCountsNewLinesAcrossFileRotation`                              |
+| AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficPreservesCountAcrossStreamReconnect`                           |
+| AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficHidesPartialCount`                                             |
+| AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficUsesOnlyConfiguredConnectionKinds`                             |
+| AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficRecognizesBothForkFormats`                                     |
+| AC-97  | vitest  | `apps/web/src/entities/Daemon/__tests__/Daemon.adapter.test.ts` | `keeps the reason a blocked total is incomplete`                                  |
+| AC-101 | go-test | `apps/metaboxd/internal/route/hits_test.go`                     | `TestCounterRetriesRetainedTrafficUntilTheRemovedTagLeavesRuntime`                |
+| AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficWatchesMissingLogFileFromCreation`                             |
+| AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficWithoutRequiredSourceIsIncomplete`                             |
+| AC-101 | go-test | `apps/metaboxd/internal/history/volume_test.go`                 | `TestVolumeKeepsPreviouslyUnattributedBytesOutOfCurrentRate`                      |
+| AC-101 | go-test | `apps/metaboxd/internal/device/traffic_test.go`                 | `TestSystemFrameDistinguishesEmptyTrafficFromMissingTelemetry`                    |
+| AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficHidesCountAfterFileBurstDropsLines`                            |
+| AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficKeepsFollowingDuringConfigReadFailure`                         |
+| AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficFollowsBeforeConfigStartsUsingBlock`                           |
+| AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficHidesCountWhenRequiredObservationStartsLate`                   |
+| AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficHidesCountAfterLogOutputChanges`                               |
+| AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficRejectsNonRegularLogFile`                                      |
+
 ### How metabox works
 
 | ID     | Kind   | File                                                                     | Check                                                                                                   |

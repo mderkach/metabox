@@ -1,22 +1,23 @@
 ## 1. Before code
 
-- [ ] 1.1 AC-97, AC-35: remove the merged change `traffic-split-by-outbound` in one commit (owner, 2026-11-20):
+- [x] 1.1 AC-97, AC-35: fold the traffic split proposal into this change and remove `traffic-split-by-outbound` in one commit (owner, 2026-11-20):
   - delete the folder `openspec/changes/traffic-split-by-outbound/`; AC-89 then has no definition left, and this change does not add one;
-  - `docs/PRD.md`: replace AC-89 with AC-97 in the "Runtime Dashboard" row of the module table and in the M2 milestone row, and drop the link to the deleted folder in the `overview` row of the specs table; the revision history row 1.67 stays as history;
+  - `docs/PRD.md`: replace AC-89 with AC-97 in the "Runtime Dashboard" row of the module table and in the M2 milestone row, and link to this change in the `overview` row of the specs table; the revision history row 1.67 stays as history;
   - `docs/adr/ADR-0074-split-sing-box-traffic-by-outbound-kind-from-the-connection-snapshot.md`: replace every mention of AC-89 (context, option 2, links) with AC-97 in this change, and drop the link to the deleted folder;
-  - `openspec/changes/connections-responsiveness/proposal.md` and `openspec/changes/one-vocabulary/proposal.md`: point their mentions of AC-89 and `traffic-split-by-outbound` at AC-97 in this change, or drop them if that change is archived by then;
+  - `openspec/changes/connections-responsiveness/proposal.md`: point to AC-97. Keep the archived vocabulary proposal as a historical record;
+  - spell out the existing proxy share in the built AC-35 so it does not reference a retired criterion;
   - add the AC-97 `go-test` rows for the daemon split carried over in 1.2 to `docs/Verification.md`.
 
-  Verify: `pnpm --silent openspec validate overview-for-newcomers --strict`, `make trace-check`, `grep -rn "AC-89\|traffic-split-by-outbound" docs openspec` finds only the PRD revision history and this change's record of the merge.
+  Verify: `pnpm --silent openspec validate overview-for-newcomers --strict`, `make trace-check`, `grep -rn "AC-89\|traffic-split-by-outbound" docs openspec` finds only historical references and the record of the merge.
 
 - [x] 1.2 AC-97: the daemon accumulates the volume by outbound kind (proxy, direct, block) from the connection poll, with connections that open or close between snapshots. Carried over from `traffic-split-by-outbound`, task 1.1. Evidence: `apps/metaboxd/internal/history/volume_test.go` (`TestVolumeSplitsLiveConnections`, `TestVolumeGivesClosedConnectionItsTail` and the rest), `TestCounterSplitsVolumeByOutboundType` (`internal/route/hits_test.go`), `TestShareCarriesSplit` (`internal/device/device_test.go`); `make test`.
 - [x] 1.3 AC-97: Overview shows the proxy and direct volumes and counts the proxy share over the proxied volume only. Carried over from `traffic-split-by-outbound`, task 1.2. The tiles are replaced by the shares in task 4.4, and their tests in `OverviewPage.test.tsx` are rewritten there. Evidence: `splits the sing-box volume into proxied and direct and counts the share over the proxy`, `names the rejected volume next to the direct share`; `pnpm --filter web test`.
-- [ ] 1.4 AC-100: start from `origin/main` with the #387 fix merged in #401. Verify the regression tests on this base with `pnpm --filter web test`.
+- [x] 1.4 AC-100: start from `origin/main` with the #387 fix merged in #401. Verify the regression tests on this base with `pnpm --filter web test`.
 
 ## 2. Daemon: traffic per outbound and latency history
 
-- [ ] 2.1 AC-101: `history.Volume` accumulates bytes per outbound (last element of `chains`) and per server (first element) from the `route.Counter` snapshot, spreads unseen bytes as for kinds, and prunes tags absent from both the running config and runtime list at the next config change, while retaining their bytes in the kind totals. Use the AC-97/AC-101 WAN 100 MiB, proxy 30 MiB and direct-through-core 20 MiB fixture before and after removal. Tests in `internal/history/volume_test.go` for the AC-101 scenarios. Add the AC-101 `go-test` rows to `docs/Verification.md`. Verify: `make test`, `make trace-check`.
-- [ ] 2.2 AC-97, AC-101: the `system` topic carries `outbounds` and `servers` (bytes and rate per tag) and the blocked count with whether the running log level shows each kind of line (task 2.7), with `origin` computed where spread bytes are included; `make schema-daemon`. Add the mock stand data to `apps/web/src/test/handlers.ts`. Add the AC-101 contract test row to `docs/Verification.md`. Verify: `make test`, `pnpm --filter web test` (`tools/mockStand.test.ts`), `make trace-check`.
+- [x] 2.1 AC-101: `history.Volume` accumulates bytes per outbound (last element of `chains`) and per server (first element) from the `route.Counter` snapshot, spreads unseen bytes as for kinds, and prunes tags absent from both the running config and runtime list at the next config change, while retaining their bytes in the kind totals. Use the AC-97/AC-101 WAN 100 MiB, proxy 30 MiB and direct-through-core 20 MiB fixture before and after removal. Tests in `internal/history/volume_test.go` for the AC-101 scenarios. Add the AC-101 `go-test` rows to `docs/Verification.md`. Verify: `make test`, `make trace-check`.
+- [x] 2.2 AC-97, AC-101: the `system` topic carries `outbounds` and `servers` (bytes and rate per tag) and the blocked count with whether the running log level shows each kind of line (task 2.7), with `origin` computed where spread bytes are included; `make schema-daemon`. Add the mock stand data to `apps/web/src/test/handlers.ts`. Add the AC-101 contract test row to `docs/Verification.md`. Verify: `make test`, `pnpm --filter web test` (`tools/mockStand.test.ts`), `make trace-check`.
 - [ ] 2.3 AC-102: a latency reader in `internal/clashapi` and a `history.Latency` ring, as ADR-0090 sets out:
   - the last 10 results and 24 hourly medians per tag, at most 4096 tags;
   - a 60 s read that records an entry only on a new core timestamp;
@@ -30,10 +31,10 @@
 - [ ] 2.5 AC-100: the daemon records the sum of the config the core last ran on in `<state_dir>/last-running.json` (written only when the sum changes) and returns it with the version list; `make schema-daemon`, mock handler. Tests: the first traffic sample after a start records the sum; a repeated start on the same sum does not write. Add the daemon AC-100 rows to `docs/Verification.md`. Verify: `make test`, `make trace-check`.
 - [ ] 2.6 AC-97, AC-101, NFR-4 (#243): manual: on an isolated device bench, under mixed proxy and direct load, compare the per-outbound volumes and the kind split with the connection summary. Agree with the owner, before the run, what difference counts as agreement: the daemon spreads unseen bytes by weight, so the numbers will not match exactly. Record daemon RSS and idle CPU with about 5000 connections with neutral synthetic outbounds and subscriptions, against NFR-4, once at `log.level` `warn` and once at `debug` with the blocked-count follower running. Write the results into the Validation of ADR-0074 and ADR-0090, add the `manual` rows and close #243 once the device and 375 px checks pass. Use the disposable bench for any configuration or service changes. Verify: `make trace-check`.
 
-- [ ] 2.7 AC-97: the blocked connection count from the core log:
+- [x] 2.7 AC-97: the blocked connection count from the core log:
   - a follower over `internal/logs` started with the daemon, which reads new lines only (no replay of the existing log) and counts `connection closed: rejected` from the router and `blocked connection to` or `blocked packet connection to` from a `block` outbound;
   - it takes one of the reader's four stream slots for the daemon's uptime (the log screen keeps three), reopens the stream after a core restart or a log rotation without counting a line twice, and keeps the count with the AC-37 history;
-  - from the running config it reports per kind whether `log.level` (empty means `trace`) and `log.disabled` let those lines through, and whether the config uses that kind (rules with the `reject` action, outbounds of type `block`); a hidden kind in use makes the figure unavailable;
+  - read configured visibility per kind from `log.level` (empty means `trace`) and `log.disabled`. Detect `reject` rules and `block` outbounds, including inline providers. A hidden kind in use keeps that uptime count unavailable after logging becomes visible;
   - `make schema-daemon`, mock data in `apps/web/src/test/handlers.ts`;
   - add the follower to the background exceptions in `apps/metaboxd/docs/guides/DeviceIO.md`, section "Resources".
 

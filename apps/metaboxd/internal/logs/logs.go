@@ -318,7 +318,15 @@ func (r *Reader) source(ctx context.Context) (source, error) {
 	}
 
 	output, err := clashapi.LogOutput(data)
-	if err != nil || output == "" {
+	if err != nil {
+		return r.logreadSource()
+	}
+
+	return r.outputSource(output)
+}
+
+func (r *Reader) outputSource(output string) (source, error) {
+	if output == "" {
 		return r.logreadSource()
 	}
 
