@@ -1,9 +1,9 @@
 module metabox
 
-go 1.27.3
+go 1.27.4
 
 require (
-	github.com/modelcontextprotocol/go-sdk v1.7.0
+	github.com/modelcontextprotocol/go-sdk v1.8.0
 	go.etcd.io/bbolt v1.5.0
 )
 
