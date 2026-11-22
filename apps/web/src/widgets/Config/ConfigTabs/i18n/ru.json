@@ -4,8 +4,8 @@
   "section": {
     "route": "Маршрутизация",
     "ruleSet": "Сеты правил",
-    "inbounds": "Инбаунды",
-    "outbounds": "Аутбаунды",
+    "inbounds": "Входы",
+    "outbounds": "Выходы",
     "providers": "Подписки",
     "endpoints": "Эндпоинты",
     "dns": "DNS-серверы и параметры",

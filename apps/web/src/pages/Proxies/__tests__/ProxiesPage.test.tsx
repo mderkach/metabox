@@ -67,7 +67,7 @@ describe('proxies screen', () => {
     renderWithQuery(<ProxiesPage />);
 
     expect(await screen.findByRole('heading', { level: 3, name: 'proxy' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: 'Группы узлов' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Группы прокси' })).toBeInTheDocument();
   });
 
   // Without a named threshold, 290 and 310 ms in different colors look like chance.
@@ -130,7 +130,7 @@ describe('proxies screen', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('status', { name: 'Результат действия' })).toHaveTextContent(
-        'Группа us-fallback: выбран узел proxy'
+        'Группа us-fallback: выбран выход proxy'
       );
     });
   });
@@ -142,7 +142,7 @@ describe('proxies screen', () => {
 
     renderWithQuery(<ProxiesPage />);
 
-    await user.click(await screen.findByRole('button', { name: 'Проверить узлы группы us-fallback' }));
+    await user.click(await screen.findByRole('button', { name: 'Проверить участников группы us-fallback' }));
 
     await waitFor(() => {
       expect(screen.getByRole('status', { name: 'Результат действия' })).toHaveTextContent(
@@ -153,9 +153,7 @@ describe('proxies screen', () => {
     await user.click(screen.getByRole('button', { name: 'Проверить все' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('status', { name: 'Результат действия' })).toHaveTextContent(
-        'Задержка всех узлов обновлена'
-      );
+      expect(screen.getByRole('status', { name: 'Результат действия' })).toHaveTextContent('Замеры задержки обновлены');
     });
   });
 
@@ -166,7 +164,7 @@ describe('proxies screen', () => {
 
     renderWithQuery(<ProxiesPage />);
 
-    await user.click(await screen.findByRole('button', { name: 'Проверить узлы группы proxy' }));
+    await user.click(await screen.findByRole('button', { name: 'Проверить участников группы proxy' }));
 
     await waitFor(() => {
       expect(probed.toSorted()).toEqual([
@@ -188,7 +186,7 @@ describe('proxies screen', () => {
 
     expect(await screen.findByRole('button', { name: /^us, .*, не проверялся$/ })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Проверить узлы группы us-fallback' }));
+    await user.click(screen.getByRole('button', { name: 'Проверить участников группы us-fallback' }));
 
     expect(await screen.findByRole('button', { name: /^us, .*, не ответил$/ })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Результат действия' })).toHaveTextContent(
@@ -206,7 +204,7 @@ describe('proxies screen', () => {
 
     renderWithQuery(<ProxiesPage />);
 
-    await user.click(await screen.findByRole('button', { name: 'Проверить аутбаунды конфига' }));
+    await user.click(await screen.findByRole('button', { name: 'Проверить выходы конфига' }));
 
     await waitFor(() => {
       expect(probed.toSorted()).toEqual(['direct', 'sub-eu/eu-reality']);
@@ -220,12 +218,12 @@ describe('proxies screen', () => {
 
     renderWithQuery(<ProxiesPage />);
 
-    expect((await screen.findAllByText(/Ядро само выбирает узел/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/Ядро само выбирает участника/)).length).toBeGreaterThan(0);
 
     // `us` is not an outbound of the file: there is nothing to wrap, and no action is offered.
-    expect(screen.queryByRole('button', { name: 'Добавить ручной выбор для группы us' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Добавить выбор вручную для группы us' })).not.toBeInTheDocument();
 
-    await user.click(await screen.findByRole('button', { name: 'Добавить ручной выбор для группы proxy' }));
+    await user.click(await screen.findByRole('button', { name: 'Добавить выбор вручную для группы proxy' }));
 
     const outbounds = readSectionNodes(selectConfigCurrent(ConfigDocumentStore.getState()) ?? '', 'outbounds');
 
@@ -236,8 +234,8 @@ describe('proxies screen', () => {
       providers: ['sub-a', 'sub-c'],
     });
     expect(outbounds).toContainEqual(expect.objectContaining({ type: 'urltest', tag: 'proxy-auto' }));
-    expect(screen.getByText(/Ручной выбор добавлен в черновик/)).toHaveFocus();
-    expect(screen.queryByRole('button', { name: 'Добавить ручной выбор для группы proxy' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Выбор вручную добавлен в черновик/)).toHaveFocus();
+    expect(screen.queryByRole('button', { name: 'Добавить выбор вручную для группы proxy' })).not.toBeInTheDocument();
   });
 
   // Manual choice reads only the config text; list files matter to Apply, and the apply bar loads them once a draft exists.
@@ -255,7 +253,7 @@ describe('proxies screen', () => {
 
     renderWithQuery(<ProxiesPage />);
 
-    expect(await screen.findByRole('button', { name: 'Добавить ручной выбор для группы proxy' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Добавить выбор вручную для группы proxy' })).toBeInTheDocument();
     expect(listsRequested).not.toHaveBeenCalled();
   });
 
@@ -460,14 +458,14 @@ describe('proxies screen', () => {
 
       renderWithQuery(<ProxiesPage />);
 
-      expect(await screen.findByText('6 узлов')).toBeInTheDocument();
+      expect(await screen.findByText('6 серверов')).toBeInTheDocument();
 
       await user.click(screen.getByRole('button', { name: 'Обновить подписку sub-eu' }));
 
-      expect(await screen.findByText('1 узел, было 6')).toBeInTheDocument();
+      expect(await screen.findByText('1 сервер, было 6')).toBeInTheDocument();
       // A status region, so the drop is announced after the update, not only drawn.
       expect(
-        screen.getAllByRole('status').filter((region) => /осталось 1 из 6 узлов/.test(region.textContent))
+        screen.getAllByRole('status').filter((region) => /осталось 1 из 6 серверов/.test(region.textContent))
       ).toHaveLength(1);
     });
 
@@ -479,8 +477,8 @@ describe('proxies screen', () => {
 
       await user.click(await screen.findByRole('button', { name: 'Обновить подписку sub-eu' }));
 
-      expect(await screen.findByText('0 узлов, было 6')).toBeInTheDocument();
-      expect(screen.getByText(/В подписке не осталось узлов/)).toBeInTheDocument();
+      expect(await screen.findByText('0 серверов, было 6')).toBeInTheDocument();
+      expect(screen.getByText(/В подписке не осталось серверов/)).toBeInTheDocument();
     });
 
     it('shows the previous count without a warning on a moderate change', async () => {
@@ -491,7 +489,7 @@ describe('proxies screen', () => {
 
       await user.click(await screen.findByRole('button', { name: 'Обновить подписку sub-eu' }));
 
-      expect(await screen.findByText('4 узла, было 6')).toBeInTheDocument();
+      expect(await screen.findByText('4 сервера, было 6')).toBeInTheDocument();
       expect(screen.queryByText(/осталось/)).not.toBeInTheDocument();
     });
 
@@ -505,8 +503,8 @@ describe('proxies screen', () => {
 
       renderWithQuery(<ProxiesPage />);
 
-      expect(await screen.findByText('2 узла, было 12')).toBeInTheDocument();
-      expect(screen.getByText(/осталось 2 из 12 узлов/)).toBeInTheDocument();
+      expect(await screen.findByText('2 сервера, было 12')).toBeInTheDocument();
+      expect(screen.getByText(/осталось 2 из 12 серверов/)).toBeInTheDocument();
     });
   });
 
@@ -552,9 +550,9 @@ describe('proxies screen', () => {
 
     renderWithQuery(<ProxiesPage />);
 
-    const nested = await screen.findByRole('button', { name: 'us, группа · самый быстрый, 609 мс' });
+    const nested = await screen.findByRole('button', { name: 'us, группа · выбирает сама по задержке, 609 мс' });
 
-    expect(within(nested).getByText('группа · самый быстрый')).toBeInTheDocument();
+    expect(within(nested).getByText('группа · выбирает сама по задержке')).toBeInTheDocument();
     expect(within(nested).queryByText('URLTest')).not.toBeInTheDocument();
   });
 });

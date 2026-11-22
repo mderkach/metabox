@@ -25,7 +25,7 @@ describe('overview node card', () => {
     renderWithRouter(OverviewNodeScreen);
 
     expect(await screen.findByText(/Групп в конфиге нет/)).toBeInTheDocument();
-    expect(screen.queryByText(/Нет групп с ручным выбором/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Нет групп с выбором вручную/)).not.toBeInTheDocument();
   });
 
   it('points to the proxies screen when every group picks its node by latency', async () => {
@@ -37,6 +37,6 @@ describe('overview node card', () => {
 
     renderWithRouter(OverviewNodeScreen);
 
-    expect(await screen.findByText(/Нет групп с ручным выбором/)).toBeInTheDocument();
+    expect(await screen.findByText(/Нет групп с выбором вручную/)).toBeInTheDocument();
   });
 });

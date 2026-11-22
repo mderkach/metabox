@@ -62,7 +62,7 @@ describe('diagnostics screen', () => {
 
     expect(within(redirect).getByText('не пройдено')).toBeInTheDocument();
     expect(
-      within(redirect).getByText('порт никто не слушает. Возможно, ядро остановлено или в конфиге нет нужного инбаунда')
+      within(redirect).getByText('порт никто не слушает. Возможно, ядро остановлено или в конфиге нет нужного входа')
     ).toBeInTheDocument();
     expect(within(redirect).getByText('dial tcp 127.0.0.1:5331: connection refused')).toBeInTheDocument();
 
@@ -75,12 +75,12 @@ describe('diagnostics screen', () => {
         .map((item) => item.textContent)
     ).toEqual(['metabox_prerouting', 'metabox_output']);
 
-    const proxy = rowOf('Выход через узел');
+    const proxy = rowOf('Через прокси');
 
     expect(within(proxy).getByText('пройдено')).toBeInTheDocument();
     expect(within(proxy).getByText('182 мс')).toBeInTheDocument();
 
-    const direct = rowOf('Прямой выход');
+    const direct = rowOf('Напрямую');
 
     expect(within(direct).getByText('пропущено')).toBeInTheDocument();
     expect(within(direct).getByText('на этой системе проверка не поддерживается')).toBeInTheDocument();

@@ -189,13 +189,13 @@ describe('ConfigApplyDiff', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
 
-    const summary = await screen.findByRole('list', { name: 'Изменения узлов и параметров' });
+    const summary = await screen.findByRole('list', { name: 'Изменения записей и параметров' });
 
     expect(
       within(summary)
         .getAllByRole('listitem')
         .map((item) => item.textContent)
-    ).toEqual(['Добавлено: аутбаунд NL test', 'Параметр route.default_mark: 100 → 7']);
+    ).toEqual(['Добавлено: выход NL test', 'Параметр route.default_mark: 100 → 7']);
     expect(within(summary).getByRole('link', { name: 'NL test' })).toHaveAttribute('href', '/config/outbounds?node=2');
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
 

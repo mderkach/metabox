@@ -112,7 +112,7 @@ export function DaemonServiceControl({ heading: Heading = 'h3' }: { heading?: 'h
             CARD_TITLE
           )}
         >
-          sing-box
+          {t('title')}
         </Heading>
         <p className='flex items-center gap-1.5 self-center text-sm'>
           <span

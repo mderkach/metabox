@@ -37,7 +37,7 @@ export function DaemonService({
   return (
     <Card>
       <CardHeader>
-        <h3 className={CARD_TITLE}>sing-box</h3>
+        <h3 className={CARD_TITLE}>{t('title')}</h3>
       </CardHeader>
 
       <CardContent className='flex flex-col gap-3'>

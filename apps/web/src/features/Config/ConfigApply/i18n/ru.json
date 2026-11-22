@@ -119,7 +119,7 @@
     }
   },
   "changes": {
-    "label": "Изменения узлов и параметров",
+    "label": "Изменения записей и параметров",
     "added": "Добавлено: {{kind}} <node>{{name}}</node>",
     "removed": "Удалено: {{kind}} <node>{{name}}</node>",
     "changed": "Изменено: {{kind}} <node>{{name}}</node> ({{fields}})",

@@ -2,11 +2,13 @@
   "action": {
     "title": "Where the traffic goes"
   },
-  "network": { "title": "Network types" },
+  "network": {
+    "title": "Network types"
+  },
   "volume": {
     "title": "Transferred in total",
-    "down": "Received",
-    "up": "Sent",
+    "down": "Downloaded",
+    "up": "Uploaded",
     "empty": "Counters have not arrived yet"
   },
   "idle": "no traffic",

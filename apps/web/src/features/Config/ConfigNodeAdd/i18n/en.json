@@ -45,9 +45,9 @@
     "tuic": "TUIC: proxy over QUIC",
     "vless": "VLESS: lightweight proxy, usually with Reality or TLS",
     "vmess": "VMess: encrypted V2Ray proxy",
-    "selector": "The node is chosen by hand from a list",
-    "urltest": "The fastest node by measured delay",
-    "fallback": "The next node by priority when the current one is down",
+    "selector": "Group with manual choice from a list of nodes",
+    "urltest": "Group that picks by latency",
+    "fallback": "Fallback group: the next node in order when the current one is down",
     "failover": "Switches nodes and keeps connections alive",
     "bond": "Several links together for speed",
     "direct": "Directly, without a proxy",
@@ -103,7 +103,7 @@
       "malformed": "The link is damaged, copy it again in full",
       "server": "The link has no server address or port",
       "credential": "The link has no access key: UUID or password",
-      "transport": "sing-box does not support the transport from the link"
+      "transport": "The core does not support the transport from the link"
     }
   },
   "docs": {

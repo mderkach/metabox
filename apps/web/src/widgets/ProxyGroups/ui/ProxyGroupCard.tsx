@@ -56,11 +56,7 @@ export function ProxyGroupCard({
           <h3 className='font-mono'>{group.name}</h3>
           <Badge variant='outline'>{kind}</Badge>
         </CardTitle>
-        <CardDescription>
-          {group.selectable ? t('card.manual') : t('card.automatic')}
-          {' · '}
-          {t('count.node', { ns: 'shared', count: group.nodes.length })}
-        </CardDescription>
+        <CardDescription>{t('card.members', { count: group.nodes.length })}</CardDescription>
         <CardAction>
           <ProxyNodesTest
             names={names}

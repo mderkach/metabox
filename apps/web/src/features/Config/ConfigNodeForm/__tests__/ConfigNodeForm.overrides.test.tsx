@@ -85,7 +85,7 @@ describe('VLESS/Reality form override', () => {
     render(<NodeFromStore path={VLESS} />);
 
     const primary = [
-      screen.getByRole('textbox', { name: 'Имя узла' }),
+      screen.getByRole('textbox', { name: 'Имя записи' }),
       screen.getByRole('textbox', { name: 'Сервер' }),
       screen.getByRole('spinbutton', { name: 'Порт сервера' }),
       screen.getByLabelText(/^UUID пользователя/),
@@ -152,7 +152,7 @@ describe('VLESS/Reality form override', () => {
 
     render(<NodeFromStore path={VLESS} />);
 
-    await user.type(screen.getByRole('textbox', { name: 'Имя узла' }), '-edited');
+    await user.type(screen.getByRole('textbox', { name: 'Имя записи' }), '-edited');
 
     await waitFor(() => {
       expect(findValue(draft(), [...VLESS, 'tag'])).toBe('hk-01-edited');
@@ -253,7 +253,7 @@ describe('api service override', () => {
     expect(screen.getByRole('textbox', { name: 'Адрес прослушивания' })).toHaveValue('127.0.0.1');
     expect(screen.getByRole('button', { name: 'TLS' })).toBeInTheDocument();
 
-    await user.type(screen.getByRole('textbox', { name: 'Имя узла' }), '-grpc');
+    await user.type(screen.getByRole('textbox', { name: 'Имя записи' }), '-grpc');
 
     await waitFor(() => {
       expect(findValue(draft(), [...API, 'tag'])).toBe('api-grpc');

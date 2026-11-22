@@ -107,7 +107,7 @@ describe('rule set add form', () => {
     renderForm(['direct', 'proxy', 'proxy-fi']);
 
     await user.click(screen.getByRole('button', { name: 'Ещё настройки' }));
-    await user.type(screen.getByLabelText('Качать через узел'), 'prox');
+    await user.type(screen.getByLabelText('Качать через выход'), 'prox');
 
     const options = await screen.findAllByRole('option');
 

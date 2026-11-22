@@ -68,7 +68,7 @@ Wherever the panel shows a connection source — cell and mobile card, sorting, 
 
 ### Requirement: AC-61 The Devices screen manages LAN devices
 
-The "Devices" screen: list, renaming, a "via sing-box" toggle that writes the dataplane ACL through the AC-53 confirmation window, navigation to the device's connections.
+The "Devices" screen SHALL manage LAN devices: list, renaming, a "through the core" toggle that writes the dataplane ACL through the AC-53 confirmation window, navigation to the device's connections.
 
 #### Scenario: The list
 
@@ -84,8 +84,8 @@ The "Devices" screen: list, renaming, a "via sing-box" toggle that writes the da
 
 #### Scenario: Via sing-box
 
-- **GIVEN** a device that does not go through sing-box
-- **WHEN** the user turns its "via sing-box" toggle on
+- **GIVEN** a device that does not go through the core
+- **WHEN** the user turns its "through the core" toggle on
 - **THEN** the dataplane ACL with its MAC is sent and the confirmation window opens
 
 #### Scenario: The daemon takes a dataplane change
@@ -118,7 +118,7 @@ A route rule condition by device SHALL be chosen from the device list and writte
 
 ### Requirement: AC-88 Interception subnets and exclusions from the panel
 
-Interception subnets SHALL be managed from the panel: a subnet in the dataplane ACL is added, changed and removed with an IPv4 CIDR check, through the AC-53 confirmation window. A device inside a listed subnet can be excluded from interception: the "via sing-box" toggle of AC-61 writes the device MAC, and its address under a static lease, to an exclusion list of the dataplane model, and the interception chains let that traffic go direct before the source match. A device covered by a subnet is never shown as impossible to switch off.
+Interception subnets SHALL be managed from the panel: a subnet in the dataplane ACL is added, changed and removed with an IPv4 CIDR check, through the AC-53 confirmation window. A device inside a listed subnet can be excluded from interception: the "through the core" toggle of AC-61 writes the device MAC, and its address under a static lease, to an exclusion list of the dataplane model, and the interception chains let that traffic go direct before the source match. A device covered by a subnet is never shown as impossible to switch off.
 
 #### Scenario: A subnet list edit goes through the confirmation window
 
@@ -142,12 +142,12 @@ Interception subnets SHALL be managed from the panel: a subnet in the dataplane 
 
 - **GIVEN** a device inside a listed subnet
 - **WHEN** the screen shows it
-- **THEN** it is shown as going through sing-box and its toggle can be turned off
+- **THEN** it is shown as going through the core and its toggle can be turned off
 
 #### Scenario: Turning off a device inside a subnet writes an exclusion
 
 - **GIVEN** a device with a static lease inside a listed subnet
-- **WHEN** its "via sing-box" toggle is turned off
+- **WHEN** its "through the core" toggle is turned off
 - **THEN** its MAC and its address go into the exclusion list
 
 #### Scenario: An excluded device goes direct on the test bench

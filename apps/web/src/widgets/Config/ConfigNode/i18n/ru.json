@@ -1,4 +1,4 @@
 {
   "tab": { "form": "Форма" },
-  "editor": { "label": "Узел {{name}} текстом" }
+  "editor": { "label": "Запись {{name}} текстом" }
 }

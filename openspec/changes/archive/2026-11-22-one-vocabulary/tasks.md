@@ -1,0 +1,38 @@
+# Tasks
+
+Each group is one commit topic. Group 1 comes first: groups 2 and 3 take their words from it. Group 4 needs groups 2 and 3, because the check fails on any forbidden word still left. Group 5 closes the change.
+
+## 1. The vocabulary (AC-94, #390)
+
+- [x] 1.1 AC-94: `apps/web/docs/guides/Glossary.md` becomes the vocabulary of design.md, "The vocabulary": one table with the concept, the English word, the Russian word, the Editor word where different and "Not used"; the group pattern and the known collisions; under the table the list "Forbidden in texts" with the word starts of design.md, "The check"; the eight current rows kept where the table does not replace them. The title and the first paragraph say it covers English and Russian texts of the panel and the daemon. `apps/web/AGENTS.md` and `apps/web/docs/README.md` name the document for writing a text in either language, not only in `ru.json`. Verified by `pnpm format:check` and manual: every row of design.md is in the document.
+- [x] 1.2 AC-94: `apps/web/PRODUCT.md`, Brand Commitments: interface texts say "core", «ядро»; the core type and version are details; "sing-box" names the fork where its own feature is meant, as `Glossary.md` lists. Closes #390. Verified by `pnpm format:check` and manual: no sentence of PRODUCT.md requires "sing-box" in interface texts.
+
+## 2. Panel texts (AC-94)
+
+Each task rewords values only, keys stay; the copy is settled with `/impeccable clarify` within the words of `Glossary.md`, and Russian follows it. Tests that find an element by a changed text are updated in the same task.
+
+- [x] 2.1 AC-94: outbound. «аутбаунд» in `shared` (`kind.outbounds`), `widgets/Config/ConfigTabs`, `features/Config/ConfigNodeDelete`, `features/Rule/RuleAdd`, `pages/Overview` (`node.noGroups`), `pages/Proxies` (`testedOutbounds`), `widgets/ProxyGroups` becomes «выход»; the Latin «тег outbound» and «Качать через узел» in `features/RuleSet/RuleSetAdd` name the outbound in Russian; English "exit" in `widgets/ProxyGroups` becomes "outbound"; «инбаунд» in `shared`, `widgets/Config/ConfigTabs`, `features/Config/ConfigNodeDelete`, `pages/Diagnostics` becomes «вход», found on the live router. Verified by `pnpm --filter web test`.
+- [x] 2.2 AC-94: groups. `shared` `groupType.*`, `widgets/ProxyGroups` («ручной выбор» in all its forms, «селектор», «группа-селектор» in the manual-choice texts; the card subtitle drops `card.manual` and `card.automatic` and shows only the node count, since the type badge says how the group chooses), `pages/Overview` (`node.none`), `features/Config/ConfigNodeAdd` (`selector`, `urltest`, `fallback` descriptions) use the vocabulary: «выбор вручную», «выбирает сама по задержке», «резервная» declined by context, and the English pairs; English `fallback` stays. Verified by `pnpm --filter web test`.
+- [x] 2.3 AC-94: the route and the uplink on Overview and Diagnostics. «Через узел» (`pages/Overview` `…proxy`) and Diagnostics «Выход через узел», «Прямой выход» and English "exit" (`pages/Diagnostics` `label`, `none`, `proxy`, `direct`) become «Через прокси», «Напрямую» and their English pairs; the outbound list of Diagnostics gets a visible label instead of an `aria-label` only; «канал» for the uplink (`traffic.note`, `linkShare`, `linkShareRejected`, `linkUnknown`, `uplink`) becomes «интернет-подключение», English "internet connection"; the traffic direction on Overview is a rate: «Ядро: скачивание» / «Ядро: отправка», English "Core download" / "Core upload", the chart label and the note line the same; the volume card says «Скачано» / «Отправлено», "Downloaded" / "Uploaded". «каналов» of `bond` in `ConfigNodeAdd` stays: it is another meaning. Verified by `pnpm --filter web test`.
+- [x] 2.4 AC-94: the rest. «ноды» in `features/Mcp/McpAccess`; the core service card title, a hard-coded "sing-box" in `widgets/Daemon/DaemonService`, moves to its dictionary as «Ядро» / "Core", with the Russian statuses beside it in the neuter; the generic "sing-box" in `features/RuleSet/RuleSetAdd` (refresh hint) and `features/Config/ConfigNodeAdd` (`error.link.transport`) becomes "core", «ядро». Verified by `pnpm --filter web test`.
+- [x] 2.5 AC-61, AC-88: the Devices toggle says "Through the core" in English and «Через ядро» in Russian, as the delta wants; the label was already there after #386, and the toggle tests named in the AC-61 rows of `docs/Verification.md` assert it. Verified by `pnpm --filter web test`: `DevicesPage.test.tsx`.
+
+## 3. Daemon texts (AC-94)
+
+- [x] 3.1 AC-94: `apps/metaboxd/internal/locale/ru.go` says «сет правил», as the panel does: «наборов» in the catalog flag help and «наборы правил» in the cache file recovery text. Only Russian values change; English source texts stay. Verified by `make test` (`TestCatalogueMatchesSources`) and `make lint`.
+
+## 4. The check (AC-94)
+
+- [x] 4.1 AC-94: a Vitest test in `apps/web/tools/` reads "Forbidden in texts" of `Glossary.md` with the language of each word, scans every value of `apps/web/src/**/i18n/{en,ru}.json` and the Russian values of `apps/metaboxd/internal/locale/ru.go`, skips `{{placeholders}}`, matches word starts case-insensitively, and fails with the file, the key and the word; it fails as well when it reads no forbidden words or no daemon entries. Exceptions by file and key: the fork texts that keep "sing-box" (binary version, `sing-box check`, the cache file, providers, links the fork parses) and "Exit code". Written test first: it fails on a fixture with each forbidden word and passes on the dictionaries after groups 2 and 3. Verified by `pnpm --filter web test`: `vocabulary`.
+- [x] 4.2 AC-94: rows in `docs/Verification.md` for the four scenarios of AC-94: the forbidden word, the fork exception, the Russian outbound, the group type. AC-61 needs no new row: its rows already name the tests that assert the toggle label. Verified by `make trace-check`.
+
+## 5. Review and hand-in
+
+- [x] 5.1 AC-94: the changed screens on the mock stand (`make dev-mock`), English and Russian, at desktop width and 375 px: Overview, Proxies, Diagnostics, Devices, the add-node form, the rule sets add form, the Editor tabs, the MCP card in Settings. Texts fit, nothing wraps into an unreadable line. Verified by `pnpm --filter web test:e2e` and manual through the Playwright MCP, listed in the pull request.
+- [x] 5.2 AC-94: `pnpm --filter web check:design`, and an `/impeccable critique` of the reworded texts by an agent that did not write them; findings go into the pull request, one not fixed becomes an issue. Verified by manual: the critique is quoted in the pull request.
+- [x] 5.3 AC-94: user documentation. `README.md`, `README.ru.md`, `docs/Recovery.md` and `docs/Recovery.ru.md` use the vocabulary: «наборы правил» in `README.ru.md` and `docs/Recovery.ru.md` became «сеты правил»; the specs have no derived Russian translation in the repository. Verified by manual: a grep of the four files for the forbidden list, except "sing-box", returns nothing; there "sing-box" names the package and the fork.
+
+## 6. Russian names for servers and config entries
+
+- [x] 6.1 AC-94 (#399): update the Russian panel and daemon texts and their assertions. Distinguish a proxy server, a group member and a config entry. Verify with `pnpm --filter web test`, `pnpm --filter web test:browser` and `make test`.
+- [x] 6.2 AC-94: update Glossary.md and the Russian forbidden stems, add verification rows for the Russian texts, and check the affected screens at desktop and 375 px on the mock stand. Verify with `pnpm --filter web test`, `pnpm --filter web check:design`, independent Impeccable critique and `make trace-check`.

@@ -28,7 +28,7 @@
         "failed": "Проверить задержку не удалось"
       },
       "select": {
-        "failed": "Переключить узел не удалось"
+        "failed": "Переключить выход не удалось"
       },
       "provider": {
         "failed": "Обновить подписку не удалось",
@@ -155,9 +155,9 @@
     "connection_one": "{{count}} соединение",
     "connection_few": "{{count}} соединения",
     "connection_many": "{{count}} соединений",
-    "node_one": "{{count}} узел",
-    "node_few": "{{count}} узла",
-    "node_many": "{{count}} узлов",
+    "node_one": "{{count}} сервер",
+    "node_few": "{{count}} сервера",
+    "node_many": "{{count}} серверов",
     "core_one": "{{count}} ядра",
     "core_few": "{{count}} ядер",
     "core_many": "{{count}} ядер",
@@ -352,8 +352,8 @@
   },
   "nodeKind": {
     "ruleSet": "сет правил",
-    "inbounds": "инбаунд",
-    "outbounds": "аутбаунд",
+    "inbounds": "вход",
+    "outbounds": "выход",
     "providers": "подписка",
     "endpoints": "эндпоинт",
     "dns": "DNS-сервер",
@@ -364,9 +364,9 @@
     "networkNamespaces": "сетевое пространство имён"
   },
   "groupType": {
-    "selector": "ручной выбор",
-    "urltest": "самый быстрый",
-    "fallback": "резерв",
+    "selector": "выбор вручную",
+    "urltest": "выбирает сама по задержке",
+    "fallback": "резервная",
     "loadBalance": "балансировка"
   },
   "tokenInput": {

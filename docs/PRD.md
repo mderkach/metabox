@@ -2,10 +2,10 @@
 
 |                      |                                                                    |
 | -------------------- | ------------------------------------------------------------------ |
-| **Document version** | 1.77                                                               |
+| **Document version** | 1.78                                                               |
 | **Status**           | **approved** 2026-08-30, except the open questions in section 10.1 |
 | **Owner**            | project author                                                     |
-| **Last revision**    | 2026-11-19                                                         |
+| **Last revision**    | 2026-11-20                                                         |
 | **Basis**            | two requirements interviews with the owner on 2026-08-30           |
 
 **Change history**
@@ -99,6 +99,7 @@
 | 1.75    | 2026-11-15 | The criteria of section 5 and the NFR table of section 6 moved to OpenSpec with their IDs and text; the main verb of each first sentence takes SHALL, scenarios added. Built criteria and the NFRs are in `openspec/specs/`, grouped by capability; AC-7, AC-69, AC-74 and AC-75 were found built and went there too; the other 14 unticked criteria are proposals in `openspec/changes/`. Sections 5 and 6 keep links ([ADR-0081](./adr/ADR-0081-keep-behaviour-specs-and-changes-in-openspec.md))                                                                                                                                                                                               |
 | 1.76    | 2026-11-19 | References to the interview transcripts by ID and round removed: the transcripts are not in the repository. The owner's answers behind the decisions are quoted in ADR-0038…ADR-0044, the deferred items of section 4 keep their reason. Requirements unchanged                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 1.77    | 2026-11-19 | Proposed AC-91 (a rollback whose core does not come up is reported as failed), AC-92 (the daemon drops a cached subscription entry that crashes the core) and AC-93 (an unreadable cache file is moved aside) in `recover-from-a-poisoned-subscription-cache`. Issue #338                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 1.78    | 2026-11-20 | Persona P3 added: a newcomer who does not know the schema or how routing works. P3 counts for v1 acceptance; P1 and P3 use one interface. Issue #395                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 > The document is living. Any decision in [`adr/`](./adr/README.md), including those moved from Appendix A, may be revised — they are decisions, not requirements; requirements are in sections 5 and 6.
 
@@ -149,6 +150,8 @@ A form editor is reproducible and is not an advantage by itself. The difference 
 **P1. Router owner — the main v1 persona.** The project author, BPI-R4 Pro. Knows the sing-box schema and edits the config by hand. Working with JSON is acceptable but not required. The problem is the maintenance cycle, not the complexity of sing-box.
 
 **P2. Advanced OpenWrt user — a secondary persona that appears with the open-source release.** Installs packages and reads documentation, does not know the sing-box schema. A GUI is a condition of use for them. Does not affect v1 acceptance, but decisions must not close off their scenario.
+
+**P3. Newcomer — a user who does not know the schema or how routing works.** Has a server or a subscription bought from a VPN provider and wants some sites or devices to go through it. Does not know sing-box, outbound types or that rules are checked in order. Thinks of routing as "device → site → how it gets there". Comes to the panel with three tasks: send a site through the proxy, add a server or a subscription, find out what broke. Counts for v1 acceptance together with P1. P1 and P3 use one interface: P3 gets plain words, steps and help next to a term; P1 keeps the schema, the editor and JSON one step away. A screen that only P1 can read fails P3; hiding the schema fails P1.
 
 **Working setting.** The panel is opened from a desktop, usually next to an ssh session to the router: rules are edited, the config is edited and applied there. From a phone, people look at the overview and connections and switch the node — this is the diagnostic entry. Editing the config and Apply from a phone are not a target scenario, but the panel frame must stay usable from 400 px (AC-42).
 
