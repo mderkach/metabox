@@ -16,6 +16,7 @@ export {
   toBooleanGroupObject,
   toFieldName,
   toInputText,
+  SUBSCRIPTION_TAG_CONFLICT,
   toNodeFormResolver,
   UNSET,
   unpackList,

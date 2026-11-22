@@ -3,7 +3,14 @@ import { useId, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { newSectionNode, type GenericSection, type NodeRegistry } from '@entities/Config';
+import {
+  ConfigDocumentStore,
+  newSectionNode,
+  readSubscriptionTagReservations,
+  selectConfigCurrent,
+  type GenericSection,
+  type NodeRegistry,
+} from '@entities/Config';
 import { nodePreset } from '@features/Config/ConfigNodeForm/@x/ConfigNodeAdd';
 import { showQueryError } from '@shared/api';
 import {
@@ -21,7 +28,7 @@ import {
 import { nodeAddErrorText } from '../model/ConfigNodeAdd.errors';
 import { useNodeInsert } from '../model/ConfigNodeAdd.insert';
 import { nodeTypeDocsUrl, nodeTypeOptions, nodeTypeSections } from '../model/ConfigNodeAdd.model';
-import { makeNodeAddSchema, NODE_ADD_DEFAULTS, type NodeAddModel } from '../model/ConfigNodeAdd.schema';
+import { makeNodeAddSchema, NODE_ADD_DEFAULTS, NODE_ADD_ERROR, type NodeAddModel } from '../model/ConfigNodeAdd.schema';
 import { ConfigNodeAddDocsLink } from './ConfigNodeAddDocsLink';
 import { ConfigNodeAddTypeItem } from './ConfigNodeAddTypeItem';
 
@@ -63,6 +70,13 @@ export function ConfigNodeAddManual({
 
   const onSubmit = form.handleSubmit((data) => {
     const tag = data.tag.trim();
+    const text = selectConfigCurrent(ConfigDocumentStore.getState());
+
+    if (text !== null && readSubscriptionTagReservations(text, section).includes(tag)) {
+      form.setError('tag', { type: 'custom', message: NODE_ADD_ERROR.TagTaken }, { shouldFocus: true });
+
+      return;
+    }
 
     if (!insertNode(nodePreset(registry, data.type, tag, newSectionNode))) {
       showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
@@ -149,6 +163,7 @@ export function ConfigNodeAddManual({
               <Label htmlFor={tagId}>{t('field.tag.label')}</Label>
               <Input
                 id={tagId}
+                ref={field.ref}
                 value={field.value}
                 autoComplete='off'
                 spellCheck={false}

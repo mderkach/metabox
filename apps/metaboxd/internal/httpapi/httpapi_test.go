@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"metabox/internal/apply"
+	"metabox/internal/clashapi"
 	"metabox/internal/config"
 	"metabox/internal/contract"
 	"metabox/internal/httpapi"
@@ -581,6 +582,23 @@ func TestApplyReturnsCheckOutputVerbatim(t *testing.T) {
 	}
 	if apiErr.Details.ExitCode != 1 {
 		t.Errorf("exit code %d, expected 1", apiErr.Details.ExitCode)
+	}
+}
+
+func TestApplyReturnsSubscriptionTagConflict(t *testing.T) {
+	applier := &fakeApplier{startErr: clashapi.ErrSubscriptionTagConflict}
+	got := applyRequest(t, newTestServer(t, applier, ""), []byte(rawConfig))
+
+	if got.status != http.StatusUnprocessableEntity {
+		t.Fatalf("status %d, want %d", got.status, http.StatusUnprocessableEntity)
+	}
+	var apiErr contract.Error
+	got.decode(t, &apiErr)
+	if apiErr.Code != contract.ErrSubscriptionTagConflict {
+		t.Errorf("code %q, want %q", apiErr.Code, contract.ErrSubscriptionTagConflict)
+	}
+	if apiErr.Message != "a subscription tag is already used by a rule set or endpoint" {
+		t.Errorf("unexpected error message %q", apiErr.Message)
 	}
 }
 

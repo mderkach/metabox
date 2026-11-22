@@ -26,6 +26,7 @@ const FAILURE_KEY: Readonly<Record<ApiFailureCode, ParseKeys<'shared'>>> = {
   config_too_large: 'failure.config_too_large',
   config_not_object: 'failure.config_not_object',
   config_not_json: 'failure.config_not_json',
+  subscription_tag_conflict: 'failure.subscription_tag_conflict',
   device_invalid: 'failure.device_invalid',
   outbound_invalid: 'failure.outbound_invalid',
   dataplane_invalid: 'failure.dataplane_invalid',

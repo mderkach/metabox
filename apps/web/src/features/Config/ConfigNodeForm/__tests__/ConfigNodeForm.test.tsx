@@ -592,3 +592,34 @@ describe('node form on the config corpus', () => {
     expect(commentLines(draft())).toEqual(commentLines(text));
   });
 });
+
+describe('subscription tag collision in the editor form', () => {
+  it('preserves the draft when a subscription is renamed to a rule set tag', async () => {
+    const text =
+      '{"providers":[{"type":"remote","tag":"sub","url":"https://example.test/sub"}],"route":{"rule_set":[{"tag":"set"}]}}';
+    ConfigDocumentState.getState().reset();
+    ConfigDocumentState.getState().load(text);
+    const user = userEvent.setup();
+
+    render(<NodeFromStore registry={NODE_REGISTRY.Provider} path={['providers', 0]} />);
+
+    const tag = screen.getByRole('textbox', { name: 'Имя записи' });
+
+    await user.clear(tag);
+    await user.paste('set');
+    expect(await screen.findByText(/Этот тег уже использует/)).toBeInTheDocument();
+    expect(tag).toHaveValue('set');
+    expect(ConfigDocumentState.getState().draft).toBeNull();
+
+    await user.clear(tag);
+    await user.type(tag, 'backup');
+    await waitFor(() => {
+      expect(findValue(draft(), ['providers', 0])).toEqual({
+        type: 'remote',
+        tag: 'backup',
+        url: 'https://example.test/sub',
+      });
+    });
+    expect(screen.queryByText(/Этот тег уже использует/)).not.toBeInTheDocument();
+  });
+});

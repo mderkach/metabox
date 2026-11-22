@@ -6,7 +6,9 @@ import {
   readRuleNames,
   readRules,
   readRuleSets,
+  readRuleSetTags,
   readSectionNodes,
+  readSubscriptionTagReservations,
   toOutboundTags,
   useConfigDocument,
   useConfigListStats,
@@ -37,7 +39,7 @@ export interface RuleSetEditorState {
   appliedTags: ReadonlySet<string>;
   /** `route.rule_set` nodes as they are: editing a rule set compares the typed input against them. */
   nodes: unknown[];
-  /** Names of rule sets already attached: a second rule set with the same name is not created. */
+  /** Names already used by rule sets or subscriptions. */
   takenTags: string[];
   /** Outbound tags: a rule set can be downloaded through one of them. */
   outbounds: string[];
@@ -62,6 +64,11 @@ export function useRuleSetEditor(): RuleSetEditorState {
   const { text, appliedText } = document;
 
   const nodes = useMemo(() => (text === null ? [] : readRuleSets(text)), [text]);
+  const takenTags = useMemo(
+    () =>
+      text === null ? [] : [...readRuleSetTags(text), ...readSubscriptionTagReservations(text, CONFIG_SECTION.RuleSet)],
+    [text]
+  );
 
   const usage = useMemo(
     () =>
@@ -102,7 +109,7 @@ export function useRuleSetEditor(): RuleSetEditorState {
     sets,
     appliedTags,
     nodes,
-    takenTags: sets.map((set) => set.tag).filter((tag) => tag !== ''),
+    takenTags,
     outbounds: toOutboundTags(document.config),
     needsCache,
   };

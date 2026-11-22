@@ -41,6 +41,8 @@ The daemon repairs this by itself: after a rollback, after a start or restart of
 
 If sing-box was already crashing before your Apply, the Apply fails its check although the change is fine; its rollback repairs the cache. Apply the change again. If you confirm an Apply while sing-box crashes on its cache, the daemon repairs it right after the confirmation. If the subscription keeps serving the same node, the crash comes back on the next restart, and so does the repair.
 
+If Apply reports a subscription tag conflict, give the subscription a tag that is free in the draft and update any references to its old tag. A subscription cannot share a tag with a rule set or endpoint. Two subscriptions can use the same URL with distinct tags.
+
 ## Getting back without the panel
 
 Connect to the router over SSH by its IP address (`ssh root@<router IP>`). SSH does not depend on sing-box: it works while the LAN is up, even when DNS and the internet are not.

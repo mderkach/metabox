@@ -2,6 +2,8 @@ package locale
 
 // ru holds the Russian texts by their English source.
 var ru = map[string]string{
+	"a subscription tag is already used by a rule set or endpoint": "тег подписки уже используется сетом правил или конечной точкой",
+
 	"Usage of %s:":  "Использование %s:",
 	" (default %q)": " (по умолчанию %q)",
 	" (default %v)": " (по умолчанию %v)",

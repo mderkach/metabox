@@ -32,6 +32,7 @@
     "invalid": "Значение не проходит схему",
     "parse": "JSON не разобран: {{reason}}",
     "required": "Обязательное поле",
+    "subscriptionTagConflict": "Этот тег уже использует другая подписка, сет правил или конечная точка",
     "realityPublicKey": "Ключ Reality: base64url без паддинга, 32 байта (43 символа)",
     "realityShortId": "Short ID: hex, не длиннее 16 символов, чётной длины"
   },

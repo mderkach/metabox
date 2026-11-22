@@ -215,6 +215,8 @@ const (
 	// ErrConfigNotJSON means the config in the apply request is not valid JSON: it has a syntax
 	// error, comments and commas before closing brackets aside.
 	ErrConfigNotJSON ErrorCode = "config_not_json"
+	// ErrSubscriptionTagConflict means a subscription tag is already used by a rule set or endpoint.
+	ErrSubscriptionTagConflict ErrorCode = "subscription_tag_conflict"
 	// ErrListInvalid means the list file was not accepted: the name is outside the rules of the
 	// rule-sets subdirectory or the apply envelope was not parsed.
 	ErrListInvalid ErrorCode = "list_invalid"

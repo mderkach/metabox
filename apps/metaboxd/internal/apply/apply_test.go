@@ -726,6 +726,28 @@ func TestCheckFailureWritesNothing(t *testing.T) {
 	}
 }
 
+func TestSubscriptionTagConflictStopsApply(t *testing.T) {
+	h := newHarness(t)
+	candidate := []byte(`{
+		"providers": [{"type":"remote", "tag":"shared", "url":"https://example.test/sub"}],
+		"route": {"rule_set": [{"type":"remote", "tag":"shared", "url":"https://example.test/rules"}]}
+	}`)
+	before := h.store.config()
+
+	if _, err := h.manager.Start(t.Context(), candidate, apply.Lists{}, "", ""); !errors.Is(err, clashapi.ErrSubscriptionTagConflict) {
+		t.Fatalf("got %v, want a subscription tag conflict", err)
+	}
+	if got := h.rec.snapshot(); slices.Contains(got, "Check") || slices.Contains(got, "Write") || slices.Contains(got, "WriteState") {
+		t.Errorf("config check or write started after the conflict: %v", got)
+	}
+	if got := h.manager.Current(); got.Phase != "" {
+		t.Errorf("transaction created despite conflict: %+v", got)
+	}
+	if !slices.Equal(before, h.store.config()) {
+		t.Error("the installed config changed")
+	}
+}
+
 // Between the reservation and the transaction appearing a second Start must not
 // slip through: the config has one owner.
 func TestConcurrentStartsAreSerialised(t *testing.T) {
