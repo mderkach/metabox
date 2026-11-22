@@ -126,11 +126,11 @@ export function readRules(text: string): unknown[] {
 }
 
 /**
- * Rule names, one per node of `readRules`: sing-box has no name field on a
- * rule, so the name is the line comment above the rule node. `null` means none.
+ * Rule names in list order: sing-box has no name field on a rule, so the
+ * name is the line comment above the node. `null` means none.
  */
-export function readRuleNames(text: string): (string | null)[] {
-  return readElementNames(text, RULES_PATH);
+export function readRuleNames(text: string, kind: 'route' | 'dns' = 'route'): (string | null)[] {
+  return readElementNames(text, kind === 'dns' ? GENERIC_SECTIONS[CONFIG_SECTION.DnsRules].path : RULES_PATH);
 }
 
 /** Where rule sets lie in the document. */

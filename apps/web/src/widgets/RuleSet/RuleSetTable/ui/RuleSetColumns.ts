@@ -2,6 +2,7 @@ import { tableFeatures, type AccessorFnColumnDef } from '@tanstack/react-table';
 import type { ParseKeys } from 'i18next';
 
 import type { RuleSetRow } from '@entities/RuleSet';
+import type { CachedRuleSet } from '@entities/RuleSet';
 
 /**
  * Rule set row layout. One set of widths serves the header and the row: if they diverge,
@@ -19,7 +20,7 @@ export const RULE_SET_COLUMN = {
   Size: 'w-20 shrink-0 text-right max-md:w-auto',
   Usage: 'w-36 shrink-0 text-right max-md:col-span-2 max-md:w-auto max-md:text-left',
   RowActions:
-    'flex w-14 shrink-0 items-center justify-end gap-2 max-md:col-start-2 max-md:row-start-1 max-md:self-start',
+    'flex w-24 shrink-0 items-center justify-end gap-2 max-md:col-start-2 max-md:row-start-1 max-md:self-start',
 } as const;
 
 export const RULE_SET_FIELD = {
@@ -34,6 +35,7 @@ export type RuleSetField = (typeof RULE_SET_FIELD)[keyof typeof RULE_SET_FIELD];
 
 export interface RuleSetCellProps {
   set: RuleSetRow;
+  cached?: CachedRuleSet;
 }
 
 /**

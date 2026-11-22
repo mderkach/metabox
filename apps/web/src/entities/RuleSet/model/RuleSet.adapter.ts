@@ -2,7 +2,7 @@ import { RuleSetSchema } from '@shared/api/generated';
 import { MS_IN_SECOND } from '@shared/lib/time';
 
 import { LIST_KIND, LIST_SOURCE, type RuleSetCatalogWire, type RuleSetListWire } from '../api/RuleSet.schema';
-import { describeURL } from './RuleSet.catalog';
+import { describeRuleSet, describeURL } from './RuleSet.catalog';
 import { RULE_SET_LIST_SOURCE, RULE_SET_TYPE } from './RuleSet.constants';
 import { localListFile } from './RuleSet.model';
 import type {
@@ -14,7 +14,32 @@ import type {
   RuleSetRow,
   RuleSetSource,
   RuleSetType,
+  RuleSetUsage,
 } from './RuleSet.model';
+
+export function parseRuleSetSearch(search: Record<string, unknown>) {
+  const tag = search.set;
+
+  if (typeof tag === 'number') return { set: String(tag) };
+
+  return { set: typeof tag === 'string' && tag !== '' ? tag : undefined };
+}
+
+export function remoteRuleSetTags(nodes: readonly unknown[]): ReadonlySet<string> {
+  const tags = new Set<string>();
+
+  for (const node of nodes) {
+    if (typeof node !== 'object' || node === null || toType(Reflect.get(node, 'type')) !== RULE_SET_TYPE.Remote) {
+      continue;
+    }
+
+    const tag = toOptionalText(Reflect.get(node, 'tag'));
+
+    if (tag !== null) tags.add(tag);
+  }
+
+  return tags;
+}
 
 /** A set without `type` is read by core as remote. */
 const DEFAULT_TYPE: RuleSetType = RULE_SET_TYPE.Remote;
@@ -126,16 +151,10 @@ function toFileStat(node: object, files: ReadonlyMap<string, RuleSetFileStat>): 
   return name === null ? null : (files.get(name) ?? null);
 }
 
-/**
- * Expands `route.rule_set` into list rows.
- *
- * How many rules refer to a set is counted outside and arrives as a map: the
- * sets slice itself knows nothing about rules, and the screen needs this in one
- * pass. The same goes for `files`, the own list files on the device by name.
- */
+/** Expands `route.rule_set` into rows with the references and file metadata indexed by tag and file name. */
 export function toRuleSetRowsFromNodes(
   nodes: readonly unknown[],
-  usage: ReadonlyMap<string, number>,
+  usage: ReadonlyMap<string, readonly RuleSetUsage[]>,
   catalog: RuleSetCatalog,
   files: ReadonlyMap<string, RuleSetFileStat>
 ): RuleSetRow[] {
@@ -152,6 +171,8 @@ export function toRuleSetRowsFromNodes(
     const type = toType(Reflect.get(node, 'type'));
     const location = toLocation(node, type);
     const tag = toText(Reflect.get(node, 'tag'));
+    const source = type === RULE_SET_TYPE.Remote ? describeURL(catalog, location) : NO_SOURCE;
+    const references = usage.get(tag) ?? [];
 
     rows.push({
       id: String(position),
@@ -160,10 +181,12 @@ export function toRuleSetRowsFromNodes(
       type,
       format: toText(Reflect.get(node, 'format')),
       location,
-      source: type === RULE_SET_TYPE.Remote ? describeURL(catalog, location) : NO_SOURCE,
+      source,
+      description: describeRuleSet(type, location, source, catalog),
       updateInterval: toOptionalText(Reflect.get(node, 'update_interval')),
       detour: toDetour(node),
-      usedBy: usage.get(tag) ?? 0,
+      usage: references,
+      usedBy: references.length,
       recognized: isRuleSetRecognized(node),
       file: toFileStat(node, files),
     });
@@ -172,32 +195,39 @@ export function toRuleSetRowsFromNodes(
   return rows;
 }
 
-/**
- * How many rules refer to each set tag.
- *
- * A rule's `rule_set` condition is a string or a list of strings, and in a
- * logical rule it lies in nested branches: a rule that refers to a set from
- * inside a group refers to it no less than a direct one.
- */
-export function countRuleSetUsage(rules: readonly unknown[]): Map<string, number> {
-  const usage = new Map<string, number>();
+interface RuleSetUsageGroup {
+  kind: RuleSetUsage['kind'];
+  rules: readonly unknown[];
+  names: readonly (string | null)[];
+}
 
-  for (const rule of rules) {
-    for (const tag of collectTags(rule)) {
-      usage.set(tag, (usage.get(tag) ?? 0) + 1);
+/** One reference to a set per top-level rule, even when several logical branches use it. */
+export function collectRuleSetUsage(groups: readonly RuleSetUsageGroup[]): Map<string, RuleSetUsage[]> {
+  const usage = new Map<string, RuleSetUsage[]>();
+
+  for (const { kind, rules, names } of groups) {
+    for (const [index, rule] of rules.entries()) {
+      const tags = new Set<string>();
+      collectTags(rule, tags);
+
+      for (const tag of tags) {
+        const reference = { kind, number: index + 1, name: names[index] ?? null };
+        const references = usage.get(tag);
+
+        if (references === undefined) {
+          usage.set(tag, [reference]);
+        } else {
+          references.push(reference);
+        }
+      }
     }
   }
 
   return usage;
 }
 
-/** Set tags a rule refers to, without repeats within one. */
-function collectTags(rule: unknown): Set<string> {
-  const tags = new Set<string>();
-
-  if (typeof rule !== 'object' || rule === null) {
-    return tags;
-  }
+function collectTags(rule: unknown, tags: Set<string>): void {
+  if (typeof rule !== 'object' || rule === null) return;
 
   const own: unknown = Reflect.get(rule, 'rule_set');
 
@@ -213,11 +243,7 @@ function collectTags(rule: unknown): Set<string> {
 
   if (Array.isArray(nested)) {
     for (const child of nested) {
-      for (const tag of collectTags(child)) {
-        tags.add(tag);
-      }
+      collectTags(child, tags);
     }
   }
-
-  return tags;
 }

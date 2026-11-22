@@ -45,12 +45,12 @@ These three boundaries must not be changed in code: a conflict is resolved by a 
 
 `internal/clashapi` may decode only these fields into narrow, local typed projections for daemon operations:
 
-| Reader           | Config fields                                                                          | Purpose                                                                                    |
-| ---------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `Read`           | `experimental.clash_api.external_controller`, `experimental.clash_api.secret`          | Reach the runtime API and perform health checks                                            |
-| `LogOutput`      | `log.disabled`, `log.output`                                                           | Select the file log source for log reading and service failure diagnosis                   |
-| `ReadDNSInbound` | `inbounds[].type`, `inbounds[].listen`, `inbounds[].listen_port`, `inbounds[].network` | Find the first `direct` inbound matching the configured DNS port and address the DNS probe |
-| `ReadCacheFile`  | `experimental.cache_file.enabled`, `.path`, `.cache_id`, `.store_subscriptions`        | Find the cached subscription that crashes the core and the bucket it lives in              |
+| Reader           | Config fields                                                                                                            | Purpose                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `Read`           | `experimental.clash_api.external_controller`, `experimental.clash_api.secret`                                            | Reach the runtime API and perform health checks                                            |
+| `LogOutput`      | `log.disabled`, `log.output`                                                                                             | Select the file log source for log reading and service failure diagnosis                   |
+| `ReadDNSInbound` | `inbounds[].type`, `inbounds[].listen`, `inbounds[].listen_port`, `inbounds[].network`                                   | Find the first `direct` inbound matching the configured DNS port and address the DNS probe |
+| `ReadCacheFile`  | `experimental.cache_file.enabled`, `.path`, `.cache_id`, `.store_subscriptions`; `route.rule_set[].type`, `.tag`, `.url` | Locate cached subscriptions for recovery and look up cached metadata for remote rule sets  |
 
 These reads preserve the original config bytes: projections are never serialized back into the config. They do not authorize a general Go config model, parsing into `map[string]any`, or custom config validation; `sing-box` remains the validator.
 
