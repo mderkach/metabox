@@ -284,6 +284,24 @@ describe('rule names', () => {
     expect(readRuleNames(LISTED)).toEqual([null, 'keep']);
   });
 
+  it('reads DNS rule names from their own list', () => {
+    const text = [
+      '{',
+      '  "route": { "rules": [{}] },',
+      '  "dns": {',
+      '    "rules": [',
+      '      // Work domains',
+      '      { "rule_set": ["work"], "server": "dns-work" },',
+      '      { "domain": ["lan"], "server": "dns-local" }',
+      '    ]',
+      '  }',
+      '}',
+    ].join('\n');
+
+    expect(readRuleNames(text, 'dns')).toEqual(['Work domains', null]);
+    expect(readRuleNames(text)).toEqual([null]);
+  });
+
   it('writes a name as one new line above the rule, in its indent', () => {
     const after = nameValue(LISTED, [...RULES, 0], 'TV through VPN') ?? '';
 

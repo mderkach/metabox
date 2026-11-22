@@ -27,12 +27,14 @@ import { createStatefulProxyHandlers } from '@entities/Proxy/__tests__/Proxy.han
 import { createRouteHandlers, createRuleHitsHandler } from '@entities/Route/__tests__/Route.handlers';
 import { ruleSetHandlers } from '@entities/RuleSet/__tests__/RuleSet.handlers';
 import { RUNTIME_TOPIC } from '@shared/api';
+import type { CachedRuleSetWire } from '@shared/api/daemon.generated';
 import { MS_IN_SECOND } from '@shared/lib/time';
 
 import { runtimeStreamHandler } from './runtimeStream';
 
 /** Stream step on the device — measured 2026-09-10: one sample per second. */
 const STREAM_INTERVAL = MS_IN_SECOND;
+const CACHED_RULE_SETS_PATH = '/api/rule-sets/cached';
 
 let memorySample = 0;
 let connectionsFrame = 0;
@@ -69,6 +71,30 @@ export function createMissingHandlers(connections = 0) {
         };
 
   const dataplane = createDataplaneMock();
+  const checkedAt = Math.floor(Date.now() / MS_IN_SECOND);
+  const cacheByTag: Record<string, Partial<Omit<CachedRuleSetWire, 'tag'>>> = {
+    gemini: { state: 'cached', checked_at: checkedAt, size: 1328 },
+    openai: { state: 'memory_only' },
+    anthropic: { state: 'unreadable' },
+    spotify: {
+      state: 'cached',
+      checked_at: checkedAt,
+      size: 11904,
+      other_address: true,
+    },
+    stripe: { state: 'cache_unavailable' },
+  };
+  const cachedRuleSets: CachedRuleSetWire[] = [];
+  for (const { type, tag } of CONFIG_FIXTURE.route?.rule_set ?? []) {
+    if (type !== 'remote' || typeof tag !== 'string') continue;
+
+    cachedRuleSets.push({
+      tag,
+      state: 'not_downloaded',
+      other_address: false,
+      ...cacheByTag[tag],
+    });
+  }
 
   return [
     ...createAuthHandlers({ others: OTHER_SESSIONS_FIXTURE }),
@@ -95,6 +121,7 @@ export function createMissingHandlers(connections = 0) {
     ...connectionHandlers,
     ...createRouteHandlers(CONNECTIONS_FIXTURE.connections),
     ...ruleSetHandlers,
+    http.get(CACHED_RULE_SETS_PATH, () => HttpResponse.json(cachedRuleSets)),
     createRuleHitsHandler(CONFIG_FIXTURE.route?.rules ?? []),
     runtimeStreamHandler(
       [

@@ -152,6 +152,8 @@ type Options struct {
 	// RuleSets returns the catalog of ready rule sets. nil means there is no catalog:
 	// the rule set connection form stays with its own address.
 	RuleSets RuleSetsReader
+	// CachedRuleSets reads the core's saved remote rule set metadata. nil disables the route.
+	CachedRuleSets CachedRuleSetsReader
 	// Runtime reports whether a sing-box process is running on the device. nil
 	// means there is nothing to observe with: the service state is then read only from
 	// procd, and the panel will not see a foreign process.
@@ -218,6 +220,11 @@ type RuleSetsReader interface {
 	Catalog() ruleset.Catalog
 }
 
+// CachedRuleSetsReader reports the saved copy of each remote set in the applied config.
+type CachedRuleSetsReader interface {
+	Read(ctx context.Context) ([]contract.CachedRuleSet, error)
+}
+
 // DeviceRegistry returns the LAN devices and changes their own names. The interface
 // is declared here, at the consumer.
 type DeviceRegistry interface {
@@ -255,6 +262,7 @@ type Server struct {
 	hits           HitsReader
 	history        HistoryReader
 	ruleSets       RuleSetsReader
+	cachedRuleSets CachedRuleSetsReader
 	runtime        RuntimeObserver
 	devices        DeviceRegistry
 	dataplane      DataplaneReader
@@ -293,6 +301,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		hits:           opts.Hits,
 		history:        opts.History,
 		ruleSets:       opts.RuleSets,
+		cachedRuleSets: opts.CachedRuleSets,
 		runtime:        opts.Runtime,
 		devices:        opts.Devices,
 		dataplane:      opts.Dataplane,
@@ -351,6 +360,10 @@ func (s *Server) routes() http.Handler {
 
 	if s.ruleSets != nil {
 		mux.HandleFunc("GET /api/rule-sets/catalog", s.handleRuleSets)
+	}
+
+	if s.cachedRuleSets != nil {
+		mux.HandleFunc("GET /api/rule-sets/cached", s.handleCachedRuleSets)
 	}
 
 	if s.devices != nil {
@@ -815,6 +828,21 @@ func (s *Server) handleHits(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleRuleSets(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(s.log, w, http.StatusOK, s.ruleSets.Catalog())
+}
+
+func (s *Server) handleCachedRuleSets(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.cachedRuleSets.Read(r.Context())
+	if err != nil {
+		fail(s.log, w, r, err)
+
+		return
+	}
+
+	if rows == nil {
+		rows = []contract.CachedRuleSet{}
+	}
+
+	writeJSON(s.log, w, http.StatusOK, rows)
 }
 
 func (s *Server) handleDevices(w http.ResponseWriter, r *http.Request) {

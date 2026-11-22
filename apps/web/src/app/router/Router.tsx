@@ -16,7 +16,7 @@ import { getDevicesOptions } from '@entities/Device';
 import { DEFAULT_LOG_LEVEL, getLogTailOptions } from '@entities/Log';
 import { getProxiesOptions, getProxyProvidersOptions } from '@entities/Proxy';
 import { parseRuleSearch } from '@entities/Rule';
-import { getRuleSetCatalogOptions } from '@entities/RuleSet';
+import { getRuleSetCatalogOptions, parseRuleSetSearch } from '@entities/RuleSet';
 import { QueryClientInstance } from '@shared/api';
 import { matchNarrow } from '@shared/lib/media';
 
@@ -107,6 +107,7 @@ const ruleSetsRoute = createRoute({
       QueryClientInstance.query(getRuleSetCatalogOptions()).catch(keepFailureForScreen),
     ]),
   path: 'rule-set',
+  validateSearch: parseRuleSetSearch,
   component: lazyRouteComponent(async () => import('@pages/RuleSets'), 'RuleSetsPage'),
 });
 

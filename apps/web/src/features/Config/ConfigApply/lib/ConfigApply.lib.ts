@@ -38,6 +38,7 @@ import {
 import { PROXY_QUERY } from '@entities/Proxy';
 import { ROUTE_QUERY } from '@entities/Route';
 import { toRuleChanges, toRuleRowsFromNodes, type RuleChange, type RuleRow } from '@entities/Rule';
+import { RULE_SET_QUERY } from '@entities/RuleSet';
 import { API_FAILURE, ApiError } from '@shared/api';
 import { failureLine, firstJsoncError } from '@shared/lib/jsonc';
 import { useStore } from '@shared/lib/state';
@@ -85,6 +86,7 @@ function useDocumentRefresh(transaction: ApplyTransaction | null) {
 
       if (transaction.phase === APPLY_PHASE.Confirmed) {
         void queryClient.invalidateQueries({ queryKey: PROXY_QUERY.all });
+        void queryClient.invalidateQueries({ queryKey: RULE_SET_QUERY.cached(), exact: true });
         void queryClient.invalidateQueries({ queryKey: ROUTE_QUERY.all });
         void queryClient.invalidateQueries({ queryKey: DAEMON_QUERY.clashConfigs() });
         void queryClient.invalidateQueries({ queryKey: DAEMON_QUERY.service() });

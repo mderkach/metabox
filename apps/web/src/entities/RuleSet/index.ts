@@ -1,9 +1,11 @@
 export { RULE_SET_ENDPOINT } from './api/RuleSet.endpoints';
-export { getRuleSetCatalogOptions, RULE_SET_QUERY, useRuleSetCatalog } from './api/RuleSet.query';
+export { getRuleSetCatalogOptions, RULE_SET_QUERY, useCachedRuleSets, useRuleSetCatalog } from './api/RuleSet.query';
 export {
-  countRuleSetUsage,
+  collectRuleSetUsage,
   isRuleSetRecognized,
   toRuleSetCatalog,
+  parseRuleSetSearch,
+  remoteRuleSetTags,
   toRuleSetRowsFromNodes,
 } from './model/RuleSet.adapter';
 export {
@@ -26,7 +28,9 @@ export { parseDuration } from './model/RuleSet.duration';
 export { filterRuleSets } from './model/RuleSet.filter';
 export { defaultFormatOf, localListFile } from './model/RuleSet.model';
 export type {
+  CachedRuleSet,
   RuleSetCatalog,
+  RuleSetDescription,
   RuleSetFileStat,
   RuleSetFormat,
   RuleSetList,
@@ -37,4 +41,5 @@ export type {
   RuleSetRow,
   RuleSetSource,
   RuleSetType,
+  RuleSetUsage,
 } from './model/RuleSet.model';

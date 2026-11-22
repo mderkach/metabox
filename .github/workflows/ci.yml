@@ -240,6 +240,12 @@ jobs:
           METABOX_EPHEMERAL_BENCH: '1'
         run: cd apps/metaboxd && go test -tags integration -run TestApplyHTTPOnEphemeralBench -count=1 -v -timeout 5m .
 
+      - name: Cached rule sets with the running core
+        timeout-minutes: 4
+        env:
+          METABOX_EPHEMERAL_BENCH: '1'
+        run: cd apps/metaboxd && go test -tags integration -run '^TestCachedRuleSetsOnEphemeralBench$' -count=1 -v -timeout 3m .
+
       - name: Reach check
         timeout-minutes: 5
         run: make reach-check

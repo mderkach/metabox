@@ -56,6 +56,19 @@ export interface RuleSetSource {
   category: string | null;
 }
 
+export type RuleSetDescription =
+  | { kind: RuleSetListKind; providerName: string; category: string; fileName: string; mirrorHost: string | null }
+  | { kind: 'remote'; host: string | null; fileName: string | null }
+  | { kind: 'local'; path: string }
+  | { kind: 'inline' };
+
+export interface RuleSetUsage {
+  kind: 'route' | 'dns';
+  /** Position of the parent rule in its list, counting from one. */
+  number: number;
+  name: string | null;
+}
+
 /** What the device disk says about a rule set file. */
 export interface RuleSetFileStat {
   /** Size in bytes. */
@@ -76,14 +89,13 @@ export interface RuleSetRow {
   /** Address for `remote`, path for `local`, empty string for `inline`. */
   location: string;
   source: RuleSetSource;
+  description: RuleSetDescription;
   /** How often core redownloads the set; `null` means the interval is not set. */
   updateInterval: string | null;
   /** Which node to download through; `null` means directly. */
   detour: string | null;
-  /**
-   * How many routing rules refer to this tag. Zero means the set is downloaded
-   * and takes memory without affecting anything.
-   */
+  usage: readonly RuleSetUsage[];
+  /** How many routing and DNS rules refer to this tag. */
   usedBy: number;
   /**
    * The file on the device. `null` means unknown: only the daemon's own list files in
@@ -136,4 +148,12 @@ export function defaultFormatOf(url: string): RuleSetFormat | '' {
   }
 
   return path.endsWith(SET_EXTENSION.Source) ? RULE_SET_FORMAT.Source : '';
+}
+
+export interface CachedRuleSet {
+  tag: string;
+  state: string;
+  checkedAt: number | undefined;
+  size: number | undefined;
+  otherAddress: boolean;
 }

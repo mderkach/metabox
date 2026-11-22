@@ -1,3 +1,4 @@
+import { getRouteApi } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +10,7 @@ import {
   readRuleSets,
   ruleSetNodePath,
 } from '@entities/Config';
-import { localListFile } from '@entities/RuleSet';
+import { localListFile, RULE_SET_TYPE, useCachedRuleSets } from '@entities/RuleSet';
 import { ConfigCacheNotice } from '@features/Config/ConfigCacheFile';
 import { RuleSetAddForm } from '@features/RuleSet/RuleSetAdd';
 import { RuleSetCustomForm } from '@features/RuleSet/RuleSetCustom';
@@ -37,6 +38,8 @@ import { RuleSetsEmptyState } from './RuleSetsEmptyState';
 import { RuleSetsPanelForm } from './RuleSetsPanelForm';
 import { RuleSetsSearch } from './RuleSetsSearch';
 
+const route = getRouteApi('/config/rule-set');
+
 /**
  * Rule sets: what is attached and what to add to it.
  *
@@ -48,6 +51,11 @@ import { RuleSetsSearch } from './RuleSetsSearch';
 export function RuleSetsPage() {
   const { t } = useTranslation('pages/RuleSets');
   const editor = useRuleSetEditor();
+  const { set: openedTag } = route.useSearch();
+  const { appliedTags } = editor;
+  const cached = useCachedRuleSets(
+    editor.sets.some((set) => set.type === RULE_SET_TYPE.Remote && appliedTags.has(set.tag))
+  );
   const filter = useRuleSetFilter(editor.sets);
   const remove = ConfigDocumentState.use.remove();
   const removeList = ConfigDocumentState.use.removeList();
@@ -143,8 +151,12 @@ export function RuleSetsPage() {
         <SidePanelLayout.Root open={panel.form !== null && !asSheet} className='items-start'>
           <SidePanelLayout.Main>
             <RuleSetTable
+              key={openedTag}
               sets={filter.sets}
               total={editor.sets.length}
+              openedTag={openedTag}
+              appliedTags={appliedTags}
+              cache={cached}
               onEdit={panel.edit}
               onRemove={onRemove}
               search={<RuleSetsSearch filter={filter} />}

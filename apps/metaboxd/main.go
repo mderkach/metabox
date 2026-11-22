@@ -402,6 +402,7 @@ func run(log *slog.Logger, s settings) error {
 		Hits:           hits,
 		History:        history.NewRuntime(traffic, deviceHistory, connectionSizes),
 		RuleSets:       ruleSets,
+		CachedRuleSets: ruleset.NewCachedReader(store, manager.CachePath),
 		Runtime:        sysinfo.Alive,
 		Devices:        lan,
 		Dataplane:      plane,

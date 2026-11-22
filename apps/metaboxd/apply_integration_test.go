@@ -25,35 +25,8 @@ import (
 
 const benchURL = "http://127.0.0.1:8080"
 
-// This suite changes the disposable CI container's config and restarts its daemon.
-// The owner's Compose project has the same name, so neither opt-in alone is enough.
 func TestApplyHTTPOnEphemeralBench(t *testing.T) {
-	if os.Getenv("CI") != "true" || os.Getenv("METABOX_EPHEMERAL_BENCH") != "1" {
-		if os.Getenv("CI") == "true" {
-			t.Fatal("CI integration run requires the explicit disposable-bench opt-in")
-		}
-		t.Skip("requires CI=true and METABOX_EPHEMERAL_BENCH=1 on a disposable bench")
-	}
-
-	labels := benchCommand(t, nil, "inspect", "metabox-target-1", "--format", `{{index .Config.Labels "com.docker.compose.project"}}/{{index .Config.Labels "com.docker.compose.service"}}`)
-	if strings.TrimSpace(string(labels)) != "metabox/target" {
-		t.Fatal("the target is not the expected metabox Compose service")
-	}
-
-	var status struct {
-		ConfigPath           string             `json:"config_path"`
-		ConfirmWindowSeconds int                `json:"confirm_window_seconds"`
-		Transaction          *apply.Transaction `json:"transaction"`
-	}
-	decodeBench(t, benchRequest(t, http.MethodGet, "/api/status", nil, http.StatusOK), &status)
-	if status.ConfigPath != "/etc/sing-box/config.json" || status.ConfirmWindowSeconds != 60 {
-		t.Fatal("the target does not have the expected CI config path and confirmation window")
-	}
-	if status.Transaction != nil && status.Transaction.Active() {
-		t.Fatal("the bench already has an active Apply transaction")
-	}
-	baseline := benchRequest(t, http.MethodGet, "/api/config", nil, http.StatusOK)
-	t.Cleanup(func() { restoreBench(t, baseline) })
+	baseline := prepareEphemeralBench(t)
 
 	t.Log("invalid candidate: the real binary rejects it without changing the config")
 	benchRequest(t, http.MethodPost, "/api/apply", []byte(`{"route":{"rules":[{"outbound":42}]}}`), http.StatusUnprocessableEntity)
@@ -148,6 +121,39 @@ func TestApplyHTTPOnEphemeralBench(t *testing.T) {
 	assertBenchCacheKeys(t, []string{"geo", "other"})
 	assertBenchReachable(t)
 	t.Log("HTTP Apply, confirmation, timeout, replay, interrupted-write recovery, a restart of a stopped service and cache file recovery passed")
+}
+
+// This suite changes the disposable CI container's config and restarts its daemon.
+// The owner's Compose project has the same name, so neither opt-in alone is enough.
+func prepareEphemeralBench(t *testing.T) []byte {
+	t.Helper()
+	if os.Getenv("CI") != "true" || os.Getenv("METABOX_EPHEMERAL_BENCH") != "1" {
+		if os.Getenv("CI") == "true" {
+			t.Fatal("CI integration run requires the explicit disposable-bench opt-in")
+		}
+		t.Skip("requires CI=true and METABOX_EPHEMERAL_BENCH=1 on a disposable bench")
+	}
+
+	labels := benchCommand(t, nil, "inspect", "metabox-target-1", "--format", `{{index .Config.Labels "com.docker.compose.project"}}/{{index .Config.Labels "com.docker.compose.service"}}`)
+	if strings.TrimSpace(string(labels)) != "metabox/target" {
+		t.Fatal("the target is not the expected metabox Compose service")
+	}
+
+	var status struct {
+		ConfigPath           string             `json:"config_path"`
+		ConfirmWindowSeconds int                `json:"confirm_window_seconds"`
+		Transaction          *apply.Transaction `json:"transaction"`
+	}
+	decodeBench(t, benchRequest(t, http.MethodGet, "/api/status", nil, http.StatusOK), &status)
+	if status.ConfigPath != "/etc/sing-box/config.json" || status.ConfirmWindowSeconds != 60 {
+		t.Fatal("the target does not have the expected CI config path and confirmation window")
+	}
+	if status.Transaction != nil && status.Transaction.Active() {
+		t.Fatal("the bench already has an active Apply transaction")
+	}
+	baseline := benchRequest(t, http.MethodGet, "/api/config", nil, http.StatusOK)
+	t.Cleanup(func() { restoreBench(t, baseline) })
+	return baseline
 }
 
 // benchCacheFile is where the cached candidate keeps its cache: relative to the config

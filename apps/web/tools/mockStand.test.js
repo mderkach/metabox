@@ -30,6 +30,34 @@ describe('mock stand', () => {
     expect(daemonRoutes().length).toBeGreaterThan(MIN_ROUTES);
   });
 
+  it('serves remote rule set cache states on the stand', async () => {
+    const request = new Request(`${ORIGIN}/api/rule-sets/cached`);
+    const options = { request, requestId: 'cached-rule-sets', resolutionContext: { baseUrl: ORIGIN } };
+    let response;
+
+    for (const handler of createMissingHandlers()) {
+      const result = await handler.run(options);
+
+      if (result?.response === undefined) continue;
+
+      response = result.response;
+      break;
+    }
+
+    const rows = await response?.json();
+
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ state: 'cached', checked_at: expect.any(Number), size: expect.any(Number) }),
+        expect.objectContaining({ state: 'cached', other_address: true }),
+        expect.objectContaining({ state: 'memory_only' }),
+        expect.objectContaining({ state: 'not_downloaded' }),
+        expect.objectContaining({ state: 'unreadable' }),
+        expect.objectContaining({ state: 'cache_unavailable' }),
+      ])
+    );
+  });
+
   it('has a handler for every daemon /api/ route the panel calls', () => {
     const handlers = stand();
     const missing = daemonRoutes()

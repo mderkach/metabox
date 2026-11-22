@@ -1,4 +1,4 @@
-import { renderWithRouter } from '@test/renderWithRouter';
+import { renderWithRouter as renderScreen } from '@test/renderWithRouter';
 import { server } from '@test/server';
 import { finishSidePanelTransition } from '@test/sidePanel';
 import { screen, waitFor, within } from '@testing-library/react';
@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CONFIG_ENDPOINT, ConfigDocumentState, findValue } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
-import { RULE_SET_ENDPOINT } from '@entities/RuleSet';
+import { parseRuleSetSearch, RULE_SET_ENDPOINT } from '@entities/RuleSet';
 import { ruleSetHandlers } from '@entities/RuleSet/__tests__/RuleSet.handlers';
 import { PANEL_AS_SHEET } from '@shared/lib/media';
 import { useShortcuts } from '@shared/lib/shortcuts';
@@ -21,6 +21,10 @@ function RuleSetsWithShortcuts() {
   useShortcuts();
 
   return <RuleSetsPage />;
+}
+
+function renderWithRouter(component: typeof RuleSetsPage, initialEntry?: string) {
+  return renderScreen(component, { path: '/config/rule-set', validateSearch: parseRuleSetSearch, initialEntry });
 }
 
 const CONFIG = JSON.stringify(
@@ -98,8 +102,129 @@ describe('rule sets screen', () => {
       // The screen header opens the version history, and the apply bar polls the daemon.
       http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: [] })),
       http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
+      http.get(CONFIG_ENDPOINT.ruleSetFiles(), () => HttpResponse.json({ files: {}, etag: null, stats: {} })),
+      http.get(RULE_SET_ENDPOINT.cached(), () => HttpResponse.json([])),
       ...ruleSetHandlers
     );
+  });
+
+  it('opens the set named in the address and shows where it is used', async () => {
+    renderWithRouter(RuleSetsPage, '/config/rule-set?set=geosite-google');
+
+    expect(await screen.findByRole('button', { name: 'Скрыть подробности о сете geosite-google' })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    );
+    expect(screen.getByRole('link', { name: 'Правило 1' })).toHaveAttribute('href', '/config?rule=1');
+  });
+
+  it('leaves every set collapsed for an unknown tag', async () => {
+    renderWithRouter(RuleSetsPage, '/config/rule-set?set=missing');
+
+    const toggles = await screen.findAllByRole('button', { name: /Подробнее о сете/ });
+    expect(toggles).toHaveLength(2);
+    for (const toggle of toggles) expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('expands and collapses a set with the keyboard, keeping focus on the toggle', async () => {
+    const user = userEvent.setup();
+    renderWithRouter(RuleSetsPage);
+    const toggle = await screen.findByRole('button', { name: 'Подробнее о сете geoip-ru' });
+    toggle.focus();
+    await user.keyboard('{Enter}');
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle).toHaveFocus();
+
+    await user.keyboard('{Enter}');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('allows two details panels without adding table rows', async () => {
+    const user = userEvent.setup();
+    renderWithRouter(RuleSetsPage, '/config/rule-set?set=geosite-google');
+
+    const second = await screen.findByRole('button', { name: 'Подробнее о сете geoip-ru' });
+    await user.click(second);
+
+    expect(second).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: 'Скрыть подробности о сете geosite-google' })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    );
+    const table = screen.getByRole('table', { name: 'Подключённые сеты' });
+    expect(table).toHaveAttribute('aria-rowcount', '3');
+    expect(within(table).getAllByRole('row')).toHaveLength(3);
+  });
+
+  it.each([
+    ['not_downloaded', 'Ещё не скачан.'],
+    ['memory_only', /Ядро держит список в памяти/],
+    ['unreadable', /Сохранённую копию не удалось прочитать как сет правил/],
+    ['cache_unavailable', 'Сохранённые копии сейчас недоступны.'],
+  ])('explains the remote state %s', async (state, message) => {
+    server.use(
+      http.get(RULE_SET_ENDPOINT.cached(), () =>
+        HttpResponse.json([{ tag: 'geosite-google', state, other_address: false }])
+      )
+    );
+
+    renderWithRouter(RuleSetsPage, '/config/rule-set?set=geosite-google');
+    expect(await screen.findByText(message)).toBeInTheDocument();
+  });
+
+  it('shows the downloaded size and checked time and flags a copy from another address', async () => {
+    const checkedAt = 1_757_550_000;
+    server.use(
+      http.get(RULE_SET_ENDPOINT.cached(), () =>
+        HttpResponse.json([
+          { tag: 'geosite-google', state: 'cached', other_address: true, checked_at: checkedAt, size: 2048 },
+        ])
+      )
+    );
+
+    renderWithRouter(RuleSetsPage, '/config/rule-set?set=geosite-google');
+    expect(await screen.findByText(/Сохранённая копия скачана с другого адреса/)).toBeInTheDocument();
+    expect(screen.getAllByText('2.0 кБ')).toHaveLength(2);
+    for (const time of screen.getAllByRole('time')) {
+      expect(time).toHaveAttribute('dateTime', new Date(1_757_550_000_000).toISOString());
+      expect(time).toHaveAttribute('title');
+    }
+  });
+
+  it('retries cache metadata without hiding the set list', async () => {
+    let attempt = 0;
+    server.use(
+      http.get(RULE_SET_ENDPOINT.cached(), () => {
+        attempt += 1;
+        return attempt === 1
+          ? HttpResponse.json({}, { status: 503 })
+          : HttpResponse.json([{ tag: 'geosite-google', state: 'not_downloaded', other_address: false }]);
+      })
+    );
+
+    const user = userEvent.setup();
+    renderWithRouter(RuleSetsPage, '/config/rule-set?set=geosite-google');
+
+    expect(await screen.findByText('Не удалось загрузить время проверки и размер.')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Подключённые сеты' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Повторить' }));
+    expect(await screen.findByText('Ещё не скачан.')).toBeInTheDocument();
+  });
+
+  it('shows a draft-only set without requesting cache metadata', async () => {
+    const loadCache = vi.fn<() => Response>(() => HttpResponse.json([]));
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG_WITHOUT_REMOTE)),
+      http.get(RULE_SET_ENDPOINT.cached(), loadCache)
+    );
+    ConfigDocumentState.getState().load(CONFIG_WITHOUT_REMOTE);
+    ConfigDocumentState.getState().replace(CONFIG_WITHOUT_CACHE);
+
+    renderWithRouter(RuleSetsPage, '/config/rule-set?set=geoip-ru');
+
+    expect(await screen.findByText('Есть только в черновике. Ядро получит его после применения.')).toBeInTheDocument();
+    expect(loadCache).not.toHaveBeenCalled();
   });
 
   it('the header names the list columns', async () => {
@@ -262,6 +387,8 @@ describe('rule set panel', () => {
       http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG)),
       http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: [] })),
       http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
+      http.get(CONFIG_ENDPOINT.ruleSetFiles(), () => HttpResponse.json({ files: {}, etag: null, stats: {} })),
+      http.get(RULE_SET_ENDPOINT.cached(), () => HttpResponse.json([])),
       ...ruleSetHandlers
     );
   });
@@ -399,6 +526,8 @@ describe('rule set panel on a narrow screen', () => {
       http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG)),
       http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: [] })),
       http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
+      http.get(CONFIG_ENDPOINT.ruleSetFiles(), () => HttpResponse.json({ files: {}, etag: null, stats: {} })),
+      http.get(RULE_SET_ENDPOINT.cached(), () => HttpResponse.json([])),
       ...ruleSetHandlers
     );
     vi.stubGlobal('matchMedia', function matchQuery(media: string) {
@@ -441,6 +570,8 @@ describe('rule set cache warning', () => {
     server.use(
       http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: [] })),
       http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
+      http.get(CONFIG_ENDPOINT.ruleSetFiles(), () => HttpResponse.json({ files: {}, etag: null, stats: {} })),
+      http.get(RULE_SET_ENDPOINT.cached(), () => HttpResponse.json([])),
       ...ruleSetHandlers
     );
   });

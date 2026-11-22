@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { countRuleSetUsage, toRuleSetCatalog, toRuleSetRowsFromNodes } from '../model/RuleSet.adapter';
+import { collectRuleSetUsage, toRuleSetCatalog, toRuleSetRowsFromNodes } from '../model/RuleSet.adapter';
 import { describeURL } from '../model/RuleSet.catalog';
 import { defaultFormatOf } from '../model/RuleSet.model';
 import type { RuleSetFileStat } from '../model/RuleSet.model';
@@ -25,7 +25,7 @@ describe('toRuleSetRowsFromNodes', () => {
 
   it('does not pass a foreign address off as a known source', () => {
     const [row] = toRuleSetRowsFromNodes(
-      [{ type: 'remote', tag: 'own', url: 'https://example.com/own.srs' }],
+      [{ type: 'remote', tag: 'own', url: 'https://example.com:8443/sets/own.srs?auth=example#latest' }],
       new Map(),
       CATALOG,
       NO_FILES
@@ -33,6 +33,71 @@ describe('toRuleSetRowsFromNodes', () => {
 
     expect(row.source.providerId).toBeNull();
     expect(row.source.category).toBeNull();
+    expect(row.description).toEqual({ kind: 'remote', host: 'example.com:8443', fileName: 'own.srs' });
+  });
+
+  it.each(['google', 'ru', 'category-ads-all', 'ru-blocked', 'geolocation-!cn'])(
+    'preserves the published category %s in both list kinds',
+    (category) => {
+      const [provider] = CATALOG.providers;
+      const rows = toRuleSetRowsFromNodes(
+        provider.lists.map(({ prefix, mirrors }) => ({
+          type: 'remote',
+          tag: `${prefix}${category}`,
+          url: `${mirrors[0].base}${prefix}${category}.srs`,
+        })),
+        new Map(),
+        CATALOG,
+        NO_FILES
+      );
+
+      expect(rows.map((row) => row.description)).toEqual([
+        {
+          kind: 'geosite',
+          providerName: provider.name,
+          category,
+          fileName: `geosite-${category}.srs`,
+          mirrorHost: null,
+        },
+        { kind: 'geoip', providerName: provider.name, category, fileName: `geoip-${category}.srs`, mirrorHost: null },
+      ]);
+    }
+  );
+
+  it('describes a catalog mirror by host even with a query string', () => {
+    const [row] = toRuleSetRowsFromNodes(
+      [{ type: 'remote', tag: 'ru', url: 'https://cdn.jsdelivr.net/gh/SagerNet/sing-geoip@rule-set/geoip-ru.srs?v=1' }],
+      new Map(),
+      CATALOG,
+      NO_FILES
+    );
+
+    expect(row.description).toEqual({
+      kind: 'geoip',
+      providerName: 'v2fly',
+      category: 'ru',
+      fileName: 'geoip-ru.srs',
+      mirrorHost: 'cdn.jsdelivr.net',
+    });
+  });
+
+  it('describes local and inline rules by their source without exposing entries', () => {
+    const rows = toRuleSetRowsFromNodes(
+      [
+        { type: 'local', tag: 'own', path: 'rule-sets/own.json' },
+        { type: 'inline', tag: 'inline', rules: [{ domain: ['example.com'] }] },
+        { type: 'remote', tag: 'invalid', url: 'incomplete-address' },
+      ],
+      new Map(),
+      CATALOG,
+      NO_FILES
+    );
+
+    expect(rows.map((row) => row.description)).toEqual([
+      { kind: 'local', path: 'rule-sets/own.json' },
+      { kind: 'inline' },
+      { kind: 'remote', host: null, fileName: null },
+    ]);
   });
 
   // A rule set without `type` is read by the core as remote, and the list must read it the same way:
@@ -72,15 +137,28 @@ describe('toRuleSetRowsFromNodes', () => {
     expect(rows[0].index).toBe(1);
   });
 
-  it('shows how many rules refer to the rule set', () => {
-    const [row] = toRuleSetRowsFromNodes(
-      [{ type: 'remote', tag: 'geosite-google', url: GEOSITE_GOOGLE }],
-      new Map([['geosite-google', 2]]),
+  it('uses route and DNS references for both the usage list and count', () => {
+    const usage = collectRuleSetUsage([
+      { kind: 'route', rules: [{}, { rule_set: 'geosite-google' }], names: [null, 'Through VPN'] },
+      { kind: 'dns', rules: [{ rule_set: 'geosite-google' }], names: [] },
+    ]);
+    const [used, unused] = toRuleSetRowsFromNodes(
+      [
+        { type: 'remote', tag: 'geosite-google', url: GEOSITE_GOOGLE },
+        { type: 'inline', tag: 'unused' },
+      ],
+      usage,
       CATALOG,
       NO_FILES
     );
 
-    expect(row.usedBy).toBe(2);
+    expect(used.usage).toEqual([
+      { kind: 'route', number: 2, name: 'Through VPN' },
+      { kind: 'dns', number: 1, name: null },
+    ]);
+    expect(used.usedBy).toBe(2);
+    expect(unused.usage).toEqual([]);
+    expect(unused.usedBy).toBe(0);
   });
 
   // Only the daemon's own list files are visible on disk: a remote set and a path outside
@@ -105,26 +183,28 @@ describe('toRuleSetRowsFromNodes', () => {
   });
 });
 
-describe('countRuleSetUsage', () => {
-  it('counts references as a string and as a list', () => {
-    const usage = countRuleSetUsage([{ rule_set: 'a' }, { rule_set: ['a', 'b'] }]);
+describe('collectRuleSetUsage', () => {
+  it('groups repeated references in nested branches under their parent DNS rule', () => {
+    const usage = collectRuleSetUsage([
+      {
+        kind: 'dns',
+        rules: [
+          null,
+          {
+            type: 'logical',
+            mode: 'and',
+            rules: [
+              { rule_set: ['a', 'a'] },
+              { type: 'logical', mode: 'or', rules: [{ rule_set: 'a' }, { rule_set: 'b' }] },
+            ],
+          },
+        ],
+        names: [null, 'Internal DNS'],
+      },
+    ]);
 
-    expect(usage.get('a')).toBe(2);
-    expect(usage.get('b')).toBe(1);
-  });
-
-  // A rule referring to a rule set from inside a logical group refers to it
-  // no less than a direct one: otherwise the rule set would look unused.
-  it('sees a reference in nested branches of a logical rule', () => {
-    const usage = countRuleSetUsage([{ type: 'logical', mode: 'and', rules: [{ rule_set: 'nested' }] }]);
-
-    expect(usage.get('nested')).toBe(1);
-  });
-
-  it('does not count one rule twice for a repeated tag', () => {
-    const usage = countRuleSetUsage([{ rule_set: ['a', 'a'] }]);
-
-    expect(usage.get('a')).toBe(1);
+    expect(usage.get('a')).toEqual([{ kind: 'dns', number: 2, name: 'Internal DNS' }]);
+    expect(usage.get('b')).toEqual([{ kind: 'dns', number: 2, name: 'Internal DNS' }]);
   });
 });
 

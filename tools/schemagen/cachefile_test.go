@@ -2,8 +2,11 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"flag"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +15,8 @@ import (
 
 	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/common/srs"
+	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/experimental/cachefile"
 	"github.com/sagernet/sing-box/include"
 	"github.com/sagernet/sing-box/log"
@@ -37,6 +42,8 @@ const (
 	healthyEntry  = `{"outbounds":[{"type":"socks","tag":"s1","server":"127.0.0.1","server_port":1080}]}`
 	ruleSetEntry  = "rule set content"
 	fixtureID     = "router"
+	ruleSetSource = `{"version":3,"rules":[{"domain_suffix":["example.test"]}]}`
+	ruleSetURL    = "https://example.test/remote.srs"
 )
 
 func TestForkParsesXHTTPLinkWithoutPaddingAsZero(t *testing.T) {
@@ -179,6 +186,17 @@ func TestCacheFileFixture(t *testing.T) {
 			}
 		}
 
+		if id == fixtureID {
+			hash := sha256.Sum256([]byte(ruleSetURL))
+			for tag, content := range ruleSetFormats(t) {
+				saved := cache.LoadRuleSet(tag)
+				if saved == nil || !bytes.Equal(saved.Content, content) || !bytes.Equal(saved.URLHash, hash[:]) ||
+					saved.LastUpdated.Unix() != 100 || saved.LastEtag != `"fixture"` {
+					t.Errorf("cache rule set %q: want content, check time, ETag and address hash written by the fork", tag)
+				}
+			}
+		}
+
 		closeCache(t, cache)
 	}
 }
@@ -190,6 +208,107 @@ func writeFixture(t *testing.T, path string) {
 
 	writeCache(t, path, "", map[string]string{"sub": poisonedEntry, "other": healthyEntry}, map[string]string{"geo": ruleSetEntry})
 	writeCache(t, path, fixtureID, map[string]string{"sub": poisonedEntry}, nil)
+	cache := openCache(t, path, fixtureID)
+	defer closeCache(t, cache)
+	for tag, content := range ruleSetFormats(t) {
+		saveFixtureRuleSet(t, cache, tag, ruleSetURL, content)
+	}
+}
+
+func ruleSetFormats(t *testing.T) map[string][]byte {
+	t.Helper()
+	var source option.PlainRuleSetCompat
+	if err := json.Unmarshal([]byte(ruleSetSource), &source); err != nil {
+		t.Fatal(err)
+	}
+	rules, err := source.Upgrade()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var binary bytes.Buffer
+	if err := srs.Write(&binary, rules, C.RuleSetVersionCurrent); err != nil {
+		t.Fatal(err)
+	}
+	return map[string][]byte{"geo-binary": binary.Bytes(), "geo-source": []byte(ruleSetSource)}
+}
+
+func saveFixtureRuleSet(t *testing.T, cache openedCache, tag, address string, content []byte) {
+	t.Helper()
+	hash := sha256.Sum256([]byte(address))
+	if err := cache.SaveRuleSet(tag, &adapter.SavedBinary{
+		Content: content, LastUpdated: time.Unix(100, 0), LastEtag: `"fixture"`, URLHash: hash[:],
+	}); err != nil {
+		t.Fatalf("save rule set %q: %v", tag, err)
+	}
+}
+
+type ruleSetCheckLog chan struct{}
+
+func (checked ruleSetCheckLog) WriteMessage(_ log.Level, message string) {
+	if strings.Contains(message, "update rule-set remote: not modified") {
+		select {
+		case checked <- struct{}{}:
+		default:
+		}
+	}
+}
+
+func TestNotModifiedMovesRuleSetCheckTime(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.Header.Get("If-None-Match") != `"fixture"` {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusNotModified)
+	}))
+	defer server.Close()
+	path := filepath.Join(t.TempDir(), "cache.db")
+	cache := openCache(t, path, "")
+	saveFixtureRuleSet(t, cache, "remote", server.URL, []byte(ruleSetSource))
+	closeCache(t, cache)
+
+	ctx := service.ContextWithDefaultRegistry(include.Context(t.Context()))
+	raw := fmt.Sprintf(`{
+		"log": {"level": "info"},
+		"experimental": {"cache_file": {"enabled": true, "path": %q}},
+		"route": {"rule_set": [{"type": "remote", "tag": "remote", "format": "source", "url": %q}]}
+	}`, path, server.URL)
+	options, err := json.UnmarshalExtendedContext[option.Options](ctx, []byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	checked := make(ruleSetCheckLog, 1)
+	instance, err := box.New(box.Options{Context: ctx, Options: options, PlatformLogWriter: checked})
+	if err != nil {
+		t.Fatal(err)
+	}
+	closed := false
+	t.Cleanup(func() {
+		if !closed {
+			_ = instance.Close()
+		}
+	})
+	if err := instance.Start(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-checked:
+	case <-time.After(5 * time.Second):
+		t.Fatal("core did not finish the conditional check")
+	}
+	err = instance.Close()
+	closed = true
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cache = openCache(t, path, "")
+	defer closeCache(t, cache)
+	got := cache.LoadRuleSet("remote")
+	if got == nil || !got.LastUpdated.After(time.Unix(100, 0)) || string(got.Content) != ruleSetSource {
+		t.Fatal("a 304 response must update the check time while preserving the rule set")
+	}
+
 }
 
 func writeCache(t *testing.T, path, cacheID string, subscriptions, ruleSets map[string]string) {

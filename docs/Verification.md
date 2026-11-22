@@ -496,6 +496,35 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-75 | go-test | `apps/metaboxd/internal/mcp/lang_test.go`                                                         | `TestToolTextsFollowLang`                                                                                                                                                                                                                              |
 | AC-75 | go-test | `apps/metaboxd/internal/httpapi/lang_test.go`                                                     | `TestErrorMessageFollowsLang`                                                                                                                                                                                                                          |
 
+### Rule set details
+
+| ID     | Kind    | File                                                              | Check                                                                              |
+| ------ | ------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| AC-108 | go-test | `tools/schemagen/cachefile_test.go`                               | `TestCacheFileFixture`                                                             |
+| AC-108 | go-test | `tools/schemagen/cachefile_test.go`                               | `TestNotModifiedMovesRuleSetCheckTime`                                             |
+| AC-108 | go-test | `apps/metaboxd/internal/cachefile/rulesets_test.go`               | `TestReadRuleSetsWhileLiveCacheIsLocked`                                           |
+| AC-108 | go-test | `apps/metaboxd/internal/cachefile/rulesets_test.go`               | `TestCacheCopyRejectsCommitBetweenMetaReads`                                       |
+| AC-108 | go-test | `apps/metaboxd/internal/cachefile/rulesets_test.go`               | `TestReadRuleSetMetadataRejectsShareLink`                                          |
+| AC-108 | go-test | `apps/metaboxd/internal/clashapi/cachefile_test.go`               | `TestReadCacheFile`                                                                |
+| AC-108 | go-test | `apps/metaboxd/internal/ruleset/cached_test.go`                   | `TestCachedRuleSetsStates`                                                         |
+| AC-108 | go-test | `apps/metaboxd/internal/ruleset/cached_test.go`                   | `TestCachedRuleSetsReusesStableSnapshotAndChecksAddress`                           |
+| AC-108 | go-test | `apps/metaboxd/internal/httpapi/rulesets_test.go`                 | `TestCachedRuleSets`                                                               |
+| AC-108 | go-test | `apps/metaboxd/rulesets_integration_test.go`                      | `TestCachedRuleSetsOnEphemeralBench`                                               |
+| AC-109 | vitest  | `apps/web/src/entities/RuleSet/__tests__/RuleSet.adapter.test.ts` | `preserves the published category %s in both list kinds`                           |
+| AC-109 | vitest  | `apps/web/src/entities/RuleSet/__tests__/RuleSet.adapter.test.ts` | `does not pass a foreign address off as a known source`                            |
+| AC-109 | vitest  | `apps/web/src/entities/RuleSet/__tests__/RuleSet.adapter.test.ts` | `describes local and inline rules by their source without exposing entries`        |
+| AC-109 | vitest  | `apps/web/src/entities/RuleSet/__tests__/RuleSet.adapter.test.ts` | `describes a catalog mirror by host even with a query string`                      |
+| AC-109 | vitest  | `apps/web/src/entities/RuleSet/__tests__/RuleSet.adapter.test.ts` | `uses route and DNS references for both the usage list and count`                  |
+| AC-109 | vitest  | `apps/web/src/entities/RuleSet/__tests__/RuleSet.adapter.test.ts` | `groups repeated references in nested branches under their parent DNS rule`        |
+| AC-110 | vitest  | `apps/web/src/pages/RuleSets/__tests__/RuleSetsPage.test.tsx`     | `opens the set named in the address and shows where it is used`                    |
+| AC-110 | vitest  | `apps/web/src/pages/RuleSets/__tests__/RuleSetsPage.test.tsx`     | `leaves every set collapsed for an unknown tag`                                    |
+| AC-110 | vitest  | `apps/web/src/pages/RuleSets/__tests__/RuleSetsPage.test.tsx`     | `expands and collapses a set with the keyboard, keeping focus on the toggle`       |
+| AC-110 | vitest  | `apps/web/src/pages/RuleSets/__tests__/RuleSetsPage.test.tsx`     | `explains the remote state %s`                                                     |
+| AC-110 | vitest  | `apps/web/src/pages/RuleSets/__tests__/RuleSetsPage.test.tsx`     | `shows the downloaded size and checked time and flags a copy from another address` |
+| AC-110 | vitest  | `apps/web/src/pages/RuleSets/__tests__/RuleSetsPage.test.tsx`     | `retries cache metadata without hiding the set list`                               |
+| AC-110 | vitest  | `apps/web/src/pages/RuleSets/__tests__/RuleSetsPage.test.tsx`     | `shows a draft-only set without requesting cache metadata`                         |
+| AC-110 | vitest  | `apps/web/tools/mockStand.test.js`                                | `serves remote rule set cache states on the stand`                                 |
+
 ## Checked by hand on purpose
 
 These parts stay by hand: a test on the bench or in CI would not show them. A row names the scenario and why it cannot be automated.
