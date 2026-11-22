@@ -82,6 +82,7 @@ export interface ProviderUsage {
 export interface ProxyProvider {
   name: string;
   nodes: number;
+  nodeNames: readonly string[];
   update: ProviderUpdate;
   /** `null` when the subscription did not send `subscription-userinfo` or it holds only zeros. */
   usage: ProviderUsage | null;

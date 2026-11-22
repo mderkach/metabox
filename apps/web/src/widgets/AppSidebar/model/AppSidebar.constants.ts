@@ -2,6 +2,7 @@ import type { LinkProps } from '@tanstack/react-router';
 import type { ParseKeys } from 'i18next';
 import {
   Activity,
+  BookOpen,
   Gauge,
   MonitorSmartphone,
   ScrollText,
@@ -28,6 +29,7 @@ interface NavItem {
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
+  { key: 'section.howItWorks', icon: BookOpen, to: '/how-it-works', more: true },
   { key: 'section.overview', icon: Gauge, to: '/overview' },
   { key: 'section.config', icon: SlidersHorizontal, to: '/config', short: 'short.config' },
   { key: 'section.proxies', icon: Share2, to: '/proxies' },

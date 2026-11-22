@@ -1,0 +1,66 @@
+{
+  "title": "How metabox works",
+  "intro": "Follow one connection from a device in your network. Select a step to see what it means and where to configure it.",
+  "walk": "Connection path",
+  "steps": {
+    "device": "Device",
+    "destination": "Destination",
+    "rule": "Rule",
+    "outbound": "Outbound",
+    "server": "Server"
+  },
+  "connections": "Live connections",
+  "other": "Other connections",
+  "choice": { "group": "Through a group", "server": "Through a server", "direct": "Direct" },
+  "empty": "No connections right now.",
+  "loading": "Loading live connections.",
+  "closed": "This connection has closed.",
+  "stopped": "The core is stopped. There are no connections to show.",
+  "failed": "The core crashed. There are no connections to show.",
+  "overview": "Open Overview",
+  "unknown": "Unknown",
+  "noRule": "No rule matched",
+  "final": "The default outbound was used.",
+  "unconfirmed": "The matching rule could not be linked to the applied config.",
+  "ruleNumber": "Rule {{number}}",
+  "direct": "Direct",
+  "withoutProxy": "Without a proxy.",
+  "noServer": "No proxy server",
+  "internet": "Uses the internet connection directly.",
+  "provider": "From subscription {{name}}",
+  "group": { "picked": "Picked {{tag}}", "selector": "Manual choice", "urltest": "Chooses by latency" },
+  "terms": {
+    "heading": "Terms",
+    "configure": "Where it is configured",
+    "groupExample": "When a rule points straight to a server, the outbound and server are the same.",
+    "device": {
+      "title": "Device",
+      "description": "A computer, phone or TV on your network. A rule can apply to just one device."
+    },
+    "service": {
+      "title": "Service",
+      "description": "A ready-made list of sites or addresses that a rule refers to by name. The Editor calls it a rule set."
+    },
+    "rule": {
+      "title": "Rule",
+      "description": "A condition and an action for a connection. The core checks rules from top to bottom and uses the first match."
+    },
+    "outbound": {
+      "title": "Outbound",
+      "description": "Where a rule sends traffic. It can be a group, a server or a direct connection."
+    },
+    "group": {
+      "title": "Group",
+      "description": "Servers or other groups under one name. A group can pick by latency or use your manual choice."
+    },
+    "server": { "title": "Server", "description": "A proxy server with an address, a protocol and a key." },
+    "subscription": {
+      "title": "Subscription",
+      "description": "A VPN provider's link that supplies a list of servers and keeps it up to date."
+    },
+    "core": {
+      "title": "Core",
+      "description": "The program on the router that applies rules to connections. Overview shows its status and Settings holds its controls."
+    }
+  }
+}

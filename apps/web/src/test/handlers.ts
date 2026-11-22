@@ -7,6 +7,7 @@ import {
   advanceConnectionsSnapshot,
   CONNECTIONS_FIXTURE,
   makeConnectionsSnapshot,
+  STAND_CONNECTIONS_FIXTURE,
 } from '@entities/Connection/__tests__/Connection.fixture';
 import { connectionHandlers } from '@entities/Connection/__tests__/Connection.handlers';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
@@ -67,7 +68,10 @@ export function createMissingHandlers(connections = 0) {
       ? makeConnectionsSnapshot(connections, { vary: true })
       : {
           ...CONNECTIONS_FIXTURE,
-          connections: CONNECTIONS_FIXTURE.connections.map((row) => ({ ...row, chain: [...row.chain] })),
+          connections: STAND_CONNECTIONS_FIXTURE.map((row) => ({
+            ...row,
+            chain: [...row.chain],
+          })),
         };
 
   const dataplane = createDataplaneMock();
@@ -119,7 +123,7 @@ export function createMissingHandlers(connections = 0) {
     ...createLogHandlers(),
     ...createDiagHandlers(),
     ...connectionHandlers,
-    ...createRouteHandlers(CONNECTIONS_FIXTURE.connections),
+    ...createRouteHandlers(connections > 0 ? CONNECTIONS_FIXTURE.connections : snapshot.connections),
     ...ruleSetHandlers,
     http.get(CACHED_RULE_SETS_PATH, () => HttpResponse.json(cachedRuleSets)),
     createRuleHitsHandler(CONFIG_FIXTURE.route?.rules ?? []),

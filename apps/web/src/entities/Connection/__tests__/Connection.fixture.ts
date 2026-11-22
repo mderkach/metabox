@@ -48,6 +48,17 @@ function connection(id: string, input: ConnectionInput): ConnectionWire {
   };
 }
 
+const WALK_SERVER_FIXTURE = connection('4b30ba88-a790-4688-a92d-b323e36d43ef', {
+  host: 'docs.example',
+  sourceIP: '192.168.1.60',
+  chains: ['sub-eu/eu-reality'],
+  rule: 'domain=docs.example',
+  action: 'route(sub-eu/eu-reality)',
+  upload: 2400,
+  download: 12800,
+  startedSecondsAgo: 37,
+});
+
 const CONNECTIONS: ConnectionWire[] = [
   connection('962b2d06-f296-42bb-af39-b96f2fac2cee', {
     host: 'video.example',
@@ -131,6 +142,8 @@ const CONNECTIONS: ConnectionWire[] = [
     startedSecondsAgo: 11,
   }),
 ];
+
+export const STAND_CONNECTIONS_FIXTURE: readonly ConnectionWire[] = [...CONNECTIONS, WALK_SERVER_FIXTURE];
 
 // The samples are frozen: live frames edit the snapshot in place, and a consumer
 // that forgot to make a copy would corrupt the reference: counters would drift apart for everyone

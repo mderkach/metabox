@@ -37,6 +37,7 @@ declare module 'i18next' {
       'pages/Devices': typeof import('./pages/Devices/i18n/ru.json');
       'pages/Diagnostics': typeof import('./pages/Diagnostics/i18n/ru.json');
       'pages/Editor': typeof import('./pages/Editor/i18n/ru.json');
+      'pages/HowItWorks': typeof import('./pages/HowItWorks/i18n/ru.json');
       'pages/Logs': typeof import('./pages/Logs/i18n/ru.json');
       'pages/Overview': typeof import('./pages/Overview/i18n/ru.json');
       'pages/Proxies': typeof import('./pages/Proxies/i18n/ru.json');

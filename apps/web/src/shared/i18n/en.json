@@ -265,6 +265,7 @@
     "done": "Done"
   },
   "section": {
+    "howItWorks": "How metabox works",
     "overview": "Overview",
     "config": "Configuration",
     "proxies": "Proxies",

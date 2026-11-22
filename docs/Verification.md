@@ -525,6 +525,33 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-110 | vitest  | `apps/web/src/pages/RuleSets/__tests__/RuleSetsPage.test.tsx`     | `shows a draft-only set without requesting cache metadata`                         |
 | AC-110 | vitest  | `apps/web/tools/mockStand.test.js`                                | `serves remote rule set cache states on the stand`                                 |
 
+### How metabox works
+
+| ID     | Kind   | File                                                                     | Check                                                                                                   |
+| ------ | ------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| AC-105 | vitest | `apps/web/src/app/router/__tests__/Router.test.tsx`                      | `opens How metabox works at its own address`                                                            |
+| AC-105 | vitest | `apps/web/src/app/router/__tests__/Router.test.tsx`                      | `on a phone opens Overview from the root`                                                               |
+| AC-105 | vitest | `apps/web/src/widgets/AppSidebar/__tests__/AppSidebar.test.tsx`          | `lists How metabox works before Overview on desktop`                                                    |
+| AC-105 | vitest | `apps/web/src/widgets/AppSidebar/__tests__/AppSidebarBottomNav.test.tsx` | `puts How metabox works first in More and keeps five bottom links`                                      |
+| AC-106 | vitest | `apps/web/src/entities/Proxy/__tests__/Proxy.adapter.test.ts`            | `retains the names of the servers alongside their count`                                                |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorks.model.test.ts`       | `offers one example of each kind in order and keeps backups without reshuffling equally preferred rows` |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorks.model.test.ts`       | `names a known device and retains the destination supplied by the connection`                           |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorks.model.test.ts`       | `uses the explanation chain to nest groups and show the server and its provider`                        |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorks.model.test.ts`       | `retains only the conditions and action when the rule position is unverified`                           |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorks.model.test.ts`       | `keeps the verified rule number when there is no proved editor position`                                |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorks.model.test.ts`       | `shows a direct exit and no server with the chain origin`                                               |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `keeps the terms but shows no invented connection`                                                      |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `points to Overview when the core is stopped`                                                           |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `follows a live group then a direct connection without reshuffling on new frames`                       |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `keeps the last explanation after the connection closes`                                                |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `replaces a connection that closes before the explanation arrives`                                      |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `shows the request failure with a retry and keeps the glossary available`                               |
+| AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `opens a term directly below the selected step on a phone`                                              |
+| AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `keeps an unverified rule link at the list`                                                             |
+| AC-105 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
+| AC-106 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
+| AC-107 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
+
 ## Checked by hand on purpose
 
 These parts stay by hand: a test on the bench or in CI would not show them. A row names the scenario and why it cannot be automated.

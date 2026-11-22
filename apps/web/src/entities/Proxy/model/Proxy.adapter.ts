@@ -193,6 +193,7 @@ export function toProxyProviders(wire: ClashProvidersWire): ProxyProvider[] {
     return {
       name: provider.name,
       nodes: provider.proxies.length,
+      nodeNames: provider.proxies.map(({ name }) => name),
       update: toProviderUpdate(provider.updatedAt),
       usage: toProviderUsage(provider.subscriptionInfo),
       expiresAt: expire > 0 ? new Date(expire * MS_IN_SECOND) : null,

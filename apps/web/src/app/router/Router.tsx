@@ -144,6 +144,19 @@ const configSectionRoute = createRoute({
   component: lazyRouteComponent(async () => import('@pages/Section'), 'SectionPage'),
 });
 
+const howItWorksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  loader: async () =>
+    Promise.all([
+      preloadNamespaces(['pages/HowItWorks', 'widgets/RouteExplanation']),
+      QueryClientInstance.query(getProxiesOptions()).catch(keepFailureForScreen),
+      QueryClientInstance.query(getProxyProvidersOptions()).catch(keepFailureForScreen),
+      QueryClientInstance.query(getDevicesOptions()).catch(keepFailureForScreen),
+    ]),
+  path: '/how-it-works',
+  component: lazyRouteComponent(async () => import('@pages/HowItWorks'), 'HowItWorksPage'),
+});
+
 const proxiesRoute = createRoute({
   getParentRoute: () => rootRoute,
   loader: async () =>
@@ -241,6 +254,7 @@ const settingsRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  howItWorksRoute,
   configLayoutRoute.addChildren([routeEditorRoute, ruleSetsRoute, rawConfigRoute, configSectionRoute]),
   proxiesRoute,
   connectionsRoute,
