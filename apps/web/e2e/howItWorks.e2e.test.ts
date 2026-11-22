@@ -2,17 +2,43 @@ import { E2E_TAG, expect, test, translate } from './fixtures/index.ts';
 
 const ns = 'pages/HowItWorks';
 const desktop = { width: 1280, height: 812 };
-const phone = { width: 375, height: 812 };
+const phones = [
+  { width: 320, height: 812 },
+  { width: 375, height: 812 },
+];
+const sidebar = 'widgets/AppSidebar';
+const BOTTOM_SECTIONS = 5;
 
-for (const viewport of [desktop, phone]) {
+for (const viewport of [desktop, ...phones]) {
   test(`walks a connection from the menu at ${viewport.width}px`, { tag: E2E_TAG.Mock }, async ({ page }) => {
     await page.setViewportSize(viewport);
-    await page.goto('/overview');
-
-    if (viewport === phone) {
-      await page.getByRole('button', { name: translate('widgets/AppSidebar', 'more.label') }).click();
+    if (viewport === desktop) {
+      await page.goto('/overview');
+      const nav = page.getByRole('navigation', { name: translate(sidebar, 'nav.label') });
+      const help = page.getByRole('link', { name: translate(sidebar, 'nav.help'), exact: true });
+      await expect(nav.getByRole('link', { name: translate(sidebar, 'nav.help') })).toHaveCount(0);
+      await nav.getByRole('link', { name: translate('shared', 'section.settings') }).focus();
+      await page.keyboard.press('Tab');
+      await expect(help).toBeFocused();
+      await expect(help).not.toHaveCSS('box-shadow', 'none');
+      await page.keyboard.press('Enter');
+      await expect(help).toHaveAttribute('aria-current', 'page');
+    } else {
+      await page.goto('/');
+      await expect(page).toHaveURL(/\/overview$/);
+      const bottom = page.getByRole('navigation', { name: translate(sidebar, 'nav.label') });
+      await expect(bottom.getByRole('link')).toHaveCount(BOTTOM_SECTIONS);
+      await bottom.getByRole('button', { name: translate(sidebar, 'more.label') }).click();
+      const more = page.getByRole('navigation', { name: translate(sidebar, 'more.sections') });
+      await expect(more.getByRole('link')).toHaveText([
+        translate(ns, 'title'),
+        translate('shared', 'section.logs'),
+        translate('shared', 'section.diagnostics'),
+        translate('shared', 'section.settings'),
+      ]);
+      await more.getByRole('link', { name: translate(ns, 'title'), exact: true }).click();
     }
-    await page.getByRole('link', { name: translate(ns, 'title'), exact: true }).click();
+    await expect(page).toHaveURL(/\/how-it-works$/);
     await expect(page.getByRole('heading', { level: 1, name: translate(ns, 'title') })).toBeVisible();
 
     const choices = page.getByRole('group', { name: translate(ns, 'connections') });
@@ -65,4 +91,20 @@ test('opens the verified applied rule from the walk', { tag: E2E_TAG.Mock }, asy
 
   await expect(page).toHaveURL(/\/config\?.*\bruleEtag=/);
   await expect(page.getByRole('complementary', { name: 'Media sites', exact: true })).toBeVisible();
+});
+
+test('keeps Help accessible and current in the collapsed sidebar', { tag: E2E_TAG.Mock }, async ({ page }) => {
+  await page.setViewportSize(desktop);
+  await page.goto('/overview');
+  await page.getByRole('button', { name: translate(sidebar, 'nav.collapse') }).click();
+  const nav = page.getByRole('navigation', { name: translate(sidebar, 'nav.label') });
+  await nav.getByRole('link', { name: translate('shared', 'section.settings') }).focus();
+  await page.keyboard.press('Tab');
+
+  const help = page.getByRole('link', { name: translate(sidebar, 'nav.help'), exact: true });
+  await expect(help).toBeFocused();
+  await expect(help).not.toHaveCSS('box-shadow', 'none');
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/how-it-works$/);
+  await expect(help).toHaveAttribute('aria-current', 'page');
 });

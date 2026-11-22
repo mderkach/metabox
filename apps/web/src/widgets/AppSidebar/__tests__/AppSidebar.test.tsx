@@ -1,6 +1,6 @@
 import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
@@ -15,17 +15,19 @@ import {
 import { AppSidebar } from '../ui/AppSidebar';
 
 describe('AppSidebar', () => {
-  it('lists How metabox works before Overview on desktop', async () => {
+  it('puts Overview first in the main sections and Help outside them', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
     );
-    renderWithRouter(AppSidebar);
+    renderWithRouter(AppSidebar, { path: '/overview' });
 
-    await screen.findByRole('link', { name: 'Как работает metabox' });
-    const paths = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
-
-    expect(paths.indexOf('/how-it-works')).toBeLessThan(paths.indexOf('/overview'));
+    const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
+    expect(within(nav).getAllByRole('link')[0]).toHaveAccessibleName('Обзор');
+    expect(within(nav).queryByRole('link', { name: 'Справка' })).not.toBeInTheDocument();
+    const help = screen.getByRole('link', { name: 'Справка' });
+    expect(help).toHaveAttribute('href', '/how-it-works');
+    expect(help).not.toHaveAttribute('aria-current');
   });
 
   // Regression: react-query keeps the last successful service value, and without
