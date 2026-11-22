@@ -199,6 +199,7 @@ func (c *Client) CheckDataplane(ctx context.Context) error {
 // DataplaneCheck is the first missing component reported by the init script.
 type DataplaneCheck string
 
+// The status tokens are part of the init script report protocol.
 const (
 	DataplaneOK                       DataplaneCheck = "ok"
 	DataplaneFwmarkRuleMissing        DataplaneCheck = "fwmark_rule_missing"

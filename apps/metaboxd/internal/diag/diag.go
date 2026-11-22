@@ -98,10 +98,14 @@ const (
 	// ReasonNFTUnparsed means the nft output was not parsed.
 	ReasonNFTUnparsed CheckReason = "nft_unparsed"
 	// ReasonChainsMissing means some chains are absent; their names are in Missing.
-	ReasonChainsMissing            CheckReason = "chains_missing"
-	ReasonRoutingSetupUnavailable  CheckReason = "routing_setup_unavailable"
-	ReasonFwmarkRuleMissing        CheckReason = "fwmark_rule_missing"
-	ReasonLocalRouteMissing        CheckReason = "local_route_missing"
+	ReasonChainsMissing CheckReason = "chains_missing"
+	// ReasonRoutingSetupUnavailable means the init script did not return a usable result.
+	ReasonRoutingSetupUnavailable CheckReason = "routing_setup_unavailable"
+	// ReasonFwmarkRuleMissing means marked packets lack the rule selecting the interception table.
+	ReasonFwmarkRuleMissing CheckReason = "fwmark_rule_missing"
+	// ReasonLocalRouteMissing means the interception table does not route packets to loopback.
+	ReasonLocalRouteMissing CheckReason = "local_route_missing"
+	// ReasonDNSmasqForwardingMissing means the DNS forwarder does not target the interception port.
 	ReasonDNSmasqForwardingMissing CheckReason = "dnsmasq_forwarding_missing"
 	// ReasonProxyUnset means the node is not selected.
 	ReasonProxyUnset CheckReason = "proxy_unset"
@@ -275,6 +279,8 @@ func (c *Checker) routingSetup(ctx context.Context, model dataplane.Model, model
 	}
 
 	switch result {
+	case singbox.DataplaneUnavailable:
+		return check
 	case singbox.DataplaneOK:
 		check.Status, check.Reason = StatusOK, ""
 	case singbox.DataplaneFwmarkRuleMissing:
