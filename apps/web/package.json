@@ -73,7 +73,7 @@
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
     "playwright": "1.64.1",
-    "react-doctor": "0.9.14",
+    "react-doctor": "0.9.23",
     "react-scan": "0.5.7",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
