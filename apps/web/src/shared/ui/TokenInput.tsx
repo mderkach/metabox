@@ -133,7 +133,11 @@ export function TokenInput({
       }}
       anchor={field}
     >
-      <div ref={field} className='flex w-full min-w-0 flex-col gap-1.5'>
+      <div
+        ref={field}
+        data-token-suggestions-open={listShown || undefined}
+        className='flex w-full min-w-0 flex-col gap-1.5'
+      >
         <div
           className={cn(
             'flex min-h-8 w-full min-w-0 flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent px-1 py-1 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 has-[input[aria-invalid=true]]:border-destructive has-[input[aria-invalid=true]]:ring-3 has-[input[aria-invalid=true]]:ring-destructive/20 dark:bg-input/30 dark:has-[input[aria-invalid=true]]:border-destructive/50',
