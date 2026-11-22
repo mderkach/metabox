@@ -56,6 +56,7 @@ Refs:
   - Rule names as structured data, for MCP and for connections.
   - Human labels for outbounds and manual usual latency for servers, kept in the daemon state.
 - **Routing mode.** The switch moves to the Overview header and appears only when the config has rules with `clash_mode`. A switch can be undone for 10 s. While the mode is not the default one, a banner on every screen says so.
+- **Motion.** Screen and tab navigation, contextual panels and visible state changes use transitions. Reduced motion preserves the same interactions without movement.
 - **Daemon contract, additive.**
   - New fields in the `system` topic and in the status.
   - New endpoints: latency history, labels and norms, dismissing the recovery notice.
@@ -76,7 +77,7 @@ Refs:
   - New: AC-95 status in the header, AC-96 needs attention, AC-97 traffic shares over the period (with the split by outbound kind that AC-89 described), AC-98 outbound rows, AC-99 links from Overview, AC-100 core stopped, AC-101 traffic per outbound.
   - Withdrawn: AC-89, defined in the change `traffic-split-by-outbound` and never built into `openspec/specs/`. Its ID is not reused.
 - `proxies`: AC-45 modified. The mode switch moves to the Overview header and shows only when the config has rules with `clash_mode`; a switch can be undone for 10 s; a banner shows while the mode is not the default.
-- `panel`: AC-38 modified. The rules list gains an outbound facet, which is the target of "N rules".
+- `panel`: AC-38 modified. The rules list gains an outbound facet, which is the target of "N rules". AC-111 adds a panel transition contract.
 - `routing-rules`: new AC-103. Rule names reach the daemon, MCP and connections.
 - `route-explanation`: AC-34 uses the same verified positional reference as AC-103.
 
