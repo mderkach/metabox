@@ -147,7 +147,9 @@ test(
     const stage = page.getByRole('button', { name: translate(PROXIES, 'recovery.stage') });
     const retry = page.getByRole('button', { name: translate(PROXIES, 'recovery.retry') });
     const restore = page.getByRole('button', { name: translate(PROXIES, 'recovery.restore') });
-    const node = page.getByRole('listitem').filter({ has: page.getByText(TAG, { exact: true }) });
+    const node = page.getByRole('listitem').filter({
+      has: page.getByRole('button', { name: translate('widgets/ProxyGroups', 'metadata.editServer', { tag: TAG }) }),
+    });
 
     await test.step('opens the server diagnosis and puts just the setting in the draft', async () => {
       await expect(node).toBeVisible();
@@ -216,8 +218,16 @@ test(
         applyBar.confirmDiff(),
       ]);
       expect(submission.postDataJSON()).toEqual({ outbounds: [REALITY_OUTBOUND] });
-      await applyBar.keep();
-      await expect(applyBar.confirmed).toBeVisible();
+      const [confirmation] = await Promise.all([
+        page.waitForResponse(
+          (response) =>
+            response.request().method() === 'POST' &&
+            new URL(response.url()).pathname === '/api/apply/reality-2/confirm'
+        ),
+        applyBar.keep(),
+      ]);
+      expect(await confirmation.json()).toMatchObject({ phase: 'confirmed' });
+      await expect(applyBar.region).toBeHidden();
     });
   }
 );

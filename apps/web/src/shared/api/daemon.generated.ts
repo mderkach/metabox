@@ -60,6 +60,7 @@ export const ERROR_CODE = [
   'list_invalid',
   'workdir_mismatch',
   'device_invalid',
+  'outbound_invalid',
   'dataplane_invalid',
   'dataplane_modified',
   'log_unavailable',
@@ -374,6 +375,7 @@ export const ServerLatencySchema = z.object({
   recent: z.array(LatencyResultSchema),
   hourly: z.array(LatencyMedianSchema),
   usual_ms: z.int().optional(),
+  computed_usual_ms: z.int().optional(),
   level: z.string(),
   origin: z.string(),
 })
@@ -382,6 +384,22 @@ export const ServerLatencySchema = z.object({
 export const LatencyHistorySchema = z.object({
   available: z.boolean().optional(),
   servers: z.array(ServerLatencySchema),
+})
+
+/** OutboundMetadata describes a stored label or manual norm. */
+export const OutboundMetadataSchema = z.object({
+  label: z.string().optional(),
+  norm_ms: z.int().optional(),
+  unused: z.boolean().optional(),
+})
+
+/** Outbounds includes entries keyed by tag, even for missing servers. */
+export const OutboundsSchema = z.record(z.string(), OutboundMetadataSchema)
+
+/** OutboundMetadataEdit replaces the label and manual usual latency for a tag. */
+export const OutboundMetadataEditSchema = z.object({
+  label: z.string().optional(),
+  norm_ms: z.int().optional(),
 })
 
 /** Error is the single failure format at the HTTP boundary. Internal details (paths on disk, command arguments, config content) do not get into it; Details carries only what is shown to the user. Code is the contract, Message is a fallback text: the panel shows its own translation by the code, and takes the message only when the code is unfamiliar to it. */
@@ -948,7 +966,10 @@ export type MatchWire = z.infer<typeof MatchSchema>
 export type MemoryWire = z.infer<typeof MemorySchema>
 export type MirrorWire = z.infer<typeof MirrorSchema>
 export type ModelWire = z.infer<typeof ModelSchema>
+export type OutboundMetadataEditWire = z.infer<typeof OutboundMetadataEditSchema>
+export type OutboundMetadataWire = z.infer<typeof OutboundMetadataSchema>
 export type OutboundTrafficWire = z.infer<typeof OutboundTrafficSchema>
+export type OutboundsWire = z.infer<typeof OutboundsSchema>
 export type PasswordChangeWire = z.infer<typeof PasswordChangeSchema>
 export type PointWire = z.infer<typeof PointSchema>
 export type ProcessWire = z.infer<typeof ProcessSchema>

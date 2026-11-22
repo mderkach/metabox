@@ -1,10 +1,19 @@
 import { memo, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { toDelayLabel, type ProxyNode } from '@entities/Proxy';
+import {
+  isLatencyServer,
+  toDelayLabel,
+  type OutboundMetadata,
+  type ProxyNode,
+  type ServerLatency,
+} from '@entities/Proxy';
 import { cn } from '@shared/lib/utils';
 
+import { useProxyMetadataEditor } from '../lib/ProxyMetadata.editor';
 import { toMemberLabel } from './ProxyGroupLabel';
+import { ProxyMetadataButton } from './ProxyMetadataButton';
+import { ProxyMetadataForm } from './ProxyMetadataForm';
 import { ProxyNodeContent } from './ProxyNodeContent';
 import { ProxyNodeDiagnostic, type ProxyNodeDiagnosticInfo } from './ProxyNodeDiagnostic';
 
@@ -19,22 +28,38 @@ function ProxyNodeTileProto({
   onSelect,
   diagnostic,
   reserveDiagnosticSpace = false,
+  entry,
+  latency,
+  editable = false,
+  onMetadataSaved,
 }: {
   node: ProxyNode;
   selectable: boolean;
   onSelect: (name: string) => void;
   diagnostic?: ProxyNodeDiagnosticInfo | undefined;
   reserveDiagnosticSpace?: boolean;
+  entry?: OutboundMetadata | undefined;
+  latency?: ServerLatency | undefined;
+  editable?: boolean;
+  onMetadataSaved: (tag: string, label?: string) => void;
 }) {
   const { t } = useTranslation('widgets/ProxyGroups');
+  const { editing, trigger, editorId, open: openMetadata, close } = useProxyMetadataEditor();
   const [expanded, setExpanded] = useState(false);
+  const server = isLatencyServer(node);
+  const computedNorm = latency?.computedUsualMS;
+  const norm = server ? (entry?.normMs ?? computedNorm) : null;
+  const normText =
+    norm == null
+      ? undefined
+      : t(entry?.normMs === undefined ? 'metadata.computedNorm' : 'metadata.manualNorm', { value: norm });
   const panelId = useId();
   const open = expanded && diagnostic !== undefined;
   if (expanded && diagnostic === undefined) setExpanded(false);
   // The name is assembled explicitly: tile parts lie in separate blocks without spaces
   // between them, and the accessible name would glue into "usURL-test609 ms".
   const label = t('node.label', {
-    name: node.name,
+    name: entry?.label === undefined ? node.name : `${entry.label} ${node.name}`,
     type: toMemberLabel(t, node.type),
     delay: diagnostic?.status?.label ?? toDelayLabel(t, node),
   });
@@ -49,44 +74,77 @@ function ProxyNodeTileProto({
 
   return (
     <li className='min-w-0'>
-      <div className='relative'>
-        {selectable ? (
-          <button
-            type='button'
-            className={cn(
-              base,
-              'cursor-pointer transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
-              node.selected
-                ? 'border-selected-edge bg-selected'
-                : 'border-border bg-card hover:border-selected-edge/60 hover:bg-row-hover'
-            )}
-            aria-pressed={node.selected}
-            aria-label={label}
-            onClick={() => {
-              onSelect(node.name);
-            }}
-          >
-            <ProxyNodeContent node={node} diagnosticStatus={diagnostic?.status} />
-          </button>
-        ) : (
-          // A reading, not a control: no edge and no hover, so nothing invites a click. The node in
-          // use keeps the opaque fill and the check mark.
-          <p className={cn(base, 'border-transparent', node.selected ? 'bg-selected' : 'bg-transparent')}>
-            {node.selected && <span className='sr-only'>{t('node.selected')}</span>}
-            <ProxyNodeContent node={node} diagnosticStatus={diagnostic?.status} />
-          </p>
-        )}
-        {diagnostic !== undefined && (
-          <ProxyNodeDiagnostic
-            diagnostic={diagnostic}
-            open={open}
-            panelId={panelId}
-            onToggle={() => {
-              setExpanded(!expanded);
-            }}
+      <div className={cn(editable && 'grid grid-cols-[minmax(0,1fr)_auto] items-start gap-1.5')}>
+        <div className='relative min-w-0'>
+          {selectable ? (
+            <button
+              type='button'
+              className={cn(
+                base,
+                'cursor-pointer transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
+                node.selected
+                  ? 'border-selected-edge bg-selected'
+                  : 'border-border bg-card hover:border-selected-edge/60 hover:bg-row-hover'
+              )}
+              aria-pressed={node.selected}
+              aria-label={normText === undefined ? label : `${label} ${normText}`}
+              onClick={() => {
+                onSelect(node.name);
+              }}
+            >
+              <ProxyNodeContent
+                node={node}
+                label={entry?.label}
+                normText={normText}
+                diagnosticStatus={diagnostic?.status}
+              />
+            </button>
+          ) : (
+            // A reading, not a control: no edge and no hover, so nothing invites a click. The node in
+            // use keeps the opaque fill and the check mark.
+            <p className={cn(base, 'border-transparent', node.selected ? 'bg-selected' : 'bg-transparent')}>
+              {node.selected && <span className='sr-only'>{t('node.selected')}</span>}
+              <ProxyNodeContent
+                node={node}
+                label={entry?.label}
+                normText={normText}
+                diagnosticStatus={diagnostic?.status}
+              />
+            </p>
+          )}
+          {diagnostic !== undefined && (
+            <ProxyNodeDiagnostic
+              diagnostic={diagnostic}
+              open={open}
+              panelId={panelId}
+              onToggle={() => {
+                setExpanded(!expanded);
+              }}
+            />
+          )}
+        </div>
+        {editable && (
+          <ProxyMetadataButton
+            tag={node.name}
+            server={server}
+            ref={trigger}
+            expanded={editing}
+            editorId={editorId}
+            onClick={openMetadata}
           />
         )}
       </div>
+      {editing && (
+        <ProxyMetadataForm
+          id={editorId}
+          tag={node.name}
+          entry={entry}
+          server={server}
+          computedNorm={computedNorm}
+          onClose={close}
+          onSaved={onMetadataSaved}
+        />
+      )}
       <div
         id={panelId}
         inert={!open}

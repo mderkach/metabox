@@ -1,7 +1,17 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 
-import { useProviderNodeChanges, useProxies, useProxyProviders, type ProxyGroup } from '@entities/Proxy';
+import {
+  toOutboundTargets,
+  useOutboundMetadata,
+  useProviderNodeChanges,
+  useProxies,
+  useProxyLatency,
+  useProxyProviders,
+  type ProxyGroup,
+} from '@entities/Proxy';
+import { ApiError } from '@shared/api';
 import { useLiveRegion } from '@shared/lib/useLiveRegion';
 import { CARD_FLUSH, Card, LiveRegion, QueryFailure, SURFACE, SkeletonRows } from '@shared/ui';
 import { PageHeader } from '@widgets/PageHeader';
@@ -11,15 +21,21 @@ import { useMinuteClock } from '../lib/Proxies.lib';
 import { useProxiesRecovery, type ProxyRecoveryItem } from '../model/Proxies.recoveryState';
 import { ProxiesRecoveryDetails } from './ProxiesRecoveryDetails';
 import { ProxiesSection } from './ProxiesSection';
+import { ProxiesUnusedMetadata } from './ProxiesUnusedMetadata';
 import { ProxyProviderRow } from './ProxyProviderRow';
 import { ProxyTestAll } from './ProxyTestAll';
 
+const NOT_FOUND = 404;
 const EMPTY_GROUPS: ProxyGroup[] = [];
 
 export function ProxiesPage() {
   const { t } = useTranslation('pages/Proxies');
   const proxies = useProxies();
   const providers = useProxyProviders();
+  const metadataQuery = useOutboundMetadata();
+  const metadata = metadataQuery.isSuccess ? metadataQuery.data : undefined;
+  const latencies = useProxyLatency({ daemon: undefined, pid: undefined, startedAt: null }, metadata !== undefined);
+  const unused = metadata === undefined ? [] : [...metadata].filter(([, entry]) => entry.unused === true);
 
   const groups = proxies.data?.groups ?? EMPTY_GROUPS;
   const nodes = proxies.data?.standalone ?? [];
@@ -92,6 +108,19 @@ export function ProxiesPage() {
     announce(t('announce.testedAll'));
   }, [announce, t]);
 
+  const onMetadataSaved = useCallback(
+    (tag: string, label?: string) => {
+      const text =
+        label === undefined
+          ? t('toast.outboundMetadata.saved', { ns: 'shared' })
+          : t('toast.outboundMetadata.named', { ns: 'shared', tag, label });
+
+      toast.success(text);
+      announce(text);
+    },
+    [announce, t]
+  );
+
   const onTestedOutbounds = useCallback(() => {
     announce(t('announce.testedOutbounds'));
   }, [announce, t]);
@@ -118,6 +147,10 @@ export function ProxiesPage() {
         {proxies.isPending && <SkeletonRows className={SURFACE} />}
 
         {proxies.isLoadingError && <QueryFailure messageKey='source.proxies' query={proxies} />}
+        {metadataQuery.isLoadingError &&
+          !(metadataQuery.error instanceof ApiError && metadataQuery.error.status === NOT_FOUND) && (
+            <QueryFailure messageKey='source.outboundMetadata' query={metadataQuery} />
+          )}
 
         {proxies.isSuccess && (
           <ProxiesSection title={t('groups.title')}>
@@ -129,6 +162,9 @@ export function ProxiesPage() {
               onTestedOutbounds={onTestedOutbounds}
               onGroupTestStart={onGroupTestStart}
               diagnosticForNode={diagnosticForNode}
+              metadata={metadata}
+              latencies={latencies.data?.servers}
+              onMetadataSaved={onMetadataSaved}
               standaloneDiagnostics={nodes.filter(
                 (node) => !groupByNode.has(node.name) && recoveryByTag.has(node.name)
               )}
@@ -153,6 +189,14 @@ export function ProxiesPage() {
               </ul>
             </Card>
           </ProxiesSection>
+        )}
+        {metadata !== undefined && unused.length > 0 && (
+          <ProxiesUnusedMetadata
+            entries={unused}
+            metadata={metadata}
+            runtimeTags={toOutboundTargets(proxies.data)}
+            announce={announce}
+          />
         )}
       </div>
     </>

@@ -422,7 +422,7 @@ describe('proxies screen', () => {
       expect(screen.getByRole('heading', { name: 'proxy' })).toBeInTheDocument();
     });
 
-    expect(screen.queryByRole('button', { name: /sub-eu\/eu-xhttp/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^sub-eu\/eu-xhttp/ })).not.toBeInTheDocument();
   });
 
   it('shows the subscriptions the nodes come from', async () => {

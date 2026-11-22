@@ -626,9 +626,43 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 
 ### Overview service controls
 
-| ID    | Kind   | File                                                          | Check                                                                                         |
-| ----- | ------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| AC-95 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx` | `keeps the highlighted core restart in the service card and explains interrupted connections` |
+| ID     | Kind   | File                                                          | Check                                                                                         |
+| ------ | ------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| AC-95  | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx` | `keeps the highlighted core restart in the service card and explains interrupted connections` |
+| AC-95  | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx` | `shows the core verdict in the header and keeps the core service card for commands`           |
+| AC-95  | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx` | `shows a core started elsewhere in the header without offering service commands`              |
+| AC-104 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx` | `shows an outbound label before the original tag on Overview`                                 |
+
+### Outbound metadata
+
+| ID     | Kind    | File                                                                  | Check                                                                              |
+| ------ | ------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| AC-104 | go-test | `apps/metaboxd/internal/config/outbounds_test.go`                     | `TestOutboundMetadataSurvivesRestart`                                              |
+| AC-104 | go-test | `apps/metaboxd/internal/config/outbounds_test.go`                     | `TestOutboundMetadataRejectsInvalidValuesWithoutChangingState`                     |
+| AC-104 | go-test | `apps/metaboxd/internal/config/outbounds_test.go`                     | `TestOutboundMetadataLimitsSavedEntries`                                           |
+| AC-104 | go-test | `apps/metaboxd/internal/httpapi/outbounds_test.go`                    | `TestOutboundsUsesAppliedAndRuntimeInventory`                                      |
+| AC-104 | go-test | `apps/metaboxd/internal/httpapi/outbounds_test.go`                    | `TestOutboundsEditsEscapedTagsWithoutRequiringInventoryMembership`                 |
+| AC-104 | go-test | `apps/metaboxd/internal/httpapi/outbounds_test.go`                    | `TestOutboundsRejectsMalformedOrOversizedEdits`                                    |
+| AC-104 | go-test | `apps/metaboxd/internal/httpapi/outbounds_test.go`                    | `TestBrokenOutboundMetadataDisablesEndpointsAndPreservesFile`                      |
+| AC-104 | go-test | `apps/metaboxd/internal/history/latency_test.go`                      | `TestLatencyAppliesManualNormWithoutLosingComputedNorm`                            |
+| AC-104 | vitest  | `apps/web/src/pages/Overview/__tests__/OverviewPage.browser.test.tsx` | `shows member labels before tags and sends the selected tag to the core`           |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `edits one group label in place and returns focus to the pencil on Escape`         |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `edits both server fields while keeping the current delay visible`                 |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `saves a label through the daemon without changing the config draft or the core`   |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `clears an encoded server tag entry and shows the computed norm again`             |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `does not label an old manual norm as computed while refreshed history is pending` |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `lists unused tags apart and preserves object key names`                           |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `moves unused metadata to a subscription server before clearing its old tag`       |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `asks before overwrite and keeps the source if removing it fails`                  |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `deletes unused metadata and can restore it from the toast`                        |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `shows tags without editing buttons when metadata endpoints are unavailable`       |
+
+### Secondary action layout
+
+| ID     | Kind | File                                                | Check                                                                  |
+| ------ | ---- | --------------------------------------------------- | ---------------------------------------------------------------------- |
+| AC-104 | e2e  | `apps/web/e2e/secondaryActionsGeometry.e2e.test.ts` | `keeps proxy group controls aligned while editing a label at`          |
+| AC-13  | e2e  | `apps/web/e2e/secondaryActionsGeometry.e2e.test.ts` | `keeps draft controls aligned before Apply and during confirmation at` |
 
 ### Server latency
 

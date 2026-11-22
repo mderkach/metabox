@@ -343,7 +343,14 @@ export function useOverviewVerdict(
     };
   }
 
-  return { tone: VERDICT_TONE.Ok, title: t('verdict.ok'), hint: t('verdict.okHint'), action: null };
+  const foreign = status === SERVICE_STATUS.Running && service.data?.managed === false;
+
+  return {
+    tone: VERDICT_TONE.Ok,
+    title: t(foreign ? 'verdict.foreign' : 'verdict.ok'),
+    hint: t(foreign ? 'verdict.foreignHint' : 'verdict.okHint'),
+    action: null,
+  };
 }
 
 /**

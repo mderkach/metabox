@@ -105,6 +105,11 @@ const maxSnapshotBytes = 16 << 20
 // would not parse, and parsing it whole without a ceiling would cost memory.
 var errSnapshotTooLarge = errors.New("response larger than allowed")
 
+// OutboundTypes reads a complete runtime inventory without probing servers.
+func (s *ClashSource) OutboundTypes(ctx context.Context) (map[string]string, error) {
+	return clashapi.ReadOutboundTypes(ctx, s)
+}
+
 // Snapshot reads a one-off response whole.
 func (s *ClashSource) Snapshot(ctx context.Context, path string) (json.RawMessage, error) {
 	ctx, cancel := context.WithTimeout(ctx, s.snapshotTimeout)

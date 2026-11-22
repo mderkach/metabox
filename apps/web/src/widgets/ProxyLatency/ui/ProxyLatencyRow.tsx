@@ -8,6 +8,9 @@ import { ProxyLatencyMeter } from './ProxyLatencyMeter';
 export function ProxyLatencyRow({
   name,
   group,
+  label,
+  manualNorm,
+  legacyNorm,
   latency,
   available,
   testing,
@@ -16,6 +19,9 @@ export function ProxyLatencyRow({
 }: {
   name: string;
   group?: string | undefined;
+  label?: string | undefined;
+  manualNorm?: number | undefined;
+  legacyNorm: boolean;
   latency: ServerLatency | undefined;
   available: boolean;
   testing: boolean;
@@ -25,13 +31,14 @@ export function ProxyLatencyRow({
   const { t, i18n } = useTranslation('widgets/ProxyLatency');
   const recent = latency?.recent ?? [];
   const delay = serverDelay(latency);
-  const usual = latency?.usualMS ?? null;
+  const usual = manualNorm ?? latency?.computedUsualMS ?? (legacyNorm ? latency?.usualMS : undefined) ?? null;
   const level = latency?.level;
 
   return (
     <li className='grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 text-xs'>
       <p className='min-w-0 wrap-anywhere'>
         {group !== undefined && <span className='text-muted-foreground'>{group} · </span>}
+        {label !== undefined && <span className='font-medium'>{label} </span>}
         <span className='font-mono'>{name}</span>
       </p>
       <Button
@@ -50,7 +57,7 @@ export function ProxyLatencyRow({
       <p className='col-span-2 flex flex-wrap gap-x-2 gap-y-1 text-muted-foreground tabular-nums'>
         <span>{toServerDelayLabel(t, latency, available)}</span>
         {usual !== null && (
-          <span>{t(latency?.origin === 'computed' ? 'usualComputed' : 'usual', { value: usual })}</span>
+          <span>{t(manualNorm === undefined ? 'usualComputed' : 'usualManual', { value: usual })}</span>
         )}
         {level === LATENCY_LEVEL.AboveNorm && <span className='text-signal-warn'>{t('aboveNorm')}</span>}
         {level === LATENCY_LEVEL.AboveCeiling && <span className='text-signal-warn'>{t('aboveCeiling')}</span>}

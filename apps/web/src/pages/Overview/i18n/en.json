@@ -15,6 +15,8 @@
     "hotHint": "From {{limit}} °C the board lowers its clock. Check the cooling and the load in the Router section below.",
     "warm": "The router is warm: {{celsius}} °C",
     "warmHint": "There is headroom before {{limit}} °C, where the board lowers its clock. The temperature is in the Router section below.",
+    "foreign": "The core is running outside metabox",
+    "foreignHint": "Another service started the core and manages its commands.",
     "ok": "Everything works",
     "okHint": "The routing core is running and data is coming in.",
     "action": {

@@ -28,11 +28,12 @@ type LatencyMedian struct {
 
 // ServerLatency separates the current process reading from the daemon's history.
 type ServerLatency struct {
-	Tag     string          `json:"tag"`
-	Current *LatencyResult  `json:"current,omitempty"`
-	Recent  []LatencyResult `json:"recent"`
-	Hourly  []LatencyMedian `json:"hourly"`
-	UsualMS *int            `json:"usual_ms,omitempty"`
-	Level   LatencyLevel    `json:"level"`
-	Origin  string          `json:"origin"`
+	Tag             string          `json:"tag"`
+	Current         *LatencyResult  `json:"current,omitempty"`
+	Recent          []LatencyResult `json:"recent"`
+	Hourly          []LatencyMedian `json:"hourly"`
+	UsualMS         *int            `json:"usual_ms,omitempty"`
+	ComputedUsualMS *int            `json:"computed_usual_ms,omitempty"`
+	Level           LatencyLevel    `json:"level"`
+	Origin          string          `json:"origin"`
 }

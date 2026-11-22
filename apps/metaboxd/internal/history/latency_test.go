@@ -147,7 +147,7 @@ func TestLatencyBoundsRetainedObservationsAndServers(t *testing.T) {
 	}
 	latency.Observe("running", now, listed)
 	latency.RecordManual("running", "server-4099", now.Add(time.Second), 98, true)
-	rows := latency.Snapshot(now.Add(time.Second))
+	rows := latency.Snapshot(now.Add(time.Second), nil)
 	if len(rows) != history.MaxLatencyServers {
 		t.Fatalf("server history count: got %d, want %d", len(rows), history.MaxLatencyServers)
 	}
@@ -177,7 +177,7 @@ func delaySample(at time.Time, delayMS int) map[string]*history.LatencySample {
 
 func latencyRow(t *testing.T, latency *history.Latency, at time.Time, tag string) history.ServerLatency {
 	t.Helper()
-	for _, row := range latency.Snapshot(at) {
+	for _, row := range latency.Snapshot(at, nil) {
 		if row.Tag == tag {
 			return row
 		}
@@ -186,4 +186,30 @@ func latencyRow(t *testing.T, latency *history.Latency, at time.Time, tag string
 	t.Fatalf("server %q was not included in history", tag)
 
 	return history.ServerLatency{}
+}
+
+func TestLatencyAppliesManualNormWithoutLosingComputedNorm(t *testing.T) {
+	at := time.Date(2026, time.November, 22, 12, 5, 0, 0, time.UTC)
+	latency := history.NewLatency()
+	latency.SetEpoch("core")
+	latency.Observe("core", at, delaySample(at, 120))
+	now := at.Add(time.Hour)
+	for i := range 3 {
+		latency.RecordManual("core", "server", now.Add(time.Duration(i)*time.Second), 100, true)
+	}
+
+	viewAt := now.Add(3 * time.Second)
+	override := latency.Snapshot(viewAt, map[string]int{"server": 80})
+	if len(override) != 1 {
+		t.Fatalf("snapshots: %+v", override)
+	}
+	row := override[0]
+	if row.Level != history.LatencyAboveNorm || row.UsualMS == nil || *row.UsualMS != 80 ||
+		row.ComputedUsualMS == nil || *row.ComputedUsualMS != 120 {
+		t.Errorf("manual norm and preserved baseline: %+v", row)
+	}
+	fallback := latencyRow(t, latency, viewAt, "server")
+	if fallback.Level != history.LatencyWithinNorm || fallback.UsualMS == nil || *fallback.UsualMS != 120 {
+		t.Errorf("after clearing manual norm: %+v", fallback)
+	}
 }

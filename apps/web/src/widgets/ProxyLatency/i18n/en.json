@@ -2,7 +2,7 @@
   "title": "Node delay",
   "scale": "scale 0–{{ceiling}} ms",
   "empty": "No servers available",
-  "usual": "Usually {{value}} ms",
+  "usualManual": "Usually {{value}} ms (set by you)",
   "usualComputed": "Usually {{value}} ms (computed)",
   "aboveNorm": "Above usual",
   "aboveCeiling": "Above limit",

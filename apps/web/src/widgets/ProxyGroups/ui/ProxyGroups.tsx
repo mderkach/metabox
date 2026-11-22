@@ -1,7 +1,13 @@
 import { Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { ProxyGroup, ProxyNode } from '@entities/Proxy';
+import {
+  GROUP_TYPES,
+  type OutboundMetadataMap,
+  type ProxyGroup,
+  type ProxyNode,
+  type ServerLatencies,
+} from '@entities/Proxy';
 import {
   Alert,
   AlertDescription,
@@ -38,6 +44,9 @@ export function ProxyGroups({
   onGroupTestStart,
   diagnosticForNode,
   standaloneDiagnostics,
+  metadata,
+  latencies,
+  onMetadataSaved,
 }: {
   groups: ProxyGroup[];
   nodes: ProxyNode[];
@@ -50,8 +59,20 @@ export function ProxyGroups({
   onGroupTestStart?: ((group: string, nodes: readonly string[]) => void) | undefined;
   diagnosticForNode?: ProxyNodeDiagnostics | undefined;
   standaloneDiagnostics?: readonly ProxyNode[] | undefined;
+  metadata: OutboundMetadataMap | undefined;
+  latencies: ServerLatencies | undefined;
+  onMetadataSaved: (tag: string, label?: string) => void;
 }) {
   const { t } = useTranslation('widgets/ProxyGroups');
+  const primaryGroup = new Map<string, string>();
+  for (const group of groups) {
+    for (const node of group.nodes) {
+      if (!primaryGroup.has(node.name)) primaryGroup.set(node.name, group.name);
+    }
+  }
+  const ungrouped =
+    metadata === undefined ? (standaloneDiagnostics ?? []) : nodes.filter((node) => !primaryGroup.has(node.name));
+
   if (groups.length > 0) {
     return (
       <div className='flex flex-col gap-3'>
@@ -65,11 +86,15 @@ export function ProxyGroups({
                 onTested={onTested}
                 onGroupTestStart={onGroupTestStart}
                 diagnosticForNode={diagnosticForNode}
+                metadata={metadata}
+                latencies={latencies}
+                primaryGroup={primaryGroup}
+                onMetadataSaved={onMetadataSaved}
               />
             </li>
           ))}
         </ul>
-        {standaloneDiagnostics !== undefined && standaloneDiagnostics.length > 0 && (
+        {ungrouped.length > 0 && (
           <Card>
             <CardHeader className='border-b'>
               <CardTitle className={SECTION_HEADING}>
@@ -78,7 +103,7 @@ export function ProxyGroups({
             </CardHeader>
             <CardContent>
               <ul className='grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3'>
-                {standaloneDiagnostics.map((node) => (
+                {ungrouped.map((node) => (
                   <ProxyNodeTile
                     key={node.name}
                     node={node}
@@ -86,6 +111,10 @@ export function ProxyGroups({
                     onSelect={NO_OP}
                     diagnostic={diagnosticForNode?.(node.name)}
                     reserveDiagnosticSpace
+                    entry={metadata?.get(node.name)}
+                    latency={latencies?.get(node.name)}
+                    editable={metadata !== undefined && !GROUP_TYPES.has(node.type)}
+                    onMetadataSaved={onMetadataSaved}
                   />
                 ))}
               </ul>
@@ -129,6 +158,10 @@ export function ProxyGroups({
                 onSelect={NO_OP}
                 diagnostic={diagnosticForNode?.(node.name)}
                 reserveDiagnosticSpace={diagnosticForNode !== undefined}
+                entry={metadata?.get(node.name)}
+                latency={latencies?.get(node.name)}
+                editable={metadata !== undefined && !GROUP_TYPES.has(node.type)}
+                onMetadataSaved={onMetadataSaved}
               />
             ))}
           </ul>

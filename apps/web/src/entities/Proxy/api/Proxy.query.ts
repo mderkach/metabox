@@ -14,6 +14,7 @@ export const PROXY_QUERY = {
   all: ['proxy'] as const,
   list: () => [...PROXY_QUERY.all, 'list'] as const,
   latency: () => [...PROXY_QUERY.all, 'latency'] as const,
+  outbounds: () => [...PROXY_QUERY.all, 'outbounds'] as const,
   providers: () => [...PROXY_QUERY.all, 'providers'] as const,
 } as const;
 

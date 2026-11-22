@@ -150,7 +150,9 @@ export function createMissingHandlers(connections = 0) {
     ),
     ...createStatefulDaemonHandlers(dataplane.status),
     ...dataplane.handlers,
-    ...createStatefulProxyHandlers(STAND_PROXIES_FIXTURE, STAND_PROVIDERS_FIXTURE),
+    ...createStatefulProxyHandlers(STAND_PROXIES_FIXTURE, STAND_PROVIDERS_FIXTURE, {
+      'old-lab': { label: 'Lab', norm_ms: 180, unused: true },
+    }),
     ...createDeviceHandlers(STAND_DEVICES_FIXTURE),
     ...createLogHandlers(),
     ...createDiagHandlers(),

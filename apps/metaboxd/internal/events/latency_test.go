@@ -50,7 +50,7 @@ func TestLatencyMonitorRecordsManualProbeWithoutRevivingOldCore(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	monitor := NewLatencyMonitor(source, resolve, func(context.Context, int) string {
 		return epoch.Load().(string)
-	}, log)
+	}, nil, log)
 	proxy, err := clashapi.NewProxy(resolve, func(w http.ResponseWriter, r *http.Request, err error) {
 		t.Errorf("forward delay %s: %v", r.URL, err)
 		w.WriteHeader(http.StatusBadGateway)
@@ -140,7 +140,7 @@ func TestLatencyMonitorCountsProbeOnceWhenCacheUpdatesBeforeResponse(t *testing.
 	settings := clashapi.Settings{Address: strings.TrimPrefix(core.URL, "http://")}
 	resolve := func(context.Context) (clashapi.Settings, error) { return settings, nil }
 	source := NewClashSource(ClashSettings(resolve), nil, nil, time.Second)
-	monitor := NewLatencyMonitor(source, resolve, func(context.Context, int) string { return "core" },
+	monitor := NewLatencyMonitor(source, resolve, func(context.Context, int) string { return "core" }, nil,
 		slog.New(slog.NewTextHandler(io.Discard, nil)))
 	monitor.poll(t.Context())
 

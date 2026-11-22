@@ -2,9 +2,6 @@ package route
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
 	"time"
 
 	"metabox/internal/clashapi"
@@ -27,12 +24,6 @@ const (
 )
 
 const outboundRefreshDelay = 5 * time.Second
-
-type clashProxies struct {
-	Proxies map[string]struct {
-		Type string `json:"type"`
-	} `json:"proxies"`
-}
 
 // recordVolumes receives chains in core order, from the final server to the
 // outbound selected by the rule.
@@ -84,7 +75,7 @@ func (c *Counter) refreshVolumeTags(ctx context.Context, connections []clashConn
 		c.outboundRefresh = now.Add(outboundRefreshDelay)
 	}
 
-	next, err := readOutbounds(ctx, c.source)
+	next, err := clashapi.ReadOutboundTypes(ctx, c.source)
 	if err != nil {
 		if ctx.Err() == nil {
 			c.log.Debug("outbound types for the volume split not read", "err", err)
@@ -170,27 +161,4 @@ func outboundKind(outboundType string) history.Kind {
 	default:
 		return history.KindProxy
 	}
-}
-
-func readOutbounds(ctx context.Context, source Source) (map[string]string, error) {
-	body, err := source.Snapshot(ctx, "/proxies")
-	if err != nil {
-		return nil, fmt.Errorf("outbound list: %w", err)
-	}
-
-	var list clashProxies
-	if err := json.Unmarshal(body, &list); err != nil {
-		return nil, fmt.Errorf("parse outbound list: %w", err)
-	}
-
-	if list.Proxies == nil {
-		return nil, errors.New("proxy snapshot has no outbound list")
-	}
-
-	types := make(map[string]string, len(list.Proxies))
-	for tag, proxy := range list.Proxies {
-		types[tag] = proxy.Type
-	}
-
-	return types, nil
 }

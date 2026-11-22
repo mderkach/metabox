@@ -34,3 +34,6 @@ export type {
   ProxyProvider,
   ProxyRuntime,
 } from './model/Proxy.model';
+
+export { useOutboundMetadata, useSaveOutboundMetadata } from './api/Proxy.metadata.query';
+export type { OutboundMetadata, OutboundMetadataMap } from './model/Proxy.metadata';

@@ -23,6 +23,14 @@
         "failed": "Could not close the connection"
       }
     },
+    "outboundMetadata": {
+      "failed": "Could not save outbound settings",
+      "named": "{{tag}} is now called {{label}}. Nothing to apply.",
+      "saved": "Outbound settings saved. Nothing to apply.",
+      "moved": "Outbound settings moved. Nothing to apply.",
+      "removed": "Outbound settings deleted. Nothing to apply.",
+      "restored": "Outbound settings restored. Nothing to apply."
+    },
     "proxy": {
       "delay": {
         "failed": "Could not measure the delay"
@@ -175,6 +183,7 @@
     "config_too_large": "the config is larger than allowed",
     "config_not_object": "the config is empty or is not a JSON object",
     "config_not_json": "the config has a syntax error and is not valid JSON",
+    "outbound_invalid": "Check the outbound name and usual latency.",
     "device_invalid": "the daemon rejected the device name",
     "dataplane_invalid": "the traffic interception settings in UCI contain errors",
     "dataplane_modified": "the traffic interception settings changed on the device, the list was reloaded",
@@ -203,6 +212,7 @@
     "config": "Could not load the config",
     "versions": "Could not read the version history",
     "latency": "Could not read server latency",
+    "outboundMetadata": "Could not read outbound settings",
     "proxies": "Could not read the proxy list",
     "providers": "Could not read the subscriptions",
     "route": "Could not explain the route",

@@ -1,4 +1,19 @@
 {
+  "metadata": {
+    "editLabel": "Label: {{tag}}",
+    "editServer": "Label and usual latency: {{tag}}",
+    "label": "Label",
+    "labelHint": "Shown wherever an outbound is chosen. Leave blank to use its tag.",
+    "norm": "Usual latency, ms",
+    "normHint": "Leave blank to calculate from history.",
+    "normHintMeasured": "From history: {{value}} ms. Leave blank to use this value.",
+    "manualNorm": "Usual: {{value}} ms (set by you)",
+    "computedNorm": "Usual: {{value}} ms (computed)",
+    "labelTooLong": "Use up to 64 characters.",
+    "controlChars": "Remove control characters.",
+    "invalidNorm": "Enter a whole number from 1 to 10,000 ms.",
+    "save": "Save"
+  },
   "empty": {
     "title": "There are no groups in the config — that is a working setup",
     "description": "Rules point straight at outbounds. To switch the outbound on the fly, the config needs a manual-choice group.",
