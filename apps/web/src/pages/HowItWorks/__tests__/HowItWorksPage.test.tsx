@@ -2,6 +2,7 @@ import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import i18next from 'i18next';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -39,8 +40,9 @@ describe('How metabox works', () => {
     );
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.unstubAllGlobals();
+    await i18next.changeLanguage('ru');
   });
 
   it('keeps the terms but shows no invented connection', async () => {
@@ -144,6 +146,46 @@ describe('How metabox works', () => {
     server.use(...createRouteHandlers(CONNECTIONS_FIXTURE.connections));
     await user.click(screen.getByRole('button', { name: 'Повторить' }));
     expect(await screen.findByText(/Выбран us/)).toBeInTheDocument();
+  });
+
+  it.each([
+    [
+      'en',
+      'Open Overview',
+      'Where it is configured',
+      ['Device', 'Service', 'Rule', 'Outbound', 'Group', 'Server', 'Subscription', 'Core'],
+    ],
+    [
+      'ru',
+      'Открыть Обзор',
+      'Где настроить',
+      ['Устройство', 'Сервис', 'Правило', 'Выход', 'Группа', 'Сервер', 'Подписка', 'Ядро'],
+    ],
+  ] as const)('defines and links all eight terms in %s', async (language, overview, configure, names) => {
+    await i18next.changeLanguage(language);
+    const user = userEvent.setup();
+    server.use(
+      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json({ ...SERVICE_RUNNING_FIXTURE, status: 'stopped' }))
+    );
+    renderWithRouter(HowItWorksPage);
+    await screen.findByRole('link', { name: overview });
+
+    const destinations = [
+      '/devices',
+      '/config/rule-set',
+      '/config',
+      '/config/outbounds',
+      '/proxies',
+      '/config/outbounds',
+      '/config/providers',
+      '/settings',
+    ];
+    for (const [index, name] of names.entries()) {
+      const card = screen.getByRole('button', { name, exact: true });
+      await user.click(card);
+      expect(card).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('link', { name: configure })).toHaveAttribute('href', destinations[index]);
+    }
   });
 
   it('opens a term directly below the selected step on a phone', async () => {

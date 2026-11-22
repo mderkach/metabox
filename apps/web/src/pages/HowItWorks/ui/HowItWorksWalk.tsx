@@ -69,7 +69,10 @@ export function HowItWorksWalk({
       {STEPS.map(({ key, term }, index) => (
         <Fragment key={key}>
           {index > 0 && (
-            <li role='presentation' className='flex items-center justify-center text-muted-foreground'>
+            <li
+              role='presentation'
+              className='flex items-center justify-center text-muted-foreground min-[48.01rem]:mt-5 min-[48.01rem]:self-start'
+            >
               <ChevronRight aria-hidden='true' className='size-4 max-[48rem]:rotate-90' />
             </li>
           )}
@@ -83,7 +86,7 @@ export function HowItWorksWalk({
               <button
                 type='button'
                 aria-pressed={selected === term}
-                className='grid min-h-11 w-full min-w-0 gap-1 rounded-lg p-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50'
+                className='grid min-h-11 w-full min-w-0 gap-1 rounded-lg p-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50 min-[48.01rem]:px-2.5'
                 onClick={() => {
                   onSelect(term);
                 }}
@@ -148,6 +151,8 @@ type WalkTranslator = ReturnType<typeof useTranslation<'pages/HowItWorks'>>['t']
 function ruleValue(walk: ConnectionWalk, t: WalkTranslator): string {
   if (walk.rule.verified !== null) return walk.rule.verified.label;
   if (walk.rule.kind === ROUTE_MATCH.Final) return t('noRule');
+
+  if (walk.rule.kind === ROUTE_MATCH.Rule && walk.rule.conditions === '') return t('unconditional');
 
   return walk.rule.conditions === '' ? t('unknown') : walk.rule.conditions;
 }

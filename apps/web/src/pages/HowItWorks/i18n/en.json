@@ -22,6 +22,7 @@
   "noRule": "No rule matched",
   "final": "The default outbound was used.",
   "unconfirmed": "The matching rule could not be linked to the applied config.",
+  "unconditional": "Rule without conditions",
   "ruleNumber": "Rule {{number}}",
   "direct": "Direct",
   "withoutProxy": "Without a proxy.",

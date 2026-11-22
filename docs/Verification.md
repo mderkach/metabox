@@ -548,6 +548,7 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `shows the request failure with a retry and keeps the glossary available`                               |
 | AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `opens a term directly below the selected step on a phone`                                              |
 | AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `keeps an unverified rule link at the list`                                                             |
+| AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `defines and links all eight terms in %s`                                                               |
 | AC-105 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
 | AC-106 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
 | AC-107 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |

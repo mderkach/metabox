@@ -18,6 +18,8 @@ for (const viewport of [desktop, phone]) {
     const choices = page.getByRole('group', { name: translate(ns, 'connections') });
     await expect(choices.getByRole('button', { name: /Through a group/, pressed: true })).toBeVisible();
     await expect(page.getByText(/Picked us/).first()).toBeVisible();
+    await choices.getByRole('button', { name: /Through a server/ }).click();
+    await expect(choices.getByRole('button', { name: /docs.example/, pressed: true })).toBeVisible();
     await choices.getByRole('button', { name: /Direct/ }).click();
     await expect(page.getByText(translate(ns, 'noServer'), { exact: true })).toBeVisible();
 

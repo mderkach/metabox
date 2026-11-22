@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@shared/lib/utils';
@@ -21,6 +22,7 @@ export function HowItWorksTerms({
   groupExample: boolean;
 }) {
   const { t } = useTranslation('pages/HowItWorks');
+  const listId = useId();
 
   return (
     <section className='grid gap-3'>
@@ -31,6 +33,8 @@ export function HowItWorksTerms({
             <button
               type='button'
               aria-pressed={selected === term}
+              aria-labelledby={`${listId}-${term}-title`}
+              aria-describedby={`${listId}-${term}-description`}
               className={cn(
                 'grid size-full gap-1 rounded-lg border p-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
                 selected === term ? 'border-selected-edge bg-selected' : 'border-border bg-card hover:bg-muted'
@@ -39,8 +43,12 @@ export function HowItWorksTerms({
                 onSelect(term);
               }}
             >
-              <span className='text-sm font-semibold'>{t(`terms.${term}.title`)}</span>
-              <span className='text-sm text-muted-foreground'>{t(`terms.${term}.description`)}</span>
+              <span id={`${listId}-${term}-title`} className='text-sm font-semibold'>
+                {t(`terms.${term}.title`)}
+              </span>
+              <span id={`${listId}-${term}-description`} className='text-sm text-muted-foreground'>
+                {t(`terms.${term}.description`)}
+              </span>
             </button>
             {inline && selected === term && (
               <HowItWorksTermPanel
