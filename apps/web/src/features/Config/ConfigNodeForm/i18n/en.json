@@ -32,6 +32,7 @@
     "invalid": "Value does not match the schema",
     "parse": "JSON not parsed: {{reason}}",
     "required": "Required field",
+    "subscriptionTagConflict": "Another subscription, rule set, or endpoint already uses this tag",
     "realityPublicKey": "Reality key: base64url without padding, 32 bytes (43 characters)",
     "realityShortId": "Short ID: hex, up to 16 characters, even length"
   },

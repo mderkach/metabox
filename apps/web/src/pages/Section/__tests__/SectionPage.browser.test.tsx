@@ -25,6 +25,7 @@ const CONFIG_TEXT = `{
 function serveConfig(text: string) {
   worker.use(
     http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text)),
+    http.get(CONFIG_ENDPOINT.ruleSetFiles(), () => HttpResponse.json({ files: {}, etag: '"lists"' })),
     http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE))
   );
 }
@@ -155,6 +156,37 @@ describe('section screen picked with the mouse', () => {
 
     await waitFor(() => {
       expect(findValue(draft(), ['outbounds', 2])).toEqual({ type: 'hysteria2', tag: 'hy2' });
+    });
+  });
+
+  it('keeps subscription fields and rejects a tag already used by a rule set', async () => {
+    serveConfig('{"route":{"rule_set":[{"type":"inline","tag":"catalog"}]}}');
+
+    renderWithRouter(ProvidersSection);
+    await openAddPanel();
+
+    const panel = within(screen.getByRole('complementary', { name: 'Новая запись' }));
+    const tag = panel.getByRole('textbox', { name: 'Тег' });
+
+    await pick(panel.getByRole('combobox', { name: 'Тип' }), 'remote');
+    await userEvent.type(tag, 'catalog');
+    await userEvent.tab();
+    expect(await panel.findByRole('alert')).toHaveTextContent('Тег уже занят другой записью');
+    await userEvent.click(panel.getByRole('button', { name: 'Добавить' }));
+
+    expect(tag).toHaveValue('catalog');
+    expect(tag).toHaveAttribute('aria-invalid', 'true');
+    await waitFor(() => {
+      expect(tag).toHaveFocus();
+    });
+    expect(ConfigDocumentState.getState().draft).toBeNull();
+
+    await userEvent.clear(tag);
+    await userEvent.type(tag, 'sub');
+    await userEvent.click(panel.getByRole('button', { name: 'Добавить' }));
+
+    await waitFor(() => {
+      expect(findValue(draft(), ['providers', 0])).toEqual({ type: 'remote', tag: 'sub' });
     });
   });
 

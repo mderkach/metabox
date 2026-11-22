@@ -1,7 +1,7 @@
 import type { ParseKeys, TFunction } from 'i18next';
 import { get, useFormContext, useFormState, type FieldError as FormFieldError } from 'react-hook-form';
 
-import { NODE_OVERRIDE_ERROR, type ConfigNodeFormModel } from '../model';
+import { NODE_OVERRIDE_ERROR, SUBSCRIPTION_TAG_CONFLICT, type ConfigNodeFormModel } from '../model';
 import { RAW_PARSE_ERROR } from './ConfigNodeForm.context';
 import { NS } from './ConfigNodeForm.namespace';
 
@@ -15,6 +15,7 @@ const ERROR_KEY: Readonly<Record<string, ParseKeys<typeof NS> | undefined>> = {
   too_small: 'error.tooSmall',
   too_big: 'error.tooBig',
   invalid_type: 'error.type',
+  [SUBSCRIPTION_TAG_CONFLICT]: 'error.subscriptionTagConflict',
   [NODE_OVERRIDE_ERROR.Required]: 'error.required',
   [NODE_OVERRIDE_ERROR.RealityPublicKey]: 'error.realityPublicKey',
   [NODE_OVERRIDE_ERROR.RealityShortId]: 'error.realityShortId',

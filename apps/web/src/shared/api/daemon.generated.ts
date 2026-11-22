@@ -57,6 +57,7 @@ export const ERROR_CODE = [
   'config_too_large',
   'config_not_object',
   'config_not_json',
+  'subscription_tag_conflict',
   'list_invalid',
   'workdir_mismatch',
   'device_invalid',

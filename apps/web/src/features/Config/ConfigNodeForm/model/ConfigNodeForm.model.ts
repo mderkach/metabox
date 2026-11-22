@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import type { JSONPath } from 'jsonc-parser';
 import { get, set, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
 
-import { compactNode } from '@entities/Config';
+import { compactNode, ConfigDocumentStore, hasSubscriptionTagConflict, selectConfigCurrent } from '@entities/Config';
 import { isRecord } from '@shared/lib/isRecord';
 import { BOOLEAN_GROUP_FLAG, type FieldPlan } from '@shared/lib/schemaShape';
 
@@ -14,6 +15,8 @@ import { overrideIssues, type NodeOverride } from './ConfigNodeForm.overrides';
  * schema, and `Path<…>` of this model is simply `string`.
  */
 export type ConfigNodeFormModel = Record<string, unknown>;
+
+export const SUBSCRIPTION_TAG_CONFLICT = 'subscriptionTagConflict';
 
 /**
  * A cleared field. Not `undefined`: React Hook Form reads it as "take the
@@ -51,7 +54,8 @@ function toNodeFormSchema(schema: z.core.$ZodType) {
  */
 export function toNodeFormResolver(
   schema: z.core.$ZodType,
-  override: NodeOverride | null = null
+  override: NodeOverride | null = null,
+  path?: JSONPath
 ): Resolver<ConfigNodeFormModel, ConfigNodeFormModel> {
   const resolve = zodResolver(toNodeFormSchema(schema));
 
@@ -59,7 +63,12 @@ export function toNodeFormResolver(
     const compacted = compactNode(values);
     const node = isRecord(compacted) ? compacted : {};
     const result = await resolve(node, context, options);
-    const issues = overrideIssues(override, node, context ?? {});
+    const tagConflict =
+      path !== undefined &&
+      node.tag !== context?.tag &&
+      hasSubscriptionTagConflict(selectConfigCurrent(ConfigDocumentStore.getState()) ?? '', path, node.tag);
+    const schemaIssues = overrideIssues(override, node, context ?? {});
+    const issues = tagConflict ? [...schemaIssues, { name: 'tag', code: SUBSCRIPTION_TAG_CONFLICT }] : schemaIssues;
 
     if (issues.length === 0) {
       return result;

@@ -131,7 +131,7 @@ describe('rule set edit form', () => {
     await user.clear(screen.getByLabelText('Имя сета'));
     await user.type(screen.getByLabelText('Имя сета'), 'own');
 
-    expect(await screen.findByText('такое имя уже занято другим сетом')).toBeInTheDocument();
+    expect(await screen.findByText('такое имя уже использует сет правил или подписка')).toBeInTheDocument();
     expect(findValue(draft(), ['route', 'rule_set', INDEX, 'tag'])).not.toBe('own');
   });
 
