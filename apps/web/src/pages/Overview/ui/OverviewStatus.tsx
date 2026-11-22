@@ -11,7 +11,7 @@ import { OverviewNode } from './OverviewNode';
  * the node the traffic leaves through and a check on demand. The verdict in
  * the header says what is wrong, this strip is where it is fixed.
  */
-export function OverviewStatus({ onAnnounce }: { onAnnounce: (message: string) => void }) {
+export function OverviewStatus({ onAnnounce, stopped }: { onAnnounce: (message: string) => void; stopped: boolean }) {
   const { t } = useTranslation('pages/Overview');
 
   return (
@@ -22,7 +22,7 @@ export function OverviewStatus({ onAnnounce }: { onAnnounce: (message: string) =
             <DaemonServiceControl heading='h2' />
           </div>
           <div className='bg-card p-4'>
-            <OverviewNode onSelected={onAnnounce} />
+            <OverviewNode onSelected={onAnnounce} stopped={stopped} />
           </div>
           <div className='bg-card p-4'>
             <OverviewCheck onChecked={onAnnounce} />

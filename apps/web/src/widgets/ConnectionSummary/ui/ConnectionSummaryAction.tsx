@@ -1,4 +1,5 @@
 import type { ParseKeys } from 'i18next';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ROUTE_KIND, type ConnectionShare, type RouteKind } from '@entities/Connection';
@@ -17,7 +18,14 @@ const KIND_VIEW = [
 ] as const satisfies readonly { kind: RouteKind; label: ParseKeys<'shared'>; tone: string }[];
 
 /** A bar as long as the traffic volume, not the connection count: a silent connection stays in the list but adds no weight. */
-export function ConnectionSummaryAction({ shares }: { shares: ConnectionShare<RouteKind>[] }) {
+export function ConnectionSummaryAction({
+  shares,
+  placeholder,
+}: {
+  shares: ConnectionShare<RouteKind>[];
+  /** Replaces the card body when the page knows the data is missing or still loading. */
+  placeholder?: ReactNode;
+}) {
   const { t } = useTranslation('widgets/ConnectionSummary');
   const bars: SummaryBar[] = KIND_VIEW.flatMap((view) => {
     const share = shares.find((entry) => entry.key === view.kind);
@@ -39,7 +47,7 @@ export function ConnectionSummaryAction({ shares }: { shares: ConnectionShare<Ro
 
   return (
     <ConnectionSummaryPanel title={t('action.title')}>
-      <ConnectionSummaryBars bars={bars} empty={t('empty')} format={formatBytes} />
+      {placeholder ?? <ConnectionSummaryBars bars={bars} empty={t('empty')} format={formatBytes} />}
     </ConnectionSummaryPanel>
   );
 }

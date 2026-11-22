@@ -6,7 +6,8 @@ import { ConnectionSummaryVolume } from '@widgets/ConnectionSummary';
 import { DaemonTraffic } from '@widgets/Daemon/DaemonTraffic';
 
 import type { OverviewRuntime } from '../lib';
-import { toDirectContext, toVolume, toPeak } from '../lib/Overview.traffic';
+import { toDirectContext, toRate, toRateContext, toVolume } from '../lib/Overview.traffic';
+import { OverviewCoreGap } from './OverviewCoreGap';
 import { OverviewSection } from './OverviewSection';
 import { OverviewTile } from './OverviewTile';
 
@@ -68,30 +69,43 @@ export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
               />
               <OverviewTile
                 label={t('traffic.down')}
-                value={runtime.awaiting ? null : formatRate(runtime.now.down)}
-                tone='text-series-down'
-                context={runtime.awaiting ? null : toPeak(t, runtime.peakDown)}
+                value={toRate(runtime.awaiting, runtime.now.down)}
+                absent={runtime.coreGap !== null}
+                tone={runtime.coreGap === null ? 'text-series-down' : undefined}
+                context={toRateContext(t, runtime.awaiting, runtime.coreGap, runtime.peakDown)}
               />
               <OverviewTile
                 label={t('traffic.up')}
-                value={runtime.awaiting ? null : formatRate(runtime.now.up)}
-                tone='text-series-up'
-                context={runtime.awaiting ? null : toPeak(t, runtime.peakUp)}
+                value={toRate(runtime.awaiting, runtime.now.up)}
+                absent={runtime.coreGap !== null}
+                tone={runtime.coreGap === null ? 'text-series-up' : undefined}
+                context={toRateContext(t, runtime.awaiting, runtime.coreGap, runtime.peakUp)}
               />
             </ul>
 
             <div className='min-w-0 border-t border-border px-4 py-4 xl:w-1/2 xl:border-t-0 xl:border-l'>
-              <DaemonTraffic
-                samples={runtime.traffic}
-                sampledAt={runtime.trafficAt}
-                peakDown={runtime.peakDown}
-                peakUp={runtime.peakUp}
-              />
+              {runtime.coreGap !== null ? (
+                <OverviewCoreGap gap={runtime.coreGap} />
+              ) : (
+                <DaemonTraffic
+                  samples={runtime.traffic}
+                  sampledAt={runtime.trafficAt}
+                  peakDown={runtime.peakDown}
+                  peakUp={runtime.peakUp}
+                />
+              )}
             </div>
           </div>
         </Card>
 
-        <ConnectionSummaryVolume totals={runtime.totals} />
+        <ConnectionSummaryVolume
+          totals={runtime.totals}
+          placeholder={
+            runtime.connectionsGap !== null || runtime.connectionsAwaiting ? (
+              <OverviewCoreGap gap={runtime.connectionsGap} />
+            ) : undefined
+          }
+        />
       </div>
     </OverviewSection>
   );

@@ -14,6 +14,7 @@ export function OverviewTile({
   meter,
   chart,
   wide,
+  absent = false,
 }: {
   label: string;
   /** `null` means the snapshot has not arrived yet: a skeleton, not a dash or zero. A dash means there is no quantity at all. */
@@ -25,6 +26,8 @@ export function OverviewTile({
   chart?: ReactNode;
   /** Spans the whole row of a two-column grid. */
   wide?: boolean;
+  /** The value will not arrive: a muted dash for the eye, and the context says why. */
+  absent?: boolean;
 }) {
   return (
     // Label, value, context and chart rows are shared with the neighbouring tiles of the grid row:
@@ -35,7 +38,12 @@ export function OverviewTile({
       <dl className='contents'>
         <dt className='text-sm font-medium text-muted-foreground'>{label}</dt>
         <dd className={cn('text-xl font-semibold tabular-nums', tone)}>
-          {value ?? <Skeleton aria-hidden='true' className={cn('h-7 w-24', PENDING_REVEAL)} />}
+          {absent && (
+            <span aria-hidden='true' className='font-normal text-muted-foreground'>
+              —
+            </span>
+          )}
+          {!absent && (value ?? <Skeleton aria-hidden='true' className={cn('h-7 w-24', PENDING_REVEAL)} />)}
         </dd>
       </dl>
       {context === null ? (

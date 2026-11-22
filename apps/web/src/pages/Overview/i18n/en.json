@@ -2,12 +2,13 @@
   "verdict": {
     "waiting": "Waiting for data from the core",
     "waitingHint": "The daemon stream has just opened: the numbers will appear in a couple of seconds.",
+    "startingHint": "The core is starting: numbers will appear in a few seconds.",
     "offline": "No connection to the daemon",
     "offlineHint": "The numbers below are not updating. The panel reconnects on its own; if it does not, check that the router is reachable over the network.",
     "silent": "No data from the core",
-    "silentHint": "The daemon responds, but the core is sending no data. The readings below are frozen. Check the log for the cause.",
+    "silentHint": "The daemon responds, but the core is sending no data. Check the log for the cause.",
     "stopped": "The core is not running",
-    "stoppedHint": "Traffic is not passing through the core. Start it in the status panel below. Check the log for the cause.",
+    "stoppedHint": "Traffic does not pass through the core. Start it with the Start button in the sing-box card below. Check the log for the cause.",
     "nodeDown": "The selected node does not respond",
     "nodeDownHint": "Traffic through this node does not get through. Pick another node or test the latency again.",
     "hot": "The router is overheating: {{celsius}} °C",
@@ -69,7 +70,12 @@
     "down": "Core inbound",
     "up": "Core outbound",
     "peak": "peak this minute {{value}}",
-    "noPeak": "no peak yet"
+    "noPeak": "no peak yet",
+    "noData": "no data"
+  },
+  "coreGap": {
+    "stopped": "The core is not running, so there is no data.",
+    "silent": "No data is coming from the core."
   },
   "connections": {
     "title": "Open connections",

@@ -81,6 +81,8 @@ Out of scope: empty captions in the overview cards, configuration tabs, counters
 
 **Streaming screens** (overview, connections) bypass Query. There loading means "the first stream snapshot has not arrived": `sampledAt === null` in its store, and `null` instead of a tile value means a skeleton. A dash remains only for a value that does not exist at all.
 
+When core data will not arrive or is no longer current, a streaming block does not stay in loading and does not show old numbers. The block shows a short reason in place of its body — the core is not running, or no data is coming from the core — and a value tile shows a muted dash hidden from screen readers, with "no data" as its readable context. The reason applies once the daemon confirms the core service is not running, or when no core frame has arrived for the stream drop threshold (8 s) since the screen opened, since a confirmed start, or since the last frame while the daemon's own snapshots keep arriving. Summary cards built from the connection snapshot show the same reason, or loading until the first current snapshot, instead of claiming there are no connections. The action to start the core is named once, in the screen header, by the visible card and button. A confirmed start begins a new wait: frames received before it do not count.
+
 ### Scope and boundaries
 
 - `apps/web/src/app/router/`, `apps/web/src/app/ui/PendingPage.tsx`, `ErrorPage.tsx`;
