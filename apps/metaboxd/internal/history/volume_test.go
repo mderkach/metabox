@@ -2,6 +2,8 @@ package history_test
 
 import (
 	"testing"
+	"testing/synctest"
+	"time"
 
 	"metabox/internal/history"
 )
@@ -114,4 +116,113 @@ func TestVolumeRebasesOnProcessRestart(t *testing.T) {
 	if got, want := volume.Split(), (history.Split{Proxy: 100, Direct: 30}); got != want {
 		t.Errorf("split: got %+v, want %+v", got, want)
 	}
+}
+
+func TestVolumeReconcilesOutboundRowsAndRetainsKindTotals(t *testing.T) {
+	const m = 1 << 20
+	var volume history.Volume
+
+	volume.Observe(0, nil)
+	volume.Observe(50*m, []history.Flow{
+		{ID: "proxy", Kind: history.KindProxy, Outbound: "group", Server: "server", Bytes: 30 * m},
+		{ID: "direct", Kind: history.KindDirect, Outbound: "direct", Bytes: 20 * m},
+	})
+
+	traffic := volume.Traffic()
+	want := history.Split{Proxy: 30 * m, Direct: 20 * m}
+	if traffic.Split != want || traffic.Outbounds["group"].Bytes != want.Proxy || traffic.Outbounds["direct"].Bytes != want.Direct {
+		t.Fatalf("outbound volumes: got %+v, want 30 MiB proxy and 20 MiB direct through the core", traffic)
+	}
+	if len(traffic.Servers) != 1 || traffic.Servers["server"].Bytes != want.Proxy {
+		t.Fatalf("server volumes: got %+v, want only the proxy server with 30 MiB", traffic.Servers)
+	}
+	const wan = 100 * m
+	if bypass := wan - traffic.Split.Proxy - traffic.Split.Direct; bypass != 50*m {
+		t.Errorf("WAN bytes outside the core: got %d, want %d", bypass, 50*m)
+	}
+
+	volume.ObserveTraffic(50*m, nil, map[string]struct{}{"direct": {}})
+	traffic = volume.Traffic()
+	if traffic.Split != want || len(traffic.Outbounds) != 1 || traffic.Outbounds["direct"].Bytes != want.Direct || len(traffic.Servers) != 0 {
+		t.Fatalf("volumes after removing the proxy: got %+v, want kind totals retained and only the direct row", traffic)
+	}
+	volume.Observe(53*m, []history.Flow{
+		{ID: "proxy-back", Kind: history.KindProxy, Outbound: "group", Server: "server", Bytes: 3 * m},
+	})
+	if got := volume.Traffic(); got.Outbounds["group"].Bytes != 3*m || got.Servers["server"].Bytes != 3*m {
+		t.Errorf("returning tags: got %+v, want fresh 3 MiB counters", got)
+	}
+}
+
+func TestVolumeSpreadsRemainderWithinKindAndSeparatesDefaultRule(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		var volume history.Volume
+		volume.Observe(0, nil)
+		time.Sleep(2 * time.Second)
+
+		volume.Observe(11, []history.Flow{
+			{ID: "a", Kind: history.KindProxy, Outbound: "group", Server: "one", Bytes: 2},
+			{ID: "b", Kind: history.KindProxy, Outbound: "group", Server: "two", Final: true, Bytes: 1},
+			{ID: "c", Kind: history.KindDirect, Outbound: "direct", Bytes: 2},
+		})
+
+		traffic := volume.Traffic()
+		group := traffic.Outbounds["group"]
+		if group.Final == nil {
+			t.Fatal("default-rule traffic is missing")
+		}
+		if group.Bytes != 5 || group.Final.Bytes != 2 || traffic.Outbounds["direct"].Bytes != 4 ||
+			traffic.Split != (history.Split{Proxy: 7, Direct: 4}) {
+			t.Errorf("weighted distribution: got %+v, default %+v", traffic, group.Final)
+		}
+		if group.Rate != 2.5 || group.Final.Rate != 1 ||
+			group.Origin != "computed" || group.Final.Origin != "computed" ||
+			traffic.Servers["one"].Bytes != 5 || traffic.Servers["two"].Bytes != 2 {
+			t.Errorf("rates, origins or server allocation: got %+v, default %+v", traffic, group.Final)
+		}
+
+		time.Sleep(time.Second)
+		volume.Observe(11, nil)
+		if got := volume.Traffic(); got.Outbounds["group"].Rate != 0 || got.Outbounds["group"].Bytes != 5 {
+			t.Errorf("idle interval: got %+v, want zero rate with retained total", got)
+		}
+	})
+}
+
+func TestVolumeRebasesOutboundRowsWhenProcessTotalDecreases(t *testing.T) {
+	var volume history.Volume
+	volume.Observe(0, nil)
+	volume.Observe(15, []history.Flow{{ID: "a", Kind: history.KindProxy, Outbound: "group", Bytes: 15}})
+	volume.Observe(5, []history.Flow{{ID: "b", Kind: history.KindProxy, Outbound: "group", Bytes: 5}})
+	volume.Observe(20, []history.Flow{{ID: "b", Kind: history.KindProxy, Outbound: "group", Bytes: 20}})
+	if got := volume.Traffic(); got.Split.Proxy != 30 || got.Outbounds["group"].Bytes != 30 {
+		t.Errorf("process restart: got %+v, want 30 bytes after skipping the new baseline", got)
+	}
+
+	if got := (&history.Volume{}).Traffic(); got.Split != (history.Split{}) || len(got.Outbounds) != 0 || len(got.Servers) != 0 {
+		t.Errorf("daemon restart: got %+v, want empty counters", got)
+	}
+}
+
+func TestVolumeKeepsPreviouslyUnattributedBytesOutOfCurrentRate(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		const missed = 100 << 20
+		var volume history.Volume
+
+		volume.Observe(0, nil)
+		time.Sleep(time.Second)
+		volume.Observe(missed, nil)
+		time.Sleep(time.Second)
+		volume.Observe(missed+2, []history.Flow{
+			{ID: "current", Kind: history.KindProxy, Outbound: "group", Server: "server", Bytes: 1},
+		})
+
+		traffic := volume.Traffic()
+		if row := traffic.Outbounds["group"]; row.Bytes != missed+2 || row.Rate != 2 {
+			t.Errorf("outbound: got %+v, want %d cumulative bytes and 2 bytes/s", row, missed+2)
+		}
+		if row := traffic.Servers["server"]; row.Bytes != missed+2 || row.Rate != 2 {
+			t.Errorf("server: got %+v, want %d cumulative bytes and 2 bytes/s", row, missed+2)
+		}
+	})
 }

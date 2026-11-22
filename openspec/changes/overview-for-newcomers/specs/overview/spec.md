@@ -227,6 +227,12 @@ Overview SHALL show proxy and direct shares since daemon start, with volume, per
 - **WHEN** the overview opens
 - **THEN** the blocked figure says it is unavailable, not a count of the `block` lines alone
 
+#### Scenario: A log level change cannot recover earlier blocked connections
+
+- **GIVEN** a needed log line was hidden earlier in this daemon uptime
+- **WHEN** the running config starts logging every needed line
+- **THEN** the daemon still reports the uptime count as unavailable until the daemon restarts
+
 #### Scenario: A log level that hides the lines
 
 - **GIVEN** a running config whose `log.level` is above the level of those lines, or whose log is disabled

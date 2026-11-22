@@ -240,13 +240,29 @@ func run(log *slog.Logger, s settings) error {
 		clashHandler = clash
 	}
 
+	logReader := logs.New(logs.Exec, store, logs.Options{
+		Logread:      s.logread,
+		Process:      filepath.Base(s.binary),
+		ConfigDir:    s.configDir,
+		TruncateDirs: []string{s.configDir, "/var/run", "/tmp"},
+		Protected:    []string{store.Path(), store.ListsPath(), s.serviceDir},
+		PollInterval: logPollInterval,
+	})
+	blocked := logs.NewBlockedCounter(logReader, store.Path(), log)
+	blocked.Start()
+	defer blocked.Close()
+
+	outboundTags := clashapi.NewOutboundTags(store.Read)
 	deviceHistory := history.NewDevice(historyStepSeconds/int(systemInterval/time.Second), historyStepSeconds, historyPoints)
 	volume := &history.Volume{}
-	sysinfo := device.New(device.Options{Port: controller.Port, History: deviceHistory, Split: volume})
+	sysinfo := device.New(device.Options{
+		Port: controller.Port, History: deviceHistory, Split: volume,
+		Traffic: volume.Traffic, Blocked: blocked.Snapshot,
+	})
 	serviceState := httpapi.ServiceStream(service, singboxVersion, sysinfo.Alive, s.lang)
 
 	source := events.NewClashSource(
-		events.ClashSettings(controller),
+		events.ClashSettings(clashapi.ConfigResolver(outboundTags.Read)),
 		serviceState,
 		sysinfo.Encoded(log),
 		healthRequestTimeout,
@@ -280,11 +296,12 @@ func run(log *slog.Logger, s settings) error {
 	// `/connections` poll stays single.
 	connectionSizes := &history.Connections{}
 	hits := route.NewCounter(source, log, route.CounterOptions{
-		Interval:  connectionsInterval,
-		Retry:     streamRetryInterval,
-		Sizes:     connectionSizes,
-		Snapshots: hub.PublishConnections,
-		Volumes:   volume,
+		Interval:      connectionsInterval,
+		Retry:         streamRetryInterval,
+		Sizes:         connectionSizes,
+		Snapshots:     hub.PublishConnections,
+		Volumes:       volume,
+		TrafficConfig: outboundTags.Current,
 	})
 	hits.Start()
 	defer hits.Close()
@@ -342,14 +359,6 @@ func run(log *slog.Logger, s settings) error {
 	}
 
 	explainer := route.NewExplainer(source, s.lang)
-	logReader := logs.New(logs.Exec, store, logs.Options{
-		Logread:      s.logread,
-		Process:      filepath.Base(s.binary),
-		ConfigDir:    s.configDir,
-		TruncateDirs: []string{s.configDir, "/var/run", "/tmp"},
-		Protected:    []string{store.Path(), store.ListsPath(), s.serviceDir},
-		PollInterval: logPollInterval,
-	})
 	diagnoser := diag.New(plane, store, probe, diag.Options{
 		ProcNet: "/proc/net",
 		URL:     s.diagURL,

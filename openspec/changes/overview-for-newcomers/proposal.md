@@ -122,8 +122,8 @@ Refs:
   - AC-89 counted shares of the core volume and labelled them "through a proxy" and "direct through sing-box". AC-97 counts shares of the internet connection volume, so a second requirement about the same numbers would only repeat AC-97 with older labels.
   - Kept in AC-97: the daemon split by outbound kind (proxy, direct, block), the bytes spread by weight, the split kept with the AC-37 history, "direct is outside the proxy share", the blocked traffic shown apart (as a count of connections: they close at once, so their volume is close to zero), and the one-baseline layout at 375 px.
   - Dropped: the tiles, the label "direct through sing-box" (AC-94 says "core"), and the second percentage on the direct tile.
-  - Its done tasks are carried over as 1.2 and 1.3; the device check (#243) is task 2.6. Task 1.1 removes the folder and the links to it.
-  - Until task 1.1 lands, AC-89 stays defined in that folder and this change does not define it again: a second definition fails `make trace-check`.
+  - Its done tasks are carried over as 1.2 and 1.3; the device check (#243) is task 2.6. Task 1.1 removes the earlier change and updates active references.
+  - AC-89 is retained in the revision history.
 - **`rollback-of-a-breaking-config`** (AC-14) and **`recover-from-a-poisoned-subscription-cache`** (AC-91…AC-93): independent.
   - AC-100 shows what they produce: `rollback_failed` with its reason, and the subscription dropped from the cache.
   - This change adds only the status field and its dismissal for the panel (#364).

@@ -131,6 +131,7 @@ Overview shows routing information. The help section explains how routing works.
      - normal;
      - blocked at zero: shown as "0", not hidden;
      - blocked unavailable (the running `log.level` hides the lines of a kind the config uses, or the log is disabled; a partial count is never shown): "unavailable" with an (i) toggletip that names the level it needs (`debug` for rules with the `reject` action, `info` for a `block` outbound), says that `debug` writes several lines per connection, and that the level is changed in the config, in the `log` section, through Apply;
+     - blocked count incomplete because earlier log lines are missing: "unavailable" with help saying earlier lines for this uptime are missing;
      - blocked count: computed mark, its toggletip says it is counted from the core log since the daemon started;
      - if the estimate of traffic past the core is negative, its contribution to Direct is zero;
      - just started (under a minute): "collecting since the daemon started";

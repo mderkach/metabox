@@ -48,7 +48,7 @@ Overview SHALL show up/down traffic in real time, counters, memory and service s
 
 ### Requirement: AC-35 Overview shows device readings
 
-Overview SHALL show device readings: load and number of cores, board temperature, used memory out of total, outward interface speed, the traffic share of AC-89, resident memory and pid of the sing-box process, daemon memory and goroutines, router uptime. The daemon reads them from procfs and sysfs and returns them as a topic of the single stream; a missing individual source — thermal zone, default route, process — blanks its own field, not the whole topic.
+Overview SHALL show device readings: load and number of cores, board temperature, used memory out of total, outward interface speed, the share of internet traffic that went through a proxy, resident memory and pid of the sing-box process, daemon memory and goroutines, router uptime. The daemon reads them from procfs and sysfs and returns them as a topic of the single stream; a missing individual source — thermal zone, default route, process — blanks its own field, not the whole topic.
 
 #### Scenario: The daemon reads the readings from procfs and sysfs
 

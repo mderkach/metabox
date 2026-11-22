@@ -68,12 +68,15 @@ func LogOutput(data []byte) (string, error) {
 		return "", fmt.Errorf("read log.output: %w", err)
 	}
 
-	switch {
-	case cfg.Log.Disabled, cfg.Log.Output == "stderr", cfg.Log.Output == "stdout":
-		return "", nil
+	return logFile(cfg.Log.Output, cfg.Log.Disabled), nil
+}
+
+func logFile(output string, disabled bool) string {
+	if disabled || output == "stderr" || output == "stdout" {
+		return ""
 	}
 
-	return cfg.Log.Output, nil
+	return output
 }
 
 // BaseURL turns the controller address into the one the daemon itself can reach.

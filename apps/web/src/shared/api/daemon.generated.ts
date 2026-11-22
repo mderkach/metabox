@@ -123,6 +123,11 @@ export const MCP_PERMISSION = [
   'read',
 ] as const
 
+export const TRAFFIC_ORIGIN = [
+  'observed',
+  'computed',
+] as const
+
 export const CHECK_NAME = [
   'redirect_port',
   'tproxy_port',
@@ -630,6 +635,45 @@ export const ShareSchema = z.object({
   seconds: z.int(),
 })
 
+/** TrafficValue is the retained volume and the most recent interval rate in bytes per second. */
+export const TrafficValueSchema = z.object({
+  bytes: z.int(),
+  rate: z.number(),
+  origin: z.string(),
+})
+
+/** OutboundTraffic keeps traffic matched by regular rules apart from the default rule. */
+export const OutboundTrafficSchema = z.object({
+  tag: z.string(),
+  bytes: z.int(),
+  rate: z.number(),
+  origin: z.string(),
+  final: TrafficValueSchema.optional(),
+})
+
+/** ServerTraffic counts bytes at the server that left the group chain, excluding direct and blocked exits. */
+export const ServerTrafficSchema = z.object({
+  tag: z.string(),
+  bytes: z.int(),
+  rate: z.number(),
+  origin: z.string(),
+})
+
+/** BlockedKind describes a connection blocking mechanism in the applied config. */
+export const BlockedKindSchema = z.object({
+  used: z.boolean(),
+  visible: z.boolean(),
+})
+
+/** BlockedTraffic reports the observed count when every configured kind is visible. */
+export const BlockedTrafficSchema = z.object({
+  count: z.int().optional(),
+  origin: z.string(),
+  reject: BlockedKindSchema,
+  block: BlockedKindSchema,
+  incomplete: z.boolean().optional(),
+})
+
 /** Process is the readings of a foreign process. */
 export const ProcessSchema = z.object({
   pid: z.int(),
@@ -654,6 +698,9 @@ export const StatSchema = z.object({
   uplink: LinkSchema.optional(),
   /** Share is the volumes of the channel and of sing-box during the daemon observation. */
   share: ShareSchema,
+  outbounds: z.array(OutboundTrafficSchema).optional(),
+  servers: z.array(ServerTrafficSchema).optional(),
+  blocked: BlockedTrafficSchema.optional(),
   /** Singbox is empty when the process is not found: there may be no routing on the device at all. */
   singbox: ProcessSchema.optional(),
   daemon: DaemonSchema,
@@ -807,6 +854,8 @@ export const CatalogSchema = z.object({
 
 export type ApplyEnvelopeWire = z.infer<typeof ApplyEnvelopeSchema>
 export type AuthWire = z.infer<typeof AuthSchema>
+export type BlockedKindWire = z.infer<typeof BlockedKindSchema>
+export type BlockedTrafficWire = z.infer<typeof BlockedTrafficSchema>
 export type CachedRuleSetWire = z.infer<typeof CachedRuleSetSchema>
 export type CatalogWire = z.infer<typeof CatalogSchema>
 export type ChainWire = z.infer<typeof ChainSchema>
@@ -846,6 +895,7 @@ export type MatchWire = z.infer<typeof MatchSchema>
 export type MemoryWire = z.infer<typeof MemorySchema>
 export type MirrorWire = z.infer<typeof MirrorSchema>
 export type ModelWire = z.infer<typeof ModelSchema>
+export type OutboundTrafficWire = z.infer<typeof OutboundTrafficSchema>
 export type PasswordChangeWire = z.infer<typeof PasswordChangeSchema>
 export type PointWire = z.infer<typeof PointSchema>
 export type ProcessWire = z.infer<typeof ProcessSchema>
@@ -855,6 +905,7 @@ export type RuleHitsWire = z.infer<typeof RuleHitsSchema>
 export type RuleSetFilesWire = z.infer<typeof RuleSetFilesSchema>
 export type RuleWire = z.infer<typeof RuleSchema>
 export type RuntimeWire = z.infer<typeof RuntimeSchema>
+export type ServerTrafficWire = z.infer<typeof ServerTrafficSchema>
 export type ServiceWire = z.infer<typeof ServiceSchema>
 export type SessionWire = z.infer<typeof SessionSchema>
 export type SessionsWire = z.infer<typeof SessionsSchema>
@@ -862,6 +913,7 @@ export type ShareWire = z.infer<typeof ShareSchema>
 export type SplitWire = z.infer<typeof SplitSchema>
 export type StatWire = z.infer<typeof StatSchema>
 export type StatusWire = z.infer<typeof StatusSchema>
+export type TrafficValueWire = z.infer<typeof TrafficValueSchema>
 export type TransactionWire = z.infer<typeof TransactionSchema>
 export type VersionWire = z.infer<typeof VersionSchema>
 export type VersionsWire = z.infer<typeof VersionsSchema>

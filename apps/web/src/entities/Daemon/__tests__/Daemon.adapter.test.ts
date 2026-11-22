@@ -6,14 +6,17 @@ import {
   toDaemonStatus,
   toServiceFrame,
   toServiceState,
+  toSystemFrame,
   toTrafficFrame,
 } from '../model/Daemon.adapter';
 import { APPLY_PHASE, SERVICE_STATUS } from '../model/Daemon.model';
 import {
   CLASH_CONFIGS_FIXTURE,
   DAEMON_STATUS_FIXTURE,
+  OUTBOUND_SYSTEM_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
   SERVICE_UNREAD_FIXTURE,
+  SYSTEM_FIXTURE,
 } from './Daemon.fixture';
 
 describe('toDaemonStatus', () => {
@@ -101,5 +104,65 @@ describe('stream frames', () => {
   it('converts a valid frame to the model', () => {
     expect(toTrafficFrame({ up: 10, down: 20 })).toEqual({ up: 10, down: 20 });
     expect(toServiceFrame(SERVICE_RUNNING_FIXTURE)?.status).toBe(SERVICE_STATUS.Running);
+  });
+});
+
+describe('system telemetry', () => {
+  it('keeps the uplink share and the outbound and server counters from the same frame', () => {
+    expect(toSystemFrame(OUTBOUND_SYSTEM_FIXTURE)).toMatchObject({
+      share: OUTBOUND_SYSTEM_FIXTURE.share,
+      outbounds: OUTBOUND_SYSTEM_FIXTURE.outbounds,
+      servers: OUTBOUND_SYSTEM_FIXTURE.servers,
+      blocked: OUTBOUND_SYSTEM_FIXTURE.blocked,
+    });
+  });
+
+  it('keeps a default-route counter separate from the named outbound total', () => {
+    const frame = OUTBOUND_SYSTEM_FIXTURE;
+    const final = { bytes: 1_048_576, rate: 128, origin: 'computed' };
+    const [direct, proxy] = frame.outbounds;
+    const outbounds = [{ ...direct, final }, proxy];
+
+    expect(toSystemFrame({ ...frame, outbounds })?.outbounds).toEqual(outbounds);
+  });
+
+  it('retains a tag whose spelling is reserved as a JavaScript object key', () => {
+    const frame = OUTBOUND_SYSTEM_FIXTURE;
+    const outbounds = [...frame.outbounds, { ...frame.outbounds[0], tag: '__proto__' }];
+
+    expect(toSystemFrame({ ...frame, outbounds })?.outbounds).toEqual(outbounds);
+  });
+
+  it('distinguishes an unavailable blocked count from zero blocked connections', () => {
+    const frame = OUTBOUND_SYSTEM_FIXTURE;
+    const blocked = {
+      origin: 'computed',
+      reject: { used: true, visible: false },
+      block: { used: false, visible: true },
+    };
+
+    expect(toSystemFrame({ ...frame, blocked })?.blocked).toEqual(blocked);
+    expect(toSystemFrame({ ...frame, blocked: { ...frame.blocked, count: 0 } })?.blocked?.count).toBe(0);
+  });
+
+  it('keeps the reason a blocked total is incomplete after the log becomes visible', () => {
+    const frame = OUTBOUND_SYSTEM_FIXTURE;
+    const blocked = {
+      origin: 'computed',
+      incomplete: true,
+      reject: { used: true, visible: true },
+      block: { used: true, visible: true },
+    };
+
+    expect(toSystemFrame({ ...frame, blocked })?.blocked).toEqual(blocked);
+  });
+
+  it('accepts an older daemon frame without outbound telemetry', () => {
+    const stat = toSystemFrame(SYSTEM_FIXTURE);
+
+    expect(stat?.share).toEqual(SYSTEM_FIXTURE.share);
+    expect(stat?.outbounds).toBeUndefined();
+    expect(stat?.servers).toBeUndefined();
+    expect(stat?.blocked).toBeUndefined();
   });
 });
