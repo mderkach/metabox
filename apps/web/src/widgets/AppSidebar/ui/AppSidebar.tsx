@@ -1,11 +1,11 @@
 import { Link, useRouterState } from '@tanstack/react-router';
-import { PanelLeftClose } from 'lucide-react';
+import { CircleHelp, PanelLeftClose } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@shared/lib/utils';
 
 import { pickActiveNav, useSidebarCollapsed } from '../lib/AppSidebar.lib';
-import { NAV_ITEMS, NAV_TARGETS } from '../model';
+import { HELP_NAV_ITEM, NAV_TARGETS, SIDEBAR_SECTIONS } from '../model';
 import { AppSidebarControls } from './AppSidebarControls';
 import { AppSidebarLogo } from './AppSidebarLogo';
 
@@ -24,6 +24,8 @@ export function AppSidebar() {
   const sidebar = useSidebarCollapsed();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const active = pickActiveNav(pathname, NAV_TARGETS);
+
+  const isHelpActive = active === HELP_NAV_ITEM.to;
 
   return (
     <aside
@@ -60,7 +62,7 @@ export function AppSidebar() {
 
       <nav aria-label={t('nav.label')} className='p-2.5'>
         <ul className='flex flex-col gap-0.5'>
-          {NAV_ITEMS.map((item) => (
+          {SIDEBAR_SECTIONS.map((item) => (
             <li key={item.key}>
               {item.to !== undefined ? (
                 <Link
@@ -109,6 +111,21 @@ export function AppSidebar() {
           sidebar.collapsed ? 'flex-col items-center gap-2 px-2 py-3' : 'flex-col gap-3 px-4 py-3.5'
         )}
       >
+        <Link
+          to={HELP_NAV_ITEM.to}
+          title={t('nav.help')}
+          aria-label={sidebar.collapsed ? t('nav.help') : undefined}
+          activeOptions={{ exact: true }}
+          aria-current={isHelpActive ? 'page' : undefined}
+          className={cn(
+            ITEM_CLASS,
+            sidebar.collapsed ? 'w-full justify-center px-0' : '-mx-1.5',
+            isHelpActive ? ACTIVE_CLASS : 'text-muted-foreground hover:bg-sidebar-accent hover:text-foreground'
+          )}
+        >
+          <CircleHelp className='size-4 shrink-0' aria-hidden='true' />
+          {!sidebar.collapsed && t('nav.help')}
+        </Link>
         <AppSidebarControls collapsed={sidebar.collapsed} />
       </footer>
     </aside>

@@ -4,6 +4,7 @@
     "label": "Panel sections",
     "collapse": "Collapse the sidebar",
     "expand": "Expand the sidebar",
+    "help": "Help",
     "unavailable": "{{section}} — the section is not built yet"
   },
   "daemon": {

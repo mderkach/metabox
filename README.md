@@ -43,7 +43,7 @@ metabox installs on the router as one apk package. It contains the `metaboxd` da
 - Proxies: node groups with latency tests, subscription updates
 - Import a VLESS server from a link. The form lists skipped parameters before the server goes into the draft.
 - Devices from DHCP leases, with a per-device switch to route traffic through the core
-- How metabox works walks through one live connection and explains the panel terms.
+- How metabox works walks through one live connection and explains the panel terms. Open it from Help in the desktop sidebar footer or from More on a phone.
 - Overview: core status and controls, node switch, quick check, traffic, connections, top devices and nodes, and router load, temperature and memory
 - Core logs and traffic interception diagnostics
 - Read-only MCP endpoint for AI agents such as Claude Code
