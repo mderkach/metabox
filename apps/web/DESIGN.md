@@ -183,7 +183,7 @@ The interface reads as two layers. The prose layer (Geist) explains: screen titl
 - One accent, azure. Everything else colored is a domain signal: route action, health, chart series, log level, JSON syntax.
 - Monospace for config values, sans for explanations.
 - Flat surfaces with a 1px translucent edge; shadow only on floating layers.
-- Persistent left sidebar on desktop, bottom tab bar on phone (from 400px).
+- Persistent left sidebar on desktop and a bottom tab bar at narrow widths.
 
 ## Colors
 
@@ -271,13 +271,15 @@ Content is built from cards in a responsive grid: three columns on wide screens 
 
 Tables are full-width cards: a toolbar row (search field with a `/` shortcut hint, dashed facet filters, actions at the right), an uppercase column header, then rows of 48px with hairline separators and a footer count. Long lists are virtualized.
 
-Phone (from 400px): the sidebar becomes a bottom tab bar with five items and "More"; cards stack into one column; controls grow to a 44px touch target under a coarse pointer while desktop density stays unchanged.
+On narrow screens the sidebar becomes a bottom tab bar with five items and "More", and cards stack into one column. Controls provide a 44px touch target under a coarse pointer.
 
-Spacing follows a 4px grid; the working steps are 4, 8, 12, 16, 24.
+Spacing follows the 4px grid at the default text size. Containers set gutters and gaps, and the content grows within the available space. See the [responsive layout rules](./docs/guides/Architecture&Style.md#responsive-layout).
 
 ## Elevation & Depth
 
-Flat by default. Depth comes from tonal steps of the cold neutral ramp (sidebar darker than the screen, card lighter, popover lighter still) and from a 1px edge: `ring-1` of the foreground at 10% on cards. Shadows appear only on layers that float over content: dialogs, menus, the bottom sheet, the floating apply bar. Motion is short and functional: 240ms enter, 180ms exit, `cubic-bezier(0.16, 1, 0.3, 1)`; screen changes shift content 12px in the navigation direction; everything respects reduced motion.
+Flat by default. Depth comes from tonal steps of the cold neutral ramp (sidebar darker than the screen, card lighter, popover lighter still) and from a 1px edge: `ring-1` of the foreground at 10% on cards. Shadows appear only on layers that float over content: dialogs, menus, the bottom sheet, the floating apply bar.
+
+Short motion connects screen and state changes. The shell stays visually stable, and directional navigation moves the content in the direction of travel. Open and close states use motion that follows the position of the layer or disclosure. With reduced motion, the destination state is immediate. See the [transition animation rules](./docs/guides/Architecture&Style.md#transition-animation).
 
 ### Named Rules
 
