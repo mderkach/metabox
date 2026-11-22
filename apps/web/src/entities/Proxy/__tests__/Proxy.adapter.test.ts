@@ -175,6 +175,13 @@ describe('toProxyProviders', () => {
     return { providers: { sub: { ...CLASH_PROVIDERS_FIXTURE.providers['sub-eu'], name: 'sub', ...patch } } };
   }
 
+  it('retains the names of the servers alongside their count', () => {
+    const [provider] = toProxyProviders(CLASH_PROVIDERS_FIXTURE);
+
+    expect(provider.nodes).toBe(2);
+    expect(provider.nodeNames).toEqual(['sub-eu/eu-reality', 'sub-eu/eu-xhttp']);
+  });
+
   it('parses the update date and keeps the original string for markup', () => {
     const [eu] = toProxyProviders(CLASH_PROVIDERS_FIXTURE);
 

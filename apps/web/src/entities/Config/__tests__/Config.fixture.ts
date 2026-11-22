@@ -1,3 +1,4 @@
+import type { ExplanationWire } from '@shared/api/daemon.generated';
 import type { Config } from '@shared/api/generated';
 
 /**
@@ -677,3 +678,54 @@ export const CONFIG_FIXTURE: Config = {
     },
   ],
 };
+
+function standCondition(value: unknown): string {
+  if (!Array.isArray(value)) return String(value);
+
+  return value.length === 1 ? String(value[0]) : `[${value.join(' ')}]`;
+}
+
+const BASE_ROUTE_RULES = CONFIG_FIXTURE.route?.rules ?? [];
+export const WALK_RULE_NAME = 'Media sites';
+export const WALK_FIRST_RULE_INDEX = BASE_ROUTE_RULES.length - 1;
+
+export const STAND_CONFIG_FIXTURE: Config = {
+  ...CONFIG_FIXTURE,
+  outbounds: [
+    ...(CONFIG_FIXTURE.outbounds ?? []),
+    { type: 'selector', tag: 'media', outbounds: ['auto'] },
+    { type: 'urltest', tag: 'auto', providers: ['provider-one'] },
+    { type: 'vless', tag: 'server-b', server: 'server-b.example.invalid', server_port: 443, uuid: 'REDACTED' },
+  ],
+  route: {
+    ...CONFIG_FIXTURE.route,
+    rules: [
+      ...BASE_ROUTE_RULES.slice(0, WALK_FIRST_RULE_INDEX),
+      { domain: ['example.com'], outbound: 'media' },
+      { domain: ['docs.example.com'], outbound: 'server-b' },
+      { domain: ['home.example.com'], outbound: 'direct' },
+      ...BASE_ROUTE_RULES.slice(WALK_FIRST_RULE_INDEX),
+    ],
+  },
+  providers: [
+    ...(CONFIG_FIXTURE.providers ?? []),
+    { type: 'remote', tag: 'provider-one', url: 'https://example.invalid/provider-one' },
+  ],
+};
+
+/** Simulates the core's ordered rule list for the applied mock document. */
+export const STAND_PROCESS_RULES: ExplanationWire['rules'] = (STAND_CONFIG_FIXTURE.route?.rules ?? []).map(
+  ({ type = 'default', action = 'route', ...fields }, index) => {
+    const { outbound, ...conditions }: Record<string, unknown> = fields;
+
+    return {
+      origin: 'observed',
+      index,
+      type,
+      conditions: Object.entries(conditions)
+        .map(([key, value]) => `${key}=${standCondition(value)}`)
+        .join(' '),
+      action: typeof outbound === 'string' ? `${action}(${outbound})` : action,
+    };
+  }
+);

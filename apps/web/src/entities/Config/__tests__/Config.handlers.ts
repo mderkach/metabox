@@ -1,7 +1,8 @@
 import { http, HttpResponse } from 'msw';
 
 import { CONFIG_ENDPOINT } from '../api/Config.endpoints';
-import { CONFIG_FIXTURE } from './Config.fixture';
+import { nameValue } from '../model/Config.model';
+import { CONFIG_FIXTURE, STAND_CONFIG_FIXTURE, WALK_FIRST_RULE_INDEX, WALK_RULE_NAME } from './Config.fixture';
 
 /** Indent of the file on the device: the config is served as text, not as an object. */
 const JSON_INDENT = 2;
@@ -26,6 +27,18 @@ const LIST_TEXT = JSON.stringify(
 
 /** The daemon serves the file fingerprint in `ETag`, in quotes; the panel returns it in `If-Match`. */
 const CONFIG_ETAG = `"${'c'.repeat(SUM_LENGTH)}"`;
+export const STAND_CONFIG_ETAG = `"${'e'.repeat(SUM_LENGTH)}"`;
+
+const STAND_CONFIG_JSON = JSON.stringify(STAND_CONFIG_FIXTURE, null, JSON_INDENT);
+const STAND_CONFIG_TEXT = nameValue(STAND_CONFIG_JSON, ['route', 'rules', WALK_FIRST_RULE_INDEX], WALK_RULE_NAME);
+
+export const standConfigHandler = http.get(CONFIG_ENDPOINT.config(), () => {
+  if (STAND_CONFIG_TEXT === null) {
+    throw new TypeError('Walkthrough rule is missing from the mock configuration');
+  }
+
+  return HttpResponse.text(STAND_CONFIG_TEXT, { headers: { ETag: STAND_CONFIG_ETAG } });
+});
 
 /**
  * Mocks of the document and its history. The rollback to a version itself starts a transaction and

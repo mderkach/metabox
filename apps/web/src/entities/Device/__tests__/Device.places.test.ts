@@ -16,6 +16,7 @@ const PLACES: readonly { place: string; file: string }[] = [
   { place: 'ячейка и мобильная карточка', file: '/src/widgets/ConnectionTable/ui/ConnectionSourceCell.tsx' },
   { place: 'сортировка и фильтр колонки', file: '/src/widgets/ConnectionTable/ui/ConnectionTable.tsx' },
   { place: 'поиск, фасет, параметр адреса и выгрузка', file: '/src/pages/Connections/lib/Connections.lib.ts' },
+  { place: 'путь соединения в справке', file: '/src/pages/HowItWorks/model/HowItWorks.model.ts' },
   { place: 'сводка обзора', file: '/src/pages/Overview/ui/OverviewConnections.tsx' },
   { place: 'объяснение маршрута', file: '/src/widgets/RouteExplanation/ui/RouteExplanationTitle.tsx' },
   { place: 'форма правила', file: '/src/features/Rule/RuleEdit/model/RuleEdit.model.ts' },

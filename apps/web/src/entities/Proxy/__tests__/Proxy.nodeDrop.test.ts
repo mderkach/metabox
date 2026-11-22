@@ -4,7 +4,7 @@ import type { ProxyProvider } from '../model/Proxy.model';
 import { NODE_DROP, observeProviders, toNodeDrop, toProviderNodeChange } from '../model/Proxy.nodeDrop';
 
 function provider(name: string, nodes: number, raw: string): ProxyProvider {
-  return { name, nodes, update: { kind: 'at', at: new Date(raw), raw }, usage: null, expiresAt: null };
+  return { name, nodes, nodeNames: [], update: { kind: 'at', at: new Date(raw), raw }, usage: null, expiresAt: null };
 }
 
 const FIRST = '2026-09-10T12:00:00Z';

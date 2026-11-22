@@ -35,6 +35,18 @@ describe('AppSidebarBottomNav', () => {
     expect(within(nav).getByRole('link', { name: 'Устройства' })).toHaveAttribute('href', '/devices');
   });
 
+  it('puts How metabox works first in More and keeps five bottom links', async () => {
+    const user = userEvent.setup();
+    renderWithRouter(AppSidebarBottomNav);
+
+    const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
+    expect(within(nav).getAllByRole('link')).toHaveLength(5);
+    await user.click(within(nav).getByRole('button', { name: 'Ещё' }));
+
+    const sections = screen.getByRole('navigation', { name: 'Разделы' });
+    expect(within(sections).getAllByRole('link')[0]).toHaveAccessibleName('Как работает metabox');
+  });
+
   it('marks a stopped sing-box on the "More" item, not only inside its sheet', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json({ ...SERVICE_RUNNING_FIXTURE, status: 'stopped' }))

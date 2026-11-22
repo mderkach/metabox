@@ -1,0 +1,67 @@
+import { useId } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import type { RuleEditorSearch } from '@entities/Route';
+import { cn } from '@shared/lib/utils';
+
+import { WALK_TERMS, type WalkTerm } from '../model/HowItWorks.terms';
+import { HowItWorksTermPanel } from './HowItWorksTermPanel';
+
+export function HowItWorksTerms({
+  selected,
+  onSelect,
+  inline,
+  ruleSearch,
+  ruleSetTag,
+  groupExample,
+}: {
+  selected: WalkTerm;
+  onSelect: (term: WalkTerm) => void;
+  inline: boolean;
+  ruleSearch?: RuleEditorSearch;
+  ruleSetTag?: string;
+  groupExample: boolean;
+}) {
+  const { t } = useTranslation('pages/HowItWorks');
+  const listId = useId();
+
+  return (
+    <section className='grid gap-3'>
+      <h2 className='text-base font-semibold'>{t('terms.heading')}</h2>
+      <ul className='grid gap-2 md:grid-cols-3'>
+        {WALK_TERMS.map((term) => (
+          <li key={term} className={cn('min-w-0', inline && selected === term && 'grid gap-2')}>
+            <button
+              type='button'
+              aria-pressed={selected === term}
+              aria-labelledby={`${listId}-${term}-title`}
+              aria-describedby={`${listId}-${term}-description`}
+              className={cn(
+                'grid size-full gap-1 rounded-lg border p-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+                selected === term ? 'border-selected-edge bg-selected' : 'border-border bg-card hover:bg-muted'
+              )}
+              onClick={() => {
+                onSelect(term);
+              }}
+            >
+              <span id={`${listId}-${term}-title`} className='text-sm font-semibold'>
+                {t(`terms.${term}.title`)}
+              </span>
+              <span id={`${listId}-${term}-description`} className='text-sm text-muted-foreground'>
+                {t(`terms.${term}.description`)}
+              </span>
+            </button>
+            {inline && selected === term && (
+              <HowItWorksTermPanel
+                term={term}
+                ruleSearch={ruleSearch}
+                ruleSetTag={ruleSetTag}
+                groupExample={groupExample}
+              />
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}

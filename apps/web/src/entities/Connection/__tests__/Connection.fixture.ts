@@ -48,6 +48,41 @@ function connection(id: string, input: ConnectionInput): ConnectionWire {
   };
 }
 
+const WALK_DEVICE_ADDRESS = '192.168.1.121';
+
+export const WALK_CONNECTIONS_FIXTURE = [
+  connection('walk-group', {
+    host: 'example.com',
+    sourceIP: WALK_DEVICE_ADDRESS,
+    chains: ['server-a', 'auto', 'media'],
+    rule: 'domain=example.com',
+    action: 'route(media)',
+    upload: 4200,
+    download: 29400,
+    startedSecondsAgo: 64,
+  }),
+  connection('walk-server', {
+    host: 'docs.example.com',
+    sourceIP: WALK_DEVICE_ADDRESS,
+    chains: ['server-b'],
+    rule: 'domain=docs.example.com',
+    action: 'route(server-b)',
+    upload: 2400,
+    download: 12800,
+    startedSecondsAgo: 37,
+  }),
+  connection('walk-direct', {
+    host: 'home.example.com',
+    sourceIP: WALK_DEVICE_ADDRESS,
+    chains: ['direct'],
+    rule: 'domain=home.example.com',
+    action: 'route(direct)',
+    upload: 1900,
+    download: 4800,
+    startedSecondsAgo: 23,
+  }),
+];
+
 const CONNECTIONS: ConnectionWire[] = [
   connection('962b2d06-f296-42bb-af39-b96f2fac2cee', {
     host: 'video.example',

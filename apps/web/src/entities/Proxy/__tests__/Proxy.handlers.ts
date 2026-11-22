@@ -62,7 +62,10 @@ export const proxyHandlers = [
  * State lives in the factory closure, so it cannot get into tests:
  * they use `proxyHandlers`, which has no state of its own.
  */
-export function createStatefulProxyHandlers() {
+export function createStatefulProxyHandlers(
+  initialProxies = CLASH_PROXIES_FIXTURE,
+  initialProviders = CLASH_PROVIDERS_FIXTURE
+) {
   const chosen = new Map<string, string>();
   const silent = new Set<string>();
   /** Subscription → the time of its last manual update. */
@@ -71,7 +74,7 @@ export function createStatefulProxyHandlers() {
   // The mock answers in the wire shape, so the selection is set right in it:
   // the model `withSelectedNode` works with groups that do not exist here yet.
   function snapshot(): ClashProxiesWire {
-    const proxies = { ...CLASH_PROXIES_FIXTURE.proxies };
+    const proxies = { ...initialProxies.proxies };
 
     for (const [group, node] of chosen) {
       if (Object.hasOwn(proxies, group)) {
@@ -87,7 +90,7 @@ export function createStatefulProxyHandlers() {
   }
 
   function providers(): ClashProvidersWire {
-    const result = { ...CLASH_PROVIDERS_FIXTURE.providers };
+    const result = { ...initialProviders.providers };
 
     for (const [name, updatedAt] of updated) {
       if (Object.hasOwn(result, name)) {
