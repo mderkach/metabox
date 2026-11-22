@@ -2,15 +2,18 @@ import { queryOptions, useMutationState, useQuery, type Mutation } from '@tansta
 import { useCallback, useMemo } from 'react';
 
 import { CACHE_TIME, decodeResponse } from '@shared/api';
+import { LatencyHistorySchema } from '@shared/api/daemon.generated';
 
 import { toFailedProbes, toProxyProviders, toProxyRuntime } from '../model/Proxy.adapter';
+import { LATENCY_LEVEL, toServerLatencies } from '../model/Proxy.latency';
 import type { ProbeOutcome } from '../model/Proxy.model';
-import { getProxies, getProxyProviders } from './Proxy.api';
+import { getProxies, getProxyLatency, getProxyProviders } from './Proxy.api';
 import { ClashProvidersSchema, ClashProxiesSchema, type ClashProxiesWire } from './Proxy.schema';
 
 export const PROXY_QUERY = {
   all: ['proxy'] as const,
   list: () => [...PROXY_QUERY.all, 'list'] as const,
+  latency: () => [...PROXY_QUERY.all, 'latency'] as const,
   providers: () => [...PROXY_QUERY.all, 'providers'] as const,
 } as const;
 
@@ -70,6 +73,38 @@ export function useProxies() {
   const select = useCallback((wire: ClashProxiesWire) => toProxyRuntime(wire, failed), [failed]);
 
   return useQuery({ ...getProxiesOptions(), select });
+}
+
+export function useProxyLatency(
+  core: {
+    daemon: string | undefined;
+    pid: number | undefined;
+    startedAt: number | null;
+  },
+  enabled: boolean
+) {
+  return useQuery({
+    queryKey: [...PROXY_QUERY.latency(), core.daemon, core.pid, core.startedAt],
+    queryFn: async (context) => decodeResponse(LatencyHistorySchema, await getProxyLatency(context), 'server latency'),
+    enabled,
+    select: toServerLatencies,
+    placeholderData: (previous, previousQuery) => {
+      const [, , daemon] = previousQuery?.queryKey ?? [];
+
+      if (previous === undefined || daemon !== core.daemon) return undefined;
+
+      return {
+        ...previous,
+        servers: previous.servers.map((server) => ({
+          ...server,
+          current: undefined,
+          level: LATENCY_LEVEL.NoMeasurement,
+        })),
+      };
+    },
+    staleTime: CACHE_TIME.Minute,
+    refetchInterval: CACHE_TIME.Minute,
+  });
 }
 
 export function useProxyProviders() {

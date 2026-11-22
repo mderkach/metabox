@@ -14,7 +14,7 @@ import (
 var mirrored = map[string][]string{
 	"apply":     {"Phase", "ReasonCode", "Transaction"},
 	"config":    {"Version", "ListStat"},
-	"history":   {"Point", "DevicePoint"},
+	"history":   {"Point", "DevicePoint", "LatencyLevel", "LatencyResult", "LatencyMedian", "ServerLatency"},
 	"devices":   {"NameSource", "Device"},
 	"dataplane": {"AccessMode", "Model", "AppliedReason", "FieldReason", "FieldError"},
 	"logs":      {"Level", "Source", "Entry"},

@@ -19,9 +19,11 @@ import {
   SYSTEM_FIXTURE,
   TRAFFIC_HISTORY_FIXTURE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
+import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
 import { DIAG_ENDPOINT } from '@entities/Diag';
 import { DIAG_REPORT_FIXTURE } from '@entities/Diag/__tests__/Diag.fixture';
 import { PROXY_ENDPOINT } from '@entities/Proxy';
+import { CHECKED_AT, CLASH_PROXIES_FIXTURE } from '@entities/Proxy/__tests__/Proxy.fixture';
 import { proxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
 
 import { OverviewPage } from '../ui/OverviewPage';
@@ -39,11 +41,13 @@ function serveStatus(configPath?: string, singboxVersion = SCHEMA_VERSION) {
     // The service card and the verdict in the header read the same state: without
     // the mock the screen would show "state not read" instead of data.
     http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
+    http.get(PROXY_ENDPOINT.latency(), () => HttpResponse.json({ servers: [] })),
     http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json({ proxies: {} })),
     http.get(DAEMON_ENDPOINT.history(), () => HttpResponse.json(TRAFFIC_HISTORY_FIXTURE)),
     // The connection stream reads the config for outbound types: without the mock the summary
     // would be computed by the substring table, not by the document.
-    http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(MINIMAL_CONFIG))
+    http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(MINIMAL_CONFIG)),
+    ...createDeviceHandlers()
   );
 }
 
@@ -108,7 +112,7 @@ describe('overview screen', () => {
 
     renderWithRouter(OverviewPage);
 
-    expect(await screen.findByText('Ядро')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Ядро', level: 3 })).toBeInTheDocument();
     expect(screen.queryByText('Память Go')).not.toBeInTheDocument();
   });
 
@@ -160,7 +164,7 @@ describe('overview screen', () => {
     renderWithRouter(OverviewPage);
 
     expect(await screen.findAllByText('Живых соединений нет')).not.toHaveLength(0);
-    expect(await screen.findByText('Групп с выбранным выходом нет')).toBeInTheDocument();
+    expect(await screen.findByText('Нет доступных серверов')).toBeInTheDocument();
   });
 
   // A measurement changes the numbers in place: visible to the eye, and for a screen reader the result
@@ -179,8 +183,92 @@ describe('overview screen', () => {
     await user.click(await screen.findByRole('button', { name: 'Проверить' }));
 
     await waitFor(() => {
-      expect(region).toHaveTextContent('Задержка выбранных серверов обновлена');
+      expect(region).toHaveTextContent('Задержка обновлена');
     });
+  });
+
+  it('gates current delay on a manual check in this core run and retains history after restart', async () => {
+    const tag = 'standalone';
+    const recent = [{ at: CHECKED_AT, delay_ms: 55 }];
+    const current = { at: '2026-09-10T19:30:00Z', delay_ms: 120 };
+    const requested = vi.fn<() => void>();
+    let checked = false;
+    let restarted = false;
+    let available = true;
+    const automatic = { at: '2026-09-10T19:32:00Z', delay_ms: 80 };
+    const runtime = { ...SYSTEM_FIXTURE, thermal: [], singbox: { pid: 5872, rss: 85_913_600 } };
+    RuntimeStore.getState().pushSystem(runtime);
+    server.use(
+      http.get(PROXY_ENDPOINT.proxies(), () =>
+        HttpResponse.json({
+          proxies: {
+            direct: CLASH_PROXIES_FIXTURE.proxies.direct,
+            [tag]: { name: tag, type: 'VLESS', udp: true, history: [{ time: CHECKED_AT, delay: restarted ? 80 : 70 }] },
+          },
+        })
+      ),
+      http.get(PROXY_ENDPOINT.latency(), () =>
+        HttpResponse.json({
+          available,
+          servers: [
+            {
+              tag,
+              recent: [...recent, ...(checked ? [current] : []), ...(restarted ? [automatic] : [])],
+              hourly: [],
+              usual_ms: 55,
+              ...(checked && !restarted ? { current, level: 'above_norm' } : { level: 'no_measurement' }),
+              origin: 'computed',
+            },
+          ],
+        })
+      ),
+      http.get(PROXY_ENDPOINT.proxyDelay(tag), () => {
+        requested();
+        checked = true;
+
+        return HttpResponse.json({ delay: current.delay_ms, time: current.at });
+      })
+    );
+    const user = userEvent.setup();
+
+    renderWithRouter(OverviewPage);
+
+    const check = await screen.findByRole('button', { name: 'Проверить задержку standalone' });
+    expect(screen.queryByRole('button', { name: 'Проверить задержку direct' })).not.toBeInTheDocument();
+    expect(screen.getByText('Нет замера')).toBeInTheDocument();
+    expect(screen.queryByText('70 мс')).not.toBeInTheDocument();
+    expect(requested).not.toHaveBeenCalled();
+
+    const details = await screen.findByRole('group', { name: 'Замеры standalone' });
+    await user.click(within(details).getByText('Последние замеры'));
+    expect(details).toHaveAttribute('open');
+    expect(within(details).getByText('55 мс')).toBeVisible();
+
+    await user.click(check);
+    expect(await screen.findByText('Выше нормы')).toBeInTheDocument();
+    expect(screen.getByText('Обычно 55 мс (расчёт)')).toBeInTheDocument();
+    expect(screen.queryByText('Нет замера')).not.toBeInTheDocument();
+
+    restarted = true;
+    act(() => {
+      RuntimeStore.getState().pushSystem({ ...runtime, singbox: { ...runtime.singbox, pid: 5873 } });
+    });
+
+    expect(await screen.findByText('Нет замера')).toBeInTheDocument();
+    expect(await screen.findByText('Обычно 55 мс (расчёт)')).toBeInTheDocument();
+    expect(screen.queryByText('Выше нормы')).not.toBeInTheDocument();
+    expect(await within(details).findByText('120 мс')).toBeVisible();
+    expect(await within(details).findByText('80 мс')).toBeVisible();
+
+    available = false;
+    act(() => {
+      RuntimeStore.getState().pushSystem({ ...runtime, singbox: { ...runtime.singbox, pid: 5874 } });
+    });
+
+    expect(await screen.findByText('Замер недоступен')).toBeInTheDocument();
+    expect(check).toHaveAttribute('aria-disabled', 'true');
+    expect(within(details).getByText('80 мс')).toBeVisible();
+    expect(requested).toHaveBeenCalledTimes(1);
   });
 
   // A URL test picks its node itself: a switch there would be undone by the next measurement.

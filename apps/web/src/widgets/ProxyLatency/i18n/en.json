@@ -1,5 +1,12 @@
 {
   "title": "Node delay",
-  "scale": "scale 0–{{ceiling}} ms, fast up to {{fast}} ms",
-  "empty": "No groups with a selected node"
+  "scale": "scale 0–{{ceiling}} ms",
+  "empty": "No servers available",
+  "usual": "Usually {{value}} ms",
+  "usualComputed": "Usually {{value}} ms (computed)",
+  "aboveNorm": "Above usual",
+  "aboveCeiling": "Above limit",
+  "history": "Recent measurements",
+  "historyServer": "Measurements for {{name}}",
+  "testServer": "Test delay for {{name}}"
 }

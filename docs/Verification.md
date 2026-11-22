@@ -618,6 +618,24 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-107 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
 | AC-107 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `opens the verified applied rule from the walk`                                                         |
 
+### Server latency
+
+| ID     | Kind    | File                                                          | Check                                                                                      |
+| ------ | ------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| AC-102 | go-test | `apps/metaboxd/internal/clashapi/latency_test.go`             | `TestReadLatencyProjectsServersAndPreservesZero`                                           |
+| AC-102 | go-test | `apps/metaboxd/internal/clashapi/latency_test.go`             | `TestReadLatencyDistinguishesEmptySnapshotFromUnavailable`                                 |
+| AC-102 | go-test | `apps/metaboxd/internal/clashapi/latency_test.go`             | `TestIsLatencyServerChecksExactEscapedTag`                                                 |
+| AC-102 | go-test | `apps/metaboxd/internal/history/latency_test.go`              | `TestLatencyWaitsForManualCheckAfterEachCoreStart`                                         |
+| AC-102 | go-test | `apps/metaboxd/internal/history/latency_test.go`              | `TestLatencyDoesNotTurnStalePollsOrRemovedServersIntoFailure`                              |
+| AC-102 | go-test | `apps/metaboxd/internal/history/latency_test.go`              | `TestLatencyUsesCompletedHourlyMediansAndThreeSlowChecks`                                  |
+| AC-102 | go-test | `apps/metaboxd/internal/history/latency_test.go`              | `TestLatencyBoundsRetainedObservationsAndServers`                                          |
+| AC-102 | go-test | `apps/metaboxd/internal/history/latency_test.go`              | `TestLatencyBoundsTheSamplesUsedForAnHourlyMedian`                                         |
+| AC-102 | go-test | `apps/metaboxd/internal/events/latency_test.go`               | `TestLatencyMonitorRecordsManualProbeWithoutRevivingOldCore`                               |
+| AC-102 | go-test | `apps/metaboxd/internal/events/latency_test.go`               | `TestLatencyMonitorCountsProbeOnceWhenCacheUpdatesBeforeResponse`                          |
+| AC-102 | go-test | `apps/metaboxd/internal/device/device_test.go`                | `TestControllerEpochTracksListenerOwnerAndStart`                                           |
+| AC-102 | go-test | `apps/metaboxd/internal/httpapi/latency_test.go`              | `TestLatencyEndpointKeepsHistoryWithoutCurrentMeasurement`                                 |
+| AC-102 | vitest  | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx` | `gates current delay on a manual check in this core run and retains history after restart` |
+
 ## Checked by hand on purpose
 
 These parts stay by hand: a test on the bench or in CI would not show them. A row names the scenario and why it cannot be automated.

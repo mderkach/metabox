@@ -7,7 +7,10 @@ export {
   PROXY_QUERY,
   useProxies,
   useProxyProviders,
+  useProxyLatency,
 } from './api/Proxy.query';
+export { LATENCY_LEVEL, isLatencyServer, serverDelay, toServerDelayLabel } from './model/Proxy.latency';
+export type { ServerLatency, ServerLatencyPoint, ServerLatencies } from './model/Proxy.latency';
 export { toDelayLabel } from './model/Proxy.delay';
 export { isProbeFailure, toProxyRuntime, withSelectedNode } from './model/Proxy.adapter';
 export { useProviderNodeChanges } from './model/Proxy.hooks';
