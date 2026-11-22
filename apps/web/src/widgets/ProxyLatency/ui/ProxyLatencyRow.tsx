@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { LATENCY_LEVEL, serverDelay, toDelayLabel, toServerDelayLabel, type ServerLatency } from '@entities/Proxy';
+import { LATENCY_LEVEL, toDelayLabel, toLatencyReading, toServerDelayLabel, type ServerLatency } from '@entities/Proxy';
 import { Button } from '@shared/ui';
 
 import { ProxyLatencyMeter } from './ProxyLatencyMeter';
@@ -30,9 +30,7 @@ export function ProxyLatencyRow({
 }) {
   const { t, i18n } = useTranslation('widgets/ProxyLatency');
   const recent = latency?.recent ?? [];
-  const delay = serverDelay(latency);
-  const usual = manualNorm ?? latency?.computedUsualMS ?? (legacyNorm ? latency?.usualMS : undefined) ?? null;
-  const level = latency?.level;
+  const { usual, level, meter } = toLatencyReading(latency, manualNorm, legacyNorm);
 
   return (
     <li className='grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 text-xs'>
@@ -62,7 +60,7 @@ export function ProxyLatencyRow({
         {level === LATENCY_LEVEL.AboveNorm && <span className='text-signal-warn'>{t('aboveNorm')}</span>}
         {level === LATENCY_LEVEL.AboveCeiling && <span className='text-signal-warn'>{t('aboveCeiling')}</span>}
       </p>
-      <ProxyLatencyMeter node={delay} />
+      <ProxyLatencyMeter node={meter} />
       {recent.length > 0 && (
         <details aria-label={t('historyServer', { name })} className='col-span-2'>
           <summary className='w-fit cursor-pointer rounded-sm py-1 text-muted-foreground select-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none pointer-coarse:min-h-11'>

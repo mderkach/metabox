@@ -184,20 +184,17 @@ Overview shows routing information. The help section explains how routing works.
 9. **Proxies: labels and usual latency (AC-104): "What do I call this outbound, and what latency is usual for it?"**
    - Content:
      - a group header shows its label in regular type and the tag under it in small monospace, or the tag alone; a pencil next to the name, outside the selection control, with the accessible name "Label: ‹tag›";
-     - a server row, also of a subscription server, shows the label and tag the same way, and the usual latency with a "computed" or "set by you" mark; a pencil in the row with the accessible name "Label and usual latency: ‹tag›";
+     - a server row, also of a subscription server, shows the label and tag the same way. Its own label pencil opens the label field. The norm belongs to a separate inline control ([AC-113](../../specs/proxies/spec.md#requirement-ac-113-each-servers-norm-is-edited-in-its-proxies-row));
      - mentions of a tag elsewhere (a member of another group) show the label without a pencil.
-   - Edit in place, as the device rename on Devices. The fields follow AC-104:
-     - a group: one field, the label (up to 64 characters; hint "Shown instead of the tag wherever an outbound is chosen. Empty: the tag again.");
-     - a server: two fields, the label and the usual latency (1 to 10 000 ms; hint "From the last day's history: ‹N› ms. Empty: computed from history."); the current latency stays in view above the fields;
-     - Save and Cancel; Escape cancels and returns focus to the pencil; errors under the field with `role="alert"`.
-   - Saved: the daemon stores it at once, no draft and no Apply; the mark changes to "set by you"; a toast and the live region say "‹tag› is now called ‹label›. Nothing to apply."
+   - Edit a group or server label in place, as on Devices. The label accepts up to 64 characters. Its hint reads "Shown instead of the tag wherever an outbound is chosen. Empty: the tag again." Saving a label leaves the server's saved norm intact and the current latency stays in view. The form has Save and Cancel. Escape cancels and returns focus to the pencil. Errors appear under the field with `role="alert"`.
+   - Saved labels go to the daemon at once, with no draft and no Apply. A toast and the live region say "‹tag› is now called ‹label›. Nothing to apply." The norm control's save and reset states follow AC-113.
    - "Labels without an outbound": a block at the bottom of Proxies, only when such entries exist. A row has the label, the tag, the usual latency, "Move to…" (picks a tag of the config or of the runtime list, subscription servers included, without an entry) and "Delete" (destructive outline, undo in the toast). A line says the tag may come back after a subscription update, which is why the daemon does not delete such entries itself.
    - States:
      - no entries: no marks, the tag alone;
      - live latency updates while a field is open do not reset the field or the focus;
      - `outbounds.json` broken, the endpoints are not registered: no pencils, tags only;
      - long labels (64 characters) and long subscription tags truncate with the full text in the accessible name;
-     - 375 px: the fields stack, buttons are 44 px tall, the row grows and the list moves down.
+     - 375 px: the label form stacks and its buttons are 44 px tall. The compact norm control reserves its own space as specified in AC-113.
 
 **Interaction and layout.**
 

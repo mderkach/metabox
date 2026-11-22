@@ -647,15 +647,26 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-104 | go-test | `apps/metaboxd/internal/history/latency_test.go`                      | `TestLatencyAppliesManualNormWithoutLosingComputedNorm`                            |
 | AC-104 | vitest  | `apps/web/src/pages/Overview/__tests__/OverviewPage.browser.test.tsx` | `shows member labels before tags and sends the selected tag to the core`           |
 | AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `edits one group label in place and returns focus to the pencil on Escape`         |
-| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `edits both server fields while keeping the current delay visible`                 |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `edits the server label independently and keeps the current delay visible`         |
 | AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `saves a label through the daemon without changing the config draft or the core`   |
-| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `clears an encoded server tag entry and shows the computed norm again`             |
-| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `does not label an old manual norm as computed while refreshed history is pending` |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `clears a label and retains the manual norm for an encoded server tag`             |
+| AC-113 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `does not label an old manual norm as computed while refreshed history is pending` |
 | AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `lists unused tags apart and preserves object key names`                           |
 | AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `moves unused metadata to a subscription server before clearing its old tag`       |
 | AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `asks before overwrite and keeps the source if removing it fails`                  |
 | AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `deletes unused metadata and can restore it from the toast`                        |
 | AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `shows tags without editing buttons when metadata endpoints are unavailable`       |
+
+### Compact norm editor
+
+The layout matrix runs at 320 and 375 px with touch and at 901, 1101, 2213 and 2711 px, all in both themes. It checks stable row height and the positions of the field, action slot and neighbors through editing, Save and both reset paths.
+
+| ID     | Kind   | File                                                          | Check                                                                                              |
+| ------ | ------ | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| AC-113 | e2e    | `apps/web/e2e/proxyLatencyNorm.e2e.test.ts`                   | `keeps the row and controls fixed in`                                                              |
+| AC-113 | e2e    | `apps/web/e2e/proxyLatencyNorm.e2e.test.ts`                   | `clears the norm immediately when a raw sample has no hourly median`                               |
+| AC-113 | e2e    | `apps/web/e2e/proxyLatencyNorm.e2e.test.ts`                   | `updates the chart from current automatic data while refetch waits and preserves no-answer status` |
+| AC-113 | vitest | `apps/web/src/entities/Proxy/__tests__/Proxy.latency.test.ts` | `keeps the delay but withholds a stale warning when the current streak cannot be proven`           |
 
 ### Secondary action layout
 

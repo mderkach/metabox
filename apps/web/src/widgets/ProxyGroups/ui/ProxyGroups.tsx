@@ -3,11 +3,13 @@ import { useTranslation } from 'react-i18next';
 
 import {
   GROUP_TYPES,
+  isLatencyServer,
   type OutboundMetadataMap,
   type ProxyGroup,
   type ProxyNode,
   type ServerLatencies,
 } from '@entities/Proxy';
+import { cn } from '@shared/lib/utils';
 import {
   Alert,
   AlertDescription,
@@ -26,6 +28,9 @@ import { ProxyGroupsLegend } from './ProxyGroupsLegend';
 import type { ProxyNodeDiagnostics } from './ProxyNodeDiagnostic';
 import { ProxyNodesTest } from './ProxyNodesTest';
 import { ProxyNodeTile } from './ProxyNodeTile';
+import { ProxyNormHeading } from './ProxyNormHeading';
+
+const NODE_TILE_GRID = 'grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3';
 
 const NO_OP = () => undefined;
 
@@ -73,6 +78,9 @@ export function ProxyGroups({
   const ungrouped =
     metadata === undefined ? (standaloneDiagnostics ?? []) : nodes.filter((node) => !primaryGroup.has(node.name));
 
+  const outbounds = groups.length > 0 ? ungrouped : nodes;
+  const showNorms = metadata !== undefined && outbounds.some(isLatencyServer);
+
   if (groups.length > 0) {
     return (
       <div className='flex flex-col gap-3'>
@@ -95,14 +103,15 @@ export function ProxyGroups({
           ))}
         </ul>
         {ungrouped.length > 0 && (
-          <Card>
-            <CardHeader className='border-b'>
+          <Card className={showNorms ? 'gap-0 py-0' : undefined}>
+            <CardHeader className={cn('border-b', showNorms && 'py-2')}>
               <CardTitle className={SECTION_HEADING}>
                 <h3>{t('empty.outbounds')}</h3>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <ul className='grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3'>
+            <CardContent className={cn('flex flex-col', showNorms ? 'px-0' : 'gap-2')}>
+              {showNorms && <ProxyNormHeading />}
+              <ul className={showNorms ? 'divide-y divide-border' : NODE_TILE_GRID}>
                 {ungrouped.map((node) => (
                   <ProxyNodeTile
                     key={node.name}
@@ -133,8 +142,8 @@ export function ProxyGroups({
         <AlertDescription>{t('empty.description')}</AlertDescription>
       </Alert>
 
-      <Card>
-        <CardHeader className='border-b'>
+      <Card className={showNorms ? 'gap-0 py-0' : undefined}>
+        <CardHeader className={cn('border-b', showNorms && 'py-2')}>
           <CardTitle className={SECTION_HEADING}>
             <h3>{t('empty.outbounds')}</h3>
           </CardTitle>
@@ -147,9 +156,10 @@ export function ProxyGroups({
             />
           </CardAction>
         </CardHeader>
-        <CardContent className='flex flex-col gap-3'>
-          <ProxyGroupsLegend />
-          <ul className='grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3'>
+        <CardContent className={cn('flex flex-col', showNorms ? 'px-0' : 'gap-3')}>
+          {!showNorms && <ProxyGroupsLegend />}
+          {showNorms && <ProxyNormHeading />}
+          <ul className={showNorms ? 'divide-y divide-border' : NODE_TILE_GRID}>
             {nodes.map((node) => (
               <ProxyNodeTile
                 key={node.name}

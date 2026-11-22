@@ -1,0 +1,52 @@
+.row,
+.heading {
+  display: grid;
+  grid-template-areas: 'identity delay' 'norm norm' 'status status';
+  grid-template-columns: minmax(0, 1fr) 4.5rem;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  padding: 0.3125rem var(--card-spacing);
+}
+
+.heading {
+  grid-template-areas: 'norm norm';
+}
+
+.identity {
+  grid-area: identity;
+}
+
+.delay {
+  grid-area: delay;
+  justify-self: end;
+}
+
+.reading {
+  grid-area: reading;
+}
+
+.norm {
+  grid-area: norm;
+  min-width: 0;
+}
+
+.status {
+  grid-area: status;
+  min-width: 0;
+}
+
+@media (min-width: 901px) {
+  .row,
+  .heading {
+    grid-template-areas: 'identity delay norm status';
+    grid-template-columns: minmax(0, 1fr) 4.375rem 13.5rem minmax(8rem, 13.5rem);
+  }
+}
+
+@media (min-width: 1101px) {
+  .row,
+  .heading {
+    grid-template-areas: 'identity delay reading norm status';
+    grid-template-columns: minmax(0, 1.2fr) 5.1875rem minmax(0, 1fr) 13.5rem minmax(8rem, 13.5rem);
+  }
+}

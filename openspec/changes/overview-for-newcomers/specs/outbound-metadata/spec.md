@@ -65,7 +65,7 @@ The daemon SHALL keep, per server, the recent results of the latency checks the 
 
 ### Requirement: AC-104 Outbounds carry a human label and servers a manual norm
 
-An outbound SHALL be able to carry a human label, and a server a manual latency norm. Both are kept by the daemon, keyed by tag, outside the config, and survive a daemon restart; setting them needs no Apply. A label is shown first, with the tag in small monospace type. They are edited in place on Proxies, next to a group name and in a server row; an empty value returns the tag or the computed norm. An entry whose tag is gone is kept and listed apart, where it is moved to another tag or deleted.
+An outbound SHALL be able to carry a human label, and a server a manual latency norm. The daemon keeps both outside the config, keyed by tag. They survive a daemon restart and need no Apply. A label precedes its tag in small monospace type. Proxies edits labels in place beside group and server names. Clearing a label shows the tag alone. The server's separate norm control follows AC-113. An entry whose tag is gone is kept and listed apart, where it is moved to another tag or deleted.
 
 #### Scenario: A label is shown before the tag
 
@@ -79,11 +79,11 @@ An outbound SHALL be able to carry a human label, and a server a manual latency 
 - **WHEN** the user presses the pencil next to its name
 - **THEN** one field for the label opens in place, and Escape closes it without a change and returns focus to the pencil
 
-#### Scenario: A server row edits the label and the usual latency
+#### Scenario: A server label is edited in place
 
-- **GIVEN** a server row on Proxies with a computed usual latency
-- **WHEN** the user presses the pencil in the row
-- **THEN** two fields open in place, the label and the usual latency, and the current latency stays in view
+- **GIVEN** a server row on Proxies
+- **WHEN** the user presses the label pencil next to its name
+- **THEN** the label field opens in place, and the current latency and separate norm control stay in view
 
 #### Scenario: A label is saved at once without Apply
 
@@ -91,11 +91,11 @@ An outbound SHALL be able to carry a human label, and a server a manual latency 
 - **WHEN** the user saves it
 - **THEN** the daemon stores it, no draft is created, the core is not restarted, and the row shows the label with the tag under it
 
-#### Scenario: An empty value returns the tag and the computed norm
+#### Scenario: Clearing a label preserves the manual norm
 
 - **GIVEN** a server with a label and a manual usual latency
-- **WHEN** the user saves both fields empty
-- **THEN** the entry is removed, the row shows the tag, and the usual latency is computed again
+- **WHEN** the user saves an empty label
+- **THEN** the row shows the tag and retains the saved manual norm
 
 #### Scenario: Labels survive a daemon restart
 
