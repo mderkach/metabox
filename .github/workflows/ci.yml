@@ -249,12 +249,6 @@ jobs:
           METABOX_EPHEMERAL_BENCH: '1'
         run: cd apps/metaboxd && go test -tags integration -run '^TestCachedRuleSetsOnEphemeralBench$' -count=1 -v -timeout 3m .
 
-      - name: Dataplane diagnostics over HTTP and MCP
-        timeout-minutes: 3
-        env:
-          METABOX_EPHEMERAL_BENCH: '1'
-        run: cd apps/metaboxd && go test -tags integration -run '^TestDataplaneDiagnosticsOnEphemeralBench$' -count=1 -v -timeout 2m .
-
       - name: Reach check
         timeout-minutes: 5
         run: make reach-check
@@ -263,6 +257,13 @@ jobs:
       - name: Dataplane check
         timeout-minutes: 10
         run: make dataplane-check
+
+      # Run the temporary route deletion after the baseline dataplane checks.
+      - name: Dataplane diagnostics over HTTP and MCP
+        timeout-minutes: 3
+        env:
+          METABOX_EPHEMERAL_BENCH: '1'
+        run: cd apps/metaboxd && go test -tags integration -run '^TestDataplaneDiagnosticsOnEphemeralBench$' -count=1 -v -timeout 2m .
 
       # The e2e step goes last: an applied edit changes the config the checks above rely on.
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6

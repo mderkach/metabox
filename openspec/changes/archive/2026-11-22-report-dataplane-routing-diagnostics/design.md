@@ -12,7 +12,7 @@ Show the first failed component as one row alongside the nftables chain check. K
 
 - Invoke the existing `dataplane_check` command with a report argument. Both modes use the same checks in the same order. Report mode emits a stable result for the daemon to map to localized labels. Apply keeps its current command behavior.
 - Reuse the report row, status, and reason fields. Display a short localized cause next to the standard failure status. Report absence of a usable result as skipped. Map the row to interception in the shared diagnostic model so its consumers see a problem in the existing area.
-- The read-only tool contract follows [ADR-0055](../../../docs/adr/ADR-0055-embed-a-read-only-mcp-server-in-the-daemon-with-the-official-go-sdk.md). Historical startup behavior was accepted in [#305](https://github.com/mderkach/metabox/issues/305).
+- The read-only tool contract follows [ADR-0055](../../../../docs/adr/ADR-0055-embed-a-read-only-mcp-server-in-the-daemon-with-the-official-go-sdk.md). Historical startup behavior was accepted in [#305](https://github.com/mderkach/metabox/issues/305).
 
 ## Alternatives considered
 
