@@ -24,6 +24,7 @@
     "dns_port": "DNS port",
     "dns_probe": "DNS probe through dns-in",
     "nft_chains": "nft chains",
+    "routing_setup": "Interception routes",
     "proxy": "Through a proxy",
     "direct": "Direct"
   },
@@ -50,6 +51,10 @@
     "nft_unavailable": "nft is unavailable",
     "nft_unparsed": "the nft output could not be parsed",
     "chains_missing": "nft has no interception chains:",
+    "routing_setup_unavailable": "the router could not run the routing check",
+    "fwmark_rule_missing": "the policy routing rule for marked packets is missing",
+    "local_route_missing": "the local route is missing. Intercepted traffic may fail to reach the core",
+    "dnsmasq_forwarding_missing": "dnsmasq is not configured to forward queries to the interception DNS port",
     "proxy_unset": "no node is chosen",
     "proxy_missing": "the running core has no such node",
     "not_measured": "the core has no latency reading for this node. It was never tested, or the last check failed",

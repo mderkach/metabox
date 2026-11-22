@@ -15,6 +15,7 @@ const NAME_KEY: Readonly<Record<CheckName, ParseKeys<'pages/Diagnostics'>>> = {
   dns_port: 'check.dns_port',
   dns_probe: 'check.dns_probe',
   nft_chains: 'check.nft_chains',
+  routing_setup: 'check.routing_setup',
   proxy: 'check.proxy',
   direct: 'check.direct',
 };

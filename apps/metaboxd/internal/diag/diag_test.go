@@ -20,6 +20,7 @@ import (
 	"metabox/internal/dataplane"
 	"metabox/internal/diag"
 	"metabox/internal/locale"
+	"metabox/internal/singbox"
 )
 
 type fakePlane struct {
@@ -122,8 +123,8 @@ func run(t *testing.T, c *diag.Checker, proxy string) map[diag.CheckName]diag.Ch
 		out[check.Name] = check
 	}
 
-	if len(out) != 7 {
-		t.Fatalf("checks %d, expected seven: %+v", len(out), report.Checks)
+	if len(out) != 8 {
+		t.Fatalf("checks %d, expected eight: %+v", len(out), report.Checks)
 	}
 
 	return out
@@ -135,7 +136,7 @@ func options() diag.Options {
 
 func TestPortListeners(t *testing.T) {
 	plane := fakePlane{model: model(listen(t)), chains: dataplane.ExpectedChains()}
-	got := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), nil, options()), "")
+	got := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), nil, nil, options()), "")
 
 	for _, name := range []diag.CheckName{diag.NameRedirectPort, diag.NameTproxyPort, diag.NameDNSPort} {
 		if got[name].Status != diag.StatusOK {
@@ -150,7 +151,7 @@ func TestPortListeners(t *testing.T) {
 	t.Run("port closed", func(t *testing.T) {
 		m := model(closedPort(t))
 		m.TproxyPort = 5334
-		got := run(t, diag.New(fakePlane{model: m}, configWith(5333, "127.0.0.1:1"), nil, options()), "")
+		got := run(t, diag.New(fakePlane{model: m}, configWith(5333, "127.0.0.1:1"), nil, nil, options()), "")
 
 		for _, name := range []diag.CheckName{diag.NameRedirectPort, diag.NameTproxyPort} {
 			if c := got[name]; c.Status != diag.StatusFail || c.Reason != diag.ReasonNotListening {
@@ -162,7 +163,7 @@ func TestPortListeners(t *testing.T) {
 	t.Run("no socket tables", func(t *testing.T) {
 		opts := options()
 		opts.ProcNet = t.TempDir()
-		got := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), nil, opts), "")
+		got := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), nil, nil, opts), "")
 
 		if c := got[diag.NameDNSPort]; c.Status != diag.StatusSkipped || c.Reason != diag.ReasonProcUnavailable {
 			t.Errorf("dns_port: %+v, expected a skip proc_unavailable", c)
@@ -173,7 +174,7 @@ func TestPortListeners(t *testing.T) {
 func TestChains(t *testing.T) {
 	t.Run("part of the chains removed", func(t *testing.T) {
 		plane := fakePlane{model: model(closedPort(t)), chains: []string{"metabox_redirect", "metabox_mangle_output"}}
-		c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), nil, options()), "")[diag.NameChains]
+		c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), nil, nil, options()), "")[diag.NameChains]
 
 		if c.Status != diag.StatusFail || c.Reason != diag.ReasonChainsMissing {
 			t.Fatalf("chains: %+v, expected chains_missing", c)
@@ -186,7 +187,7 @@ func TestChains(t *testing.T) {
 
 	t.Run("nft unavailable", func(t *testing.T) {
 		plane := fakePlane{model: model(closedPort(t)), nftReason: dataplane.NFTUnavailable}
-		c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), nil, options()), "")[diag.NameChains]
+		c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), nil, nil, options()), "")[diag.NameChains]
 
 		if c.Status != diag.StatusSkipped || c.Reason != diag.ReasonNFTUnavailable {
 			t.Errorf("chains: %+v, expected a skip nft_unavailable", c)
@@ -194,10 +195,59 @@ func TestChains(t *testing.T) {
 	})
 }
 
+type routingReader func(context.Context) (singbox.DataplaneCheck, error)
+
+func (f routingReader) ReadDataplaneCheck(ctx context.Context) (singbox.DataplaneCheck, error) {
+	return f(ctx)
+}
+
+func TestRoutingSetup(t *testing.T) {
+	tests := []struct {
+		name   string
+		result singbox.DataplaneCheck
+		err    error
+		status diag.CheckStatus
+		reason diag.CheckReason
+	}{
+		{"present", singbox.DataplaneOK, nil, diag.StatusOK, ""},
+		{"missing policy rule", singbox.DataplaneFwmarkRuleMissing, nil, diag.StatusFail, diag.ReasonFwmarkRuleMissing},
+		{"missing local route", singbox.DataplaneLocalRouteMissing, nil, diag.StatusFail, diag.ReasonLocalRouteMissing},
+		{"missing DNS forwarding", singbox.DataplaneDNSmasqForwardingMissing, nil, diag.StatusFail, diag.ReasonDNSmasqForwardingMissing},
+		{"unavailable", singbox.DataplaneUnavailable, nil, diag.StatusSkipped, diag.ReasonRoutingSetupUnavailable},
+		{"execution error", singbox.DataplaneUnavailable, context.DeadlineExceeded, diag.StatusSkipped, diag.ReasonRoutingSetupUnavailable},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plane := fakePlane{model: model(closedPort(t))}
+			routing := routingReader(func(context.Context) (singbox.DataplaneCheck, error) {
+				return tt.result, tt.err
+			})
+			got := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), nil, routing, options()), "")[diag.NameRoutingSetup]
+			if got.Status != tt.status || got.Reason != tt.reason {
+				t.Errorf("routing setup: %+v, want %s %s", got, tt.status, tt.reason)
+			}
+		})
+	}
+}
+
+func TestRoutingSetupSkipsDisabledInterception(t *testing.T) {
+	plane := fakePlane{model: model(closedPort(t))}
+	plane.model.Enabled = false
+	routing := routingReader(func(context.Context) (singbox.DataplaneCheck, error) {
+		t.Error("called the init script with interception disabled")
+		return singbox.DataplaneUnavailable, nil
+	})
+	got := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), nil, routing, options()), "")[diag.NameRoutingSetup]
+	if got.Status != diag.StatusSkipped || got.Reason != diag.ReasonInterceptionDisabled {
+		t.Errorf("routing setup: %+v, want skipped with interception_disabled", got)
+	}
+}
+
 func TestSkippedWithoutModel(t *testing.T) {
 	t.Run("model not read", func(t *testing.T) {
 		plane := fakePlane{modelErr: errors.New("uci show metabox: exit 1")}
-		got := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), &fakeDNS{}, options()), "")
+		got := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), &fakeDNS{}, nil, options()), "")
 
 		for _, name := range []diag.CheckName{diag.NameRedirectPort, diag.NameDNSProbe, diag.NameChains, diag.NameDirect} {
 			if c := got[name]; c.Status != diag.StatusSkipped || c.Reason != diag.ReasonModelUnavailable {
@@ -209,7 +259,7 @@ func TestSkippedWithoutModel(t *testing.T) {
 	t.Run("interception disabled", func(t *testing.T) {
 		m := model(closedPort(t))
 		m.Enabled = false
-		got := run(t, diag.New(fakePlane{model: m}, configWith(5333, "127.0.0.1:1"), &fakeDNS{}, options()), "")
+		got := run(t, diag.New(fakePlane{model: m}, configWith(5333, "127.0.0.1:1"), &fakeDNS{}, nil, options()), "")
 
 		if c := got[diag.NameRedirectPort]; c.Status != diag.StatusSkipped || c.Reason != diag.ReasonInterceptionDisabled {
 			t.Errorf("redirect_port: %+v, expected a skip interception_disabled", c)
@@ -222,7 +272,7 @@ func TestDNSProbe(t *testing.T) {
 
 	t.Run("dns-in is silent", func(t *testing.T) {
 		dns := &fakeDNS{err: errors.New("i/o timeout")}
-		c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), dns, options()), "")[diag.NameDNSProbe]
+		c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), dns, nil, options()), "")[diag.NameDNSProbe]
 
 		if c.Status != diag.StatusFail || c.Reason != diag.ReasonNoAnswer {
 			t.Errorf("probe: %+v, expected no_answer", c)
@@ -242,14 +292,14 @@ func TestDNSProbe(t *testing.T) {
 			opts := options()
 			opts.Lang = lang
 
-			if c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), dns, opts), "")[diag.NameDNSProbe]; c.Detail != want {
+			if c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), dns, nil, opts), "")[diag.NameDNSProbe]; c.Detail != want {
 				t.Errorf("%s: detail %q, want %q", lang, c.Detail, want)
 			}
 		}
 	})
 
 	t.Run("dns-in answers", func(t *testing.T) {
-		c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), &fakeDNS{}, options()), "")[diag.NameDNSProbe]
+		c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), &fakeDNS{}, nil, options()), "")[diag.NameDNSProbe]
 
 		if c.Status != diag.StatusOK {
 			t.Errorf("probe: %+v, expected ok", c)
@@ -257,7 +307,7 @@ func TestDNSProbe(t *testing.T) {
 	})
 
 	t.Run("no dns-in in the config", func(t *testing.T) {
-		c := run(t, diag.New(plane, configWith(5999, "127.0.0.1:1"), &fakeDNS{}, options()), "")[diag.NameDNSProbe]
+		c := run(t, diag.New(plane, configWith(5999, "127.0.0.1:1"), &fakeDNS{}, nil, options()), "")[diag.NameDNSProbe]
 
 		if c.Status != diag.StatusFail || c.Reason != diag.ReasonNoDNSInbound {
 			t.Errorf("probe: %+v, expected no_dns_inbound", c)
@@ -265,7 +315,7 @@ func TestDNSProbe(t *testing.T) {
 	})
 
 	t.Run("name not set", func(t *testing.T) {
-		c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), nil, options()), "")[diag.NameDNSProbe]
+		c := run(t, diag.New(plane, configWith(5333, "127.0.0.1:1"), nil, nil, options()), "")[diag.NameDNSProbe]
 
 		if c.Status != diag.StatusSkipped || c.Reason != diag.ReasonDNSNameUnset {
 			t.Errorf("probe: %+v, expected a skip dns_name_unset", c)
@@ -273,7 +323,7 @@ func TestDNSProbe(t *testing.T) {
 	})
 
 	t.Run("no config", func(t *testing.T) {
-		c := run(t, diag.New(plane, fakeConfig{err: config.ErrNoConfig}, &fakeDNS{}, options()), "")[diag.NameDNSProbe]
+		c := run(t, diag.New(plane, fakeConfig{err: config.ErrNoConfig}, &fakeDNS{}, nil, options()), "")[diag.NameDNSProbe]
 
 		if c.Status != diag.StatusSkipped || c.Reason != diag.ReasonConfigMissing {
 			t.Errorf("probe: %+v, expected a skip config_missing", c)
@@ -306,7 +356,7 @@ func TestProxyDelay(t *testing.T) {
 	t.Cleanup(clash.Close)
 
 	cfg := configWith(5333, strings.TrimPrefix(clash.URL, "http://"))
-	c := diag.New(fakePlane{model: model(closedPort(t))}, cfg, nil, options())
+	c := diag.New(fakePlane{model: model(closedPort(t))}, cfg, nil, nil, options())
 
 	tests := []struct {
 		name   string
@@ -366,7 +416,7 @@ func TestObserveReportsRecordedDelay(t *testing.T) {
 	t.Cleanup(clash.Close)
 
 	cfg := configWith(5333, strings.TrimPrefix(clash.URL, "http://"))
-	c := diag.New(fakePlane{model: model(closedPort(t))}, cfg, nil, options())
+	c := diag.New(fakePlane{model: model(closedPort(t))}, cfg, nil, nil, options())
 
 	tests := []struct {
 		name   string
@@ -426,7 +476,7 @@ func TestObserveControllerFailures(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := diag.New(fakePlane{model: model(closedPort(t))}, configWith(5333, tt.controller), nil, options())
+			c := diag.New(fakePlane{model: model(closedPort(t))}, configWith(5333, tt.controller), nil, nil, options())
 
 			report, err := c.Observe(t.Context(), "node A")
 			if err != nil {
@@ -446,7 +496,7 @@ func TestDirectUnsupportedOutsideLinux(t *testing.T) {
 		t.Skip("socket mark exists only on Linux")
 	}
 
-	c := run(t, diag.New(fakePlane{model: model(closedPort(t))}, configWith(5333, "127.0.0.1:1"), nil, options()), "")[diag.NameDirect]
+	c := run(t, diag.New(fakePlane{model: model(closedPort(t))}, configWith(5333, "127.0.0.1:1"), nil, nil, options()), "")[diag.NameDirect]
 
 	if c.Status != diag.StatusSkipped || c.Reason != diag.ReasonUnsupported {
 		t.Errorf("direct outbound: %+v, expected a skip unsupported", c)
