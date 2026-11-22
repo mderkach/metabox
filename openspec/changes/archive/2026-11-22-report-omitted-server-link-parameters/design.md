@@ -44,7 +44,7 @@ Keep probe handling, applied node lookup and result presentation reusable. Keep 
 - A person pasting a provider link wants to know which settings will be left out and whether they can proceed. Show an inline status beneath the field hint, above the existing Add action, on a valid link with omissions.
 - Use the existing form typography and semantic warning treatment. Proposed English copy is “These parameters will be skipped when you add the server” and Russian copy is “Эти параметры не попадут в конфигурацию при добавлении сервера”. Display the names next to the sentence. Keep the action enabled.
 - Announce the advisory politely and associate it with the field. Keep focus in the link field and wrap long names within the form. For a valid link with no omissions, show the ordinary hint. For a failed submission, show the current validation or subscription guidance.
-- Review the mock-stand flow in both languages at desktop width and 375 px, with keyboard navigation and at least one long parameter name. Use the product and panel design system as the visual references. [Panel design gate](../../../docs/adr/ADR-0078-gate-panel-design-with-the-impeccable-detector-a-brief-and-an-independent-critique.md)
+- Review the mock-stand flow in both languages at desktop width and 375 px, with keyboard navigation and at least one long parameter name. Use the product and panel design system as the visual references. [Panel design gate](../../../../docs/adr/ADR-0078-gate-panel-design-with-the-impeccable-detector-a-brief-and-an-independent-critique.md)
 
 ### Existing servers
 

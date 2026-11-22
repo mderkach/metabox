@@ -8,6 +8,7 @@ import { PageHeader } from '@widgets/PageHeader';
 import { ProxyGroups } from '@widgets/ProxyGroups';
 
 import { useMinuteClock } from '../lib/Proxies.lib';
+import { ProxiesRecoveryHints } from './ProxiesRecoveryHints';
 import { ProxiesSection } from './ProxiesSection';
 import { ProxyProviderRow } from './ProxyProviderRow';
 import { ProxyTestAll } from './ProxyTestAll';
@@ -65,6 +66,7 @@ export function ProxiesPage() {
 
         {proxies.isSuccess && (
           <ProxiesSection title={t('groups.title')}>
+            <ProxiesRecoveryHints nodes={nodes} />
             <ProxyGroups
               groups={groups}
               nodes={nodes}

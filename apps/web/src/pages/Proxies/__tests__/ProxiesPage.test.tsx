@@ -1,11 +1,18 @@
 import { renderWithQuery } from '@test/renderWithQuery';
+import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { CONFIG_ENDPOINT, ConfigDocumentStore, readSectionNodes, selectConfigCurrent } from '@entities/Config';
+import {
+  CONFIG_ENDPOINT,
+  CONFIG_QUERY,
+  ConfigDocumentStore,
+  readSectionNodes,
+  selectConfigCurrent,
+} from '@entities/Config';
 import { configHandlers } from '@entities/Config/__tests__/Config.handlers';
 import { PROXY_ENDPOINT } from '@entities/Proxy';
 import { CLASH_PROVIDERS_FIXTURE, CLASH_PROXIES_FIXTURE } from '@entities/Proxy/__tests__/Proxy.fixture';
@@ -192,6 +199,121 @@ describe('proxies screen', () => {
     expect(screen.getByRole('status', { name: 'Результат действия' })).toHaveTextContent(
       'Группа us-fallback: задержка обновлена'
     );
+  });
+
+  describe('REALITY recovery hint', () => {
+    const tag = 'us';
+    const etag = '"applied-reality"';
+    const hint = 'Открыть настройки сервера us';
+    const outbound = {
+      type: 'vless',
+      tag,
+      server: 'server.example',
+      server_port: 443,
+      uuid: '01234567-89ab-4cde-8123-456789abcdef',
+      tls: { enabled: true, reality: { enabled: true } },
+    };
+
+    function mockApplied(outbounds: readonly unknown[]) {
+      const text = JSON.stringify({ outbounds });
+
+      server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text, { headers: { ETag: etag } })));
+
+      return text;
+    }
+
+    async function checkGroup() {
+      const user = userEvent.setup();
+      const button = screen.getByRole('button', { name: 'Проверить участников группы us-fallback' });
+
+      await user.click(button);
+      await waitFor(() => expect(button).toBeEnabled());
+    }
+
+    async function openProxies(outbounds: readonly unknown[] = [outbound], runtimeType = 'VLESS') {
+      serveProxies();
+      const text = mockApplied(outbounds);
+      serveProxyList({
+        ...CLASH_PROXIES_FIXTURE.proxies,
+        us: { ...CLASH_PROXIES_FIXTURE.proxies.us, type: runtimeType, history: [] },
+      });
+      const view = renderWithRouter(ProxiesPage);
+
+      await screen.findByRole('heading', { name: 'us-fallback' });
+      await waitFor(() => {
+        expect(view.queryClient.getQueryData(CONFIG_QUERY.current())).toEqual({ text, etag });
+      });
+
+      return { text, ...view };
+    }
+
+    it('links a failed REALITY probe to the corresponding existing node', async () => {
+      const { text } = await openProxies();
+      serveProbes([tag]);
+
+      // Change the draft order without changing which node the runtime probed.
+      ConfigDocumentStore.getState().load(text, etag);
+      ConfigDocumentStore.getState().edit(['outbounds'], [{ type: 'direct', tag: 'direct' }, outbound]);
+
+      await checkGroup();
+
+      expect(await screen.findByRole('link', { name: hint })).toHaveAttribute('href', '/config/outbounds?node=2');
+      expect(screen.getByText(/Если сервер REALITY недавно обновили/)).toBeInTheDocument();
+    });
+
+    it('clears the REALITY hint on a successful check or a changed applied config', async () => {
+      const { queryClient, text } = await openProxies();
+      serveProbes([tag]);
+
+      await checkGroup();
+      expect(await screen.findByRole('link', { name: hint })).toBeInTheDocument();
+
+      serveProbes();
+      await checkGroup();
+      await waitFor(() => expect(screen.queryByRole('link', { name: hint })).not.toBeInTheDocument());
+
+      serveProbes([tag]);
+      await checkGroup();
+      expect(await screen.findByRole('link', { name: hint })).toBeInTheDocument();
+
+      act(() => {
+        queryClient.setQueryData(CONFIG_QUERY.current(), { text, etag: '"new-config"' });
+      });
+      await waitFor(() => expect(screen.queryByRole('link', { name: hint })).not.toBeInTheDocument());
+    });
+
+    it('does not offer REALITY recovery when the runtime tag belongs to a group', async () => {
+      await openProxies([outbound], 'URLTest');
+      serveProbes([tag]);
+
+      await checkGroup();
+      expect(screen.queryByRole('link', { name: hint })).not.toBeInTheDocument();
+    });
+
+    it('does not show the REALITY hint for a daemon error or a node without an eligible edit', async () => {
+      const { queryClient } = await openProxies([
+        { ...outbound, tls: { enabled: true, reality: { enabled: true, support_x25519mlkem768: true } } },
+      ]);
+      serveProbes([tag]);
+
+      await checkGroup();
+      await waitFor(() => expect(screen.queryByRole('link', { name: hint })).not.toBeInTheDocument());
+
+      act(() => {
+        queryClient.setQueryData(CONFIG_QUERY.current(), { text: JSON.stringify({ outbounds: [outbound] }), etag });
+      });
+      await checkGroup();
+      expect(await screen.findByRole('link', { name: hint })).toBeInTheDocument();
+
+      server.use(
+        http.get(PROXY_ENDPOINT.proxyDelay(tag), () =>
+          HttpResponse.json({ code: 'core_down', message: 'Core down' }, { status: 503 })
+        )
+      );
+
+      await checkGroup();
+      await waitFor(() => expect(screen.queryByRole('link', { name: hint })).not.toBeInTheDocument());
+    });
   });
 
   it('tests the config outbounds when the config has no groups', async () => {

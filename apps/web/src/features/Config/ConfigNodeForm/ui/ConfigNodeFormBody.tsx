@@ -37,7 +37,7 @@ export function ConfigNodeFormBody({
   const editMany = ConfigDocumentState.use.editMany();
   const revision = ConfigDocumentState.use.revision();
   const plan = useMemo(() => toFieldPlan(schema), [schema]);
-  const layout = useMemo(() => arrangePlan(plan, override), [plan, override]);
+  const layout = useMemo(() => arrangePlan(plan, override, node), [plan, override, node]);
   const [openedNode] = useState(node);
   const resolver = useMemo(() => toNodeFormResolver(schema, override), [schema, override]);
   const [failures] = useState(() => new Map<string, unknown>());

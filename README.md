@@ -41,12 +41,17 @@ metabox installs on the router as one apk package. It contains the `metaboxd` da
 - Apply with health checks and automatic rollback; version history with restore
 - Connections: live list with filters, CSV and JSON export, and which rule routed each connection
 - Proxies: node groups with latency tests, subscription updates
+- Import a VLESS server from a link. The form lists skipped parameters before the server goes into the draft.
 - Devices from DHCP leases, with a per-device switch to route traffic through the core
 - How metabox works walks through one live connection and explains the panel terms.
 - Overview: core status and controls, node switch, quick check, traffic, connections, top devices and nodes, and router load, temperature and memory
 - Core logs and traffic interception diagnostics
 - Read-only MCP endpoint for AI agents such as Claude Code
 - Light and dark theme, English and Russian, desktop and phone layouts
+
+### Check an existing REALITY server
+
+If a VLESS REALITY server stops answering after a server upgrade, run a manual latency check in **Proxies**. If the panel suggests checking the hybrid key share, open the server settings from the hint. For a compatible core, change **Hybrid key share (X25519MLKEM768)**, review and apply the draft, then repeat the check through the same server. A failed check alone cannot identify the cause.
 
 ## Preview
 

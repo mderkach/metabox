@@ -1,5 +1,6 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { getConfigOptions } from '@entities/Config';
 import { isProbeFailure, PROXY_MUTATION, testProxyDelay, type ProbeOutcome } from '@entities/Proxy';
 import { CACHE_TIME } from '@shared/api';
 
@@ -19,16 +20,20 @@ const FAILED_PROBE_MEMORY = FAILED_PROBE_MEMORY_MINUTES * CACHE_TIME.Minute;
  * the fork keeps no trace of it. Other errors reject and show a toast.
  */
 export function useTestProxyDelay() {
+  const client = useQueryClient();
+
   return useMutation({
     mutationKey: PROXY_MUTATION.delay(),
     mutationFn: async function requestProxyDelay(name: string): Promise<ProbeOutcome> {
+      const configEtag = client.getQueryData(getConfigOptions().queryKey)?.etag;
+
       try {
         await testProxyDelay(name);
 
         return { name, failed: false };
       } catch (error) {
         if (isProbeFailure(error)) {
-          return { name, failed: true };
+          return { name, failed: true, ...(typeof configEtag === 'string' ? { configEtag } : {}) };
         }
 
         throw error;

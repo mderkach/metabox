@@ -28,5 +28,11 @@
     "tested": "Group {{group}}: latency updated",
     "testedAll": "Latency of all nodes updated",
     "testedOutbounds": "Outbound latency updated"
+  },
+  "recovery": {
+    "title": "Check the REALITY settings",
+    "hint": "If this REALITY server was recently updated, check the hybrid key share setting and test again.",
+    "edit": "Open settings for server {{tag}}",
+    "openSection": "Find server {{tag}} in Outbounds"
   }
 }

@@ -13,9 +13,11 @@ import {
   useConfigCurrent,
   type NodeRegistry,
 } from '@entities/Config';
+import { OutboundVlessSchema } from '@shared/api/generated';
 
 import { NODE_OVERRIDE_ERROR, nodeOverrideOf, nodePreset, overrideIssues } from '../model';
 import { ConfigNodeForm } from '../ui/ConfigNodeForm';
+import { ConfigNodeFormBody } from '../ui/ConfigNodeFormBody';
 
 /** A Reality key in the fork client format: base64url without padding, 32 bytes. Not a real one. */
 const PUBLIC_KEY = 'jNXHt1yRo0vDuchQlIP6Z0ZvjT3KtzVI-T4E7RoLJS0';
@@ -42,6 +44,7 @@ const TEXT = `{
 }`;
 
 const VLESS: JSONPath = ['outbounds', 0];
+const REALITY_HYBRID_KEY_SHARE = 'Гибридный обмен ключами (X25519MLKEM768)';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -94,6 +97,7 @@ describe('VLESS/Reality form override', () => {
       screen.getByRole('combobox', { name: 'Отпечаток браузера' }),
       screen.getByRole('textbox', { name: 'Публичный ключ Reality' }),
       screen.getByRole('textbox', { name: 'Short ID Reality' }),
+      screen.getByRole('switch', { name: REALITY_HYBRID_KEY_SHARE }),
     ];
 
     expect(inDocumentOrder([...primary, screen.getByRole('button', { name: /^Ещё параметры/ })])).toBe(true);
@@ -110,6 +114,63 @@ describe('VLESS/Reality form override', () => {
 
     expect(screen.getByRole('combobox', { name: 'domain_strategy' })).toBeInTheDocument();
     expect(screen.getAllByRole('textbox', { name: 'Имя сервера (SNI)' })).toHaveLength(1);
+  });
+
+  it('edits the REALITY hybrid key share on an existing outbound in the draft only', async () => {
+    const user = userEvent.setup();
+    const flagPath = [...VLESS, 'tls', 'reality', 'support_x25519mlkem768'];
+
+    render(<NodeFromStore path={VLESS} />);
+
+    const flag = screen.getByRole('switch', { name: REALITY_HYBRID_KEY_SHARE });
+    expect(flag).toHaveAccessibleDescription(/отпечаток/i);
+    expect(flag).not.toBeChecked();
+
+    await user.click(flag);
+    await waitFor(() => {
+      expect(findValue(draft(), flagPath)).toBe(true);
+    });
+    expect(findValue(draft(), [...VLESS, 'tls', 'reality', 'public_key'])).toBe('REDACTED');
+    expect(ConfigDocumentState.getState().applied).toBe(TEXT);
+
+    await user.click(flag);
+    await waitFor(() => {
+      expect(findValue(draft(), flagPath)).toBe(false);
+    });
+    expect(ConfigDocumentState.getState().applied).toBe(TEXT);
+  });
+
+  it('keeps the hybrid key share hidden when REALITY is disabled', async () => {
+    const user = userEvent.setup();
+    ConfigDocumentState.getState().load(TEXT.replace(/"reality": \{ "enabled": true/, '"reality": { "enabled": false'));
+
+    render(<NodeFromStore path={VLESS} />);
+    await user.click(screen.getByRole('button', { name: /^Ещё параметры/ }));
+
+    expect(screen.queryByRole('switch', { name: REALITY_HYBRID_KEY_SHARE })).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: /support_x25519mlkem768/ })).not.toBeInTheDocument();
+  });
+
+  it('does not offer the hybrid key share when the schema has no field for it', () => {
+    const tls = OutboundVlessSchema.shape.tls.unwrap();
+    const reality = tls.shape.reality.unwrap().omit({ support_x25519mlkem768: true });
+    const schema = OutboundVlessSchema.extend({ tls: tls.extend({ reality: reality.optional() }).optional() });
+    const node = findValue(TEXT, VLESS);
+
+    if (!isRecord(node)) throw new Error('Expected the fixture to contain a VLESS outbound');
+
+    render(
+      <ConfigNodeFormBody
+        schema={schema}
+        override={nodeOverrideOf(NODE_REGISTRY.Outbound, 'vless')}
+        path={VLESS}
+        node={node}
+        builtTags={null}
+      />
+    );
+
+    expect(screen.getByRole('textbox', { name: 'Публичный ключ Reality' })).toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: REALITY_HYBRID_KEY_SHARE })).not.toBeInTheDocument();
   });
 
   it('an empty server is a required field, nothing is written', async () => {

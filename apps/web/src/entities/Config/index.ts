@@ -80,6 +80,7 @@ export {
   nodeVariants,
   readNodeTags,
   registryOfSection,
+  supportsVlessRealityHybridKeyShare,
 } from './model/Config.registry';
 export type { NodeRegistry } from './model/Config.registry';
 export type { UnbuiltNode, UnbuiltOption } from './model/Config.build';
