@@ -233,13 +233,6 @@ func run(log *slog.Logger, s settings) error {
 
 	controller := clashapi.ConfigResolver(store.Read)
 
-	clash, err := clashapi.NewProxy(controller, httpapi.ProxyError(log))
-	if err != nil {
-		log.Warn("Clash API proxy not built", "err", err)
-	} else {
-		clashHandler = clash
-	}
-
 	logReader := logs.New(logs.Exec, store, logs.Options{
 		Logread:      s.logread,
 		Process:      filepath.Base(s.binary),
@@ -267,6 +260,21 @@ func run(log *slog.Logger, s settings) error {
 		sysinfo.Encoded(log),
 		healthRequestTimeout,
 	)
+
+	latency := events.NewLatencyMonitor(source, controller, sysinfo.ControllerEpoch, log)
+	latencyCtx, stopLatency := context.WithCancel(ctx)
+	latencyDone := latency.Start(latencyCtx)
+	defer func() {
+		stopLatency()
+		<-latencyDone
+	}()
+
+	clash, err := clashapi.NewProxy(controller, httpapi.ProxyError(log))
+	if err != nil {
+		log.Warn("Clash API proxy not built", "err", err)
+	} else {
+		clashHandler = clash.WithDelayObserver(latency.ObserveDelay)
+	}
 
 	hub := events.New(
 		source,
@@ -412,6 +420,7 @@ func run(log *slog.Logger, s settings) error {
 		Explain:        explainer,
 		Hits:           hits,
 		History:        history.NewRuntime(traffic, deviceHistory, connectionSizes),
+		Latency:        latency.Snapshot,
 		RuleSets:       ruleSets,
 		CachedRuleSets: ruleset.NewCachedReader(store, manager.CachePath),
 		Runtime:        sysinfo.Alive,

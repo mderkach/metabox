@@ -12,15 +12,17 @@ const DELAY_TONE: Readonly<Record<string, string>> = {
 
 const PERCENT = 100;
 
-export function ProxyLatencyMeter({ node }: { node: ProxyNode }) {
+export function ProxyLatencyMeter({ node }: { node: Pick<ProxyNode, 'delay' | 'delayState'> }) {
   const share = toMeter(node);
 
   if (share === null) {
-    return <span className='col-span-2 block h-1.5 rounded-full border border-dashed border-border' />;
+    return (
+      <span aria-hidden='true' className='col-span-2 block h-1.5 rounded-full border border-dashed border-border' />
+    );
   }
 
   return (
-    <span className='col-span-2 block h-1.5 overflow-hidden rounded-full bg-meter-track'>
+    <span aria-hidden='true' className='col-span-2 block h-1.5 overflow-hidden rounded-full bg-meter-track'>
       <span
         className={cn('block h-full rounded-full', DELAY_TONE[node.delayState])}
         style={{ width: `${String(share * PERCENT)}%` }}

@@ -34,6 +34,14 @@ export const SERVICE_ERROR_CODE = [
   'service_state_unread',
 ] as const
 
+export const LATENCY_LEVEL = [
+  'no_measurement',
+  'no_answer',
+  'within_norm',
+  'above_norm',
+  'above_ceiling',
+] as const
+
 export const ERROR_CODE = [
   'not_found',
   'origin_mismatch',
@@ -340,6 +348,35 @@ export const HistorySchema = z.object({
   recent: z.array(PointSchema),
   /** Connections is the number of live connections over the last minute, one snapshot per second. */
   connections: z.array(z.int()),
+})
+
+/** LatencyResult represents a successful measurement or an attempt with no answer. */
+export const LatencyResultSchema = z.object({
+  at: z.string(),
+  delay_ms: z.int().optional(),
+})
+
+/** LatencyMedian is the median of the retained successful readings of a completed UTC hour. */
+export const LatencyMedianSchema = z.object({
+  hour: z.string(),
+  delay_ms: z.int(),
+})
+
+/** ServerLatency separates the current process reading from the daemon's history. */
+export const ServerLatencySchema = z.object({
+  tag: z.string(),
+  current: LatencyResultSchema.optional(),
+  recent: z.array(LatencyResultSchema),
+  hourly: z.array(LatencyMedianSchema),
+  usual_ms: z.int().optional(),
+  level: z.string(),
+  origin: z.string(),
+})
+
+/** LatencyHistory is the daemon's bounded per-server latency history. */
+export const LatencyHistorySchema = z.object({
+  available: z.boolean().optional(),
+  servers: z.array(ServerLatencySchema),
 })
 
 /** Error is the single failure format at the HTTP boundary. Internal details (paths on disk, command arguments, config content) do not get into it; Details carries only what is shown to the user. Code is the contract, Message is a fallback text: the panel shows its own translation by the code, and takes the message only when the code is unfamiliar to it. */
@@ -889,6 +926,9 @@ export type FieldErrorWire = z.infer<typeof FieldErrorSchema>
 export type HealthWire = z.infer<typeof HealthSchema>
 export type HistoryWire = z.infer<typeof HistorySchema>
 export type HitsWire = z.infer<typeof HitsSchema>
+export type LatencyHistoryWire = z.infer<typeof LatencyHistorySchema>
+export type LatencyMedianWire = z.infer<typeof LatencyMedianSchema>
+export type LatencyResultWire = z.infer<typeof LatencyResultSchema>
 export type LinkWire = z.infer<typeof LinkSchema>
 export type ListStatWire = z.infer<typeof ListStatSchema>
 export type ListWire = z.infer<typeof ListSchema>
@@ -913,6 +953,7 @@ export type RuleHitsWire = z.infer<typeof RuleHitsSchema>
 export type RuleSetFilesWire = z.infer<typeof RuleSetFilesSchema>
 export type RuleWire = z.infer<typeof RuleSchema>
 export type RuntimeWire = z.infer<typeof RuntimeSchema>
+export type ServerLatencyWire = z.infer<typeof ServerLatencySchema>
 export type ServerTrafficWire = z.infer<typeof ServerTrafficSchema>
 export type ServiceWire = z.infer<typeof ServiceSchema>
 export type SessionWire = z.infer<typeof SessionSchema>

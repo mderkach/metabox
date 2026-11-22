@@ -1,6 +1,7 @@
 import type { AxiosRequestConfig } from 'axios';
 
 import { ApiClientInstance, TIMEOUT } from '@shared/api';
+import type { LatencyHistoryWire } from '@shared/api/daemon.generated';
 
 import { PROXY_ENDPOINT } from './Proxy.endpoints';
 import type { ClashDelayWire, ClashProvidersWire, ClashProxiesWire } from './Proxy.schema';
@@ -14,6 +15,10 @@ const DELAY_PROBE = {
   url: 'https://www.gstatic.com/generate_204',
   timeout: TIMEOUT.Probe,
 } as const;
+
+export async function getProxyLatency(config?: AxiosRequestConfig): Promise<LatencyHistoryWire> {
+  return ApiClientInstance.get<LatencyHistoryWire>(PROXY_ENDPOINT.latency(), config);
+}
 
 export async function getProxies(config?: AxiosRequestConfig): Promise<ClashProxiesWire> {
   return ApiClientInstance.get<ClashProxiesWire>(PROXY_ENDPOINT.proxies(), config);

@@ -2,7 +2,8 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useConnectionStream } from '@entities/Connection';
-import { useRuntimeStream } from '@entities/Daemon';
+import { useDaemonInstance, useRuntimeStream } from '@entities/Daemon';
+import { useProxyLatency } from '@entities/Proxy';
 import { useNarrowScreen } from '@shared/lib/media';
 import { useLiveRegion } from '@shared/lib/useLiveRegion';
 import { LiveRegion } from '@shared/ui';
@@ -22,7 +23,12 @@ export function OverviewPage() {
   useRuntimeStream();
 
   const runtime = useOverviewRuntime();
-  const verdict = useOverviewVerdict(runtime);
+  const daemon = useDaemonInstance();
+  const latency = useProxyLatency(
+    { daemon, pid: runtime.system?.singbox?.pid, startedAt: runtime.startedAt },
+    !runtime.stopped
+  );
+  const verdict = useOverviewVerdict(runtime, latency.data?.servers);
 
   // A measurement changes numbers in place: visible to the eye, but for a screen reader
   // the result is announced by one region per screen.
@@ -42,9 +48,14 @@ export function OverviewPage() {
       <LiveRegion message={message} />
 
       <div className='flex min-h-0 grow flex-col gap-6 overflow-y-auto px-4 py-5 *:shrink-0 sm:px-6'>
-        <OverviewStatus onAnnounce={announce} stopped={runtime.stopped} />
+        <OverviewStatus
+          onAnnounce={announce}
+          stopped={runtime.stopped}
+          latencies={latency.data?.servers}
+          latencyAvailable={latency.data?.available ?? !latency.isLoadingError}
+        />
         <OverviewTraffic runtime={runtime} />
-        <OverviewConnections runtime={runtime} onLatencyTested={onLatencyTested} />
+        <OverviewConnections runtime={runtime} latency={latency} onLatencyTested={onLatencyTested} />
         <OverviewDevice system={runtime.system} collapsible={narrow} />
         <OverviewProcess runtime={runtime} collapsible={narrow} />
       </div>

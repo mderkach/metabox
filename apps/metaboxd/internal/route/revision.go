@@ -2,8 +2,6 @@ package route
 
 import (
 	"context"
-	"net"
-	"net/url"
 	"strconv"
 
 	"metabox/internal/clashapi"
@@ -66,7 +64,7 @@ func (v *RuleVerifier) capture(ctx context.Context) *ruleEvidence {
 	if err != nil {
 		return nil
 	}
-	port := controllerPort(settings)
+	port := settings.LocalPort()
 	if port == 0 {
 		return nil
 	}
@@ -98,25 +96,6 @@ func (v *RuleVerifier) capture(ctx context.Context) *ruleEvidence {
 			return err == nil && current == identity && v.listener(ctx, identity.PID, port) == listener
 		},
 	}
-}
-
-func controllerPort(settings clashapi.Settings) int {
-	base, err := settings.BaseURL()
-	if err != nil {
-		return 0
-	}
-
-	endpoint, err := url.Parse(base)
-	if err != nil || !net.ParseIP(endpoint.Hostname()).IsLoopback() {
-		return 0
-	}
-
-	port, err := strconv.Atoi(endpoint.Port())
-	if err != nil || port < 1 || port > 65535 {
-		return 0
-	}
-
-	return port
 }
 
 // appliedPosition requires a unique match in the runtime list even when a

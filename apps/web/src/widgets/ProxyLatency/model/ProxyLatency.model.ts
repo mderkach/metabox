@@ -1,20 +1,29 @@
-import type { ProxyGroup, ProxyNode } from '@entities/Proxy';
+import { isLatencyServer, type ProxyNode, type ProxyRuntime } from '@entities/Proxy';
 
-interface GroupDelay {
-  group: string;
+interface ServerEntry {
+  group?: string;
   node: ProxyNode;
 }
 
-export function toSelected(groups: ProxyGroup[]): GroupDelay[] {
-  const names = new Set(groups.map((group) => group.name));
+export function toSelected(runtime: ProxyRuntime): ServerEntry[] {
+  const selected = new Map<string, ServerEntry>();
+  const members = new Set<string>();
 
-  return groups.flatMap((group) => {
-    if (group.now !== null && names.has(group.now)) {
-      return [];
+  for (const group of runtime.groups) {
+    for (const node of group.nodes) {
+      members.add(node.name);
+
+      if (node.name === group.now && isLatencyServer(node) && !selected.has(node.name)) {
+        selected.set(node.name, { group: group.name, node });
+      }
     }
+  }
 
-    const node = group.nodes.find((candidate) => candidate.name === group.now);
+  for (const node of runtime.standalone) {
+    if (!members.has(node.name) && isLatencyServer(node)) {
+      selected.set(node.name, { node });
+    }
+  }
 
-    return node === undefined ? [] : [{ group: group.name, node }];
-  });
+  return [...selected.values()];
 }

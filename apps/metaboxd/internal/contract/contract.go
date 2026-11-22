@@ -148,6 +148,12 @@ type ServiceErrorCode string
 // such a response is not observed but substituted.
 const ServiceStateUnread ServiceErrorCode = "service_state_unread"
 
+// LatencyHistory is the daemon's bounded per-server latency history.
+type LatencyHistory struct {
+	Available *bool           `json:"available,omitempty"`
+	Servers   []ServerLatency `json:"servers"`
+}
+
 // History is the response of `GET /api/history`: traffic over the whole time the daemon accumulated.
 //
 // The point time is not transmitted: the router has no clock before NTP synchronization, and

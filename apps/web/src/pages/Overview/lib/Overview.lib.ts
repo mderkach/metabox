@@ -25,7 +25,7 @@ import {
   type TrafficShare,
   type UplinkRate,
 } from '@entities/Daemon';
-import { DELAY_STATE, useProxies } from '@entities/Proxy';
+import { LATENCY_LEVEL, useProxies, type ServerLatencies } from '@entities/Proxy';
 import { useDaemonRestarting } from '@features/Daemon/DaemonControl';
 import { MS_IN_SECOND } from '@shared/lib/time';
 
@@ -93,6 +93,7 @@ export interface OverviewRuntime {
   starting: boolean;
   /** The daemon confirmed that the core service is not running. */
   stopped: boolean;
+  startedAt: number | null;
 }
 
 function toCoreGap(stopped: boolean, silent: boolean): CoreGap | null {
@@ -239,6 +240,7 @@ export function useOverviewRuntime(): OverviewRuntime {
     connectionsGap,
     starting: startedAt !== null && frameAt === null && !overdue,
     stopped,
+    startedAt,
   };
 }
 
@@ -275,7 +277,8 @@ export interface Verdict {
  * the daemon sends device snapshots but there is no traffic from sing-box.
  */
 export function useOverviewVerdict(
-  runtime: Pick<OverviewRuntime, 'system' | 'live' | 'awaiting' | 'daemonLive' | 'overdue' | 'starting'>
+  runtime: Pick<OverviewRuntime, 'system' | 'live' | 'awaiting' | 'daemonLive' | 'overdue' | 'starting'>,
+  latencies: ServerLatencies | undefined
 ): Verdict {
   const { t } = useTranslation('pages/Overview');
   const reachable = useDaemonReachable();
@@ -305,8 +308,8 @@ export function useOverviewVerdict(
       : { tone: VERDICT_TONE.Idle, title: t('verdict.offline'), hint: t('verdict.offlineHint'), action: null };
   }
 
-  const failed = (proxies.data?.groups ?? []).some((group) =>
-    group.nodes.some((node) => node.name === group.now && node.delayState === DELAY_STATE.Failed)
+  const failed = (proxies.data?.groups ?? []).some(
+    (group) => group.now !== null && latencies?.get(group.now)?.level === LATENCY_LEVEL.NoAnswer
   );
 
   if (failed) {
