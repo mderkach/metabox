@@ -7,6 +7,7 @@ import {
   isSettingsSection,
   readNodeTags,
   readSectionNodes,
+  readSubscriptionTagReservations,
   registryOfSection,
   useConfigDocument,
   type GenericSection,
@@ -58,7 +59,10 @@ export function SectionNodes({ section, requestedNode }: { section: GenericSecti
   const [held, setHeld] = useState<SectionPanelNode | null>(null);
   const text = document.text;
   const nodes = useMemo(() => (text === null ? [] : readSectionNodes(text, section)), [text, section]);
-  const takenTags = useMemo(() => (text === null ? [] : readNodeTags(text)), [text]);
+  const takenTags = useMemo(
+    () => (text === null ? [] : [...readNodeTags(text), ...readSubscriptionTagReservations(text, section)]),
+    [text, section]
+  );
   const builtTags = status.data?.singboxTags ?? null;
   const shape = GENERIC_SECTIONS[section];
   const addable = shape.kind === 'list' && registryOfSection(section) !== null;

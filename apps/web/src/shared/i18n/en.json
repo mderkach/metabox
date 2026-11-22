@@ -182,6 +182,7 @@
     "config_modified": "the config file was changed outside metabox",
     "config_too_large": "the config is larger than allowed",
     "config_not_object": "the config is empty or is not a JSON object",
+    "subscription_tag_conflict": "a subscription tag is already used by a rule set or endpoint",
     "config_not_json": "the config has a syntax error and is not valid JSON",
     "outbound_invalid": "Check the outbound name and usual latency.",
     "device_invalid": "the daemon rejected the device name",

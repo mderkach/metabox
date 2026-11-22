@@ -39,7 +39,7 @@ export function ConfigNodeFormBody({
   const plan = useMemo(() => toFieldPlan(schema), [schema]);
   const layout = useMemo(() => arrangePlan(plan, override, node), [plan, override, node]);
   const [openedNode] = useState(node);
-  const resolver = useMemo(() => toNodeFormResolver(schema, override), [schema, override]);
+  const resolver = useMemo(() => toNodeFormResolver(schema, override, path), [schema, override, path]);
   const [failures] = useState(() => new Map<string, unknown>());
   // Dirty state is rebased when focus leaves the form: a field changed since opening keeps its place by this set.
   const [changed] = useState(() => new Set<string>());

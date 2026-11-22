@@ -8,6 +8,7 @@ import (
 
 	"metabox/internal/apply"
 	"metabox/internal/auth"
+	"metabox/internal/clashapi"
 	"metabox/internal/config"
 	"metabox/internal/contract"
 	"metabox/internal/dataplane"
@@ -195,6 +196,8 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 		return http.StatusBadRequest, contract.ErrConfigNotObject
 	case errors.Is(err, apply.ErrConfigNotJSON):
 		return http.StatusBadRequest, contract.ErrConfigNotJSON
+	case errors.Is(err, clashapi.ErrSubscriptionTagConflict):
+		return http.StatusUnprocessableEntity, contract.ErrSubscriptionTagConflict
 	case errors.Is(err, apply.ErrListName), errors.Is(err, errBadApplyEnvelope):
 		return http.StatusBadRequest, contract.ErrListInvalid
 	case errors.Is(err, devices.ErrInvalidMAC), errors.Is(err, devices.ErrInvalidName),

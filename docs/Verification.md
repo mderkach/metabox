@@ -720,6 +720,17 @@ The layout matrix runs at 320 and 375 px with touch and at 901, 1101, 2213 and 2
 | AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/Proxies.recoveryState.test.tsx`                     | `ignores a delayed $label retest once a newer probe has started for that same node`                            |
 | AC-11  | e2e    | `apps/web/e2e/realityRecovery.e2e.test.ts`                                                | `applies and restores a REALITY setting after distinct retest failures`                                        |
 
+### Subscription cache tags
+
+| ID     | Kind    | File                                                                            | Check                                                                    |
+| ------ | ------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| AC-126 | go-test | `apps/metaboxd/internal/clashapi/cache_tags_test.go`                            | `TestCheckSubscriptionTags`                                              |
+| AC-126 | go-test | `apps/metaboxd/internal/apply/apply_test.go`                                    | `TestSubscriptionTagConflictStopsApply`                                  |
+| AC-126 | go-test | `apps/metaboxd/internal/httpapi/httpapi_test.go`                                | `TestApplyReturnsSubscriptionTagConflict`                                |
+| AC-126 | vitest  | `apps/web/src/entities/Config/__tests__/Config.subscriptionTags.test.ts`        | `collects tags from JSONC, including numeric defaults`                   |
+| AC-126 | vitest  | `apps/web/src/features/Config/ConfigNodeForm/__tests__/ConfigNodeForm.test.tsx` | `preserves the draft when a subscription is renamed to a rule set tag`   |
+| AC-126 | vitest  | `apps/web/src/pages/Section/__tests__/SectionPage.browser.test.tsx`             | `keeps subscription fields and rejects a tag already used by a rule set` |
+
 ## Checked by hand on purpose
 
 These parts stay by hand: a test on the bench or in CI would not show them. A row names the scenario and why it cannot be automated.

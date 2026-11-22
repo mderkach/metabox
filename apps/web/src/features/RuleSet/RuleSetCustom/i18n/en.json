@@ -20,7 +20,7 @@
   "added": "List {{tag}} is in the draft: apply the config to make it work",
   "error": {
     "tagRequired": "Name the list: rules reference it by name",
-    "tagTaken": "The name is already taken by another set",
+    "tagTaken": "A rule set or subscription already uses this name",
     "tagNotFileName": "For a file the list name is limited to Latin letters, digits, dots and dashes: the file name is built from it",
     "entriesRequired": "The list is empty: add at least one line",
     "entryInvalid": "“{{entry}}” looks like neither a domain nor an address"

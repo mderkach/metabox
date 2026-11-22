@@ -52,7 +52,7 @@
     "urlRequired": "nothing to download without an address",
     "urlScheme": "the address starts with http:// or https://",
     "tagRequired": "without a name no rule can point at this set",
-    "tagTaken": "another set already goes by that name",
+    "tagTaken": "a rule set or subscription already uses that name",
     "formatRequired": "pick the file format",
     "intervalFormat": "a duration looks like 12h, 3d or 1h30m",
     "detourUnknown": "no outbound in the config goes by that name"

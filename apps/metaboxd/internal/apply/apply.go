@@ -411,6 +411,10 @@ func (m *Manager) Start(ctx context.Context, cfg []byte, lists Lists, base, list
 		return Transaction{}, fmt.Errorf("ensure clash_api: %w", err)
 	}
 
+	if err := clashapi.CheckSubscriptionTags(prepared); err != nil {
+		return Transaction{}, err
+	}
+
 	settings, err := clashapi.Read(prepared)
 	if err != nil {
 		return Transaction{}, err
