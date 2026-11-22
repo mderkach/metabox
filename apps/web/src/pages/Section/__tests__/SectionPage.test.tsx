@@ -543,7 +543,7 @@ describe('section screen', () => {
     const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
 
     await user.click(panel.getByRole('textbox', { name: 'Вставить ссылку' }));
-    await user.paste('https://provider.example/sub/token');
+    await user.paste('tuic://uuid:pass@example.com:443');
     await user.click(panel.getByRole('button', { name: 'Добавить по ссылке' }));
 
     expect(await panel.findByRole('alert')).toHaveTextContent(

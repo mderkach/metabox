@@ -99,6 +99,7 @@
     "linkRequired": "Paste a link",
     "link": {
       "scheme": "Link not recognized: vless://, vmess://, trojan://, ss:// and hysteria2:// are supported",
+      "subscription": "This is a subscription address, not a server link. Add subscriptions in the Subscriptions section",
       "malformed": "The link is damaged, copy it again in full",
       "server": "The link has no server address or port",
       "credential": "The link has no access key: UUID or password",

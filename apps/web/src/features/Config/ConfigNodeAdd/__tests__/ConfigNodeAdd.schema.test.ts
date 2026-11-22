@@ -43,7 +43,8 @@ describe('NodeLinkFormSchema', () => {
   });
 
   it('fails with the parser code', () => {
-    expect(linkIssues('https://example.com')).toEqual([['link', NODE_LINK_ERROR.Scheme]]);
+    expect(linkIssues('tuic://uuid:pass@example.com:443')).toEqual([['link', NODE_LINK_ERROR.Scheme]]);
+    expect(linkIssues('https://example.com')).toEqual([['link', NODE_LINK_ERROR.Subscription]]);
     expect(linkIssues('trojan://secret@example.com')).toEqual([['link', NODE_LINK_ERROR.Server]]);
   });
 });

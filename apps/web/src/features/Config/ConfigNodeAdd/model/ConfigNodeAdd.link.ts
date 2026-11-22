@@ -3,6 +3,7 @@ import { compactNode } from '@entities/Config';
 /** Failure codes of share link parsing: the `ui` substitutes the text by them. */
 export const NODE_LINK_ERROR = {
   Scheme: 'scheme',
+  Subscription: 'subscription',
   Malformed: 'malformed',
   Server: 'server',
   Credential: 'credential',
@@ -465,7 +466,13 @@ export function parseShareLink(text: string): ShareLinkResult {
     return fail(NODE_LINK_ERROR.Scheme);
   }
 
-  const parser = LINK_PARSER.get(match[1].toLowerCase());
+  const scheme = match[1].toLowerCase();
+
+  if (scheme === 'http' || scheme === 'https') {
+    return fail(NODE_LINK_ERROR.Subscription);
+  }
+
+  const parser = LINK_PARSER.get(scheme);
 
   return parser === undefined ? fail(NODE_LINK_ERROR.Scheme) : parser(match[2]);
 }

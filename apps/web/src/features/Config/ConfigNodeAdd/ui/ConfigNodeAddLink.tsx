@@ -23,6 +23,7 @@ const NS = 'features/Config/ConfigNodeAdd';
 const LINK_ERROR_KEY: Readonly<Record<string, ParseKeys<typeof NS> | undefined>> = {
   [NODE_ADD_ERROR.LinkRequired]: 'error.linkRequired',
   [NODE_LINK_ERROR.Scheme]: 'error.link.scheme',
+  [NODE_LINK_ERROR.Subscription]: 'error.link.subscription',
   [NODE_LINK_ERROR.Malformed]: 'error.link.malformed',
   [NODE_LINK_ERROR.Server]: 'error.link.server',
   [NODE_LINK_ERROR.Credential]: 'error.link.credential',
