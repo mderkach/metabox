@@ -110,6 +110,9 @@ describe('FacetFilter', () => {
 
     const input = await screen.findByRole('textbox', { name: 'Найти значение: Устройство' });
     const [first, second] = screen.getAllByRole('option');
+    await waitFor(() => {
+      expect(input).toHaveFocus();
+    });
 
     await user.keyboard('{ArrowDown}');
 
