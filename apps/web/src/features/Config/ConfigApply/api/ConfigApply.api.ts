@@ -1,8 +1,26 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useMutationState } from '@tanstack/react-query';
 
 import { applyConfig, confirmApply, restoreConfigVersion, useSaveApplyTransaction } from '@entities/Config';
+import { isRecord } from '@shared/lib/isRecord';
 
 import { ConfigApplyStore } from '../model/ConfigApply.store';
+
+const APPLY_DRAFT = ['config', 'apply-draft'] as const;
+
+export function useLatestConfigApplySubmission() {
+  const submissions = useMutationState({
+    filters: { mutationKey: APPLY_DRAFT, exact: true, status: 'success' },
+    select: ({ state: { data, variables } }) => {
+      if (!isRecord(data) || !isRecord(variables)) return null;
+      const { id } = data;
+      const { text, base } = variables;
+
+      return typeof id === 'string' && typeof text === 'string' && typeof base === 'string' ? { id, text, base } : null;
+    },
+  });
+
+  return submissions.at(-1) ?? null;
+}
 
 /**
  * Applying a draft. No retries: a repeat would start a second cycle on the
@@ -16,6 +34,7 @@ export function useApplyConfig() {
   const onTransaction = useSaveApplyTransaction();
 
   return useMutation({
+    mutationKey: APPLY_DRAFT,
     mutationFn: applyConfig,
     meta: { showError: true },
     onSuccess: (transaction, { text, lists }) => {

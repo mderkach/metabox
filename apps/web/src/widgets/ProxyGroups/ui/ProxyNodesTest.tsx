@@ -8,11 +8,13 @@ export function ProxyNodesTest({
   names,
   label,
   onTested,
+  onTestStart,
 }: {
   names: readonly string[];
   /** The accessible name tells apart identical "Test" buttons of neighbouring cards. */
   label: string;
   onTested: () => void;
+  onTestStart?: (() => void) | undefined;
 }) {
   const { t } = useTranslation('widgets/ProxyGroups');
   const delay = useTestProxyDelays();
@@ -24,6 +26,7 @@ export function ProxyNodesTest({
       disabled={names.length === 0 || delay.isPending}
       aria-label={label}
       onClick={() => {
+        onTestStart?.();
         void delay.test(names).then(function announceTested(success) {
           if (success) onTested();
         });

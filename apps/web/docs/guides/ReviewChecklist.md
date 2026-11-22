@@ -97,6 +97,7 @@ Only what a human checks. Layer boundaries, file and folder naming, `any`, unsaf
 - [ ] Component variants are defined with `cva`
 - [ ] Images are responsive
 - [ ] No new `.css` files appeared
+- [ ] Status changes, temporary controls and help popovers preserve the positions and sizes of surrounding content. Compare the bounds before and after the change ([layout stability](./Architecture&Style.md#layout-stability-across-states)).
 
 ## Design
 

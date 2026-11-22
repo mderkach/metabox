@@ -8,7 +8,7 @@ import { Button, Switch } from '@shared/ui';
 import { isUnset, UNSET, type ConfigNodeFormModel } from '../model';
 import { errorText } from './ConfigNodeForm.error';
 import type { NodeFieldProps } from './ConfigNodeForm.field';
-import { useFieldLabel } from './ConfigNodeForm.labels';
+import { useBooleanFieldHint, useFieldLabel } from './ConfigNodeForm.labels';
 import { NS } from './ConfigNodeForm.namespace';
 import { ConfigNodeFormFieldRow } from './ConfigNodeFormFieldRow';
 
@@ -20,9 +20,11 @@ import { ConfigNodeFormFieldRow } from './ConfigNodeFormFieldRow';
 export function ConfigNodeFormBooleanField({ field, name }: NodeFieldProps) {
   const { t } = useTranslation(NS);
   const label = useFieldLabel(name) ?? field.key;
+  const hint = useBooleanFieldHint(name);
   const { control } = useFormContext<ConfigNodeFormModel>();
   const id = useId();
   const errorId = useId();
+  const hintId = useId();
 
   return (
     <Controller
@@ -57,10 +59,18 @@ export function ConfigNodeFormBooleanField({ field, name }: NodeFieldProps) {
             id={id}
             checked={input.value === true}
             aria-invalid={fieldState.invalid}
+            aria-describedby={
+              [hint !== null ? hintId : '', fieldState.invalid ? errorId : ''].filter(Boolean).join(' ') || undefined
+            }
             onCheckedChange={(checked) => {
               input.onChange(checked);
             }}
           />
+          {hint !== null && (
+            <p id={hintId} className='text-xs text-muted-foreground'>
+              {hint}
+            </p>
+          )}
         </ConfigNodeFormFieldRow>
       )}
     />

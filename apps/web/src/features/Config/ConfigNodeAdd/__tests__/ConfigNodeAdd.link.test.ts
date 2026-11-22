@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import { NODE_REGISTRY, nodeSchemaOf } from '@entities/Config';
+import { NODE_REGISTRY, nodeSchemaOf, supportsVlessRealityHybridKeyShare } from '@entities/Config';
 
 import {
   NODE_LINK_ERROR,
@@ -10,6 +10,17 @@ import {
   shareLinkTag,
   type ShareLink,
 } from '../model/ConfigNodeAdd.link';
+
+vi.mock('@entities/Config', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@entities/Config')>();
+
+  return {
+    ...original,
+    supportsVlessRealityHybridKeyShare: vi.fn<typeof original.supportsVlessRealityHybridKeyShare>(
+      original.supportsVlessRealityHybridKeyShare
+    ),
+  };
+});
 
 const UUID = 'b831381d-6324-4d53-ad4f-8cda48b30811';
 const REALITY_KEY = 'jNXHt1yRo0vDuchQlIP6Z0ZvjT3KtzVI-T4E7RoLJS0';
@@ -66,6 +77,77 @@ describe('parseShareLink', () => {
         reality: { enabled: true, public_key: REALITY_KEY, short_id: '6ba85179e30d4fc2' },
       },
     });
+  });
+
+  it.each([
+    ['true', true],
+    ['false', false],
+  ])('keeps the explicit Reality hybrid key share value %s', (value, expected) => {
+    const text = `vless://${UUID}@example.com:443?security=reality&support-x25519mlkem768=${value}`;
+
+    expect(nodeOf(text).tls).toMatchObject({ reality: { support_x25519mlkem768: expected } });
+    expect(linkOf(text).omittedParams).toEqual([]);
+  });
+
+  it('reports the hybrid key share when the target schema does not support it', () => {
+    vi.mocked(supportsVlessRealityHybridKeyShare).mockReturnValueOnce(false);
+    const link = linkOf(`vless://${UUID}@example.com:443?security=reality&support-x25519mlkem768=true`);
+
+    expect(link.omittedParams).toEqual(['support-x25519mlkem768']);
+    expect(link.fields.tls).toMatchObject({ reality: { enabled: true } });
+    expect(link.fields).not.toHaveProperty('tls.reality.support_x25519mlkem768');
+  });
+
+  it('reports each omitted VLESS parameter once by its decoded name', () => {
+    const link = linkOf(
+      `vless://${UUID}@example.com:443?encryption=none&security=reality&sni=front.example` +
+        '&type=tcp&headerType=none&spx=%2Ffirst&%73px=%2Fsecond&__proto__=value&extra=opaque'
+    );
+
+    expect(link.omittedParams).toEqual(['spx', '__proto__', 'extra']);
+  });
+
+  it('reports settings that the selected transport and security cannot apply', () => {
+    const link = linkOf(
+      `vless://${UUID}@example.com:443?security=tls&type=ws&host=front.example&path=%2Fws` +
+        '&serviceName=ignored&pbk=ignored&support-x25519mlkem768=true&encryption=unsupported'
+    );
+
+    expect(link.omittedParams).toEqual(['serviceName', 'pbk', 'support-x25519mlkem768', 'encryption']);
+  });
+
+  it.each([
+    ['allowInsecure=bogus', ['allowInsecure']],
+    ['insecure=bogus', ['insecure']],
+    ['allowInsecure=bogus&insecure=1', ['allowInsecure', 'insecure']],
+  ])('reports unusable TLS boolean parameters and preserves alias precedence for %s', (query, omitted) => {
+    const link = linkOf(`vless://${UUID}@example.com:443?security=tls&${query}`);
+
+    expect(link.omittedParams).toEqual(omitted);
+    expect(link.fields).not.toHaveProperty('tls.insecure');
+  });
+
+  it.each([
+    ['allowInsecure=true', true],
+    ['insecure=1', true],
+    ['allowInsecure=false', undefined],
+    ['insecure=0', undefined],
+  ])('keeps the existing TLS boolean semantics for %s', (query, insecure) => {
+    const link = linkOf(`vless://${UUID}@example.com:443?security=tls&${query}`);
+
+    expect(link.omittedParams).toEqual([]);
+    expect(link.fields).toHaveProperty('tls', {
+      enabled: true,
+      server_name: 'example.com',
+      ...(insecure === true ? { insecure } : {}),
+    });
+  });
+
+  it('reports an unrecognized hybrid key share value and keeps the existing default', () => {
+    const link = linkOf(`vless://${UUID}@example.com:443?security=reality&support-x25519mlkem768=1`);
+
+    expect(link.omittedParams).toEqual(['support-x25519mlkem768']);
+    expect(link.fields).not.toHaveProperty('tls.reality.support_x25519mlkem768');
   });
 
   it('turns uTLS on for Reality without a fingerprint: the fork client does not build Reality without it', () => {
@@ -301,7 +383,7 @@ describe('parseShareLink', () => {
 });
 
 describe('shareLinkTag', () => {
-  const link: ShareLink = { type: 'vless', name: '', server: 'example.com', fields: {} };
+  const link: ShareLink = { type: 'vless', name: '', server: 'example.com', fields: {}, omittedParams: [] };
 
   it('takes the link name', () => {
     expect(shareLinkTag({ ...link, name: 'Amsterdam' }, [])).toBe('Amsterdam');

@@ -29,6 +29,7 @@ const FIELD_LABEL_KEY: Readonly<Record<string, ParseKeys<typeof NS> | undefined>
   'tls.reality': 'label.reality',
   'tls.reality.public_key': 'label.realityPublicKey',
   'tls.reality.short_id': 'label.realityShortId',
+  'tls.reality.support_x25519mlkem768': 'label.realityHybridKeyShare',
   transport: 'label.transport',
   multiplex: 'label.multiplex',
   obfs: 'label.obfs',
@@ -50,4 +51,10 @@ export function useFieldLabel(name: string): string | null {
   const key = FIELD_LABEL_KEY[name];
 
   return key === undefined ? null : t(key);
+}
+
+export function useBooleanFieldHint(name: string): string | null {
+  const { t } = useTranslation(NS);
+
+  return name === 'tls.reality.support_x25519mlkem768' ? t('boolean.realityHybridKeyShareHint') : null;
 }

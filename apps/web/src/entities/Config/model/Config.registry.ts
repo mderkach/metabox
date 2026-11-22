@@ -6,6 +6,7 @@ import {
   DnsSchema,
   EndpointSchema,
   InboundSchema,
+  OutboundRealityOptionsSchema,
   OutboundSchema,
   ProviderSchema,
   ServiceSchema,
@@ -118,4 +119,8 @@ export function readNodeTags(text: string): string[] {
   return SECTION_REGISTRY.flatMap(({ section }) => readSectionNodes(text, section))
     .map((node): unknown => (typeof node === 'object' && node !== null ? Reflect.get(node, 'tag') : undefined))
     .filter((tag): tag is string => typeof tag === 'string' && tag.length > 0);
+}
+
+export function supportsVlessRealityHybridKeyShare(): boolean {
+  return Object.hasOwn(OutboundRealityOptionsSchema.shape, 'support_x25519mlkem768');
 }

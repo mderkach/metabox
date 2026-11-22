@@ -44,6 +44,8 @@ export interface ProxyNode {
 export interface ProbeOutcome {
   name: string;
   failed: boolean;
+  /** Applied config fingerprint at probe start. */
+  configEtag?: string;
 }
 
 export interface ProxyGroup {

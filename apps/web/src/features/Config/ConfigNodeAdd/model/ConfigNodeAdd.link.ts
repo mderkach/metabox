@@ -1,4 +1,4 @@
-import { compactNode } from '@entities/Config';
+import { compactNode, supportsVlessRealityHybridKeyShare } from '@entities/Config';
 
 /** Failure codes of share link parsing: the `ui` substitutes the text by them. */
 export const NODE_LINK_ERROR = {
@@ -20,6 +20,8 @@ export interface ShareLink {
   server: string;
   /** Node fields other than `type` and `tag`, empty ones dropped. */
   fields: Record<string, unknown>;
+  /** Decoded query names omitted from a VLESS share link, in link order. */
+  omittedParams: readonly string[];
 }
 
 export type ShareLinkResult = { link: ShareLink; error: null } | { link: null; error: NodeLinkError };
@@ -33,6 +35,10 @@ interface LinkParts {
   port: string;
   params: URLSearchParams;
   name: string;
+}
+
+interface LinkQuery {
+  get(name: string, accepts?: (value: string) => boolean): string | null;
 }
 
 const LINK_PATTERN = /^([\d+.a-z-]+):\/\/(.*)$/is;
@@ -52,6 +58,8 @@ const REALITY_FINGERPRINT = 'chrome';
 /** Header the fork sends WebSocket early data in when the path carries `?ed=` (`parser/link/utils.go`). */
 const EARLY_DATA_HEADER = 'Sec-WebSocket-Protocol';
 const EARLY_DATA_PATTERN = /^(.*?)\?ed=(\d+)$/;
+
+const HYBRID_KEY_SHARE_PARAM = 'support-x25519mlkem768';
 
 const SECURITY = { Tls: 'tls', Reality: 'reality' } as const;
 
@@ -131,6 +139,14 @@ function isTrue(value: string | null): boolean {
   return value === '1' || value === 'true';
 }
 
+function isBooleanText(value: string | null): value is 'true' | 'false' {
+  return value === 'true' || value === 'false';
+}
+
+function isTlsBoolean(value: string): boolean {
+  return isBooleanText(value) || value === '1' || value === '0' || value === '';
+}
+
 /** Comma list as the fork schema takes it: one value is written as a string, not as an array of one. */
 function toListable(value: string | null): string | string[] | undefined {
   const items = (value ?? '')
@@ -141,7 +157,13 @@ function toListable(value: string | null): string | string[] | undefined {
   return items.length > 1 ? items : items[0];
 }
 
-function toLink(type: string, name: string, server: string, fields: Record<string, unknown>): ShareLinkResult {
+function toLink(
+  type: string,
+  name: string,
+  server: string,
+  fields: Record<string, unknown>,
+  omittedParams: readonly string[] = []
+): ShareLinkResult {
   const compact = compactNode(fields);
 
   return {
@@ -149,6 +171,7 @@ function toLink(type: string, name: string, server: string, fields: Record<strin
       type,
       name: name.trim(),
       server,
+      omittedParams,
       fields: typeof compact === 'object' && compact !== null ? Object.fromEntries(Object.entries(compact)) : {},
     },
     error: null,
@@ -156,7 +179,12 @@ function toLink(type: string, name: string, server: string, fields: Record<strin
 }
 
 /** TLS block by the `security` parameter; `undefined` means the link goes without TLS. */
-function toTls(security: string, host: string, params: URLSearchParams): Record<string, unknown> | undefined {
+function toTls(
+  security: string,
+  host: string,
+  params: LinkQuery,
+  hybridKeyShare?: boolean
+): Record<string, unknown> | undefined {
   if (security !== SECURITY.Tls && security !== SECURITY.Reality) {
     return undefined;
   }
@@ -168,14 +196,21 @@ function toTls(security: string, host: string, params: URLSearchParams): Record<
   return {
     enabled: true,
     server_name: params.get('sni') ?? params.get('peer') ?? host,
-    insecure: isTrue(params.get('allowInsecure') ?? params.get('insecure')) || undefined,
+    insecure: isTrue(params.get('allowInsecure', isTlsBoolean) ?? params.get('insecure', isTlsBoolean)) || undefined,
     alpn: toListable(params.get('alpn')),
     utls: fingerprint === '' ? undefined : { enabled: true, fingerprint },
-    reality: reality ? { enabled: true, public_key: params.get('pbk'), short_id: params.get('sid') } : undefined,
+    reality: reality
+      ? {
+          enabled: true,
+          public_key: params.get('pbk'),
+          short_id: params.get('sid'),
+          support_x25519mlkem768: hybridKeyShare,
+        }
+      : undefined,
   };
 }
 
-function toWebSocket(params: URLSearchParams): Record<string, unknown> {
+function toWebSocket(params: LinkQuery): Record<string, unknown> {
   const path = params.get('path') ?? '';
   const host = params.get('host');
   const early = EARLY_DATA_PATTERN.exec(path);
@@ -189,7 +224,7 @@ function toWebSocket(params: URLSearchParams): Record<string, unknown> {
   };
 }
 
-function toHttp(params: URLSearchParams): Record<string, unknown> {
+function toHttp(params: LinkQuery): Record<string, unknown> {
   return { type: 'http', host: toListable(params.get('host')), path: params.get('path') };
 }
 
@@ -197,13 +232,15 @@ function toHttp(params: URLSearchParams): Record<string, unknown> {
  * Transport by the link `type` (`net` in VMess). `undefined` means plain TCP,
  * `null` means a transport the fork does not have.
  */
-function toTransport(kind: string, params: URLSearchParams): Record<string, unknown> | undefined | null {
+function toTransport(kind: string, params: LinkQuery): Record<string, unknown> | undefined | null {
   switch (kind) {
     case '':
     case 'tcp':
     case 'raw':
     case 'none':
-      return params.get('headerType') === 'http' ? toHttp(params) : undefined;
+      return params.get('headerType', (value) => value === 'http' || value === 'none' || value === '') === 'http'
+        ? toHttp(params)
+        : undefined;
     case 'ws':
       return toWebSocket(params);
     case 'http':
@@ -223,14 +260,29 @@ function toTransport(kind: string, params: URLSearchParams): Record<string, unkn
   }
 }
 
+/** Preserve first-value and alias precedence even when the value is reported as omitted. */
+function trackQuery(params: URLSearchParams, used: Set<string>): LinkQuery {
+  return {
+    get(name, accepts) {
+      const value = params.get(name);
+
+      if (value !== null && accepts?.(value) !== false) {
+        used.add(name);
+      }
+
+      return value;
+    },
+  };
+}
+
 /**
  * URL link in the Xray format: the credential in userinfo, TLS and transport in
  * parameters. VLESS and Trojan differ only in the node fields built from it.
  */
 function parseXrayLink(
   body: string,
-  type: string,
-  toFields: (credential: string, host: string, params: URLSearchParams) => Record<string, unknown>
+  type: 'vless' | 'trojan',
+  toFields: (credential: string, host: string, params: LinkQuery) => Record<string, unknown>
 ): ShareLinkResult {
   const parts = splitLink(body);
 
@@ -240,7 +292,9 @@ function parseXrayLink(
 
   const { userinfo, host, port, params, name } = parts;
   const serverPort = parsePort(port);
-  const transport = toTransport(params.get('type') ?? '', params);
+  const used = new Set<string>();
+  const query = type === 'vless' ? trackQuery(params, used) : params;
+  const transport = toTransport(query.get('type') ?? '', query);
 
   if (host === '' || serverPort === null) {
     return fail(NODE_LINK_ERROR.Server);
@@ -254,21 +308,38 @@ function parseXrayLink(
     return fail(NODE_LINK_ERROR.Transport);
   }
 
-  return toLink(type, name, host, {
+  const fields = {
     server: host,
     server_port: serverPort,
-    ...toFields(userinfo, host, params),
+    ...toFields(userinfo, host, query),
     transport,
-  });
+  };
+  const omittedParams =
+    type === 'vless' ? [...new Set(params.keys())].filter((key) => key !== '' && !used.has(key)) : [];
+
+  return toLink(type, name, host, fields, omittedParams);
 }
 
 function parseVless(body: string): ShareLinkResult {
-  return parseXrayLink(body, 'vless', (uuid, host, params) => ({
-    uuid,
-    flow: params.get('flow'),
-    packet_encoding: params.get('packetEncoding'),
-    tls: toTls(params.get('security') ?? '', host, params),
-  }));
+  return parseXrayLink(body, 'vless', (uuid, host, params) => {
+    params.get('encryption', (value) => value === 'none' || value === '');
+    const security =
+      params.get(
+        'security',
+        (value) => value === SECURITY.Tls || value === SECURITY.Reality || value === 'none' || value === ''
+      ) ?? '';
+    const hybridKeyShare =
+      security === SECURITY.Reality && supportsVlessRealityHybridKeyShare()
+        ? params.get(HYBRID_KEY_SHARE_PARAM, isBooleanText)
+        : null;
+
+    return {
+      uuid,
+      flow: params.get('flow'),
+      packet_encoding: params.get('packetEncoding'),
+      tls: toTls(security, host, params, isBooleanText(hybridKeyShare) ? hybridKeyShare === 'true' : undefined),
+    };
+  });
 }
 
 /** Trojan does not work without TLS: it is on even when the link does not say so. */

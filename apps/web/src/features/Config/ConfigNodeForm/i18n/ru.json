@@ -1,7 +1,8 @@
 {
   "boolean": {
     "unset": "не задано",
-    "reset": "Сбросить {{name}}"
+    "reset": "Сбросить {{name}}",
+    "realityHybridKeyShareHint": "Нужен некоторым новым серверам REALITY. Выбранный отпечаток браузера должен поддерживать гибридный обмен ключами."
   },
   "booleanGroup": {
     "details": "Подробнее",
@@ -57,6 +58,7 @@
     "reality": "Reality",
     "realityPublicKey": "Публичный ключ Reality",
     "realityShortId": "Short ID Reality",
+    "realityHybridKeyShare": "Гибридный обмен ключами (X25519MLKEM768)",
     "transport": "Транспорт",
     "multiplex": "Мультиплексирование",
     "obfs": "Обфускация",
