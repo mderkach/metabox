@@ -47,6 +47,7 @@ export function renderWithRouter(Component: FunctionComponent, route: ScreenRout
         <RouterProvider router={router} />
       </QueryClientProvider>
     ),
+    queryClient,
     /** Test router: used to check that the screen wrote state into the address. */
     router,
   };

@@ -16,6 +16,7 @@ import {
   SERVICE_RUNNING_FIXTURE,
   TRAFFIC_HISTORY_FIXTURE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
+import { DEVICE_ENDPOINT } from '@entities/Device';
 import { PROXY_ENDPOINT } from '@entities/Proxy';
 import { NARROW_SCREEN } from '@shared/lib/media';
 
@@ -115,6 +116,21 @@ describe('panel routes', () => {
     const nav = screen.getByRole('navigation', { name: 'Разделы панели' });
 
     expect(within(nav).getByRole('link', { current: 'page' })).toHaveAttribute('href', '/overview');
+  });
+
+  it('opens How metabox works at its own address', async () => {
+    serveDaemon();
+    vi.stubGlobal('EventSource', SilentEventSource);
+    server.use(
+      http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json({ proxies: {} })),
+      http.get(PROXY_ENDPOINT.providers(), () => HttpResponse.json({ providers: {} })),
+      http.get(DEVICE_ENDPOINT.devices(), () => HttpResponse.json({ devices: [] }))
+    );
+
+    const router = renderRouter('/how-it-works');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Как работает metabox' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/how-it-works');
   });
 
   // The rule sets section is done, and its menu item must lead to it: an item without

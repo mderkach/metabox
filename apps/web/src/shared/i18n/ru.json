@@ -274,6 +274,7 @@
     "done": "Готово"
   },
   "section": {
+    "howItWorks": "Как работает metabox",
     "overview": "Обзор",
     "config": "Конфигурация",
     "proxies": "Прокси",

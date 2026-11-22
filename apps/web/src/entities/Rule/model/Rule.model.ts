@@ -110,6 +110,20 @@ export function toNewRuleRow(place: NewRulePlace): RuleRow {
  * Set tags the rule refers to itself, without nested branches. The string
  * `"rule_set": "x"` arrives as a list of one tag.
  */
-export function ruleSetsOf(rule: RuleRow): string[] {
+export function ruleSetsOf(rule: Pick<RuleBranch, 'matchers'>): string[] {
   return rule.matchers.find((matcher) => matcher.key === RULE_SET_MATCHER)?.values ?? [];
+}
+
+/** Set references in a rule and its logical branches, in the order they appear. */
+export function ruleSetReferencesOf(rule: RuleBranch): string[] {
+  const tags = new Set<string>();
+
+  function collect(branch: RuleBranch): void {
+    ruleSetsOf(branch).forEach((tag) => tags.add(tag));
+    branch.group?.children.forEach(collect);
+  }
+
+  collect(rule);
+
+  return [...tags];
 }

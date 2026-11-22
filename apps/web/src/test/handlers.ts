@@ -1,12 +1,17 @@
 import { http, HttpResponse } from 'msw';
 
 import { createAuthHandlers, OTHER_SESSIONS_FIXTURE } from '@entities/Auth/__tests__/Auth.handlers';
-import { CONFIG_FIXTURE } from '@entities/Config/__tests__/Config.fixture';
-import { configHandlers } from '@entities/Config/__tests__/Config.handlers';
+import {
+  STAND_CONFIG_FIXTURE,
+  STAND_PROCESS_RULES,
+  WALK_FIRST_RULE_INDEX,
+} from '@entities/Config/__tests__/Config.fixture';
+import { configHandlers, STAND_CONFIG_ETAG, standConfigHandler } from '@entities/Config/__tests__/Config.handlers';
 import {
   advanceConnectionsSnapshot,
   CONNECTIONS_FIXTURE,
   makeConnectionsSnapshot,
+  WALK_CONNECTIONS_FIXTURE,
 } from '@entities/Connection/__tests__/Connection.fixture';
 import { connectionHandlers } from '@entities/Connection/__tests__/Connection.handlers';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
@@ -19,12 +24,19 @@ import {
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { createStatefulDaemonHandlers } from '@entities/Daemon/__tests__/Daemon.handlers';
 import { createDataplaneMock } from '@entities/Dataplane/__tests__/Dataplane.handlers';
+import { STAND_DEVICES_FIXTURE } from '@entities/Device/__tests__/Device.fixture';
 import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
 import { createDiagHandlers } from '@entities/Diag/__tests__/Diag.handlers';
 import { createLogHandlers } from '@entities/Log/__tests__/Log.handlers';
 import { createMcpHandlers } from '@entities/Mcp/__tests__/Mcp.handlers';
+import { STAND_PROVIDERS_FIXTURE, STAND_PROXIES_FIXTURE } from '@entities/Proxy/__tests__/Proxy.fixture';
 import { createStatefulProxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
-import { createRouteHandlers, createRuleHitsHandler } from '@entities/Route/__tests__/Route.handlers';
+import { withAppliedRuleReference } from '@entities/Route/__tests__/Route.fixture';
+import {
+  createRouteExplanationHandler,
+  createRouteHandlers,
+  createRuleHitsHandler,
+} from '@entities/Route/__tests__/Route.handlers';
 import { ruleSetHandlers } from '@entities/RuleSet/__tests__/RuleSet.handlers';
 import { RUNTIME_TOPIC } from '@shared/api';
 import type { CachedRuleSetWire } from '@shared/api/daemon.generated';
@@ -58,6 +70,24 @@ function streamSampleAt(offset: number) {
  * until the page reloads, otherwise manual checking looks like breakage.
  */
 export function createMissingHandlers(connections = 0) {
+  const walkConnections = connections > 0 ? [] : WALK_CONNECTIONS_FIXTURE;
+  const walkRouteHandlers = walkConnections.map(({ id, chain }, offset) => {
+    const { index, conditions, action } = STAND_PROCESS_RULES[WALK_FIRST_RULE_INDEX + offset];
+
+    return createRouteExplanationHandler(
+      withAppliedRuleReference(
+        {
+          connection_id: id,
+          match: { origin: 'observed', kind: 'rule', index, conditions, action },
+          chain: { origin: 'observed', nodes: chain },
+          rules: STAND_PROCESS_RULES,
+        },
+        index,
+        STAND_CONFIG_ETAG
+      )
+    );
+  });
+
   // The snapshot is assembled once and then changes in place: inflating five
   // thousand rows on every tick would measure the generator, not the panel. A copy
   // is mandatory: `CONNECTIONS_FIXTURE` itself shares the connection array with the samples
@@ -67,7 +97,10 @@ export function createMissingHandlers(connections = 0) {
       ? makeConnectionsSnapshot(connections, { vary: true })
       : {
           ...CONNECTIONS_FIXTURE,
-          connections: CONNECTIONS_FIXTURE.connections.map((row) => ({ ...row, chain: [...row.chain] })),
+          connections: CONNECTIONS_FIXTURE.connections.map((row) => ({
+            ...row,
+            chain: [...row.chain],
+          })),
         };
 
   const dataplane = createDataplaneMock();
@@ -85,7 +118,7 @@ export function createMissingHandlers(connections = 0) {
     stripe: { state: 'cache_unavailable' },
   };
   const cachedRuleSets: CachedRuleSetWire[] = [];
-  for (const { type, tag } of CONFIG_FIXTURE.route?.rule_set ?? []) {
+  for (const { type, tag } of STAND_CONFIG_FIXTURE.route?.rule_set ?? []) {
     if (type !== 'remote' || typeof tag !== 'string') continue;
 
     cachedRuleSets.push({
@@ -99,6 +132,7 @@ export function createMissingHandlers(connections = 0) {
   return [
     ...createAuthHandlers({ others: OTHER_SESSIONS_FIXTURE }),
     ...createMcpHandlers(),
+    standConfigHandler,
     ...configHandlers,
     // The daemon minute of open connections matches the live snapshot: with the
     // test fixture's 150 the chart would drop where the stream takes over.
@@ -108,21 +142,24 @@ export function createMissingHandlers(connections = 0) {
     http.get(DAEMON_ENDPOINT.history(), () =>
       HttpResponse.json({
         ...TRAFFIC_HISTORY_FIXTURE,
-        connections: TRAFFIC_HISTORY_FIXTURE.connections.map(() => snapshot.connections.length),
+        connections: TRAFFIC_HISTORY_FIXTURE.connections.map(
+          () => snapshot.connections.length + walkConnections.length
+        ),
         recent: TRAFFIC_HISTORY_FIXTURE.recent.map((_, index, all) => streamSampleAt(index - all.length + 1)),
       })
     ),
     ...createStatefulDaemonHandlers(dataplane.status),
     ...dataplane.handlers,
-    ...createStatefulProxyHandlers(),
-    ...createDeviceHandlers(),
+    ...createStatefulProxyHandlers(STAND_PROXIES_FIXTURE, STAND_PROVIDERS_FIXTURE),
+    ...createDeviceHandlers(STAND_DEVICES_FIXTURE),
     ...createLogHandlers(),
     ...createDiagHandlers(),
     ...connectionHandlers,
-    ...createRouteHandlers(CONNECTIONS_FIXTURE.connections),
+    ...walkRouteHandlers,
+    ...createRouteHandlers(connections > 0 ? CONNECTIONS_FIXTURE.connections : snapshot.connections),
     ...ruleSetHandlers,
     http.get(CACHED_RULE_SETS_PATH, () => HttpResponse.json(cachedRuleSets)),
-    createRuleHitsHandler(CONFIG_FIXTURE.route?.rules ?? []),
+    createRuleHitsHandler(STAND_CONFIG_FIXTURE.route?.rules ?? []),
     runtimeStreamHandler(
       [
         { topic: RUNTIME_TOPIC.Service, data: () => SERVICE_RUNNING_FIXTURE },
@@ -131,7 +168,11 @@ export function createMissingHandlers(connections = 0) {
           data: () => {
             connectionsFrame += 1;
 
-            return advanceConnectionsSnapshot(snapshot, connectionsFrame);
+            const frame = advanceConnectionsSnapshot(snapshot, connectionsFrame);
+
+            return walkConnections.length === 0
+              ? frame
+              : { ...frame, connections: [...walkConnections, ...frame.connections] };
           },
         },
         {
