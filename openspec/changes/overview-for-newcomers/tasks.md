@@ -94,6 +94,8 @@
 
 - [ ] 5.4 AC-95…AC-100: an e2e scenario on the mock stand for the normal, needs attention and core stopped states at desktop width and 375 px, in both themes, with neutral tags in the fixtures; row in `docs/Verification.md`. Verify: `pnpm --filter web test:e2e`, `make trace-check`.
 
+- [ ] 5.5 AC-111: verify the shared route transition in both directions, including browser history. Apply the panel motion guidance to the redesigned views, notices and contextual controls. Test the standard and reduced-motion paths on the mock stand, as well as the navigation fallback without the View Transition API. Assert final state, focus and stable popover geometry in both themes at desktop and 375 px. Add the scenarios to `docs/Verification.md`. Verify: `pnpm --filter web test:e2e`, `pnpm --filter web check:design`, an independent Impeccable critique, `make trace-check`.
+
 ## 6. User documentation
 
 - [ ] 6.1 AC-95…AC-104, AC-10, AC-35, AC-38, AC-45: update the Overview description in `README.md` and `README.ru.md`, and the Overview screenshots in `docs/screenshots/` with neutral tags. Note in `docs/Recovery.md` and `docs/Recovery.ru.md` that the "core stopped" block offers the last version the core ran on, and that a rule name is not a place for a secret (it reaches MCP with only URLs masked). Note in the Overview description that the blocked count needs `log.level` `debug` for `reject` rules and `info` for a `block` outbound. The specs have no derived Russian translation in the repository; if one appears before this task, update it for `overview`, `proxies`, `panel`, `routing-rules` and `outbound-metadata`. Verify: manual: the English and Russian copies say the same, and `pnpm --filter web test` passes (`tools/vocabulary.test.ts`).
