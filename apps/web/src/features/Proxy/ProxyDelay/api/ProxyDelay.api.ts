@@ -32,7 +32,7 @@ export function useTestProxyDelay() {
         const { delay } = await testProxyDelay(name);
         if (!Number.isFinite(delay) || delay < 0) throw new Error('Invalid proxy delay response');
 
-        return { name, failed: delay >= DELAY_TIMEOUT, ...revision };
+        return { name, failed: delay === 0 || delay >= DELAY_TIMEOUT, ...revision };
       } catch (error) {
         if (isProbeFailure(error)) {
           return { name, failed: true, ...revision };

@@ -166,29 +166,41 @@ export function useProxiesRecovery(nodes: readonly ProxyNode[]): readonly ProxyR
 
       async function measure(): Promise<NonNullable<Attempt['probe']>['result'] | null> {
         const query = getConfigOptions();
-        try {
-          const before = await client.fetchQuery({ ...query, staleTime: 0 });
-          if (before.etag !== startedOn) return null;
-
-          const outcome = await mutateAsync(tag);
-          const after = await client.fetchQuery({ ...query, staleTime: 0 });
-          const latest = client
+        const latestProbe = () =>
+          client
             .getMutationCache()
             .findAll({ mutationKey: PROXY_MUTATION.delay() })
             .findLast((mutation) => mutation.state.variables === tag);
-          if (outcome.configEtag !== startedOn || after.etag !== startedOn || latest?.state.data !== outcome) {
-            return null;
-          }
-
-          return outcome.failed ? 'no-response' : 'answered';
-        } catch {
-          return 'probe-error';
-        } finally {
-          await Promise.all([
-            client.invalidateQueries({ queryKey: PROXY_QUERY.list() }),
-            client.invalidateQueries({ queryKey: PROXY_QUERY.latency() }),
-          ]);
+        const beforeProbe = latestProbe()?.mutationId;
+        const before = await client.fetchQuery({ ...query, staleTime: 0 }).catch(() => null);
+        if (before === null) {
+          return latestProbe()?.mutationId === beforeProbe && client.getQueryData(query.queryKey)?.etag === startedOn
+            ? 'probe-error'
+            : null;
         }
+        if (before.etag !== startedOn) return null;
+
+        const probe = mutateAsync(tag);
+        const probeId = latestProbe()?.mutationId;
+        const outcome = await probe.catch(() => null);
+        const after = await client.fetchQuery({ ...query, staleTime: 0 }).catch(() => null);
+        await Promise.all([
+          client.invalidateQueries({ queryKey: PROXY_QUERY.list() }),
+          client.invalidateQueries({ queryKey: PROXY_QUERY.latency() }),
+        ]);
+
+        if (
+          probeId === undefined ||
+          latestProbe()?.mutationId !== probeId ||
+          client.getQueryData(query.queryKey)?.etag !== startedOn ||
+          (after !== null && after.etag !== startedOn)
+        ) {
+          return null;
+        }
+        if (outcome === null || after === null) return 'probe-error';
+        if (outcome.configEtag !== startedOn) return null;
+
+        return outcome.failed ? 'no-response' : 'answered';
       }
 
       try {

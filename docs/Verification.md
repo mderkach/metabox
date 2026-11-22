@@ -658,8 +658,9 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/ProxiesPage.test.tsx`                               | `does not show the REALITY hint for a daemon error or a node without an eligible edit`                         |
 | AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/ProxiesPage.test.tsx`                               | `does not offer REALITY recovery when the runtime tag belongs to a group`                                      |
 | AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/ProxiesPage.test.tsx`                               | `places only one diagnostic for a server shown in two groups`                                                  |
-| AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/Proxies.recoveryState.test.tsx`                     | `stages the original value %s after a confirmed same-server retest`                                            |
+| AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/Proxies.recoveryState.test.tsx`                     | `stages the original value $original after a confirmed same-server retest returning $delay`                    |
 | AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/Proxies.recoveryState.test.tsx`                     | `does not attribute a confirm made outside this tab to the staged fix`                                         |
+| AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/Proxies.recoveryState.test.tsx`                     | `ignores a delayed $label retest once a newer probe has started for that same node`                            |
 | AC-11  | e2e    | `apps/web/e2e/realityRecovery.e2e.test.ts`                                                | `applies and restores a REALITY setting after distinct retest failures`                                        |
 
 ## Checked by hand on purpose

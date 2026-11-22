@@ -27,7 +27,7 @@ const TRANSACTION = {
   sha256: CHANGED,
 };
 
-function serveRecovery(original: boolean | undefined) {
+function serveRecovery(original: boolean | undefined, delay = DELAY_TIMEOUT) {
   let text = JSON.stringify({
     outbounds: [
       {
@@ -66,7 +66,7 @@ function serveRecovery(original: boolean | undefined) {
 
       return HttpResponse.json(transaction);
     }),
-    http.get(PROXY_ENDPOINT.proxyDelay(TAG), () => HttpResponse.json({ delay: DELAY_TIMEOUT })),
+    http.get(PROXY_ENDPOINT.proxyDelay(TAG), () => HttpResponse.json({ delay })),
     http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json({ proxies: {} })),
     http.get(PROXY_ENDPOINT.latency(), () => HttpResponse.json({ servers: [] }))
   );
@@ -141,30 +141,39 @@ describe('REALITY recovery attempt', () => {
     localStorage.clear();
   });
 
-  it.each([false, undefined])('stages the original value %s after a confirmed same-server retest', async (original) => {
-    serveRecovery(original);
-    await startRecovery();
-    await confirmRecovery();
-    await userEvent.click(await screen.findByRole('button', { name: 'Retry' }));
-    const restore = await screen.findByRole('button', { name: 'Restore' });
-    expect(screen.getByRole('status', { name: 'Recovery phase' })).toHaveTextContent('no-response');
+  it.each([
+    { original: false, delay: DELAY_TIMEOUT },
+    { original: undefined, delay: 0 },
+  ])(
+    'stages the original value $original after a confirmed same-server retest returning $delay',
+    async ({ original, delay }) => {
+      serveRecovery(original, delay);
+      await startRecovery();
+      await confirmRecovery();
+      await userEvent.click(await screen.findByRole('button', { name: 'Retry' }));
+      const restore = await screen.findByRole('button', { name: 'Restore' });
+      expect(screen.getByRole('status', { name: 'Recovery phase' })).toHaveTextContent('no-response');
 
-    act(() => {
-      ConfigDocumentStore.getState().edit(['log', 'level'], 'debug');
-    });
-    await userEvent.click(restore);
-    const draft = selectConfigCurrent(ConfigDocumentStore.getState()) ?? '';
-    expect(findValue(draft, FLAG)).toBe(original);
-    expect(findValue(draft, ['log', 'level'])).toBe('debug');
-    expect(screen.getByRole('status', { name: 'Recovery phase' })).toHaveTextContent('return-staged');
-  });
+      act(() => {
+        ConfigDocumentStore.getState().edit(['log', 'level'], 'debug');
+      });
+      await userEvent.click(restore);
+      const draft = selectConfigCurrent(ConfigDocumentStore.getState()) ?? '';
+      expect(findValue(draft, FLAG)).toBe(original);
+      expect(findValue(draft, ['log', 'level'])).toBe('debug');
+      expect(screen.getByRole('status', { name: 'Recovery phase' })).toHaveTextContent('return-staged');
+    }
+  );
 
-  it('ignores a delayed failed retest once a newer probe has started for that same node', async () => {
+  it.each([
+    { label: 'no-response', response: () => HttpResponse.json({ delay: DELAY_TIMEOUT }) },
+    { label: 'daemon error', response: () => HttpResponse.json({ code: 'core_unavailable' }, { status: 503 }) },
+  ])('ignores a delayed $label retest once a newer probe has started for that same node', async ({ response }) => {
     serveRecovery(false);
     await startRecovery();
     await confirmRecovery();
 
-    let finish = () => {
+    let finish: () => void = () => {
       throw new Error('Retest promise was not initialized');
     };
     const delayed = new Promise<void>((resolve) => {
@@ -178,7 +187,7 @@ describe('REALITY recovery attempt', () => {
 
         await delayed;
 
-        return HttpResponse.json({ delay: DELAY_TIMEOUT });
+        return response();
       })
     );
 
