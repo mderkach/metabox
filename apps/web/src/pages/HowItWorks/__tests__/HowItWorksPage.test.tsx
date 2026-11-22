@@ -181,7 +181,7 @@ describe('How metabox works', () => {
       '/settings',
     ];
     for (const [index, name] of names.entries()) {
-      const card = screen.getByRole('button', { name, exact: true });
+      const card = screen.getByRole('button', { name });
       await user.click(card);
       expect(card).toHaveAttribute('aria-pressed', 'true');
       expect(screen.getByRole('link', { name: configure })).toHaveAttribute('href', destinations[index]);
