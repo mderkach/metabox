@@ -78,6 +78,7 @@ Refs:
 - `proxies`: AC-45 modified. The mode switch moves to the Overview header and shows only when the config has rules with `clash_mode`; a switch can be undone for 10 s; a banner shows while the mode is not the default.
 - `panel`: AC-38 modified. The rules list gains an outbound facet, which is the target of "N rules".
 - `routing-rules`: new AC-103. Rule names reach the daemon, MCP and connections.
+- `route-explanation`: AC-34 uses the same verified positional reference as AC-103.
 
 ## Conflicts with built requirements and principles
 

@@ -4,10 +4,8 @@
   "from": "from {{device}}",
   "close": "Close the explanation",
   "drift": {
-    "title": "The core runs another config version",
-    "description": "The core uses {{running}} rules. The applied file contains {{document}}, so the rule number is hidden. Apply the config to make the lists match.",
-    "notCompared": "The applied config was not read, so there is no link to the rule.",
-    "open": "Open the config"
+    "title": "The rule position is unconfirmed",
+    "description": "Find the rule by its condition and action in the rule list."
   },
   "origin": {
     "observed": "from the core",
@@ -31,7 +29,8 @@
     "action": "Action",
     "open": "Open the rule in the editor",
     "observed": "The matched rule reported by the core",
-    "unmapped": "The number of this rule in the file is unknown."
+    "name": "Name",
+    "openConfig": "Open the config"
   },
   "chain": {
     "title": "Chain",
@@ -40,5 +39,9 @@
   "before": {
     "title": "Rules above did not match",
     "label": "Rules above the matched one"
+  },
+  "draft": {
+    "title": "There are changes in the draft",
+    "description": "The verified position refers to the applied config."
   }
 }

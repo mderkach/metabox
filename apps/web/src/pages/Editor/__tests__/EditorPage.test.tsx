@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
 import { finishSidePanelTransition } from '@test/sidePanel';
@@ -8,7 +9,7 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfigDocumentState, findValue } from '@entities/Config';
-import { CONFIG_ENDPOINT } from '@entities/Config';
+import { CONFIG_ENDPOINT, CONFIG_QUERY } from '@entities/Config';
 import { parseRuleSearch } from '@entities/Rule';
 import { PANEL_AS_SHEET } from '@shared/lib/media';
 
@@ -762,6 +763,99 @@ describe('rule number from the address', () => {
     const panel = await screen.findByRole('complementary');
 
     expect(within(panel).getByText('Правило 2', { selector: 'p' })).toBeInTheDocument();
+  });
+
+  it('opens a guarded rule when the loaded editor document matches its ETag', async () => {
+    const etag = '"verified"';
+    server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG, { headers: { ETag: etag } })));
+    const { router } = renderWithRouter(EditorPage, { validateSearch: parseRuleSearch });
+
+    await act(async () => {
+      await router.navigate({ to: '/', search: { rule: 2, ruleEtag: etag } });
+    });
+
+    const panel = await screen.findByRole('complementary');
+    expect(within(panel).getByText('Правило 2', { selector: 'p' })).toBeInTheDocument();
+  });
+
+  it('keeps an opened guarded rule while the user edits its draft', async () => {
+    const etag = '"verified"';
+    server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG, { headers: { ETag: etag } })));
+    const { router } = renderWithRouter(EditorPage, { validateSearch: parseRuleSearch });
+
+    await act(async () => {
+      await router.navigate({ to: '/', search: { rule: 2, ruleEtag: etag } });
+    });
+
+    await screen.findByRole('complementary');
+    act(() => {
+      ConfigDocumentState.getState().replace(CONFIG + '\n// Local edit');
+    });
+
+    expect(within(screen.getByRole('complementary')).getByText('Правило 2', { selector: 'p' })).toBeInTheDocument();
+  });
+
+  it('closes an opened guarded position when the applied config is reordered', async () => {
+    const user = userEvent.setup();
+    const etag = '"verified"';
+    const original = editConfig(EDIT_RULES);
+    server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(original, { headers: { ETag: etag } })));
+
+    function EditorWithRefresh() {
+      const client = useQueryClient();
+
+      return (
+        <>
+          <button
+            type='button'
+            onClick={() => {
+              void client.invalidateQueries({ queryKey: CONFIG_QUERY.current(), exact: true });
+            }}
+          >
+            Refresh applied config
+          </button>
+          <EditorPage />
+        </>
+      );
+    }
+
+    const { router } = renderWithRouter(EditorWithRefresh, { validateSearch: parseRuleSearch });
+
+    await act(async () => {
+      await router.navigate({ to: '/', search: { rule: 2, ruleEtag: etag } });
+    });
+
+    expect(await screen.findByRole('complementary', { name: '53 → перехватить DNS' })).toBeInTheDocument();
+
+    const reordered = editConfig([EDIT_RULES[1], EDIT_RULES[0], EDIT_RULES[2]]);
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(reordered, { headers: { ETag: '"reordered"' } }))
+    );
+    await user.click(screen.getByRole('button', { name: 'Refresh applied config' }));
+
+    expect(await screen.findByRole('button', { name: '53 → перехватить DNS, правило 1' })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+  });
+
+  it.each(['different revision', 'dirty draft'])('does not open a guarded position on a %s', async (reason) => {
+    const etag = '"verified"';
+    server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG, { headers: { ETag: etag } })));
+    if (reason === 'dirty draft') {
+      ConfigDocumentState.getState().load(CONFIG, etag);
+      ConfigDocumentState.getState().replace(CONFIG + '\n// Existing draft');
+    }
+
+    const { router } = renderWithRouter(EditorPage, { validateSearch: parseRuleSearch });
+
+    await act(async () => {
+      await router.navigate({
+        to: '/',
+        search: { rule: 2, ruleEtag: reason === 'dirty draft' ? etag : '"different"' },
+      });
+    });
+
+    expect(await screen.findByRole('table', { name: 'Правила маршрутизации' })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
   });
 
   it('converts the interface number to a node index', () => {

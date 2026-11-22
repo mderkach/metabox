@@ -219,6 +219,8 @@ The agent can then answer questions like these:
 
 Access is read-only: no tool changes the config or the services. Secrets in config fragments are masked. The sing-box log is returned as is.
 
+MCP returns rule names separately from the config text. URLs are masked and invisible characters are removed. Keep credentials out of rule names.
+
 The token is separate from the panel password and does not open the panel. A new token replaces the old one. **Disable** in the same dialog turns MCP off. Over SSH: `rm /etc/metabox/mcp.json && /etc/init.d/metaboxd restart`.
 
 With HTTPS on, the command uses `https://`, and the client must trust the panel certificate. Claude Code rejects the daemon's own root with `unsupported name constraint type`. Your own certificate through `https_cert` and `https_key` avoids this.

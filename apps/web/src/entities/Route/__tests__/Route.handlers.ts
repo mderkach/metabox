@@ -118,3 +118,7 @@ export function createRouteHandlers(connections: readonly ExplainedConnection[])
     }),
   ];
 }
+
+export function createRouteExplanationHandler(explanation: RouteExplanationWire) {
+  return http.get(ROUTE_ENDPOINT.explanation(explanation.connection_id), () => HttpResponse.json(explanation));
+}
