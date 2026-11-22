@@ -1,6 +1,6 @@
 import { worker } from '@test/browserWorker';
 import { renderWithRouter } from '@test/renderWithRouter';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
@@ -59,6 +59,33 @@ describe('overview screen picked with the mouse', () => {
 
     await waitFor(() => {
       expect(region).toHaveTextContent('us-fallback: выбран выход proxy');
+    });
+  });
+
+  it('shows member labels before tags and sends the selected tag to the core', async () => {
+    const writes: unknown[] = [];
+    worker.use(...proxyHandlers);
+    worker.use(
+      http.get(PROXY_ENDPOINT.outbounds(), () =>
+        HttpResponse.json({ us: { label: 'America' }, proxy: { label: 'Europe' } })
+      ),
+      http.put(PROXY_ENDPOINT.proxy('us-fallback'), async ({ request }) => {
+        writes.push(await request.json());
+
+        return new HttpResponse(null, { status: 204 });
+      })
+    );
+
+    renderWithRouter(OverviewPage);
+
+    const control = await screen.findByRole('combobox', { name: 'Выход группы us-fallback' });
+    expect(await within(control).findByText('America', { exact: true })).toBeVisible();
+    expect(within(control).getByText('us', { exact: true })).toHaveClass('font-mono');
+    await userEvent.click(control);
+    await userEvent.click(await screen.findByRole('option', { name: /Europe\s*proxy/ }));
+
+    await waitFor(() => {
+      expect(writes).toEqual([{ name: 'proxy' }]);
     });
   });
 

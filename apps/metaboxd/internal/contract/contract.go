@@ -227,6 +227,8 @@ const (
 	// is longer than allowed or has control characters, the body is not parsed,
 	// or there are more own names than the daemon stores.
 	ErrDeviceInvalid ErrorCode = "device_invalid"
+	// ErrOutboundInvalid means an outbound label, manual norm or edit was not accepted.
+	ErrOutboundInvalid ErrorCode = "outbound_invalid"
 	// ErrDataplaneInvalid means the dataplane model was not accepted: in UCI or in
 	// the `PUT /api/dataplane` body. The fields with errors lie in Details; a body
 	// that did not parse as JSON has none.

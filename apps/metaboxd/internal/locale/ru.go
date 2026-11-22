@@ -34,6 +34,8 @@ var ru = map[string]string{
 	"request host does not match the panel address":                                        "адрес запроса не совпадает с адресом панели",
 	"WebSocket upgrade is not supported: the runtime comes through the /api/events stream": "апгрейд до WebSocket не поддерживается: рантайм идёт потоком /api/events",
 	"apply request body not parsed":                                                        "тело запроса применения не разобрано",
+	"outbound metadata rejected":                                                           "имя или обычная задержка выхода не приняты",
+	"outbound metadata body not parsed":                                                    "тело правки имени или обычной задержки выхода не разобрано",
 	"device rename body not parsed":                                                        "тело правки имени устройства не разобрано",
 	"dataplane model change body not parsed":                                               "тело смены модели обвязки не разобрано",
 	"If-Match with the ETag from GET /api/dataplane is required":                           "нужен If-Match с ETag из GET /api/dataplane",

@@ -30,7 +30,7 @@ export function OverviewStatus({
       <Card className={CARD_FLUSH}>
         <div className='grid gap-px bg-border lg:grid-cols-3'>
           <div className='bg-card p-4'>
-            <DaemonServiceControl heading='h2' emphasizeRestart />
+            <DaemonServiceControl heading='h2' emphasizeRestart showStatus={false} />
           </div>
           <div className='bg-card p-4'>
             <OverviewNode

@@ -10,6 +10,9 @@ export class ApplyBar {
   readonly region: Locator;
   readonly dirty: Locator;
   readonly applyButton: Locator;
+  readonly more: Locator;
+  readonly discard: Locator;
+  readonly confirmPrompt: Locator;
   readonly diff: Locator;
   readonly ruleChanges: Locator;
   readonly nodeChanges: Locator;
@@ -21,6 +24,9 @@ export class ApplyBar {
     this.region = page.getByRole('region', { name: translate(CONFIG_APPLY, 'bar.label') });
     this.dirty = this.region.getByText(translate(CONFIG_APPLY, 'bar.dirty'));
     this.applyButton = this.region.getByRole('button', { name: translate(CONFIG_APPLY, 'bar.apply'), exact: true });
+    this.more = this.region.getByRole('button', { name: translate(CONFIG_APPLY, 'bar.more') });
+    this.discard = page.getByRole('menuitem', { name: translate(CONFIG_APPLY, 'bar.discard') });
+    this.confirmPrompt = this.region.getByRole('status').filter({ hasText: translate(CONFIG_APPLY, 'confirm.prompt') });
     this.diff = page.getByRole('dialog', { name: translate(CONFIG_APPLY, 'diff.title') });
     this.ruleChanges = this.diff.getByRole('list', { name: translate(CONFIG_APPLY, 'diff.rules.label') });
     this.nodeChanges = this.diff.getByRole('list', { name: translate(CONFIG_APPLY, 'changes.label') });
@@ -39,6 +45,13 @@ export class ApplyBar {
 
   async confirmDiff() {
     await this.diff.getByRole('button', { name: translate(CONFIG_APPLY, 'bar.apply'), exact: true }).click();
+  }
+
+  remainingSeconds(seconds: number): Locator {
+    const text = translate(CONFIG_APPLY, 'confirm.left', { seconds }).match(/<time>([^<]+)<\/time>/)?.[1];
+    if (text === undefined) throw new Error('Confirmation countdown is missing the time text');
+
+    return this.region.getByText(text, { exact: true });
   }
 
   async keep() {

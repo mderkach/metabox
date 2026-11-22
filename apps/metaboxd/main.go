@@ -261,7 +261,18 @@ func run(log *slog.Logger, s settings) error {
 		healthRequestTimeout,
 	)
 
-	latency := events.NewLatencyMonitor(source, controller, sysinfo.ControllerEpoch, log)
+	var outbounds httpapi.OutboundRegistry
+	var manualNorms func() map[string]int
+	metadata, err := config.NewOutboundRegistry(ctx, store)
+	if err != nil {
+		log.Error("outbound metadata not loaded", "err", err)
+	} else {
+
+		outbounds = metadata
+		manualNorms = metadata.ManualNorms
+	}
+
+	latency := events.NewLatencyMonitor(source, controller, sysinfo.ControllerEpoch, manualNorms, log)
 	latencyCtx, stopLatency := context.WithCancel(ctx)
 	latencyDone := latency.Start(latencyCtx)
 	defer func() {
@@ -421,6 +432,11 @@ func run(log *slog.Logger, s settings) error {
 		Hits:           hits,
 		History:        history.NewRuntime(traffic, deviceHistory, connectionSizes),
 		Latency:        latency.Snapshot,
+
+		Outbounds:           outbounds,
+		ConfiguredOutbounds: outboundTags.Configured,
+		RuntimeOutbounds:    source.OutboundTypes,
+
 		RuleSets:       ruleSets,
 		CachedRuleSets: ruleset.NewCachedReader(store, manager.CachePath),
 		Runtime:        sysinfo.Alive,

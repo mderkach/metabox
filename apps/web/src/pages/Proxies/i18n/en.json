@@ -1,4 +1,21 @@
 {
+  "metadata": {
+    "unused": "Labels without an outbound",
+    "unusedHint": "A missing tag can return after a subscription update.",
+    "norm": "Usual latency: {{value}} ms",
+    "target": "Destination for {{tag}}",
+    "pick": "Choose an outbound or server",
+    "hasEntry": "{{tag}} (already has settings)",
+    "moveTag": "Move settings for {{tag}}",
+    "move": "Move to…",
+    "deleteTag": "Delete settings for {{tag}}",
+    "delete": "Delete",
+    "undo": "Undo",
+    "overwriteTitle": "Replace settings for {{tag}}?",
+    "overwriteDescription": "The moved settings will replace the existing name and usual latency.",
+    "overwrite": "Replace and move",
+    "moveCleanupFailed": "The settings were copied. The source could not be removed."
+  },
   "groups": {
     "title": "Node groups"
   },

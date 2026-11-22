@@ -151,6 +151,11 @@ type Options struct {
 	History HistoryReader
 	// Latency returns bounded per-server measurements for the current core and its history.
 	Latency func(context.Context) (bool, []history.ServerLatency)
+	// Outbounds is nil when the persisted metadata could not be loaded.
+	Outbounds OutboundRegistry
+	// ConfiguredOutbounds and RuntimeOutbounds must both be available to mark a tag unused.
+	ConfiguredOutbounds func(context.Context) (map[string]struct{}, error)
+	RuntimeOutbounds    func(context.Context) (map[string]string, error)
 	// RuleSets returns the catalog of ready rule sets. nil means there is no catalog:
 	// the rule set connection form stays with its own address.
 	RuleSets RuleSetsReader
@@ -264,6 +269,11 @@ type Server struct {
 	hits           HitsReader
 	history        HistoryReader
 	latency        func(context.Context) (bool, []history.ServerLatency)
+
+	outbounds           OutboundRegistry
+	configuredOutbounds func(context.Context) (map[string]struct{}, error)
+	runtimeOutbounds    func(context.Context) (map[string]string, error)
+
 	ruleSets       RuleSetsReader
 	cachedRuleSets CachedRuleSetsReader
 	runtime        RuntimeObserver
@@ -304,6 +314,11 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		hits:           opts.Hits,
 		history:        opts.History,
 		latency:        opts.Latency,
+
+		outbounds:           opts.Outbounds,
+		configuredOutbounds: opts.ConfiguredOutbounds,
+		runtimeOutbounds:    opts.RuntimeOutbounds,
+
 		ruleSets:       opts.RuleSets,
 		cachedRuleSets: opts.CachedRuleSets,
 		runtime:        opts.Runtime,
@@ -363,6 +378,11 @@ func (s *Server) routes() http.Handler {
 	}
 	if s.latency != nil {
 		mux.HandleFunc("GET /api/latency", s.handleLatency)
+	}
+
+	if s.outbounds != nil {
+		mux.HandleFunc("GET /api/outbounds", s.handleOutbounds)
+		mux.HandleFunc("PUT /api/outbounds/{tag}", s.handleOutboundEdit)
 	}
 
 	if s.ruleSets != nil {

@@ -15,6 +15,7 @@ import {
   DAEMON_STATUS_FIXTURE,
   SERVICE_FAILED_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
+  SERVICE_UNMANAGED_FIXTURE,
   SERVICE_UNREAD_FIXTURE,
   SYSTEM_FIXTURE,
   TRAFFIC_HISTORY_FIXTURE,
@@ -42,6 +43,7 @@ function serveStatus(configPath?: string, singboxVersion = SCHEMA_VERSION) {
     // the mock the screen would show "state not read" instead of data.
     http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
     http.get(PROXY_ENDPOINT.latency(), () => HttpResponse.json({ servers: [] })),
+    http.get(PROXY_ENDPOINT.outbounds(), () => HttpResponse.json({})),
     http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json({ proxies: {} })),
     http.get(DAEMON_ENDPOINT.history(), () => HttpResponse.json(TRAFFIC_HISTORY_FIXTURE)),
     // The connection stream reads the config for outbound types: without the mock the summary
@@ -61,6 +63,31 @@ describe('overview screen', () => {
     ConnectionStore.getState().reset();
     RuntimeStore.getState().reset();
     serveStatus();
+  });
+
+  it('shows the core verdict in the header and keeps the core service card for commands', async () => {
+    RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+
+    renderWithRouter(OverviewPage);
+
+    expect(await screen.findByText('Всё работает')).toBeInTheDocument();
+    const service = within(await screen.findByRole('region', { name: 'Состояние системы' }));
+    expect(await service.findByRole('button', { name: 'Перезапустить' })).toBeEnabled();
+    expect(service.getByRole('button', { name: 'Остановить' })).toBeEnabled();
+    expect(service.queryByText('работает')).not.toBeInTheDocument();
+  });
+
+  it('shows a core started elsewhere in the header without offering service commands', async () => {
+    server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_UNMANAGED_FIXTURE)));
+    RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+
+    renderWithRouter(OverviewPage);
+
+    expect(await screen.findByText('Ядро работает вне metabox')).toBeInTheDocument();
+    const service = within(await screen.findByRole('region', { name: 'Состояние системы' }));
+    expect(await service.findByRole('heading', { name: 'Ядро' })).toBeInTheDocument();
+    expect(service.queryByRole('button', { name: /^(Перезапустить|Остановить|Запустить)$/ })).not.toBeInTheDocument();
+    expect(service.queryByText('поднято другой службой')).not.toBeInTheDocument();
   });
 
   it('keeps the highlighted core restart in the service card and explains interrupted connections', async () => {
@@ -231,6 +258,7 @@ describe('overview screen', () => {
               recent: [...recent, ...(checked ? [current] : []), ...(restarted ? [automatic] : [])],
               hourly: [],
               usual_ms: 55,
+              computed_usual_ms: 55,
               ...(checked && !restarted ? { current, level: 'above_norm' } : { level: 'no_measurement' }),
               origin: 'computed',
             },
@@ -367,6 +395,22 @@ describe('overview screen', () => {
     expect(await screen.findByRole('img', { name: 'Открытые соединения за минуту' })).toBeInTheDocument();
     expect(RuntimeStore.getState().traffic).toHaveLength(60);
     expect(ConnectionStore.getState().history).toHaveLength(60);
+  });
+
+  it('shows an outbound label before the original tag on Overview', async () => {
+    server.use(
+      http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(CLASH_PROXIES_FIXTURE)),
+      http.get(PROXY_ENDPOINT.outbounds(), () => HttpResponse.json({ 'us-fallback': { label: 'Work traffic' } }))
+    );
+
+    renderWithRouter(OverviewPage);
+
+    expect(
+      await screen.findByRole('combobox', { name: 'Выход группы Work traffic · us-fallback' })
+    ).toBeInTheDocument();
+    const row = screen.getAllByRole('listitem').find((item) => within(item).queryByText('Work traffic') !== null);
+    expect(row).toHaveTextContent(/Work traffic\s*us-fallback/);
+    expect(screen.getByText('us-fallback', { selector: 'span.font-mono' })).toBeInTheDocument();
   });
 
   // The verdict answers the question the screen is opened for, and stands in the header.

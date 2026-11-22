@@ -32,6 +32,7 @@ export interface ServerLatency {
   recent: ServerLatencyPoint[];
   hourly: ServerLatencyPoint[];
   usualMS: number | null;
+  computedUsualMS: number | null;
   origin: string;
   level: LatencyLevel;
 }
@@ -54,6 +55,7 @@ function toLatencyByTag(wire: LatencyHistoryWire, available: boolean): ServerLat
         recent: server.recent.map((point) => ({ at: point.at, delayMS: point.delay_ms ?? null })),
         hourly: server.hourly.map((point) => ({ at: point.hour, delayMS: point.delay_ms })),
         usualMS: server.usual_ms ?? null,
+        computedUsualMS: server.computed_usual_ms ?? null,
         origin: server.origin,
         level: available
           ? (Object.values(LATENCY_LEVEL).find((level) => level === server.level) ?? LATENCY_LEVEL.NoMeasurement)

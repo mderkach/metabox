@@ -1,6 +1,12 @@
 import { http, HttpResponse } from 'msw';
 
-import type { LatencyHistoryWire, LatencyResultWire } from '@shared/api/daemon.generated';
+import {
+  OutboundMetadataEditSchema,
+  type LatencyHistoryWire,
+  type LatencyResultWire,
+  type OutboundMetadataEditWire,
+  type OutboundsWire,
+} from '@shared/api/daemon.generated';
 
 import { PROXY_ENDPOINT } from '../api/Proxy.endpoints';
 import type { ClashProvidersWire, ClashProxiesWire } from '../api/Proxy.schema';
@@ -48,6 +54,7 @@ function readOnlyHandlers() {
 
 /** Proxy handlers the daemon does not have yet: shapes taken from the device. */
 export const proxyHandlers = [
+  http.get(PROXY_ENDPOINT.outbounds(), () => HttpResponse.json({})),
   http.get(PROXY_ENDPOINT.latency(), () => HttpResponse.json({ servers: [] })),
   http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(CLASH_PROXIES_FIXTURE)),
   http.get(PROXY_ENDPOINT.providers(), () => HttpResponse.json(CLASH_PROVIDERS_FIXTURE)),
@@ -69,11 +76,34 @@ export const proxyHandlers = [
  */
 export function createStatefulProxyHandlers(
   initialProxies = CLASH_PROXIES_FIXTURE,
-  initialProviders = CLASH_PROVIDERS_FIXTURE
+  initialProviders = CLASH_PROVIDERS_FIXTURE,
+  initialMetadata: OutboundsWire = {}
 ) {
   const chosen = new Map<string, string>();
   const silent = new Set<string>();
   const measurements = new Map<string, LatencyResultWire[]>();
+  const metadata = new Map(Object.entries(initialMetadata));
+
+  function getMetadata(): OutboundsWire {
+    return Object.fromEntries(
+      [...metadata].map(([tag, entry]) => [
+        tag,
+        {
+          ...(entry.label === undefined ? {} : { label: entry.label }),
+          ...(entry.norm_ms === undefined ? {} : { norm_ms: entry.norm_ms }),
+          ...(!Object.hasOwn(initialProxies.proxies, tag) ? { unused: true } : {}),
+        },
+      ])
+    );
+  }
+
+  function rememberMetadata(tag: string, entry: OutboundMetadataEditWire): void {
+    if (entry.label === undefined && entry.norm_ms === undefined) {
+      metadata.delete(tag);
+    } else {
+      metadata.set(tag, entry);
+    }
+  }
   /** Subscription → the time of its last manual update. */
   const updated = new Map<string, string>();
 
@@ -102,13 +132,14 @@ export function createStatefulProxyHandlers(
 
   function latency(): LatencyHistoryWire {
     return {
-      servers: Object.values(CLASH_PROXIES_FIXTURE.proxies)
+      servers: Object.values(initialProxies.proxies)
         .filter((proxy) => !GROUP_TYPES.has(proxy.type) && proxy.type !== 'Direct')
         .map((proxy) => {
           const manual = measurements.get(proxy.name) ?? [];
           const current = manual.at(-1);
           const knownDelay = proxy.history.at(0)?.delay;
-          const usual = knownDelay !== undefined && knownDelay < DELAY_TIMEOUT ? knownDelay : undefined;
+          const computed = knownDelay !== undefined && knownDelay < DELAY_TIMEOUT ? knownDelay : undefined;
+          const usual = metadata.get(proxy.name)?.norm_ms ?? computed;
           const recent = [
             ...proxy.history.map((point) => ({
               at: point.time,
@@ -126,6 +157,7 @@ export function createStatefulProxyHandlers(
             tag: proxy.name,
             ...(current === undefined ? {} : { current }),
             ...(usual === undefined ? {} : { usual_ms: usual }),
+            ...(computed === undefined ? {} : { computed_usual_ms: computed }),
             recent,
             hourly: [],
             level,
@@ -151,6 +183,17 @@ export function createStatefulProxyHandlers(
   }
 
   return [
+    http.get(PROXY_ENDPOINT.outbounds(), () => HttpResponse.json(getMetadata())),
+    http.put(`${PROXY_ENDPOINT.outbounds()}/:tag`, async ({ request }) => {
+      const entry = OutboundMetadataEditSchema.safeParse(await request.json());
+      if (!entry.success) {
+        return HttpResponse.json({ code: 'outbound_invalid' }, { status: 400 });
+      }
+
+      rememberMetadata(toGroupName(request.url), entry.data);
+
+      return HttpResponse.json(getMetadata());
+    }),
     http.get(PROXY_ENDPOINT.latency(), () => HttpResponse.json(latency())),
     http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(snapshot())),
     http.get(PROXY_ENDPOINT.providers(), () => HttpResponse.json(providers())),

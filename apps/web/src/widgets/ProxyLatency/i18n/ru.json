@@ -2,7 +2,7 @@
   "title": "Задержка серверов",
   "scale": "шкала 0–{{ceiling}} мс",
   "empty": "Нет доступных серверов",
-  "usual": "Обычно {{value}} мс",
+  "usualManual": "Обычно {{value}} мс (задано вручную)",
   "usualComputed": "Обычно {{value}} мс (расчёт)",
   "aboveNorm": "Выше нормы",
   "aboveCeiling": "Выше предела",

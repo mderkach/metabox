@@ -54,13 +54,14 @@ type LatencyMedian struct {
 
 // ServerLatency separates the current process reading from the daemon's history.
 type ServerLatency struct {
-	Tag     string          `json:"tag"`
-	Current *LatencyResult  `json:"current,omitempty"`
-	Recent  []LatencyResult `json:"recent"`
-	Hourly  []LatencyMedian `json:"hourly"`
-	UsualMS *int            `json:"usual_ms,omitempty"`
-	Level   LatencyLevel    `json:"level"`
-	Origin  string          `json:"origin"`
+	Tag             string          `json:"tag"`
+	Current         *LatencyResult  `json:"current,omitempty"`
+	Recent          []LatencyResult `json:"recent"`
+	Hourly          []LatencyMedian `json:"hourly"`
+	UsualMS         *int            `json:"usual_ms,omitempty"`
+	ComputedUsualMS *int            `json:"computed_usual_ms,omitempty"`
+	Level           LatencyLevel    `json:"level"`
+	Origin          string          `json:"origin"`
 }
 
 // Latency keeps bounded histories for the lifetime of the daemon.
@@ -373,14 +374,14 @@ func (r *serverLatency) medianOpenHour() int {
 
 // Snapshot returns a detached, tag-sorted view. The current hour does not
 // contribute to the median of medians before it is complete.
-func (l *Latency) Snapshot(at time.Time) []ServerLatency {
+func (l *Latency) Snapshot(at time.Time, norms map[string]int) []ServerLatency {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	rows := make([]ServerLatency, 0, len(l.servers))
 	for _, tag := range slices.Sorted(maps.Keys(l.servers)) {
 		row := l.servers[tag]
-		snapshot := row.snapshot(tag, at, l.known)
+		snapshot := row.snapshot(tag, at, l.known, norms[tag])
 		if row.listed || len(snapshot.Recent) > 0 || len(snapshot.Hourly) > 0 {
 			rows = append(rows, snapshot)
 		}
@@ -389,7 +390,7 @@ func (l *Latency) Snapshot(at time.Time) []ServerLatency {
 	return rows
 }
 
-func (r *serverLatency) snapshot(tag string, at time.Time, known bool) ServerLatency {
+func (r *serverLatency) snapshot(tag string, at time.Time, known bool, norm int) ServerLatency {
 	row := ServerLatency{
 		Tag: tag, Level: LatencyNoMeasurement, Origin: "computed",
 		Recent: []LatencyResult{},
@@ -401,7 +402,11 @@ func (r *serverLatency) snapshot(tag string, at time.Time, known bool) ServerLat
 			row.Recent = append(row.Recent, point.result())
 		}
 	}
-	row.Hourly, row.UsualMS = r.completedHours(at)
+	row.Hourly, row.ComputedUsualMS = r.completedHours(at)
+	row.UsualMS = row.ComputedUsualMS
+	if norm != 0 {
+		row.UsualMS = &norm
+	}
 
 	if known && r.listed && !r.manualAt.IsZero() && r.last.at <= now {
 		result := r.last.result()

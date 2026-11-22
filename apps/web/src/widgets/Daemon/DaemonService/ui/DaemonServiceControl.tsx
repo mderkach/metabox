@@ -61,9 +61,11 @@ const REASON_KEY: Readonly<Record<ServiceErrorCode, ParseKeys<'widgets/Daemon/Da
 export function DaemonServiceControl({
   heading: Heading = 'h3',
   emphasizeRestart = false,
+  showStatus = true,
 }: {
   heading?: 'h2' | 'h3';
   emphasizeRestart?: boolean;
+  showStatus?: boolean;
 }) {
   const { t } = useTranslation('widgets/Daemon/DaemonService');
   const service = useServiceState();
@@ -120,14 +122,18 @@ export function DaemonServiceControl({
         >
           {t('title')}
         </Heading>
-        <p className='flex items-center gap-1.5 self-center text-sm'>
-          <span
-            aria-hidden='true'
-            className={cn('size-2 shrink-0 rounded-full', status === null ? 'bg-signal-idle' : STATUS_TONE[status])}
-          />
-          {t(status === null ? 'status.unknown' : STATUS_LABEL[status])}
-        </p>
-        {running && !managed && <span className='text-xs text-muted-foreground'>{t('status.foreign')}</span>}
+        {showStatus && (
+          <p className='flex items-center gap-1.5 self-center text-sm'>
+            <span
+              aria-hidden='true'
+              className={cn('size-2 shrink-0 rounded-full', status === null ? 'bg-signal-idle' : STATUS_TONE[status])}
+            />
+            {t(status === null ? 'status.unknown' : STATUS_LABEL[status])}
+          </p>
+        )}
+        {showStatus && running && !managed && (
+          <span className='text-xs text-muted-foreground'>{t('status.foreign')}</span>
+        )}
         {/* The daemon returns zero when the process age could not be determined. */}
         {known && state.managed && state.uptime > 0 && (
           <p className='text-xs text-muted-foreground tabular-nums'>

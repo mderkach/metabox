@@ -5,15 +5,20 @@ import { type ProxyNode } from '@entities/Proxy';
 import { cn } from '@shared/lib/utils';
 
 import { toMemberLabel } from './ProxyGroupLabel';
+import { ProxyMetadataName } from './ProxyMetadataName';
 import { ProxyNodeDelayValue } from './ProxyNodeDelayValue';
 import type { ProxyNodeDiagnosticInfo } from './ProxyNodeDiagnostic';
 
 export function ProxyNodeContent({
   node,
   diagnosticStatus,
+  label,
+  normText,
 }: {
   node: ProxyNode;
   diagnosticStatus?: ProxyNodeDiagnosticInfo['status'];
+  label?: string | undefined;
+  normText?: string | undefined;
 }) {
   const { t } = useTranslation('widgets/ProxyGroups');
 
@@ -23,7 +28,9 @@ export function ProxyNodeContent({
     <>
       <span className='flex min-w-0 items-center gap-1.5'>
         {node.selected && <Check className='size-3.5 shrink-0 text-primary' aria-hidden='true' />}
-        <span className='min-w-0 grow truncate font-mono text-xs'>{node.name}</span>
+        <span className='min-w-0 grow text-xs'>
+          <ProxyMetadataName tag={node.name} label={label} />
+        </span>
       </span>{' '}
       <span className='flex items-center justify-between gap-2'>
         <span className='truncate text-xs text-muted-foreground'>{toMemberLabel(t, node.type)}</span>{' '}
@@ -37,6 +44,7 @@ export function ProxyNodeContent({
           </span>
         )}
       </span>
+      {normText !== undefined && <span className='text-xs text-muted-foreground tabular-nums'>{normText}</span>}
     </>
   );
 }
