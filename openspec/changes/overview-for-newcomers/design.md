@@ -45,7 +45,7 @@ See `proposal.md` for the motivation. What exists now:
 9. **Core version in the sidebar footer** under the daemon version, the full type and version in "Router and metabox". UX-7 then holds on every desktop screen with the sidebar open (owner, 2026-11-20). Deviations, recorded in the proposal: a collapsed sidebar has the version only in the accessible name and tooltip of the status dot; on a phone the footer is in "More", and the "More" button gets an amber dot when the core is older than the forms (the existing `more.withStatus` mechanism).
 10. **Computed marks.** One visual mark across the screen for computed values, the same as the route explanation uses for `computed` (AC-34), with a toggletip that says what was computed from what. The mark is applied to: the direct share, the blocked count (computed from the core log), volumes and rates that include spread bytes, norms and levels. Counts of rules are read from the config, not computed, and carry no mark.
 
-11. **The core and panel commands stay where they are** (owner, 2026-11-20). The header states the status and holds no command; the core service card keeps "Restart", "Stop" and "Start" at the top of the screen, and the panel daemon card keeps the panel restart (AC-87 unchanged). On Overview the service card does not repeat the status word and dot, which the header carries; Settings shows the card as today. Rejected: one core command in the header with "Stop" and the panel restart moved to "Router and metabox", which the owner declined.
+11. **The core and panel commands stay where they are** (owner, 2026-11-20). The header states the status and holds no command; the core service card keeps "Restart", "Stop" and "Start" at the top of the screen, and the panel daemon card keeps the panel restart (AC-87 unchanged). On Overview the service card does not repeat the status word and dot, which the header carries; Settings shows the card as today. Rejected: one core command in the header with "Stop" and the panel restart moved to "Router and metabox", which the owner declined. The v11 mockup demonstrates the danger treatment and explains the interruption. The service card adopts that treatment so the header stays focused on status and routing mode.
 
 12. **Coordinator decisions approved by the owner on 2026-11-20.**
     - Blocked traffic is shown as a count of connections, not bytes; its source, the core log, is the owner's (decision 14).
@@ -68,9 +68,9 @@ Produced with `/impeccable shape`. The discovery round was the owner's review of
      - the screen title;
      - one status: works, needs attention, core stopped, waiting for the first data from the core, the core sends no data, no link to the daemon, or works outside metabox;
      - the mode switch (only when the config has rules with `clash_mode`).
-   - The header holds no core command. Under it, the core service card stays as today: the commands of `DaemonServiceControl`, shared with Settings, and the core uptime. "Restart" and "Stop" (with its confirmation) while the core runs, "Start" while it is stopped, none for a core outside the managed service. On Overview the card does not repeat the status word and dot that the header carries.
+   - The header holds no core command. Under it, the core service card stays as today: the commands of `DaemonServiceControl`, shared with Settings, and the core uptime. "Restart" and "Stop" (each with a confirmation) while the core runs, "Start" while it is stopped, none for a core outside the managed service. On Overview the card does not repeat the status word and dot that the header carries.
    - States:
-     - normal: works, no color but the status icon; "Restart" and "Stop" are outline buttons, as today;
+     - normal: works, with color on the status icon; "Restart" uses the shared danger outline and a restart icon on Overview. It uses the same button size as "Stop". Its confirmation says connections through the core may be interrupted. "Stop" keeps its own confirmation;
      - needs attention: an amber status with the count;
      - core stopped: a coral status. When a prior version can be restored, the recovery block offers the primary "Return version ‹N› and start" and the service card offers the secondary "Start current version". Otherwise the service card offers the sole primary "Start".
      - core outside the managed service (AC-36): "works, started outside metabox", no core command;
@@ -182,7 +182,7 @@ Produced with `/impeccable shape`. The discovery round was the owner's review of
      - a group header shows its label in regular type and the tag under it in small monospace, or the tag alone; a pencil next to the name, outside the selection control, with the accessible name "Label: ‹tag›";
      - a server row, also of a subscription server, shows the label and tag the same way, and the usual latency with a "computed" or "set by you" mark; a pencil in the row with the accessible name "Label and usual latency: ‹tag›";
      - mentions of a tag elsewhere (a member of another group) show the label without a pencil.
-   - Edit in place, as the device rename on Devices:
+   - Edit in place, as the device rename on Devices. The single upper-bound field in the v11 mockup illustrates the editing interaction. The production fields follow AC-104:
      - a group: one field, the label (up to 64 characters; hint "Shown instead of the tag wherever an outbound is chosen. Empty: the tag again.");
      - a server: two fields, the label and the usual latency (1 to 10 000 ms; hint "From the last day's history: ‹N› ms. Empty: computed from history."); the current latency stays in view above the fields;
      - Save and Cancel; Escape cancels and returns focus to the pencil; errors under the field with `role="alert"`.
@@ -198,6 +198,7 @@ Produced with `/impeccable shape`. The discovery round was the owner's review of
 **Interaction and layout.**
 
 - Desktop: one column of full-width sections, with blocks 7 and 8 side by side.
+- Reserve space for borders and icons in secondary controls. In Proxies group actions and the draft bar, changes to those borders and icons keep nearby controls and status text in place. Verify group actions and the draft ready-to-apply and awaiting-confirmation states at 320 and 375 px in both themes.
 - Every name is a link (AC-99); the link names its target in its accessible name.
 - Toggletips are 24 × 24 buttons that open on press or Enter and close on Escape, with `aria-expanded`.
 - Number changes are not announced; a latency check result is announced through the screen's one live region, as now.

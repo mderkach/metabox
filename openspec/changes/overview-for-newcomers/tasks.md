@@ -49,12 +49,12 @@
 
 - [ ] 4.1 AC-95, AC-45: the header:
   - one status (works, needs attention, core stopped, waiting for the first data from the core, the core sends no data, no link to the daemon, or works outside metabox) and no core command; the silent core comes from `coreGap` of the #387 fix; a server in use that no check has measured makes it needs attention;
-  - the core service card stays at the top with "Restart", "Stop" and "Start" as today, without repeating the status on Overview; "Start" is primary when there is no rollback. Otherwise the service card offers the secondary "Start current version";
+  - the core service card stays at the top with "Restart", "Stop" and "Start", without repeating the status on Overview. Restart uses the danger treatment and keeps the confirmation that explains possible interruption of connections through the core. "Start" is primary when there is no rollback. Otherwise the service card offers the secondary "Start current version";
   - the panel restart stays in the panel daemon card (AC-87 unchanged);
   - the mode switch, shown only when the running config has rules with `clash_mode`, labelled by where its rules lead, with a 10 s undo toast;
   - the mode banner in the app shell.
 
-  Remove the per-card status dots and the subtitle. Add a "core ‹version›" line with the full version string next to the daemon version in the sidebar footer; on a collapsed sidebar put the version into the accessible name and tooltip of the status dot; on a phone give the "More" button an amber dot and an accessible name when the core is older than the forms (`more.withStatus`). Tests for the AC-95 and AC-45 scenarios; rows in `docs/Verification.md`. Verify: `pnpm --filter web test`, `pnpm --filter web check:design`, `make trace-check`, and an Impeccable critique by someone who did not write it, at desktop width and 375 px.
+  Remove the per-card status dots and the subtitle. Add a "core ‹version›" line with the full version string next to the daemon version in the sidebar footer; on a collapsed sidebar put the version into the accessible name and tooltip of the status dot; on a phone give the "More" button an amber dot and an accessible name when the core is older than the forms (`more.withStatus`). Tests for the AC-95 and AC-45 scenarios, including "Restart warns about interrupted connections"; rows in `docs/Verification.md`. Verify: `pnpm --filter web test`, `pnpm --filter web check:design`, `make trace-check`, and an Impeccable critique by someone who did not write it, at desktop width and 375 px.
 
 - [ ] 4.2 AC-96: the "Needs attention" block, with the item order, server cap and actions from the design brief, including the `recovery` item and the item for a server in use that was never checked, whose action checks it. Tests for the AC-96 scenarios; rows in `docs/Verification.md`. Verify: `pnpm --filter web test`, `pnpm --filter web check:design`, an Impeccable critique by someone who did not write it, `make trace-check`.
 - [ ] 4.3 AC-100: the "core stopped" block, built on the #387 fix:
@@ -78,7 +78,7 @@
   Tests for the AC-98 scenarios and the AC-104 display scenario; rows in `docs/Verification.md`. Verify: `pnpm --filter web test`, `pnpm --filter web check:design`, an Impeccable critique by someone who did not write it, `make trace-check`.
 
 - [ ] 4.6 AC-10: the open-now cards (devices by volume, destinations of the default rule), marked "open now"; the latency card is removed. Update the AC-10 rows in `docs/Verification.md` whose test titles change. Verify: `pnpm --filter web test`, `pnpm --filter web check:design`, an Impeccable critique by someone who did not write it at desktop width and 375 px, `make trace-check`.
-- [ ] 4.7 AC-35, AC-95: the "Router and metabox" block with every AC-35 reading, the core type and version and the interception mode. It adds no command: the panel restart stays in the panel daemon card with its confirmation as built (AC-87), and the core commands stay in the core service card. Tests for the AC-35 scenarios whose titles change; rows in `docs/Verification.md`. Verify: `pnpm --filter web test`, `pnpm --filter web check:design`, an Impeccable critique by someone who did not write it at desktop width and 375 px, `make trace-check`.
+- [ ] 4.7 AC-35, AC-95: the "Router and metabox" block with every AC-35 reading, the core type and version and the interception mode. It adds no command: the panel restart stays in the panel daemon card with its confirmation as built (AC-87), and the core commands stay in the core service card. Verify that the panel restart and the core restart open their own confirmations. Tests for the AC-35 scenarios whose titles change; rows in `docs/Verification.md`. Verify: `pnpm --filter web test`, `pnpm --filter web check:design`, an Impeccable critique by someone who did not write it at desktop width and 375 px, `make trace-check`.
 
 ## 5. Panel: links, rules facet, labels on Proxies
 
@@ -88,11 +88,12 @@
   - a pencil next to a group name opens the label field; a pencil in a server row opens the label and usual latency fields; the pencil sits outside the selection button of a manual-choice group, with its own accessible name;
   - saving sends `PUT /api/outbounds/{tag}` and creates no draft; an empty value removes it, so the row returns to the tag and the computed usual latency; the toast and the live region say nothing needs applying;
   - the "Labels without an outbound" block: "Move to…" writes the entry to the chosen tag and then removes the old one (two `PUT` requests, ADR-0089); "Delete" removes it with undo in the toast;
-  - no pencils while the endpoints are not registered.
+  - no pencils while the endpoints are not registered;
+  - keep group actions in their own slots. At 320 and 375 px in both themes, check that secondary-action borders and icons leave adjacent controls in place. The distinction between manual-choice and automatic groups is covered by #314.
 
   Tests for the AC-104 scenarios "A group label is edited in place", "A server row edits the label and the usual latency", "A label is saved at once without Apply", "An empty value returns the tag and the computed norm", "Labels without an outbound are listed apart", "An unused label is moved to another tag" and "An unused label is deleted"; a `vitest` row per scenario in `docs/Verification.md`. Verify: `pnpm --filter web test`, `pnpm --filter web check:design`, an Impeccable critique by someone who did not write it at desktop width and 375 px, `make trace-check`.
 
-- [ ] 5.4 AC-95…AC-100: an e2e scenario on the mock stand for the normal, needs attention and core stopped states at desktop width and 375 px, in both themes, with neutral tags in the fixtures; row in `docs/Verification.md`. Verify: `pnpm --filter web test:e2e`, `make trace-check`.
+- [ ] 5.4 AC-95…AC-100: an e2e scenario on the mock stand for the normal, needs attention and core stopped states at desktop width and 375 px, in both themes, with neutral tags in the fixtures. In the mock stand draft flow, exercise the ready-to-apply and awaiting-confirmation states at 320 and 375 px in both themes. Within each state, verify that secondary-action borders and icons leave adjacent controls in place. Add rows in `docs/Verification.md`. Verify: `pnpm --filter web test:e2e`, `pnpm --filter web check:design`, an Impeccable critique by someone who did not write it, `make trace-check`.
 
 ## 6. User documentation
 

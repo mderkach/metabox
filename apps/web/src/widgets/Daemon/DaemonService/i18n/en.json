@@ -31,7 +31,7 @@
   },
   "restart": {
     "title": "Restart the core?",
-    "description": "All devices will lose their current connections. Downloads and calls will be interrupted. The core will restart in a few seconds.",
+    "description": "Connections through the core may be interrupted, including downloads and calls.",
     "confirm": "Restart the core"
   },
   "stop": {
