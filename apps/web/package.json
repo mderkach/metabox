@@ -22,7 +22,7 @@
     "lint:react": "react-doctor --no-telemetry --no-supply-chain"
   },
   "dependencies": {
-    "@base-ui/react": "1.8.0",
+    "@base-ui/react": "1.9.0",
     "@hookform/resolvers": "5.9.1",
     "@tanstack/react-query": "5.103.1",
     "@tanstack/react-router": "1.170.38",
