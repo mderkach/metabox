@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -204,4 +205,47 @@ func (r *Reader) holdsSocket(pid string, inodes map[string]struct{}) bool {
 	}
 
 	return false
+}
+
+// ControllerListener identifies the listening sockets owned by the specified PID.
+// An empty result means ownership is unconfirmed, including a port shared by
+// another process.
+func (r *Reader) ControllerListener(ctx context.Context, pid, port int) string {
+	if pid <= 0 || ctx.Err() != nil {
+		return ""
+	}
+
+	inodes, err := r.listenerInodes(port)
+	if err != nil || len(inodes) == 0 {
+		return ""
+	}
+
+	dir := filepath.Join(r.proc, strconv.Itoa(pid), "fd")
+	fds, err := os.ReadDir(dir)
+	if err != nil {
+		return ""
+	}
+
+	owned := make([]string, 0, len(inodes))
+	for _, fd := range fds {
+		target, err := os.Readlink(filepath.Join(dir, fd.Name()))
+		if err != nil {
+			continue
+		}
+		if inode, ok := strings.CutPrefix(target, "socket:["); ok {
+			inode = strings.TrimSuffix(inode, "]")
+			if _, pending := inodes[inode]; pending {
+				owned = append(owned, inode)
+				delete(inodes, inode)
+			}
+		}
+	}
+
+	if len(inodes) != 0 || ctx.Err() != nil {
+		return ""
+	}
+
+	slices.Sort(owned)
+
+	return strings.Join(owned, ",")
 }

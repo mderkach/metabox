@@ -762,6 +762,12 @@ export const EventSchema = z.object({
   data: z.unknown(),
 })
 
+/** AppliedRule identifies a rule in an exact revision of the applied document. */
+export const AppliedRuleSchema = z.object({
+  index: z.int(),
+  etag: z.string(),
+})
+
 /** Match is the matched rule. Index is returned by pointer: zero is a valid index, and it cannot otherwise be told from "no index". */
 export const MatchSchema = z.object({
   origin: z.string(),
@@ -769,6 +775,7 @@ export const MatchSchema = z.object({
   index: z.int().optional(),
   conditions: z.string().optional(),
   action: z.string().optional(),
+  applied_rule: AppliedRuleSchema.optional(),
   /** ReasonCode is filled only for Kind == KindUnknown: the panel takes the text in the user's language by it. */
   reason_code: z.string().optional(),
   /** Reason is the same reason in the daemon's words. A fallback text for a code the panel does not know. */
@@ -795,7 +802,7 @@ export const ExplanationSchema = z.object({
   connection_id: z.string(),
   match: MatchSchema,
   chain: ChainSchema,
-  /** Rules is the whole list of the running process. The panel compares its length with the length of route.rules of the applied document: the process could have loaded another config, and leading the user to a node of a foreign file is not allowed. */
+  /** Rules lists the running process rules. Match.AppliedRule is the separately verified link to disk. */
   rules: z.array(RuleSchema),
 })
 
@@ -852,6 +859,7 @@ export const CatalogSchema = z.object({
   providers: z.array(ProviderSchema),
 })
 
+export type AppliedRuleWire = z.infer<typeof AppliedRuleSchema>
 export type ApplyEnvelopeWire = z.infer<typeof ApplyEnvelopeSchema>
 export type AuthWire = z.infer<typeof AuthSchema>
 export type BlockedKindWire = z.infer<typeof BlockedKindSchema>

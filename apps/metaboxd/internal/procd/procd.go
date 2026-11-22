@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -128,7 +129,7 @@ func (c *Client) Service(ctx context.Context, name, instance string) (State, err
 
 	state.Running = true
 	state.PID = selected.PID
-	state.Uptime = c.uptime(selected.PID)
+	state.Uptime = c.uptime(ctx, selected.PID)
 	state.Workdir = c.workdir(selected.PID, selected.Command)
 	state.Configs, state.ConfigDirs = configFlags(selected.Command, state.Workdir)
 
@@ -244,7 +245,7 @@ func isValueFlag(arg string) bool {
 // uptime counts the process age as the difference between the system uptime and
 // the process start moment. Absolute time does not fit: the router has no real-time
 // clock, and after power-on it jumps on NTP synchronization.
-func (c *Client) uptime(pid int) time.Duration {
+func (c *Client) uptime(ctx context.Context, pid int) time.Duration {
 	if pid <= 0 {
 		return 0
 	}
@@ -254,8 +255,15 @@ func (c *Client) uptime(pid int) time.Duration {
 		return 0
 	}
 
-	started, err := c.processStart(pid)
-	if err != nil || started > booted {
+	// USER_HZ on aarch64 and other common architectures equals 100.
+	const tick = time.Second / 100
+	ticks, err := ProcessStart(ctx, c.procDir, pid)
+	if err != nil || ticks > math.MaxInt64/uint64(tick) {
+		return 0
+	}
+
+	started := time.Duration(ticks) * tick
+	if started > booted {
 		return 0
 	}
 
@@ -278,10 +286,20 @@ func (c *Client) systemUptime() (time.Duration, error) {
 	return time.Duration(value * float64(time.Second)), nil
 }
 
-// processStart extracts the starttime field from /proc/<pid>/stat, the process start
-// moment in ticks since system boot.
-func (c *Client) processStart(pid int) (time.Duration, error) {
-	raw, err := os.ReadFile(c.procDir + "/" + strconv.Itoa(pid) + "/stat")
+// ProcessStart returns the process start in clock ticks since boot, before any
+// conversion to an uptime estimate. A PID can be reused for a different start.
+func ProcessStart(ctx context.Context, procDir string, pid int) (uint64, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+
+	root, err := os.OpenRoot(procDir)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = root.Close() }()
+
+	raw, err := root.ReadFile(filepath.Join(strconv.Itoa(pid), "stat"))
 	if err != nil {
 		return 0, err
 	}
@@ -302,15 +320,10 @@ func (c *Client) processStart(pid int) (time.Duration, error) {
 		return 0, fmt.Errorf("no starttime field in stat for pid %d", pid)
 	}
 
-	ticks, err := strconv.ParseInt(fields[startTimeField], 10, 64)
+	ticks, err := strconv.ParseUint(fields[startTimeField], 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("parse starttime for pid %d: %w", pid, err)
 	}
 
-	// USER_HZ on aarch64 and other common architectures equals 100;
-	// the value cannot be learned from Go without cgo, and sysconf would pull in a dependency.
-	// On a system with another USER_HZ the age comes out shifted by a factor.
-	const userHZ = 100
-
-	return time.Duration(ticks) * time.Second / userHZ, nil
+	return ticks, nil
 }

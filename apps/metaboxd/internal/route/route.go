@@ -81,11 +81,12 @@ type Rule struct {
 // Match is the matched rule. Index is returned by pointer: zero is a valid
 // index, and it cannot otherwise be told from "no index".
 type Match struct {
-	Origin     Origin `json:"origin"`
-	Kind       Kind   `json:"kind"`
-	Index      *int   `json:"index,omitempty"`
-	Conditions string `json:"conditions,omitempty"`
-	Action     string `json:"action,omitempty"`
+	Origin      Origin       `json:"origin"`
+	Kind        Kind         `json:"kind"`
+	Index       *int         `json:"index,omitempty"`
+	Conditions  string       `json:"conditions,omitempty"`
+	Action      string       `json:"action,omitempty"`
+	AppliedRule *AppliedRule `json:"applied_rule,omitempty"`
 	// ReasonCode is filled only for Kind == KindUnknown: the panel takes
 	// the text in the user's language by it.
 	ReasonCode ReasonCode `json:"reason_code,omitempty"`
@@ -106,9 +107,7 @@ type Explanation struct {
 	ConnectionID string `json:"connection_id"`
 	Match        Match  `json:"match"`
 	Chain        Chain  `json:"chain"`
-	// Rules is the whole list of the running process. The panel compares its length with
-	// the length of route.rules of the applied document: the process could have loaded another
-	// config, and leading the user to a node of a foreign file is not allowed.
+	// Rules lists the running process rules. Match.AppliedRule is the separately verified link to disk.
 	Rules []Rule `json:"rules"`
 }
 
@@ -120,14 +119,22 @@ type Source interface {
 
 // Explainer assembles the explanation from core data.
 type Explainer struct {
-	source Source
-	lang   locale.Lang
+	source   Source
+	lang     locale.Lang
+	verifier *RuleVerifier
 }
 
 // NewExplainer assembles the explanation on top of the same source as the runtime
 // stream: the daemon does not create a second set of Clash API requests.
 func NewExplainer(source Source, lang locale.Lang) *Explainer {
 	return &Explainer{source: source, lang: lang}
+}
+
+// WithRuleVerification enables applied rule references when runtime evidence is available.
+func (e *Explainer) WithRuleVerification(verifier *RuleVerifier) *Explainer {
+	e.verifier = verifier
+
+	return e
 }
 
 type clashRule struct {
@@ -157,17 +164,34 @@ type clashConnections struct {
 // Explain explains the route of a connection: which rule fired, which config
 // node it is and which chain the traffic went through.
 func (e *Explainer) Explain(ctx context.Context, id string) (Explanation, error) {
-	connection, err := e.connection(ctx, id)
+	evidence := e.verifier.capture(ctx)
+	if evidence != nil {
+		explanation, err := e.explain(ctx, evidence.source, evidence, id)
+		if err == nil {
+			return explanation, nil
+		}
+	}
+
+	return e.explain(ctx, e.source, nil, id)
+}
+
+func (e *Explainer) explain(ctx context.Context, source Source, evidence *ruleEvidence, id string) (Explanation, error) {
+	connection, err := readConnection(ctx, source, id)
 	if err != nil {
 		return Explanation{}, err
 	}
 
-	rules, err := readRules(ctx, e.source)
+	rules, err := readRules(ctx, source)
 	if err != nil {
 		return Explanation{}, err
 	}
 
 	match := matchRule(connection.Rule, rules)
+	if evidence != nil {
+		if index, ok := appliedPosition(connection.Rule, rules, evidence.names); ok && evidence.confirm(ctx) {
+			match.AppliedRule = &AppliedRule{Index: index, ETag: evidence.etag}
+		}
+	}
 	if match.ReasonCode == ReasonNotInProcessList {
 		match.Reason = locale.Message(e.lang, errNotInProcessList)
 	}
@@ -180,8 +204,8 @@ func (e *Explainer) Explain(ctx context.Context, id string) (Explanation, error)
 	}, nil
 }
 
-func (e *Explainer) connection(ctx context.Context, id string) (clashConnection, error) {
-	body, err := e.source.Snapshot(ctx, "/connections")
+func readConnection(ctx context.Context, source Source, id string) (clashConnection, error) {
+	body, err := source.Snapshot(ctx, "/connections")
 	if err != nil {
 		return clashConnection{}, fmt.Errorf("%w: connections: %w", ErrRuntimeUnavailable, err)
 	}
@@ -244,11 +268,7 @@ func matchRule(rule string, rules []Rule) Match {
 	conditions, action, hasAction := clashapi.SplitRule(rule)
 
 	for _, candidate := range rules {
-		if candidate.Conditions != conditions || !terminates(candidate.Action) {
-			continue
-		}
-
-		if hasAction && candidate.Action != action {
+		if !matchesRule(candidate, conditions, action, hasAction) {
 			continue
 		}
 
@@ -266,9 +286,15 @@ func matchRule(rule string, rules []Rule) Match {
 	return Match{
 		Origin:     OriginUnknown,
 		Kind:       KindUnknown,
+		Conditions: conditions,
+		Action:     action,
 		ReasonCode: ReasonNotInProcessList,
 		Reason:     errNotInProcessList.Error(),
 	}
+}
+
+func matchesRule(rule Rule, condition, action string, hasAction bool) bool {
+	return rule.Conditions == condition && terminates(rule.Action) && (!hasAction || rule.Action == action)
 }
 
 // terminates reports whether an action interrupts the rule iteration.

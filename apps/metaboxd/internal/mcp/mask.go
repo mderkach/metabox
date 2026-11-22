@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 // maskChars stands in place of a hidden secret, the same characters the panel shows.
@@ -185,6 +186,20 @@ func maskLog(message string) string {
 
 		return masked + raw[len(value):]
 	})
+}
+
+func maskRuleName(name string) string {
+	clean := strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) ||
+			unicode.Is(unicode.Other_Default_Ignorable_Code_Point, r) ||
+			unicode.Is(unicode.Variation_Selector, r) {
+			return -1
+		}
+
+		return r
+	}, name)
+
+	return maskLog(clean)
 }
 
 func encodeString(value string) []byte {

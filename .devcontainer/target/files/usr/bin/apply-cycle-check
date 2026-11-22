@@ -91,6 +91,15 @@ pid=$(echo "$service" | jsonfilter -e '@.pid' | head -1)
 cwd=$(readlink "/proc/$pid/cwd") || fail "the working directory of process $pid was not read"
 [ "$cwd" = "$CONF_DIR" ] || fail "process $pid works in '$cwd', expected $CONF_DIR"
 echo "   -c $CONF, -D and the process cwd are $CONF_DIR"
+snapshot=$(tr '\000' '\n' <"/proc/$pid/cmdline" | awk '$0 == "-c" { getline; print; exit }')
+case "$snapshot" in
+	/var/run/metabox-core/"$pid"-*.json) ;;
+	*) fail "the running core did not receive a private config snapshot" ;;
+esac
+LC_ALL=C ls -ldn "$snapshot" | awk '$1 == "-r--------" && $3 == "0" { found = 1 } END { exit !found }' ||
+	fail "the core config snapshot is accessible outside its owner"
+cmp -s "$CONF" "$snapshot" || fail "snapshot contents differ from the applied config"
+echo "   The core runs from a private copy of the applied config"
 
 echo "9. List as a file: local rule-set from rule-sets/"
 LISTS_DIR=$CONF_DIR/rule-sets

@@ -358,7 +358,9 @@ func run(log *slog.Logger, s settings) error {
 		}
 	}
 
-	explainer := route.NewExplainer(source, s.lang)
+	verifier := route.NewRuleVerifier(store, service.LoadedRevision, sysinfo.ControllerListener,
+		func(settings clashapi.Settings) (route.Source, error) { return source.WithController(settings) })
+	explainer := route.NewExplainer(source, s.lang).WithRuleVerification(verifier)
 	diagnoser := diag.New(plane, store, probe, diag.Options{
 		ProcNet: "/proc/net",
 		URL:     s.diagURL,

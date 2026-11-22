@@ -176,3 +176,24 @@ func (s *ClashSource) do(ctx context.Context, path string) (*http.Response, erro
 
 	return response, nil
 }
+
+// WithController pins a single controller across related observations. The
+// normal source resolves settings again on each request.
+func (s *ClashSource) WithController(settings clashapi.Settings) (*ClashSource, error) {
+	base, err := settings.BaseURL()
+	if err != nil {
+		return nil, err
+	}
+
+	pinned := *s
+	// A pooled connection could still reach a process that released the listen port.
+	pinned.client = &http.Client{
+		Transport:     &http.Transport{DisableKeepAlives: true},
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}
+	pinned.resolve = func(context.Context) (Settings, error) {
+		return Settings{BaseURL: base, Secret: settings.Secret}, nil
+	}
+
+	return &pinned, nil
+}
