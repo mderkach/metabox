@@ -72,7 +72,7 @@ Overview SHALL show device readings: load and number of cores, board temperature
 
 ### Requirement: AC-95 Overview states the core once, in its header
 
-Overview SHALL show one core status in its header, with the states specified below. An in-use server without a measurement counts as needs attention. The header holds no commands. Core commands stay in the service card and the panel restart in the daemon card (AC-87). The core restart asks for confirmation and explains the possible interruption of connections through the core. No card repeats the status. The core version is in the sidebar footer.
+Overview SHALL show one core status in its header. A running managed core has one "Restart core" action in the header, next to the routing mode control when present. Restart uses a danger style and requires confirmation. An in-use server without a measurement counts as needs attention. Start and Stop stay in the core service card, and the panel restart stays in the daemon card (AC-87). No card repeats the status. The sidebar footer shows the core version.
 
 #### Scenario: One status in the header
 
@@ -114,18 +114,19 @@ Overview SHALL show one core status in its header, with the states specified bel
 
 - **GIVEN** a running core started outside the managed service
 - **WHEN** the overview opens
-- **THEN** the header says the core works and was started outside metabox, and the core service card offers no command
+- **THEN** the header says the core works and was started outside metabox, and no core command is offered in the header or the core service card
 
-#### Scenario: The core commands stay in the service card
+#### Scenario: Restart sits in the Overview header
 
-- **GIVEN** a running core
-- **WHEN** the overview opens
-- **THEN** the header holds no core command, "Restart" and "Stop" are in the core service card, and the panel restart is in the panel daemon card
+- **GIVEN** a running managed core
+- **WHEN** Overview opens
+- **THEN** its header shows one "Restart core" action, adjacent to the routing mode control when present, and the service card shows Stop
+- **AND** the panel daemon card retains its separate restart action
 
 #### Scenario: Restart warns about interrupted connections
 
 - **GIVEN** a running managed core on Overview
-- **WHEN** the user activates "Restart" in the core service card
+- **WHEN** the user activates "Restart core" in the Overview header
 - **THEN** the confirmation explains that connections through the core may be interrupted
 
 #### Scenario: The recovery action is the only primary button
