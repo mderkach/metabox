@@ -135,7 +135,12 @@ export function RulePanel({
         </Button>
       </header>
 
-      <div className='flex min-h-0 grow flex-col gap-4 overflow-y-auto p-4'>
+      <div
+        className={cn(
+          'flex min-h-0 grow flex-col gap-4 overflow-y-auto p-4',
+          sheet && 'has-[[data-token-suggestions-open]]:pb-72'
+        )}
+      >
         {!creating && <RulePanelConditions rule={rule} />}
         {creating && <p className='text-sm text-pretty text-muted-foreground'>{t('creating')}</p>}
 
