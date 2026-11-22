@@ -148,14 +148,13 @@ func restartBenchCoreDuringCacheReads(t *testing.T, size int, started time.Time)
 		t.Fatalf("read core PID before restart: %q", pid)
 	}
 	const ready = `set -eu
-/etc/init.d/metabox-singbox restart
-for i in $(seq 1 150); do
-  pid=$(/usr/bin/dataplane-check singbox-pid)
+for i in $(seq 1 15); do
+  pid=$(/usr/bin/dataplane-check singbox-pid || true)
   if [ -n "$pid" ] && [ "$pid" != "$1" ] && [ ! -e "/proc/$1" ] &&
      wget -q -T 1 -O /dev/null http://127.0.0.1:9090/version; then
     exit 0
   fi
-  sleep 0.1
+  sleep 1
 done
 exit 1`
 
@@ -174,9 +173,12 @@ exit 1`
 	restarted := make(chan restartResult, 1)
 	restart.Go(func() {
 		start := time.Now()
-		out, err := runBenchCommand(ctx, nil, "exec", "metabox-target-1", "sh", "-c", ready, "restart", pid)
-		if err != nil {
-			err = fmt.Errorf("restart while reading cache: %w: %s", err, out)
+		err := restartBenchCore(ctx)
+		if err == nil {
+			out, readyErr := runBenchCommand(ctx, nil, "exec", "metabox-target-1", "sh", "-c", ready, "restart", pid)
+			if readyErr != nil {
+				err = fmt.Errorf("wait for the new core while reading cache: %w: %s", readyErr, out)
+			}
 		}
 		restarted <- restartResult{time.Since(start), err}
 	})
@@ -196,4 +198,23 @@ exit 1`
 			benchExec(t, nil, "touch", "-m", benchCacheFile)
 		}
 	}
+}
+
+func restartBenchCore(ctx context.Context) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, benchURL+"/api/service/restart", nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Origin", benchURL)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("restart while reading cache: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		const maxResponse = 4096
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxResponse))
+		return fmt.Errorf("restart while reading cache: HTTP %d: %s", resp.StatusCode, body)
+	}
+	return nil
 }
