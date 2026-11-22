@@ -45,7 +45,7 @@ metabox installs on the router as one apk package. It contains the `metaboxd` da
 - Devices from DHCP leases, with a per-device switch to route traffic through the core
 - How metabox works walks through one live connection and explains the panel terms. Open it from Help in the desktop sidebar footer or from More on a phone.
 - Overview: core status and controls, node switch, quick check, traffic, connections, top devices and nodes, and router load, temperature and memory
-- Core logs and traffic interception diagnostics
+- Core logs and traffic interception diagnostics with named failures for the policy routing rule, local route, and DNS forwarding
 - Read-only MCP endpoint for AI agents such as Claude Code
 - Light and dark theme, English and Russian, desktop and phone layouts
 

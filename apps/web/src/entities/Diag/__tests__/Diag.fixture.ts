@@ -18,6 +18,7 @@ export const DIAG_REPORT_FIXTURE: ReportWire = {
       reason: 'chains_missing',
       missing: ['metabox_prerouting', 'metabox_output'],
     },
+    { name: 'routing_setup', status: 'fail', reason: 'local_route_missing' },
     { name: 'proxy', status: 'ok', delay_ms: 182 },
     { name: 'direct', status: 'skipped', reason: 'unsupported' },
   ],

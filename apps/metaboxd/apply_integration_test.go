@@ -125,7 +125,7 @@ func TestApplyHTTPOnEphemeralBench(t *testing.T) {
 
 // This suite changes the disposable CI container's config and restarts its daemon.
 // The owner's Compose project has the same name, so neither opt-in alone is enough.
-func prepareEphemeralBench(t *testing.T) []byte {
+func requireEphemeralBench(t *testing.T) {
 	t.Helper()
 	if os.Getenv("CI") != "true" || os.Getenv("METABOX_EPHEMERAL_BENCH") != "1" {
 		if os.Getenv("CI") == "true" {
@@ -151,6 +151,11 @@ func prepareEphemeralBench(t *testing.T) []byte {
 	if status.Transaction != nil && status.Transaction.Active() {
 		t.Fatal("the bench already has an active Apply transaction")
 	}
+}
+
+func prepareEphemeralBench(t *testing.T) []byte {
+	t.Helper()
+	requireEphemeralBench(t)
 	baseline := benchRequest(t, http.MethodGet, "/api/config", nil, http.StatusOK)
 	t.Cleanup(func() { restoreBench(t, baseline) })
 	return baseline

@@ -14,6 +14,7 @@ describe('toDiagChecks', () => {
       'dns_port',
       'dns_probe',
       'nft_chains',
+      'routing_setup',
       'proxy',
       'direct',
     ]);
@@ -22,7 +23,7 @@ describe('toDiagChecks', () => {
       reason: 'chains_missing',
       missing: ['metabox_prerouting', 'metabox_output'],
     });
-    expect(checks[5]).toMatchObject({ status: 'ok', reason: null, delayMs: 182 });
+    expect(checks[6]).toMatchObject({ status: 'ok', reason: null, delayMs: 182 });
   });
 
   // A check whose outcome the panel did not understand cannot be shown as passed.

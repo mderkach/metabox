@@ -55,8 +55,7 @@ describe('diagnostics screen', () => {
 
     await screen.findByRole('table', { name: 'Проверки обвязки' });
 
-    // Two of the fixture checks fail: the run outcome is read before the rows.
-    expect(screen.getByRole('status')).toHaveTextContent('Не прошли 2 проверки из 7');
+    expect(screen.getByRole('status')).toHaveTextContent('Не прошли 3 проверки из 8');
 
     const redirect = rowOf('Порт redirect (TCP)');
 
@@ -74,6 +73,12 @@ describe('diagnostics screen', () => {
         .getAllByRole('listitem')
         .map((item) => item.textContent)
     ).toEqual(['metabox_prerouting', 'metabox_output']);
+
+    const routing = within(rowOf('Маршруты перехвата'));
+    expect(routing.getByText('не пройдено')).toBeInTheDocument();
+    expect(
+      routing.getByText('нет локального маршрута. Из-за этого перехваченный трафик может не доходить до ядра')
+    ).toBeInTheDocument();
 
     const proxy = rowOf('Через прокси');
 

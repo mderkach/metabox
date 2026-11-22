@@ -243,6 +243,34 @@ func TestCheckDataplaneFails(t *testing.T) {
 	}
 }
 
+func TestReadDataplaneCheck(t *testing.T) {
+	tests := []struct {
+		name      string
+		result    singbox.Result
+		want      singbox.DataplaneCheck
+		wantError bool
+	}{
+		{"installed", singbox.Result{Stdout: "ok\n"}, singbox.DataplaneOK, false},
+		{"missing route", singbox.Result{Stdout: "local_route_missing\n"}, singbox.DataplaneLocalRouteMissing, false},
+		{"legacy script", singbox.Result{}, singbox.DataplaneUnavailable, false},
+		{"unexpected output", singbox.Result{Stdout: "ok\nextra output\n"}, singbox.DataplaneUnavailable, false},
+		{"command failed", singbox.Result{ExitCode: 1}, singbox.DataplaneUnavailable, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runner := &fakeRunner{result: tt.result}
+			got, err := newClient(t, runner).ReadDataplaneCheck(t.Context())
+			if got != tt.want || (err != nil) != tt.wantError {
+				t.Errorf("got %q, %v, want %q, error %t", got, err, tt.want, tt.wantError)
+			}
+			want := []string{initScript, "dataplane_check", "report"}
+			if len(runner.calls) != 1 || !slices.Equal(runner.calls[0], want) {
+				t.Errorf("called %v, expected %v", runner.calls, want)
+			}
+		})
+	}
+}
+
 func TestRunning(t *testing.T) {
 	tests := []struct {
 		name     string

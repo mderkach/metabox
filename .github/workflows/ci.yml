@@ -249,6 +249,12 @@ jobs:
           METABOX_EPHEMERAL_BENCH: '1'
         run: cd apps/metaboxd && go test -tags integration -run '^TestCachedRuleSetsOnEphemeralBench$' -count=1 -v -timeout 3m .
 
+      - name: Dataplane diagnostics over HTTP and MCP
+        timeout-minutes: 3
+        env:
+          METABOX_EPHEMERAL_BENCH: '1'
+        run: cd apps/metaboxd && go test -tags integration -run '^TestDataplaneDiagnosticsOnEphemeralBench$' -count=1 -v -timeout 2m .
+
       - name: Reach check
         timeout-minutes: 5
         run: make reach-check

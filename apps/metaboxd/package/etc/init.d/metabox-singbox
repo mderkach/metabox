@@ -27,6 +27,8 @@ LOCAL_ADDR_V4="0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16
 dp_fail() {
 	local format="$1"
 
+	[ "${dp_quiet:-0}" != 1 ] || return 1
+
 	mb_msg metabox-singbox "$@"
 	shift
 	logger -t metabox-singbox "$(printf "$format" "$@")"
@@ -447,23 +449,52 @@ dp_up() {
 	dp_nft_up
 }
 
-# What the daemon checks after reload besides the nft chains: the fwmark rule, the local route
-# in the table and the dnsmasq fragment. Nothing is checked when the model is disabled or broken:
-# start leaves the dataplane as is then.
+# Report mode gives the diagnostics caller a stable result on stdout without logging.
+# Apply uses the exit status and the operator message.
 dataplane_check() {
-	local dnsmasq_file
+	local mode="${1:-}" dnsmasq_file dp_quiet=0
 
+	[ "$mode" != report ] || dp_quiet=1
 	config_load metabox
-	dp_load || return 0
-	[ "$dp_enabled" = 1 ] || return 0
+	if ! dp_load || [ "$dp_enabled" != 1 ]; then
+		[ "$mode" != report ] || printf '%s\n' unavailable
+		return 0
+	fi
+	if [ "$mode" = report ] && ! command -v ip >/dev/null 2>&1; then
+		printf '%s\n' unavailable
+		return 0
+	fi
 
-	dp_rule_present "$dp_tproxy_mark" "$dp_route_table" ||
-		dp_fail "no ip rule fwmark %s table %s" "$dp_tproxy_mark" "$dp_route_table" || return 1
-	dp_route_present "$dp_route_table" ||
-		dp_fail "no local route in table %s" "$dp_route_table" || return 1
-	dnsmasq_file=$(dp_dnsmasq_file) || return 0
-	grep -qx "server=127.0.0.1#$dp_dns_port" "$dnsmasq_file" 2>/dev/null ||
+	if ! dp_rule_present "$dp_tproxy_mark" "$dp_route_table"; then
+		if [ "$mode" = report ]; then
+			printf '%s\n' fwmark_rule_missing
+			return 0
+		fi
+		dp_fail "no ip rule fwmark %s table %s" "$dp_tproxy_mark" "$dp_route_table"
+		return 1
+	fi
+	if ! dp_route_present "$dp_route_table"; then
+		if [ "$mode" = report ]; then
+			printf '%s\n' local_route_missing
+			return 0
+		fi
+		dp_fail "no local route in table %s" "$dp_route_table"
+		return 1
+	fi
+	if ! dnsmasq_file=$(dp_dnsmasq_file); then
+		[ "$mode" != report ] || printf '%s\n' dnsmasq_forwarding_missing
+		return 0
+	fi
+	if ! grep -qx "server=127.0.0.1#$dp_dns_port" "$dnsmasq_file" 2>/dev/null; then
+		if [ "$mode" = report ]; then
+			printf '%s\n' dnsmasq_forwarding_missing
+			return 0
+		fi
 		dp_fail "dnsmasq fragment %s does not point to port %s" "$dnsmasq_file" "$dp_dns_port"
+		return 1
+	fi
+
+	[ "$mode" != report ] || printf '%s\n' ok
 }
 
 core_launcher() (

@@ -26,6 +26,7 @@ import (
 	"metabox/internal/config"
 	"metabox/internal/dataplane"
 	"metabox/internal/locale"
+	"metabox/internal/singbox"
 )
 
 // detailLimit is the ceiling of a detail: the Clash API answer goes into it.
@@ -51,6 +52,8 @@ const (
 	NameDNSProbe CheckName = "dns_probe"
 	// NameChains means the dataplane chains stand in the fw4 table.
 	NameChains CheckName = "nft_chains"
+	// NameRoutingSetup covers the policy rule, local route and DNS forwarding fragment.
+	NameRoutingSetup CheckName = "routing_setup"
 	// NameProxy is the node delay through the Clash API.
 	NameProxy CheckName = "proxy"
 	// NameDirect is internet access bypassing interception, with the self_mark mark.
@@ -95,7 +98,11 @@ const (
 	// ReasonNFTUnparsed means the nft output was not parsed.
 	ReasonNFTUnparsed CheckReason = "nft_unparsed"
 	// ReasonChainsMissing means some chains are absent; their names are in Missing.
-	ReasonChainsMissing CheckReason = "chains_missing"
+	ReasonChainsMissing            CheckReason = "chains_missing"
+	ReasonRoutingSetupUnavailable  CheckReason = "routing_setup_unavailable"
+	ReasonFwmarkRuleMissing        CheckReason = "fwmark_rule_missing"
+	ReasonLocalRouteMissing        CheckReason = "local_route_missing"
+	ReasonDNSmasqForwardingMissing CheckReason = "dnsmasq_forwarding_missing"
 	// ReasonProxyUnset means the node is not selected.
 	ReasonProxyUnset CheckReason = "proxy_unset"
 	// ReasonProxyMissing means the Clash API does not know such a node.
@@ -150,6 +157,11 @@ type ConfigReader interface {
 	Read(ctx context.Context) ([]byte, error)
 }
 
+// RoutingSetupReader inspects the installed policy routing and DNS forwarding setup.
+type RoutingSetupReader interface {
+	ReadDataplaneCheck(context.Context) (singbox.DataplaneCheck, error)
+}
+
 // Options is what the daemon receives by flags.
 type Options struct {
 	// ProcNet is the socket table directory, `/proc/net` on the device.
@@ -166,20 +178,21 @@ type Options struct {
 // Checker runs the checks. It caches nothing: the model, config and rules
 // change bypassing the daemon.
 type Checker struct {
-	plane  Plane
-	config ConfigReader
-	dns    DNSProber
-	opts   Options
-	client *http.Client
+	plane   Plane
+	routing RoutingSetupReader
+	config  ConfigReader
+	dns     DNSProber
+	opts    Options
+	client  *http.Client
 }
 
 // New assembles the checks. dns nil means the probe name is not set, the probe is skipped.
-func New(plane Plane, cfg ConfigReader, dns DNSProber, opts Options) *Checker {
+func New(plane Plane, cfg ConfigReader, dns DNSProber, routing RoutingSetupReader, opts Options) *Checker {
 	// Diagnostics are rare: keeping a connection to the controller between runs
 	// is pointless.
 	client := &http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
 
-	return &Checker{plane: plane, config: cfg, dns: dns, opts: opts, client: client}
+	return &Checker{plane: plane, config: cfg, dns: dns, routing: routing, opts: opts, client: client}
 }
 
 // Run runs all the checks; proxy is the node the access is checked through with a
@@ -220,6 +233,7 @@ func (c *Checker) run(ctx context.Context, proxy string, check func(context.Cont
 		},
 		func(ctx context.Context) Check { return c.dnsProbe(ctx, model, modelErr, cfg, cfgErr) },
 		func(ctx context.Context) Check { return c.chains(ctx, model, modelErr) },
+		func(ctx context.Context) Check { return c.routingSetup(ctx, model, modelErr) },
 		func(ctx context.Context) Check { return check(ctx, proxy, cfg, cfgErr) },
 		func(ctx context.Context) Check { return c.direct(ctx, model, modelErr) },
 	}
@@ -244,6 +258,34 @@ func (c *Checker) run(ctx context.Context, proxy string, check func(context.Cont
 	}
 
 	return Report{Checks: out}, nil
+}
+
+func (c *Checker) routingSetup(ctx context.Context, model dataplane.Model, modelErr error) Check {
+	if check, skip := interception(c.opts.Lang, NameRoutingSetup, modelErr, model); skip {
+		return check
+	}
+
+	check := Check{Name: NameRoutingSetup, Status: StatusSkipped, Reason: ReasonRoutingSetupUnavailable}
+	if c.routing == nil {
+		return check
+	}
+	result, err := c.routing.ReadDataplaneCheck(ctx)
+	if err != nil {
+		return check
+	}
+
+	switch result {
+	case singbox.DataplaneOK:
+		check.Status, check.Reason = StatusOK, ""
+	case singbox.DataplaneFwmarkRuleMissing:
+		check.Status, check.Reason = StatusFail, ReasonFwmarkRuleMissing
+	case singbox.DataplaneLocalRouteMissing:
+		check.Status, check.Reason = StatusFail, ReasonLocalRouteMissing
+	case singbox.DataplaneDNSmasqForwardingMissing:
+		check.Status, check.Reason = StatusFail, ReasonDNSmasqForwardingMissing
+	}
+
+	return check
 }
 
 // interception returns a skip when the dataplane checks have nothing to apply to.
