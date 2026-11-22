@@ -364,6 +364,12 @@ Each kind of change has one mechanism. Screen changes and stateful tabs go throu
 - **Pinned elements.** `view-transition-name` is carried by the shell's `<main>`, `PageHeader`, the config tab strip and the apply bar. A named element is animated only in a router transition; outside it is shown live, without a snapshot and fade. A new name is added to the shared branch of rules in `index.css`, where the group has zero duration, and, if it is animated, to the `:active-view-transition-type()` branch under which it is animated: there are three: content under all four types, the header under all except `page-hold`, and the header without a pair under `page-hold`. The carrier of a name must not render twice.
 - **Durations and curves** are variables in `index.css`: `--view-transition-*` for View Transitions, `--motion-*` for CSS transitions (enter 240 ms, exit 180 ms, sheet 280 and 200 ms, curve `--motion-ease-out`). Exit is faster than enter. Keyframes live there too. The `prefers-reduced-motion: reduce` rule zeroes View Transitions by itself; CSS transitions are removed with `motion-reduce:transition-none` on each one, and code that waits for `transitionend` checks the setting itself: with the transition removed there will be no event.
 
+### Layout stability across states
+
+At a given available width and text size, reserve space for foreseeable changes within a component, including the longest supported status, loading feedback, and controls shown only in some states. Use a shared column layout across table rows and keep the action slot reserved when its control is absent. Keep a status and its action adjacent on the same line in layouts that support it. The reserved space belongs to the enclosing cell, so extra width does not separate related controls from their labels. If the pair needs more space at a narrow width or at a larger text size, adapt the layout for every state together. This keeps columns, neighboring content, and interaction targets in the same positions as results change.
+
+Anchor help popovers outside the content flow. A disclosure intentionally opened in the flow can expand below its trigger. Verify the positions and sizes of the surrounding content before and after state changes and when conditional controls appear or disappear. Check narrow and wide layouts with the longest supported labels.
+
 ## Tools
 
 Lint is oxlint, format is oxfmt, types are tsc, tests are Vitest. Commands and the full list of checks before committing are in [`CONTRIBUTING.md`](../../../../CONTRIBUTING.md).
