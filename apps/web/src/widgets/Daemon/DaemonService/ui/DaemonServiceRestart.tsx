@@ -1,15 +1,30 @@
+import { RotateCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, ConfirmDialog } from '@shared/ui';
+import { cn } from '@shared/lib/utils';
+import { Button, ConfirmDialog, DESTRUCTIVE_OUTLINE } from '@shared/ui';
 
-/** Asks first: a restart drops the current connections of all devices. */
-export function DaemonServiceRestart({ disabled, onConfirm }: { disabled: boolean; onConfirm: () => void }) {
+export function DaemonServiceRestart({
+  disabled,
+  emphasize,
+  onConfirm,
+}: {
+  disabled: boolean;
+  emphasize: boolean;
+  onConfirm: () => void;
+}) {
   const { t } = useTranslation('widgets/Daemon/DaemonService');
 
   return (
     <ConfirmDialog
       trigger={
-        <Button variant='outline' size='sm' disabled={disabled}>
+        <Button
+          variant='outline'
+          size='sm'
+          disabled={disabled}
+          className={cn(emphasize && [DESTRUCTIVE_OUTLINE, 'dark:border-destructive/40'])}
+        >
+          {emphasize && <RotateCw aria-hidden='true' />}
           {t('action.restart')}
         </Button>
       }
@@ -17,7 +32,6 @@ export function DaemonServiceRestart({ disabled, onConfirm }: { disabled: boolea
       description={t('restart.description')}
       cancelLabel={t('action.cancel', { ns: 'shared' })}
       confirmLabel={t('restart.confirm')}
-
       onConfirm={onConfirm}
     />
   );

@@ -285,7 +285,7 @@ describe('service state', () => {
     await user.click(await screen.findByRole('button', { name: 'Перезапустить' }));
 
     expect(screen.getByRole('alertdialog', { name: 'Перезапустить ядро?' })).toHaveTextContent(
-      'соединения всех устройств оборвутся'
+      'Соединения через ядро могут прерваться'
     );
 
     await user.click(screen.getByRole('button', { name: 'Отмена' }));
