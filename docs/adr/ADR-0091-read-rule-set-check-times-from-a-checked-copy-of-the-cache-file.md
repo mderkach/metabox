@@ -1,6 +1,6 @@
 # ADR-0091. Read rule set check times from a checked copy of the cache file
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-20
 - Deciders: repository owner
 
@@ -34,7 +34,7 @@ Facts the decision depends on, checked in the fork pinned by `tools/schemagen/go
 - The daemon module requires the MCP Go SDK and `go.etcd.io/bbolt`, the latter imported only by `internal/cachefile` (ADR-0088); a new dependency is a separate decision ([`apps/metaboxd/AGENTS.md`](../../apps/metaboxd/AGENTS.md)).
 - The daemon's resource budget is a steady-state resident memory of at most 64 MB with no panel open (`openspec/specs/non-functional`, NFR-4).
 
-In scope: how the daemon gets the check time, size and address match of a cached remote set. Out of scope: the panel layout (the change [`rule-set-contents`](../../openspec/changes/rule-set-contents/proposal.md)), `local` sets outside `rule-sets/`, searching a domain in a set.
+In scope: how the daemon gets the check time, size and address match of a cached remote set. Out of scope: the panel layout (the change [`rule-set-contents`](../../openspec/changes/archive/2026-11-22-rule-set-contents/proposal.md)), `local` sets outside `rule-sets/`, searching a domain in a set.
 
 ## Decision drivers
 
@@ -112,7 +112,7 @@ Not applicable for data: the daemon writes nothing to the cache file and the con
 ## Links
 
 - Issues #398, #245, #395; pull request #309.
-- [`rule-set-contents`](../../openspec/changes/rule-set-contents/proposal.md): the change this decision serves.
+- [`rule-set-contents`](../../openspec/changes/archive/2026-11-22-rule-set-contents/proposal.md): the change this decision serves.
 - [ADR-0088](./ADR-0088-repair-the-sing-box-cache-file-in-the-daemon-with-bbolt.md): the cache file package and its fixture test; this decision adds a read path next to its edit.
 - [ADR-0007](./ADR-0007-explain-route-without-own-rule-evaluator.md): whether a domain matches a rule set is asked of the installed binary.
 - [ADR-0038](./ADR-0038-target-the-sing-box-extended-fork-schema-only.md): the fork is pinned only in `tools/schemagen`.

@@ -1,10 +1,10 @@
 ## Context
 
-See proposal.md, "Why". How the daemon reads the record of a cached set, the RAM cost of the copy and why the list itself is not read are decided in [ADR-0091](../../../docs/adr/ADR-0091-read-rule-set-check-times-from-a-checked-copy-of-the-cache-file.md); this document does not repeat its comparison.
+See proposal.md, "Why". How the daemon reads the record of a cached set, the RAM cost of the copy and why the list itself is not read are decided in [ADR-0091](../../../../docs/adr/ADR-0091-read-rule-set-check-times-from-a-checked-copy-of-the-cache-file.md); this document does not repeat its comparison.
 
 What the project has today:
 
-- `internal/cachefile` opens the cache file with `go.etcd.io/bbolt` only with the core stopped and deletes one key ([ADR-0088](../../../docs/adr/ADR-0088-repair-the-sing-box-cache-file-in-the-daemon-with-bbolt.md)). Its fault recovery (`debug.SetPanicOnFault` and a length check) protects the daemon from a broken file.
+- `internal/cachefile` opens the cache file with `go.etcd.io/bbolt` only with the core stopped and deletes one key ([ADR-0088](../../../../docs/adr/ADR-0088-repair-the-sing-box-cache-file-in-the-daemon-with-bbolt.md)). Its fault recovery (`debug.SetPanicOnFault` and a length check) protects the daemon from a broken file.
 - `internal/clashapi.ReadCacheFile` reads `experimental.cache_file` (enabled, path, `cache_id`) from the config bytes; `apply.Manager.cachePath` resolves a relative path against the working directory of the service.
 - `GET /api/config/rule-sets` returns the own list files and their `stats` (size, modification time) since #309; the rule sets table shows a dash for every other set.
 - The panel already knows the source of a remote set: `describeURL` in `entities/RuleSet` matches the address against the catalog and gives the provider name, the list kind (`geosite` or `geoip`) and the category. The catalog of the daemon (`internal/ruleset`) carries provider names and category names only; there is no human description of a category.
