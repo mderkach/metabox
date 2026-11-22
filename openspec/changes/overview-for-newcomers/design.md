@@ -48,7 +48,7 @@ See `proposal.md` for the motivation. What exists now:
 
 12. **Coordinator decisions approved by the owner on 2026-11-20.**
     - Blocked traffic is shown as a count of connections, not bytes; its source, the core log, is the owner's (decision 14).
-    - A server in use that no check has measured makes the status "needs attention", with "Check" as the action. Configured URLTest groups and providers with health checks can produce results. A first result for an individual server can also come from a user check.
+    - A server in use that no check has measured makes the status "needs attention", with "Check" as the action. Configured URLTest groups and providers keep running their checks. On Overview, automatic results before the first user check for the server in the current core process can populate history. They leave the current value at "No measurement".
     - The recovery notice is kept in `last-running.json`, so a daemon restart does not lose it.
 13. **On Overview, the core service card does not repeat the status word and dot.** The header carries them (AC-95). The owner approved this on 2026-11-20. Settings keeps its full service card.
 
@@ -93,7 +93,7 @@ Produced with `/impeccable shape`. The discovery round was the owner's review of
      - one main action and at most one secondary.
    - The main action by cause:
      - a manual-choice group: "Switch ‹group› to ‹outbound›";
-     - a server in use that no check has measured: "Check ‹server›"; the sentence says its latency is unknown. Show "No measurement" when there is no fresh result. Do not start a check automatically;
+     - a server in use that no check has measured: "Check ‹server›"; the sentence says its latency is unknown. Show "No measurement" until the user checks the server in the current core process. Do not start a check automatically;
      - a group that picks by latency: "Check the other servers of ‹group›", with the sentence saying why it did not switch (the group's tolerance);
      - a dropped cache: "Dismiss"; the subscription name and the reason are the content.
    - States:

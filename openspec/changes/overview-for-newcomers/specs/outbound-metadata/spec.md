@@ -30,13 +30,20 @@ The daemon SHALL keep, per server, the recent results of the latency checks the 
 
 - **GIVEN** recorded results and a core that restarted
 - **WHEN** the daemon reads the core and finds no results
-- **THEN** the current value and its failure streak reset. Earlier observations remain historical and the panel shows "No measurement" until a fresh result appears
+- **THEN** the current value and its failure streak reset. Earlier observations remain historical and Overview shows "No measurement" until the user initiates a check for that server
 
 #### Scenario: The first measurement is started by the user
 
 - **GIVEN** a server in use without a result from the current core process
 - **WHEN** its latency is shown
 - **THEN** the panel shows "No measurement" and offers a check for that server, including a server outside any group. After a successful check it shows the fresh value, and it shows a usual value only when a manual or computed norm exists.
+
+#### Scenario: An automatic check completes before the first user check
+
+- **GIVEN** the core has just restarted and its configured URLTest group or provider has checked a server
+- **WHEN** Overview opens before the user checks that server
+- **THEN** Overview shows "No measurement" with a Check action, and the automatic result can be kept in history
+- **AND** a successful user check displays its result immediately
 
 #### Scenario: A manual norm wins
 

@@ -29,7 +29,7 @@ Refs:
   - The core type and version move to "Router and metabox" and to the sidebar footer.
 - **Needs attention.** The block appears only when something is wrong.
   - It names the servers (up to four, then "and N more") and what this means for the rules.
-  - A server without a fresh latency result shows "No measurement" and offers "Check". No active check starts automatically.
+  - On Overview, a server shows "No measurement" and offers "Check" until the user initiates its first check in the current core process. Configured checks can still populate history.
   - It offers one main action that depends on the group type: switch a manual-choice group, or explain why a group that picks by latency did not switch.
   - A subscription the daemon dropped from the core cache (#364) is listed here until the user dismisses it.
 - **Traffic over a period.** Two shares of the internet connection volume since the daemon started: through a proxy and direct. The Direct share combines traffic sent directly by rules and estimated traffic past the core. Its help explains that the outbound table sees only traffic through the core. The blocked connections are shown apart, as a count the daemon reads from the core log: they never reach the internet connection and close at once, so their volume is close to zero. When `log.level` hides those lines, the figure says it is unavailable and its help names the level it needs.

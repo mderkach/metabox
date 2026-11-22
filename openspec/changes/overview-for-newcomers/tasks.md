@@ -20,7 +20,7 @@
 - [ ] 2.3 AC-102: a latency reader in `internal/clashapi` and a `history.Latency` ring, as ADR-0090 sets out:
   - the last 10 results and 24 hourly medians per tag, at most 4096 tags;
   - a 60 s read that records an entry only on a new core timestamp;
-  - a vanished result recorded as "no answer" only when the tag is still listed and the core process is the same; clear the current result and failure streak on a core restart, retaining earlier observations as history. A tag removed from runtime starts a new baseline if it returns;
+  - a vanished result recorded as "no answer" only when the tag is still listed and the core process is the same; clear the current result and failure streak on a core restart, retaining earlier observations as history. Test that configured checks before the first user check in the current process can populate history while Overview shows "No measurement". A tag removed from runtime starts a new baseline if it returns;
   - the usual latency (median of hourly medians, none before the first hourly median) and the levels. Test the no-measurement state separately from failure;
   - `GET /api/latency`, a mock handler for it, and `make schema-daemon`.
 
