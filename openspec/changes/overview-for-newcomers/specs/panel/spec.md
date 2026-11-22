@@ -1,6 +1,6 @@
 ## ADDED Requirements
 
-### Requirement: AC-111 Visible panel transitions communicate the change
+### Requirement: AC-114 Visible panel transitions communicate the change
 
 The panel SHALL animate navigation between screens and user-visible changes of view, including tab changes, the opening and closing of disclosures and contextual panels, and the appearance and dismissal of actionable notices. The transition preserves the surrounding layout and focus behavior. An in-flow disclosure may resize its own section. Background data refreshes and changes to individual values do not replay the surrounding transition.
 
