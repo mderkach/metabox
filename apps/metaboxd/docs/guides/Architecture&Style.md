@@ -53,6 +53,7 @@ These three boundaries must not be changed in code: a conflict is resolved by a 
 | `ReadDNSInbound` | `inbounds[].type`, `inbounds[].listen`, `inbounds[].listen_port`, `inbounds[].network`                                                       | Find the first `direct` inbound matching the configured DNS port and address the DNS probe |
 | `ReadCacheFile`  | `experimental.cache_file.enabled`, `.path`, `.cache_id`, `.store_subscriptions`; `route.rule_set[].type`, `.tag`, `.url`                     | Locate cached subscriptions for recovery and look up cached metadata for remote rule sets  |
 | `OutboundTags`   | `outbounds[].tag`, `endpoints[].tag`                                                                                                         | Retain configured traffic rows while refreshing runtime tags                               |
+| `ReadRuleNames`  | `route.rules` array positions and leading JSONC comments                                                                                     | Read the names for a config version or proved runtime rule position                        |
 
 These reads preserve the original config bytes: projections are never serialized back into the config. They do not authorize a general Go config model, parsing into `map[string]any`, or custom config validation; `sing-box` remains the validator.
 

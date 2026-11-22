@@ -36,11 +36,18 @@ export interface RouteRule {
   action: string;
 }
 
+export interface AppliedRuleReference {
+  /** Position in `route.rules` of the applied file, counting from zero. */
+  index: number;
+  etag: string;
+}
+
 export interface RouteMatch {
   origin: RouteOrigin;
   kind: RouteMatchKind;
   /** `null` means there is no node in `route.rules`: `final` or unknown. */
   index: number | null;
+  appliedRule: AppliedRuleReference | null;
   conditions: string;
   action: string;
   /** Why it could not be computed; empty for a found rule. */

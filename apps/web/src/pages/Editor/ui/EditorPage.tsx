@@ -27,10 +27,13 @@ export function EditorPage() {
   const filter = useRuleFilter(editor.rules);
   const marks = useRuleMarks(editor);
   const asSheet = usePanelAsSheet();
-  // The rule number from the address selects the rule: the connections screen and the Apply summary
-  // lead here to the node.
-  const { rule } = useSearch({ strict: false });
-  const selection = useRuleSelection(toSelectedRuleId(rule), editor.rules);
+  const { rule, ruleEtag } = useSearch({ strict: false });
+  // A new applied revision invalidates a position already open from this link.
+  const guardedLink =
+    rule !== undefined && ruleEtag !== undefined ? JSON.stringify([rule, ruleEtag, editor.appliedEtag]) : undefined;
+  const matchesDocument = ruleEtag === undefined || (ruleEtag === editor.appliedEtag && editor.isAppliedDocument);
+  const currentRule = matchesDocument ? rule : undefined;
+  const selection = useRuleSelection(toSelectedRuleId(currentRule), editor.rules, guardedLink);
   const createRule = useCreateRule();
   const edit = ConfigDocumentState.use.edit();
   const { reset: resetFilter } = filter;

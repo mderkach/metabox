@@ -7,36 +7,36 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfigDocumentState } from '@entities/Config';
 import { CONFIG_ENDPOINT } from '@entities/Config';
-import { CONFIG_FIXTURE } from '@entities/Config/__tests__/Config.fixture';
 import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
-import { ROUTE_ENDPOINT } from '@entities/Route';
 import {
   ROUTE_EXPLANATION_FIXTURE,
   ROUTE_FINAL_FIXTURE,
   ROUTE_UNKNOWN_FIXTURE,
+  withAppliedRuleReference,
 } from '@entities/Route/__tests__/Route.fixture';
+import { createRouteExplanationHandler } from '@entities/Route/__tests__/Route.handlers';
 
 import { RouteExplanation } from '../ui/RouteExplanation';
 import { RouteExplanationSheet } from '../ui/RouteExplanationSheet';
 
-const JSON_INDENT = 2;
-
-/** The fixture config has 32 rules, and the explanation comes for 7: the lengths differ. */
-const CONFIG_TEXT = JSON.stringify(CONFIG_FIXTURE, null, JSON_INDENT);
+const APPLIED_ETAG = '"verified"';
+const CONFIRMED_EXPLANATION = withAppliedRuleReference(ROUTE_EXPLANATION_FIXTURE, 6, APPLIED_ETAG);
 
 function serveExplanation(body: typeof ROUTE_EXPLANATION_FIXTURE) {
-  server.use(http.get(ROUTE_ENDPOINT.explanation('c-1'), () => HttpResponse.json(body)));
+  server.use(createRouteExplanationHandler({ ...body, connection_id: 'c-1' }));
 }
 
-function serveConfig(text: string) {
-  server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text)));
+function serveConfig(text: string, etag = APPLIED_ETAG) {
+  server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(text, { headers: { ETag: etag } })));
 }
 
-/** A config with exactly the number of rules the daemon returned: the link to the node is alive. */
-function configWithRules(count: number): string {
-  const rules = Array.from({ length: count }, (_, index) => ({ inbound: `in-${String(index)}`, outbound: 'direct' }));
+function configWithRules(count: number, lastName?: string): string {
+  const rules = Array.from({ length: count }, (_, index) => {
+    const name = index === count - 1 && lastName !== undefined ? `// ${lastName}\n` : '';
+    return name + JSON.stringify({ inbound: `in-${String(index)}`, outbound: 'direct' });
+  });
 
-  return JSON.stringify({ route: { rules } }, null, JSON_INDENT);
+  return `{"route":{"rules":[\n${rules.join(',\n')}\n]}}`;
 }
 
 describe('RouteExplanation', () => {
@@ -46,7 +46,7 @@ describe('RouteExplanation', () => {
   });
 
   it('names the source by the device label, and leaves the address as a hint', async () => {
-    serveExplanation(ROUTE_EXPLANATION_FIXTURE);
+    serveExplanation(CONFIRMED_EXPLANATION);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
     renderWithRouter(() => (
@@ -61,9 +61,9 @@ describe('RouteExplanation', () => {
     expect(await screen.findByText('с устройства Ноутбук')).toHaveAttribute('title', '192.168.1.60');
   });
 
-  it('shows the matched rule and its origin', async () => {
-    serveExplanation(ROUTE_EXPLANATION_FIXTURE);
-    serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
+  it('shows the matched rule name and its observed origin', async () => {
+    serveExplanation(CONFIRMED_EXPLANATION);
+    serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length, 'Applied rule name'));
 
     renderWithRouter(() => (
       <RouteExplanation
@@ -76,12 +76,13 @@ describe('RouteExplanation', () => {
 
     // Daemon indexes count from zero, rules on the screen are numbered from one.
     expect(await screen.findByText('Сработало правило 7')).toBeInTheDocument();
+    expect(screen.getByText('Applied rule name')).toBeInTheDocument();
     expect(screen.getByText('Сет правил: google-ip')).toHaveAttribute('title', 'rule_set=google-ip');
     expect(screen.getAllByText('от ядра').length).toBeGreaterThan(0);
   });
 
-  it('leads to the rule in the editor when the process list matches the config', async () => {
-    serveExplanation(ROUTE_EXPLANATION_FIXTURE);
+  it('leads to the rule in the editor with its confirmed applied revision', async () => {
+    serveExplanation(CONFIRMED_EXPLANATION);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
     renderWithRouter(() => (
@@ -95,16 +96,19 @@ describe('RouteExplanation', () => {
 
     const link = await screen.findByRole('link', { name: 'Открыть правило в редакторе' });
 
-    expect(link).toHaveAttribute('href', '/config?rule=7');
+    const url = new URL(link.getAttribute('href') ?? '', document.baseURI);
+    expect(url.pathname).toBe('/config');
+    expect(url.searchParams.get('rule')).toBe('7');
+    expect(url.searchParams.get('ruleEtag')).toBe(JSON.stringify(APPLIED_ETAG));
     // Variant classes pass through `cn`: otherwise the base `border-transparent`
     // survives next to the variant `border-border`, and the link is left without a border.
     expect(link).toHaveClass('border-border');
     expect(link).not.toHaveClass('border-transparent');
   });
 
-  it('disables the jump to the node when the process runs a different config', async () => {
-    serveExplanation(ROUTE_EXPLANATION_FIXTURE);
-    serveConfig(CONFIG_TEXT);
+  it('keeps the observed rule when the applied revision changed at the same list length', async () => {
+    serveExplanation(CONFIRMED_EXPLANATION);
+    serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length, 'Different rule name'), '"reordered"');
 
     renderWithRouter(() => (
       <RouteExplanation
@@ -115,7 +119,8 @@ describe('RouteExplanation', () => {
       />
     ));
 
-    expect(await screen.findByText('Ядро работает с другой версией конфига')).toBeInTheDocument();
+    expect(await screen.findByText('Позиция правила не подтверждена')).toBeInTheDocument();
+    expect(screen.queryByText('Different rule name')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Открыть правило в редакторе' })).not.toBeInTheDocument();
     // The node number of a foreign document is not shown at all: it would point to
     // a different rule.
@@ -129,6 +134,41 @@ describe('RouteExplanation', () => {
     expect(
       within(screen.getByRole('list', { name: 'Правила выше сработавшего' })).queryByText('1')
     ).not.toBeInTheDocument();
+  });
+
+  it('keeps the observed rule without a position when the daemon sends no proof', async () => {
+    serveExplanation({
+      ...ROUTE_EXPLANATION_FIXTURE,
+      match: { ...ROUTE_EXPLANATION_FIXTURE.match, index: undefined },
+    });
+    serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length, 'Unverified rule name'));
+
+    renderWithRouter(() => (
+      <RouteExplanation connectionId='c-1' host='video.example:443' source='' onClose={vi.fn<() => void>()} />
+    ));
+
+    expect(await screen.findByText('Сработавшее правило по данным ядра')).toBeInTheDocument();
+    expect(screen.getByText('Сет правил: google-ip')).toBeInTheDocument();
+    expect(screen.getByTitle('route(alt-fallback)')).toBeInTheDocument();
+    expect(screen.queryByText('Unverified rule name')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Открыть правило в редакторе' })).not.toBeInTheDocument();
+  });
+
+  it('opens the config without a position when the draft differs from the applied file', async () => {
+    const applied = configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length, 'Applied rule name');
+    serveExplanation(CONFIRMED_EXPLANATION);
+    serveConfig(applied);
+    ConfigDocumentState.getState().load(applied, APPLIED_ETAG);
+    ConfigDocumentState.getState().replace(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length, 'Draft rule name'));
+
+    renderWithRouter(() => (
+      <RouteExplanation connectionId='c-1' host='video.example:443' source='' onClose={vi.fn<() => void>()} />
+    ));
+
+    expect(await screen.findByText('Applied rule name')).toBeInTheDocument();
+    expect(screen.queryByText('Draft rule name')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Открыть конфигурацию' })).toHaveAttribute('href', '/config');
+    expect(screen.queryByRole('link', { name: 'Открыть правило в редакторе' })).not.toBeInTheDocument();
   });
 
   it('shows the default outbound as an observation, not as unknown', async () => {
@@ -169,7 +209,7 @@ describe('RouteExplanation', () => {
   });
 
   it('shows the chain in human reading order', async () => {
-    serveExplanation(ROUTE_EXPLANATION_FIXTURE);
+    serveExplanation(CONFIRMED_EXPLANATION);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
     renderWithRouter(() => (
@@ -187,7 +227,7 @@ describe('RouteExplanation', () => {
   });
 
   it('is named after the connection it describes', async () => {
-    serveExplanation(ROUTE_EXPLANATION_FIXTURE);
+    serveExplanation(CONFIRMED_EXPLANATION);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
     renderWithRouter(() => (
@@ -205,7 +245,7 @@ describe('RouteExplanation', () => {
   });
 
   it('closes on Escape', async () => {
-    serveExplanation(ROUTE_EXPLANATION_FIXTURE);
+    serveExplanation(CONFIRMED_EXPLANATION);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
 
     const onClose = vi.fn<() => void>();
@@ -225,7 +265,7 @@ describe('RouteExplanation', () => {
 describe('RouteExplanationSheet', () => {
   beforeEach(() => {
     ConfigDocumentState.getState().reset();
-    serveExplanation(ROUTE_EXPLANATION_FIXTURE);
+    serveExplanation(CONFIRMED_EXPLANATION);
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length));
     server.use(...createDeviceHandlers());
   });

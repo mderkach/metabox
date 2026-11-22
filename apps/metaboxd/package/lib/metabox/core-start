@@ -1,0 +1,57 @@
+#!/bin/sh
+
+process_start() {
+	sed 's/.*) //' "/proc/$1/stat" 2>/dev/null | awk '{print $20}'
+}
+
+snapshot_config() {
+	local source="$1" run="$2" start old file pid ticks hash
+
+	[ ! -L "$run" ] && [ "$(stat -c '%u:%a' "$run")" = '0:700' ] || return 1
+	start=$(process_start "$$")
+	case "$start" in
+	'' | *[!0-9]*) return 1 ;;
+	esac
+
+	# A live process may reread its snapshot on SIGHUP. Keep it until that process exits.
+	for old in "$run"/*.json "$run"/.snapshot-*-*; do
+		[ -f "$old" ] || continue
+		file=${old##*/}
+		case "$file" in
+		.snapshot-*) file=${file#.snapshot-}; file=${file%.*} ;;
+		esac
+		pid=${file%%-*}
+		case "$pid" in
+		'' | *[!0-9]*) continue ;;
+		esac
+		file=${file#*-}
+		ticks=${file%%-*}
+		case "$ticks" in
+		'' | *[!0-9]*) continue ;;
+		esac
+		[ "$(process_start "$pid")" = "$ticks" ] || rm -f "$old"
+	done
+
+	umask 077
+	snapshot_tmp=$(mktemp "$run/.snapshot-$$-$start.XXXXXX") || return 1
+	trap 'rm -f "$snapshot_tmp"' EXIT
+	trap 'exit 1' HUP INT TERM
+
+	# Keep large hand-written configs working without retaining another copy in tmpfs.
+	head -c 4194305 "$source" >"$snapshot_tmp" || return 1
+	[ "$(stat -c '%s' "$snapshot_tmp")" -le 4194304 ] || return 1
+	hash=$(sha256sum "$snapshot_tmp") || return 1
+	hash=${hash%% *}
+	file="$run/$$-$start-$hash.json"
+	chmod 0400 "$snapshot_tmp" && mv "$snapshot_tmp" "$file" || return 1
+	printf '%s\n' "$file"
+}
+
+binary=$1
+shift
+if [ "$#" = 5 ] && [ "$1" = run ] && [ "$2" = -c ] && [ "$4" = -D ] &&
+	snapshot=$(snapshot_config "$3" /var/run/metabox-core); then
+	exec "$binary" run -c "$snapshot" -D "$5"
+fi
+
+exec "$binary" "$@"

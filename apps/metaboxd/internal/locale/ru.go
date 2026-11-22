@@ -143,11 +143,11 @@ var ru = map[string]string{
 		"ещё ничего не применялось.",
 	"Content of one config version from metabox_config_versions. Secrets are masked " +
 		"(secret, password, private_key, pre_shared_key, psk, token, auth_str, access_key_secret; for url and " +
-		"download_url everything after the host) and cannot be revealed through MCP. Comments are removed, " +
-		"since they may hold secrets the mask cannot recognise.": "Содержимое одной версии конфига из metabox_config_versions. Секреты замаскированы " +
+		"download_url everything after the host) and cannot be revealed through MCP. Rule names are returned " +
+		"with URLs masked and invisible characters removed. Other comments are removed.": "Содержимое одной версии конфига из metabox_config_versions. Секреты замаскированы " +
 		"(secret, password, private_key, pre_shared_key, psk, token, auth_str, access_key_secret; у url и " +
-		"download_url всё после хоста) и через MCP не раскрываются. Комментарии удалены: " +
-		"в них могут быть секреты, которые маска не распознаёт.",
+		"download_url всё после хоста) и через MCP не раскрываются. В именах правил URL замаскированы, " +
+		"невидимые символы удалены. Остальные комментарии удалены.",
 	"Last lines of the routing core log, oldest first, the same text the panel log screen shows. " +
 		"level is the minimum level: trace, debug, info, notice, warn, error, fatal or panic (default: all). " +
 		"lines is 1 to 1000, default 200. Lines without a level (stack traces, continuations) pass the filter. " +

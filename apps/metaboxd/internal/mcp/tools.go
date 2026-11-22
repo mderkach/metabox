@@ -13,6 +13,7 @@ import (
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"metabox/internal/clashapi"
 	"metabox/internal/config"
 	"metabox/internal/contract"
 	"metabox/internal/diag"
@@ -101,8 +102,8 @@ func (t tools) addRead(server *sdk.Server, log *slog.Logger) {
 			Name: "metabox_config_version",
 			Description: locale.T(t.opts.Lang, "Content of one config version from metabox_config_versions. Secrets are masked "+
 				"(secret, password, private_key, pre_shared_key, psk, token, auth_str, access_key_secret; for url and "+
-				"download_url everything after the host) and cannot be revealed through MCP. Comments are removed, "+
-				"since they may hold secrets the mask cannot recognise."),
+				"download_url everything after the host) and cannot be revealed through MCP. Rule names are returned "+
+				"with URLs masked and invisible characters removed. Other comments are removed."),
 		}, t.version)
 	}
 
@@ -221,12 +222,21 @@ type connectionsIn struct {
 
 type connectionsOut struct {
 	// Total is the number of matching connections before the limit.
-	Total       int                 `json:"total"`
-	Connections []events.Connection `json:"connections"`
+	Total       int               `json:"total"`
+	Connections []namedConnection `json:"connections"`
+}
+
+type namedConnection struct {
+	events.Connection
+	RuleName string `json:"rule_name,omitempty"`
+}
+
+type connectionNamesReader interface {
+	ConnectionsWithRuleNames(context.Context) (json.RawMessage, map[string]string, error)
 }
 
 func (t tools) connections(ctx context.Context, in connectionsIn) (connectionsOut, error) {
-	snapshot, err := t.liveConnections(ctx)
+	snapshot, names, err := t.connectionsAndNames(ctx)
 	if err != nil {
 		return connectionsOut{}, err
 	}
@@ -237,7 +247,7 @@ func (t tools) connections(ctx context.Context, in connectionsIn) (connectionsOu
 	}
 
 	limit := clamp(in.Limit, defaultConnections, maxConnections)
-	out := connectionsOut{Connections: []events.Connection{}}
+	out := connectionsOut{Connections: []namedConnection{}}
 
 	for _, c := range snapshot.Connections {
 		if !matchConnection(c, in, sources) {
@@ -247,11 +257,28 @@ func (t tools) connections(ctx context.Context, in connectionsIn) (connectionsOu
 		out.Total++
 
 		if len(out.Connections) < limit {
-			out.Connections = append(out.Connections, c)
+			out.Connections = append(out.Connections, namedConnection{Connection: c, RuleName: maskRuleName(names[c.ID])})
 		}
 	}
 
 	return out, nil
+}
+
+func (t tools) connectionsAndNames(ctx context.Context) (events.ConnectionsSnapshot, map[string]string, error) {
+	reader, ok := t.opts.Explain.(connectionNamesReader)
+	if !ok {
+		snapshot, err := t.liveConnections(ctx)
+
+		return snapshot, nil, err
+	}
+
+	raw, names, err := reader.ConnectionsWithRuleNames(ctx)
+	if err != nil {
+		return events.ConnectionsSnapshot{}, nil, fmt.Errorf("%w: connections: %w", route.ErrRuntimeUnavailable, err)
+	}
+	snapshot, err := events.ParseConnections(raw)
+
+	return snapshot, names, err
 }
 
 func (t tools) liveConnections(ctx context.Context) (events.ConnectionsSnapshot, error) {
@@ -498,7 +525,8 @@ type versionIn struct {
 type versionOut struct {
 	ID int `json:"id"`
 	// Content is the config text with secrets masked and comments removed.
-	Content string `json:"content"`
+	Content   string   `json:"content"`
+	RuleNames []string `json:"rule_names,omitempty"`
 }
 
 func (t tools) version(ctx context.Context, in versionIn) (versionOut, error) {
@@ -511,7 +539,15 @@ func (t tools) version(ctx context.Context, in versionIn) (versionOut, error) {
 		return versionOut{}, err
 	}
 
-	return versionOut{ID: in.ID, Content: string(maskConfig(data))}, nil
+	names, err := clashapi.ReadRuleNames(data)
+	if err != nil {
+		names = nil
+	}
+	for index, name := range names {
+		names[index] = maskRuleName(name)
+	}
+
+	return versionOut{ID: in.ID, Content: string(maskConfig(data)), RuleNames: names}, nil
 }
 
 type logTailIn struct {

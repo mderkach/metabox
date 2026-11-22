@@ -129,6 +129,11 @@ describe('rule filter in the address', () => {
     expect(parseRuleSearch({ rule: '3', rule_set: 'geoip-ru' })).toEqual({ rule: 3, rule_set: 'geoip-ru' });
   });
 
+  it('keeps a guarded rule number and its revision together', () => {
+    expect(parseRuleSearch({ rule: '3', ruleEtag: '"applied"' })).toEqual({ rule: 3, ruleEtag: '"applied"' });
+    expect(parseRuleSearch({ rule: '3', ruleEtag: '' })).toEqual({});
+  });
+
   // The router parses a hand-typed `?rule_set=123` as a number: a tag of digits
   // stays a tag and does not drop the rule number along with it.
   it('a tag of digits is read as a string', () => {

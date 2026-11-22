@@ -4,9 +4,7 @@ import type { RouteExplanationWire } from '../api/Route.schema';
  * Daemon response for a connection that went to `alt-fallback` by rule set.
  * Rule indexes count from zero: these are indexes of `route.rules` nodes.
  *
- * There are seven rules here, and 32 in the fixture config, so next to it the panel
- * shows a list mismatch and disables the jump to the node. This is not a breakage:
- * this is how the "process runs a different config" case looks.
+ * The fixture carries runtime observations and can be used with an older daemon response.
  */
 export const ROUTE_EXPLANATION_FIXTURE: RouteExplanationWire = {
   connection_id: 'c-1',
@@ -62,8 +60,7 @@ export const ROUTE_UNKNOWN_FIXTURE: RouteExplanationWire = {
 /**
  * The process rule list for explanations by connection snapshot: conditions and
  * actions are exactly those the snapshot rows carry, so each connection
- * finds its rule in it. The list does not match the fixture config, and the
- * panel still shows the list mismatch.
+ * finds its rule in it. The fixture carries no confirmed applied rule reference.
  */
 export const ROUTE_PROCESS_RULES_FIXTURE: RouteExplanationWire['rules'] = [
   { origin: 'observed', index: 0, type: 'default', conditions: '', action: 'sniff' },
@@ -95,3 +92,11 @@ export const ROUTE_DRIFTED_CHAIN_FIXTURE: RouteExplanationWire = {
   chain: { origin: 'observed', nodes: ['sub-us/us-hysteria', 'us', 'us-fallback'] },
   rules: ROUTE_PROCESS_RULES_FIXTURE,
 };
+
+export function withAppliedRuleReference(
+  explanation: RouteExplanationWire,
+  index: number,
+  etag: string
+): RouteExplanationWire {
+  return { ...explanation, match: { ...explanation.match, applied_rule: { index, etag } } };
+}
