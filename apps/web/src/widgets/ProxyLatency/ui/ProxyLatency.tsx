@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useOutboundMetadata, useProxies, type useProxyLatency } from '@entities/Proxy';
+import { LATENCY_CEILING_MS, useOutboundMetadata, useProxies, type useProxyLatency } from '@entities/Proxy';
 import { useTestProxyDelays } from '@features/Proxy/ProxyDelay';
 import {
   Button,
@@ -19,7 +19,7 @@ import {
 } from '@shared/ui';
 
 import { toSelected } from '../model/ProxyLatency.model';
-import { SCALE_CEILING, SCALE } from '../model/ProxyLatency.scale';
+import { SCALE } from '../model/ProxyLatency.scale';
 import { ProxyLatencyRow } from './ProxyLatencyRow';
 
 /** The measurement is made by sing-box: from the browser the channel to the panel would be measured. */
@@ -60,7 +60,9 @@ export function ProxyLatency({
         {/* The ceiling here is constant, while in neighboring summary panels it follows
             the series leader: without a named scale the lengths would read the same. It goes
             under the title row, otherwise it pushes the button onto a line of its own. */}
-        <p className='order-last basis-full text-xs text-muted-foreground'>{t('scale', { ceiling: SCALE_CEILING })}</p>
+        <p className='order-last basis-full text-xs text-muted-foreground'>
+          {t('scale', { ceiling: LATENCY_CEILING_MS })}
+        </p>
         <span className='grow' />
         <Button
           variant='outline'

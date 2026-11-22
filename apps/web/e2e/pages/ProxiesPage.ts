@@ -38,7 +38,42 @@ export class ProxiesPage {
     return this.group(tag).getByRole('textbox', { name: translate(PROXY_GROUPS, 'metadata.label'), exact: true });
   }
 
+  normHeader(group: string): Locator {
+    return this.group(group).getByText(translate(PROXY_GROUPS, 'metadata.autoDefault'), { exact: true });
+  }
+
+  normField(tag: string): Locator {
+    return this.page.getByRole('textbox', {
+      name: translate(PROXY_GROUPS, 'metadata.normField', { tag }),
+      exact: true,
+    });
+  }
+
+  normRow(tag: string): Locator {
+    return this.page.locator('[data-slot="proxy-node-row"]').filter({ has: this.normField(tag) });
+  }
+
+  normCell(tag: string, cell: 'identity' | 'delay' | 'reading' | 'status' | 'norm' | 'meter'): Locator {
+    return this.normRow(tag).locator(`[data-slot="proxy-node-${cell}"]`);
+  }
+
+  editNorm(tag: string): Locator {
+    return this.normButton(tag, 'metadata.editNorm');
+  }
+
+  saveNorm(tag: string): Locator {
+    return this.normButton(tag, 'metadata.saveNorm');
+  }
+
+  resetNorm(tag: string): Locator {
+    return this.normButton(tag, 'metadata.resetNorm');
+  }
+
   addManualChoiceButton(group: string): Locator {
     return this.page.getByRole('button', { name: translate(PROXY_GROUPS, 'auto.actionLabel', { group }) });
+  }
+
+  private normButton(tag: string, key: string): Locator {
+    return this.normRow(tag).getByRole('button', { name: translate(PROXY_GROUPS, key, { tag }), exact: true });
   }
 }

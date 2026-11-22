@@ -15,9 +15,11 @@ export const ProxyMetadataFormSchema = z.object({
     .string()
     .refine((label) => !/\p{Cc}/u.test(label), METADATA_FORM_ERROR.ControlChars)
     .refine((label) => Array.from(label).length <= METADATA_LABEL_LIMIT, METADATA_FORM_ERROR.LabelTooLong),
-  /** Blank restores the usual latency derived from history. */
+});
+
+export const ProxyNormFormSchema = z.object({
+  /** A server's override, in milliseconds. */
   norm: z.string().refine((norm) => {
-    if (norm === '') return true;
     const value = Number(norm);
 
     return /^\d+$/.test(norm) && value >= 1 && value <= MAX_NORM_MS;
@@ -25,3 +27,4 @@ export const ProxyMetadataFormSchema = z.object({
 });
 
 export type ProxyMetadataFormModel = z.infer<typeof ProxyMetadataFormSchema>;
+export type ProxyNormFormModel = z.infer<typeof ProxyNormFormSchema>;

@@ -11,7 +11,7 @@ import { configHandlers } from '@entities/Config/__tests__/Config.handlers';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { PROXY_ENDPOINT } from '@entities/Proxy';
-import { CLASH_PROXIES_FIXTURE } from '@entities/Proxy/__tests__/Proxy.fixture';
+import { CLASH_DELAY_FIXTURE, CLASH_PROXIES_FIXTURE } from '@entities/Proxy/__tests__/Proxy.fixture';
 import { createStatefulProxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
 import {
   OutboundMetadataEditSchema,
@@ -76,24 +76,49 @@ it('edits one group label in place and returns focus to the pencil on Escape', a
   expect(writes).toEqual([]);
 });
 
-it('edits both server fields while keeping the current delay visible', async () => {
+it('edits the server label independently and keeps the current delay visible', async () => {
   serveMetadata();
+  const sample = { at: CLASH_DELAY_FIXTURE.time, delay_ms: CLASH_DELAY_FIXTURE.delay };
+  server.use(
+    http.get(PROXY_ENDPOINT.latency(), () =>
+      HttpResponse.json({
+        servers: [
+          {
+            tag: SERVER,
+            current: sample,
+            usual_ms: sample.delay_ms,
+            computed_usual_ms: sample.delay_ms,
+            recent: [sample],
+            hourly: [],
+            level: 'within_norm',
+            origin: 'computed',
+          },
+        ],
+      })
+    )
+  );
   const user = userEvent.setup();
   renderWithQuery(<ProxiesPage />);
 
-  const pencil = await screen.findByRole('button', { name: `Имя и обычная задержка: ${SERVER}` });
+  const pencil = await screen.findByRole('button', { name: `Имя: ${SERVER}` });
   const group = within(await screen.findByRole('group', { name: 'proxy' }));
+  const delayText = `${String(sample.delay_ms)} мс`;
+  expect(await group.findByText(delayText, { selector: 'data' })).toBeVisible();
   await user.click(pencil);
 
-  expect(group.getByRole('textbox', { name: 'Своё имя' })).toBeInTheDocument();
-  const norm = group.getByRole('textbox', { name: 'Обычная задержка, мс' });
-  await waitFor(() => expect(norm).toHaveAccessibleDescription(/По истории: 143 мс/));
-  expect(group.getByText('143 мс')).toBeVisible();
+  expect(group.getByRole('textbox', { name: 'Своё имя' })).toHaveFocus();
+  const norm = group.getByRole('textbox', { name: `Норма задержки: ${SERVER}` });
+  expect(norm).toHaveAttribute('readonly');
+  expect(group.getByText(delayText, { selector: 'data' })).toBeVisible();
 
+  await user.click(group.getByRole('button', { name: `Изменить норму задержки: ${SERVER}` }));
+  expect(norm).toHaveFocus();
+  await user.clear(norm);
   await user.type(norm, '1.5');
   expect(group.getByRole('alert')).toHaveTextContent('Введите целое число');
-  await user.click(group.getByRole('button', { name: 'Сохранить' }));
-  expect(norm).toBeInTheDocument();
+  await user.keyboard('{Escape}');
+  expect(norm).toHaveAttribute('readonly');
+  expect(group.getByRole('button', { name: `Изменить норму задержки: ${SERVER}` })).toHaveFocus();
 });
 
 it('saves a label through the daemon without changing the config draft or the core', async () => {
@@ -130,21 +155,19 @@ it('saves a label through the daemon without changing the config draft or the co
   expect(screen.getByRole('button', { name: 'Имя: proxy' })).toHaveFocus();
 });
 
-it('clears an encoded server tag entry and shows the computed norm again', async () => {
+it('clears a label and retains the manual norm for an encoded server tag', async () => {
   const writes = serveMetadata({ [SERVER]: { label: 'Основной сервер', norm_ms: 500 } });
   const user = userEvent.setup();
   renderWithQuery(<ProxiesPage />);
 
-  await user.click(await screen.findByRole('button', { name: `Имя и обычная задержка: ${SERVER}` }));
+  await user.click(await screen.findByRole('button', { name: `Имя: ${SERVER}` }));
   const group = within(screen.getByRole('group', { name: 'proxy' }));
-  expect(group.getByText('Обычно: 500 мс (задано вручную)')).toBeVisible();
   await user.clear(group.getByRole('textbox', { name: 'Своё имя' }));
-  await user.clear(group.getByRole('textbox', { name: 'Обычная задержка, мс' }));
   await user.click(group.getByRole('button', { name: 'Сохранить' }));
 
-  expect(await group.findByText('Обычно: 143 мс (расчёт)')).toBeVisible();
-  expect(group.queryByText('Основной сервер')).not.toBeInTheDocument();
-  expect(writes).toEqual([{ tag: SERVER, entry: {} }]);
+  await waitFor(() => expect(group.queryByText('Основной сервер')).not.toBeInTheDocument());
+  expect(group.getByRole('textbox', { name: `Норма задержки: ${SERVER}` })).toHaveValue('500');
+  expect(writes).toEqual([{ tag: SERVER, entry: { norm_ms: 500 } }]);
 });
 
 it('does not label an old manual norm as computed while refreshed history is pending', async () => {
@@ -182,19 +205,54 @@ it('does not label an old manual norm as computed while refreshed history is pen
   renderWithQuery(<ProxiesPage />);
 
   try {
-    await user.click(await screen.findByRole('button', { name: `Имя и обычная задержка: ${SERVER}` }));
+    const reset = await screen.findByRole('button', { name: `Вернуть авто: ${SERVER}` });
     const group = within(screen.getByRole('group', { name: 'proxy' }));
-    expect(group.getByText('Обычно: 500 мс (задано вручную)')).toBeVisible();
-    await user.clear(group.getByRole('textbox', { name: 'Обычная задержка, мс' }));
-    await user.click(group.getByRole('button', { name: 'Сохранить' }));
+    const norm = group.getByRole('textbox', { name: `Норма задержки: ${SERVER}` });
+    expect(norm).toHaveValue('500');
+    await user.click(reset);
 
     await waitFor(() => {
       expect(refreshStarted).toHaveBeenCalled();
     });
-    expect(group.queryByText(/Обычно: 500 мс/)).not.toBeInTheDocument();
+    expect(norm).toHaveValue('');
+    expect(norm).toHaveAttribute('placeholder', 'Нет данных');
   } finally {
     release();
   }
+});
+
+it('does not save or reset a manual norm when the edited field is empty', async () => {
+  const writes = serveMetadata({ [SERVER]: { norm_ms: 500 } });
+  const user = userEvent.setup();
+  renderWithQuery(<ProxiesPage />);
+
+  await user.click(await screen.findByRole('button', { name: `Изменить норму задержки: ${SERVER}` }));
+  const input = screen.getByRole('textbox', { name: `Норма задержки: ${SERVER}` });
+  await user.clear(input);
+  await user.keyboard('{Enter}');
+  expect(await screen.findByRole('alert')).toHaveTextContent('Введите целое число');
+  await user.click(screen.getByRole('button', { name: `Сохранить норму задержки: ${SERVER}` }));
+  expect(writes).toEqual([]);
+  expect(screen.getByRole('button', { name: `Вернуть авто: ${SERVER}` })).toBeVisible();
+  await user.keyboard('{Escape}');
+  expect(input).toHaveValue('500');
+});
+
+it('reads the latest server name before clearing its manual norm', async () => {
+  const writes = serveMetadata({ [SERVER]: { label: 'Старое имя', norm_ms: 500 } });
+  const user = userEvent.setup();
+  renderWithQuery(<ProxiesPage />);
+
+  const reset = await screen.findByRole('button', { name: `Вернуть авто: ${SERVER}` });
+  server.use(
+    http.get(PROXY_ENDPOINT.outbounds(), () => HttpResponse.json({ [SERVER]: { label: 'Новое имя', norm_ms: 500 } }))
+  );
+  await user.click(reset);
+
+  await waitFor(() => {
+    expect(writes).toEqual([{ tag: SERVER, entry: { label: 'Новое имя' } }]);
+  });
+  expect(await screen.findByText('Новое имя')).toBeVisible();
 });
 
 it('lists unused tags apart and preserves object key names', async () => {

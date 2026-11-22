@@ -17,11 +17,13 @@ export function ProxyNodeDiagnostic({
   open,
   onToggle,
   panelId,
+  inline = false,
 }: {
   diagnostic: ProxyNodeDiagnosticInfo;
   open: boolean;
   onToggle: () => void;
   panelId: string;
+  inline?: boolean;
 }) {
   return (
     <Button
@@ -29,7 +31,9 @@ export function ProxyNodeDiagnostic({
       variant='ghost'
       size='icon-sm'
       className={cn(
-        'absolute right-1 bottom-0 w-9 gap-0.5 pointer-coarse:right-0 pointer-coarse:size-11',
+        inline
+          ? 'w-9 gap-0.5 pointer-coarse:size-11'
+          : 'absolute right-1 bottom-0 w-9 gap-0.5 pointer-coarse:right-0 pointer-coarse:size-11',
         diagnostic.status?.failed === false
           ? 'text-muted-foreground hover:text-muted-foreground aria-expanded:text-muted-foreground'
           : 'text-signal-bad hover:text-signal-bad aria-expanded:text-signal-bad'

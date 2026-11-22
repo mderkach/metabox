@@ -13,12 +13,10 @@ export function ProxyNodeContent({
   node,
   diagnosticStatus,
   label,
-  normText,
 }: {
   node: ProxyNode;
   diagnosticStatus?: ProxyNodeDiagnosticInfo['status'];
   label?: string | undefined;
-  normText?: string | undefined;
 }) {
   const { t } = useTranslation('widgets/ProxyGroups');
 
@@ -44,7 +42,6 @@ export function ProxyNodeContent({
           </span>
         )}
       </span>
-      {normText !== undefined && <span className='text-xs text-muted-foreground tabular-nums'>{normText}</span>}
     </>
   );
 }

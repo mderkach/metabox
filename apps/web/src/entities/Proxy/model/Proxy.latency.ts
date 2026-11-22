@@ -12,6 +12,8 @@ import {
   type ProxyNode,
 } from './Proxy.model';
 
+export const LATENCY_CEILING_MS = 1500;
+
 export const LATENCY_LEVEL = {
   NoMeasurement: 'no_measurement',
   NoAnswer: 'no_answer',
@@ -83,6 +85,36 @@ export function serverDelay(latency: ServerLatency | undefined): { delay: number
     delay: latency.current.delayMS,
     delayState: latency.level === LATENCY_LEVEL.WithinNorm ? DELAY_STATE.Fast : DELAY_STATE.Slow,
   };
+}
+
+/** The metadata can reflect a norm change before the latency snapshot does. An unproven comparison has no level. */
+export function toLatencyReading(latency: ServerLatency | undefined, manualNorm?: number, legacyNorm = false) {
+  const usual = manualNorm ?? latency?.computedUsualMS ?? (legacyNorm ? latency?.usualMS : undefined) ?? null;
+  const level = latency === undefined ? undefined : toCurrentLevel(latency, usual);
+  const meter = serverDelay(latency);
+
+  if (level !== latency?.level) {
+    if (level === undefined) meter.delayState = DELAY_STATE.Unknown;
+    else meter.delayState = level === LATENCY_LEVEL.WithinNorm ? DELAY_STATE.Fast : DELAY_STATE.Slow;
+  }
+
+  return { usual, level, meter };
+}
+
+function toCurrentLevel(latency: ServerLatency, usual: number | null): LatencyLevel | undefined {
+  const { current, level, usualMS: snapshotNorm } = latency;
+  const delay = current?.delayMS;
+  if (delay == null || (level !== LATENCY_LEVEL.WithinNorm && level !== LATENCY_LEVEL.AboveNorm)) return level;
+  if (usual === null) return undefined;
+  if (usual === snapshotNorm) return level;
+  if (delay <= usual) return LATENCY_LEVEL.WithinNorm;
+  if (snapshotNorm !== null) {
+    if (usual > snapshotNorm && level === LATENCY_LEVEL.WithinNorm) return level;
+    if (usual < snapshotNorm && level === LATENCY_LEVEL.AboveNorm) return level;
+  }
+
+  // Recent history may include readings from an earlier core process and cannot prove a current streak.
+  return undefined;
 }
 
 export function toServerDelayLabel(

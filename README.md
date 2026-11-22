@@ -49,6 +49,10 @@ metabox installs on the router as one apk package. It contains the `metaboxd` da
 - Read-only MCP endpoint for AI agents such as Claude Code
 - Light and dark theme, English and Russian, desktop and phone layouts
 
+### Set a server's usual latency
+
+In **Proxies**, select the displayed norm or its pencil to set a server’s usual latency in milliseconds. Save with Enter or the check mark. **Return to auto** removes the override and uses the computed norm when available. These changes save immediately and do not require Apply.
+
 ### Check an existing REALITY server
 
 If a VLESS REALITY server stops answering after an upgrade, run a manual latency check in **Proxies**. Open the diagnostics beside the server and review the proposed hybrid key share setting where offered. Add it to the draft, apply and confirm the changes, then check the same server again. If it still does not answer, you can return that setting through the draft. Check for a new server link or refresh the relevant subscription before testing again. A failed latency check alone cannot identify the cause.

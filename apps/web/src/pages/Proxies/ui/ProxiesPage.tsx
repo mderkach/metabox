@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { RuntimeStore, useDaemonInstance, useRuntimeStream } from '@entities/Daemon';
 import {
   toOutboundTargets,
   useOutboundMetadata,
@@ -34,7 +35,10 @@ export function ProxiesPage() {
   const providers = useProxyProviders();
   const metadataQuery = useOutboundMetadata();
   const metadata = metadataQuery.isSuccess ? metadataQuery.data : undefined;
-  const latencies = useProxyLatency({ daemon: undefined, pid: undefined, startedAt: null }, metadata !== undefined);
+  useRuntimeStream();
+  const daemon = useDaemonInstance();
+  const pid = RuntimeStore((state) => state.system?.singbox?.pid);
+  const latencies = useProxyLatency({ daemon, pid, startedAt: null }, metadata !== undefined);
   const unused = metadata === undefined ? [] : [...metadata].filter(([, entry]) => entry.unused === true);
 
   const groups = proxies.data?.groups ?? EMPTY_GROUPS;
