@@ -89,6 +89,16 @@ describe('How metabox works', () => {
     expect(direct).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('shows the origin on each step taken from the route explanation', async () => {
+    ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
+    renderWithRouter(HowItWorksPage);
+
+    const walk = await screen.findByRole('list', { name: 'Путь соединения' });
+    expect(await within(walk).findAllByText('от ядра')).toHaveLength(3);
+    const steps = within(walk).getAllByRole('listitem');
+    expect(steps.map((step) => within(step).queryByText('от ядра') !== null)).toEqual([false, false, true, true, true]);
+  });
+
   it('keeps the last explanation after the connection closes', async () => {
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
     renderWithRouter(HowItWorksPage);
@@ -118,7 +128,7 @@ describe('How metabox works', () => {
     expect(within(choices).queryByText(/video.example/)).not.toBeInTheDocument();
   });
 
-  it('keeps an unverified rule link at the list', async () => {
+  it('keeps rule and service links at their lists when the rule is unverified', async () => {
     const user = userEvent.setup();
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
     renderWithRouter(HowItWorksPage);
@@ -127,6 +137,9 @@ describe('How metabox works', () => {
     const walk = screen.getByRole('list', { name: 'Путь соединения' });
     await user.click(within(walk).getByRole('button', { name: /^Правило/ }));
     expect(screen.getByRole('link', { name: 'Где настроить' })).toHaveAttribute('href', '/config');
+
+    await user.click(within(walk).getByRole('button', { name: /^Куда соединение/ }));
+    expect(screen.getByRole('link', { name: 'Где настроить' })).toHaveAttribute('href', '/config/rule-set');
   });
 
   it('shows the request failure with a retry and keeps the glossary available', async () => {
@@ -204,6 +217,8 @@ describe('How metabox works', () => {
     const walk = screen.getByRole('list', { name: 'Путь соединения' });
     expect(within(walk).getByRole('heading', { name: 'Сервис' })).toBeInTheDocument();
     expect(within(walk).getByRole('link', { name: 'Где настроить' })).toHaveAttribute('href', '/config/rule-set');
+    const announcement = screen.getAllByRole('status').find((status) => status.getAttribute('aria-live') === 'polite');
+    expect(announcement).toHaveTextContent(/^Сервис\. Готовый список/);
     expect(north).toHaveFocus();
   });
 });

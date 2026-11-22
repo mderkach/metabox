@@ -579,12 +579,14 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `keeps the terms but shows no invented connection`                                                      |
 | AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `points to Overview when the core is stopped`                                                           |
 | AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `follows a live group then a direct connection without reshuffling on new frames`                       |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `shows the origin on each step taken from the route explanation`                                        |
 | AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `keeps the last explanation after the connection closes`                                                |
 | AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `replaces a connection that closes before the explanation arrives`                                      |
 | AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `shows the request failure with a retry and keeps the glossary available`                               |
 | AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `opens a term directly below the selected step on a phone`                                              |
-| AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `keeps an unverified rule link at the list`                                                             |
+| AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `keeps rule and service links at their lists when the rule is unverified`                               |
 | AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `defines and links all eight terms in %s`                                                               |
+| AC-107 | vitest | `apps/web/tools/vocabulary.test.ts`                                      | `finds no forbidden word in the panel dictionaries and the daemon texts`                                |
 | AC-105 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
 | AC-106 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
 | AC-107 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
