@@ -34,7 +34,7 @@ In scope: what the daemon accumulates, from which source, how bounded, and what 
 
 ### Latency history
 
-1. **Read `GET /proxies` on a fixed slow cadence and record a result only when its timestamp changed.** One request every 60 s, independent of the panel. Per server tag: a ring of the last 10 results and 24 hourly medians, about 100 bytes, for at most 4096 tags. That is under 0.5 MB at the cap and a few kilobytes on a typical config. The norm and the levels are computed when read. The cost is a fourth background exception. **Chosen.**
+1. **Read `GET /proxies` on a fixed slow cadence and record a result only when its timestamp changed.** One request every 60 s, independent of the panel. Limit retention to 4096 servers, the last 10 results and 24 hourly medians per server, plus the latest 64 successful samples in the current hour. The retained buffers and entries are roughly 4 MB at the cap before key strings and map overhead. Verify RSS on the device. The norm and the levels are computed when read. The cost is a fourth background exception. **Chosen.**
 2. **Read latency only while a panel is open** (inside the runtime stream hub). No new exception. But the history then covers only the minutes a tab was open, and a norm is meaningless after a night with the panel closed (driver 1). **Rejected.**
 3. **Start active checks on a schedule.** Covers servers outside groups but adds requests through those servers while the panel is closed. A failed probe can erase a recent result. **Rejected.**
 4. **Check once when adding a server.** Gives immediate feedback, but its sample is gone when the core restarts and a single sample does not establish the server's usual latency. **Deferred.**
@@ -57,12 +57,12 @@ In scope: what the daemon accumulates, from which source, how bounded, and what 
   - A connection straight to `direct` or `block` has the same tag in both places and is counted once, as an outbound.
   - Tags that leave the running config and the runtime list are dropped at the next config change. Their bytes stay in the kind split. A tag that returns after pruning starts a new per-tag total.
 - The rate of each entry is the increment over the last interval. The history ring of ADR-0015 is not widened: a row shows its total and current rate, not a per-outbound chart.
-- `internal/clashapi` gets a latency reader. `history.Latency` keeps, per tag, the last 10 results (time, milliseconds or failure) and the hourly medians of the last 24 hours. `main.go` starts it next to the traffic accounting and the rule counter, with a fixed 60 s interval.
-  - It records a result only when the core's timestamp for that tag changed.
+- `internal/clashapi` gets a latency reader. `history.Latency` keeps, per tag, the last 10 results (time, milliseconds or failure) and the medians of completed UTC hours in the last 24 hours. A completed hour uses up to the latest 64 successful readings. `main.go` starts it next to the traffic accounting and the rule counter, with a fixed 60 s interval.
+  - It records a result only when the core's timestamp for that tag changed. A passive poll does not ingest a server sample while its manual request is in flight, since the core can update the cache before returning that response.
   - It records a failure when a tag that had a result has none at the next read.
-  - A vanished result is a failure only when the tag is still listed in `/proxies` and the core process is the same. A failed connection through a `urltest` group also deletes the result (`protocol/group/urltest.go`, `DialContext`), and that counts as a failure. A removed tag starts a new baseline if it returns. A core restart clears current readings and failure streaks. Earlier observations can remain in the historical ring until their age limit or daemon restart.
+  - A vanished result is a failure only when the tag is still listed in `/proxies` and the core process is the same. A failed connection through a `urltest` group also deletes the result (`protocol/group/urltest.go`, `DialContext`), and that counts as a failure. A tag that returns after disappearing from a valid snapshot starts a new history. A restart alone retains earlier history for the same listed tag. A core restart clears current readings and failure streaks. Earlier observations can remain in the historical ring until their age limit or daemon restart.
   - Before the first hourly median there is no computed norm, and only the ceiling applies.
-- A missing current result shows "No measurement" with a manual "Check" action for that server (owner, 2026-11-22). Overview keeps "No measurement" until the user initiates a check for the server in the current core process. Configured checks can still supply historical observations. The first successful manual result is shown immediately. After the core restarts, previous daemon observations are historical and cannot stand in for a current reading. An explicitly failed manual check shows "No answer".
+- A missing current result shows "No measurement" with a manual "Check" action for that server (owner, 2026-11-22). Overview keeps "No measurement" until the user initiates a check for the server in the current core process. Configured checks can still supply historical observations. The first successful manual result is shown immediately. After the core restarts, previous daemon observations are historical and cannot stand in for a current reading. An explicitly failed manual check shows "No answer". The daemon observes the existing browser delay request and never starts a probe of its own. A manual result is bound to the local controller process and listener on both sides of the request. Its completion satisfies the gate immediately. Cached automatic results at or before that completion cannot replace it.
 - The norm ("usual latency" in the panel) is one number: the manual norm (ADR-0089), otherwise the median of the hourly medians. A slow hour therefore does not become the norm within minutes. Levels:
   - within the norm;
   - above the norm, when the last three results are all above it;
@@ -74,7 +74,7 @@ In scope: what the daemon accumulates, from which source, how bounded, and what 
 
 - Contract:
   - The `system` topic gains `outbounds` and `servers` arrays with the tag, bytes, combined rate in bytes per second, and origin. The outbound entry carries a separate default-route value when present. Array entries preserve tags that are reserved JavaScript object keys. The blocked count includes availability per kind and whether an earlier part of the period is incomplete.
-  - `GET /api/latency` returns the rings, norms and levels.
+  - `GET /api/latency` returns the rings, norms and levels. A controller address has to resolve to this host to record current readings. The response reports when collection is unavailable. The panel observes process restarts through the system stream. It can detect a reload that changes only the listener at its next latency refresh.
   - Both reset with the daemon.
 - Non-goals: per-outbound history charts; per-device volume; keeping anything on flash.
 
@@ -92,12 +92,12 @@ In scope: what the daemon accumulates, from which source, how bounded, and what 
 
 ### Negative
 
-- A fourth background exception to the DeviceIO rule: one `/proxies` read a minute with no reader. On a config with many subscription servers that answer is large (ADR-0074 already notes this). The cost has to be measured on the device.
-- A fifth background exception to the DeviceIO rule: the log follower. At `info` the core writes a line per connection already, at `debug` several, so the follower parses every line the core writes. The cost has to be measured on the device at `debug`.
+- The latency reader is a background exception to the DeviceIO rule: one `/proxies` read a minute with no reader. On a config with many subscription servers that answer is large (ADR-0074 already notes this). The cost has to be measured on the device.
+- The log follower is also a background exception to the DeviceIO rule: the log follower. At `info` the core writes a line per connection already, at `debug` several, so the follower parses every line the core writes. The cost has to be measured on the device at `debug`.
 - The blocked count is only as complete as the log: a user who set `info` sees the figure unavailable when the config has `reject` rules, and lines lost by a full log ring are not counted.
 
 - The unseen part of the per-outbound volume is attributed, not observed, with the same error as ADR-0074. For an outbound that carries only short connections it can be noticeably off. The panel marks these numbers as computed.
-- Servers without URLTest or provider health-check results show no measurement until checked by the user. The one-minute sampler can miss results replaced between observations.
+- Overview shows no measurement until the first manual check per server and core epoch, including when configured URLTest or provider checks have already populated history. The one-minute sampler can miss results replaced between observations.
 - A group whose `interval` is longer than 60 s gives one new result per its own interval. The recent ring then spans more time, and "three in a row" takes longer to trigger.
 - Everything resets on a daemon restart.
 

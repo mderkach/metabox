@@ -116,6 +116,6 @@
     "daemonHistory": "Daemon memory over its uptime"
   },
   "announce": {
-    "latencyTested": "Latency of the selected nodes updated"
+    "latencyTested": "Latency updated"
   }
 }

@@ -32,6 +32,7 @@ function serveStatus() {
     ),
     http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE)),
     http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
+    http.get(PROXY_ENDPOINT.latency(), () => HttpResponse.json({ servers: [] })),
     http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json({ proxies: {} })),
     http.get(DAEMON_ENDPOINT.history(), () => HttpResponse.json(TRAFFIC_HISTORY_FIXTURE)),
     http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(MINIMAL_CONFIG)),

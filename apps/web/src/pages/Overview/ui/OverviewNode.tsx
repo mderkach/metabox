@@ -2,7 +2,14 @@ import { Link } from '@tanstack/react-router';
 import { ArrowUpRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { SERVICE_GROUPS, toDelayLabel, useProxies } from '@entities/Proxy';
+import {
+  isLatencyServer,
+  serverDelay,
+  SERVICE_GROUPS,
+  toServerDelayLabel,
+  useProxies,
+  type ServerLatencies,
+} from '@entities/Proxy';
 import { useSelectProxy } from '@features/Proxy/ProxySelect';
 import { cn } from '@shared/lib/utils';
 import {
@@ -27,10 +34,14 @@ import { OverviewCoreGap } from './OverviewCoreGap';
 export function OverviewNode({
   onSelected,
   stopped,
+  latencies,
+  latencyAvailable,
 }: {
   onSelected: (message: string) => void;
   /** The core is confirmed stopped and cannot switch a group. */
   stopped: boolean;
+  latencies?: ServerLatencies | undefined;
+  latencyAvailable?: boolean;
 }) {
   const { t } = useTranslation('pages/Overview');
   const proxies = useProxies();
@@ -63,6 +74,7 @@ export function OverviewNode({
         <ul className='flex flex-col gap-2'>
           {groups.map((group) => {
             const current = group.nodes.find((node) => node.name === group.now);
+            const latency = current && latencies?.get(current.name);
 
             return (
               <li key={group.name} className='flex flex-wrap items-center gap-x-3 gap-y-1.5'>
@@ -101,14 +113,16 @@ export function OverviewNode({
                 </Select>
                 <p className='flex min-w-0 items-baseline gap-2 text-xs'>
                   <span className='truncate text-muted-foreground'>{group.name}</span>
-                  <span
-                    className={cn(
-                      'font-mono whitespace-nowrap tabular-nums',
-                      current === undefined ? 'text-muted-foreground' : DELAY_TONE[current.delayState]
-                    )}
-                  >
-                    {toDelayLabel(t, current)}
-                  </span>
+                  {current !== undefined && isLatencyServer(current) && (
+                    <span
+                      className={cn(
+                        'font-mono whitespace-nowrap tabular-nums',
+                        DELAY_TONE[serverDelay(latency).delayState]
+                      )}
+                    >
+                      {toServerDelayLabel(t, latency, latencyAvailable)}
+                    </span>
+                  )}
                 </p>
               </li>
             );

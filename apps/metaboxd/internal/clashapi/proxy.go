@@ -51,6 +51,27 @@ func (r Resolver) Port(ctx context.Context) (int, error) {
 	return strconv.Atoi(port)
 }
 
+// LocalPort returns the controller port only when the resolver uses a literal
+// loopback address. A wildcard is mapped to loopback by BaseURL.
+func (s Settings) LocalPort() int {
+	base, err := s.BaseURL()
+	if err != nil {
+		return 0
+	}
+
+	endpoint, err := url.Parse(base)
+	if err != nil || !net.ParseIP(endpoint.Hostname()).IsLoopback() {
+		return 0
+	}
+
+	port, err := strconv.Atoi(endpoint.Port())
+	if err != nil || port < 1 || port > 65535 {
+		return 0
+	}
+
+	return port
+}
+
 // ErrorHandler returns a failure in the HTTP layer format. Injected from outside so that
 // the package does not know the daemon response format.
 type ErrorHandler func(w http.ResponseWriter, r *http.Request, err error)
@@ -59,9 +80,11 @@ type ErrorHandler func(w http.ResponseWriter, r *http.Request, err error)
 // shapes verbatim. The response is not buffered: the traffic, memory and connection
 // streams go under the same branch.
 type Proxy struct {
-	resolve Resolver
-	onError ErrorHandler
-	proxy   *httputil.ReverseProxy
+	resolve      Resolver
+	onError      ErrorHandler
+	proxy        *httputil.ReverseProxy
+	probe        *httputil.ReverseProxy
+	observeDelay DelayObserver
 }
 
 type targetKey struct{}
@@ -118,7 +141,11 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := context.WithValue(r.Context(), targetKey{}, target{base: parsed, secret: settings.Secret})
-	p.proxy.ServeHTTP(w, r.WithContext(ctx))
+	handler, ctx, done := p.handlerForDelay(ctx, r, settings)
+	if done != nil {
+		defer done()
+	}
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
 // stripCORS removes the controller CORS headers: with an empty

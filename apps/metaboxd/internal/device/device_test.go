@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -371,5 +372,39 @@ func TestControllerListenerRejectsAnotherListenerOnThePort(t *testing.T) {
 	fs.write(t, table, "0: 00000000000000000000000000000000:"+clashPortHex+" 00000000000000000000000000000000:0000 0A 00:00 00:00 00000000 0 0 48121\n")
 	if reader.ControllerListener(t.Context(), 5872, clashPort) != "" {
 		t.Fatal("ownership is ambiguous with another listening socket")
+	}
+}
+
+func TestControllerEpochTracksListenerOwnerAndStart(t *testing.T) {
+	fs := newTree(t)
+	fs.listener(t, clashPortHex, socketInode)
+	fs.process(t, 5872, "sing-box", socketInode, 83900)
+	fs.process(t, 5873, "sing-box", "48121", 83900)
+	setStart := func(pid, tick int) {
+		t.Helper()
+		fs.write(t, filepath.Join(fs.proc, fmt.Sprint(pid), "stat"),
+			fmt.Sprintf("%d (sing-box) S %s%d\n", pid, strings.Repeat("0 ", 18), tick))
+	}
+	setStart(5872, 100)
+	setStart(5873, 200)
+	reader := fs.reader(clashPort)
+
+	first := reader.ControllerEpoch(t.Context(), clashPort)
+	if first == "" || reader.ControllerEpoch(t.Context(), clashPort) != first {
+		t.Fatal("controller epoch should be stable while the listener is unchanged")
+	}
+	fs.listener(t, clashPortHex, "48121")
+	second := reader.ControllerEpoch(t.Context(), clashPort)
+	if second == "" || second == first {
+		t.Fatal("epoch should follow the listener while the old process still exists")
+	}
+	setStart(5873, 300)
+	third := reader.ControllerEpoch(t.Context(), clashPort)
+	if third == "" || third == second {
+		t.Fatal("epoch should change when the PID is reused")
+	}
+	fs.listener(t, clashPortHex, "48122")
+	if reader.ControllerEpoch(t.Context(), clashPort) != "" {
+		t.Fatal("unowned listener has no verified epoch")
 	}
 }

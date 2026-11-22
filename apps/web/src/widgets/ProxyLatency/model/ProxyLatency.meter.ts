@@ -3,7 +3,7 @@ import { toShare } from '@shared/lib/chart';
 
 import { SCALE_CEILING } from './ProxyLatency.scale';
 
-export function toMeter(node: ProxyNode): number | null {
+export function toMeter(node: Pick<ProxyNode, 'delay' | 'delayState'>): number | null {
   if (node.delay === null) {
     return null;
   }

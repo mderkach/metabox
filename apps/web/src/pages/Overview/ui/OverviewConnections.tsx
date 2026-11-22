@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { deviceLabel, useDeviceIndex } from '@entities/Device';
+import type { useProxyLatency } from '@entities/Proxy';
 import { ConnectionSummaryAction, ConnectionSummaryNetwork, ConnectionSummaryTop } from '@widgets/ConnectionSummary';
 import { ProxyLatency } from '@widgets/ProxyLatency';
 
@@ -12,9 +13,11 @@ import { OverviewSection } from './OverviewSection';
 
 export function OverviewConnections({
   runtime,
+  latency,
   onLatencyTested,
 }: {
   runtime: OverviewRuntime;
+  latency: ReturnType<typeof useProxyLatency>;
   onLatencyTested: () => void;
 }) {
   const { t } = useTranslation('pages/Overview');
@@ -53,6 +56,7 @@ export function OverviewConnections({
           placeholder={missing ? <OverviewCoreGap gap={runtime.connectionsGap} /> : undefined}
         />
         <ProxyLatency
+          latency={latency}
           onTested={onLatencyTested}
           placeholder={runtime.stopped ? <OverviewCoreGap gap={runtime.coreGap} /> : undefined}
         />

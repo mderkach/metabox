@@ -202,6 +202,7 @@
     "loading": "Loading",
     "config": "Could not load the config",
     "versions": "Could not read the version history",
+    "latency": "Could not read server latency",
     "proxies": "Could not read the proxy list",
     "providers": "Could not read the subscriptions",
     "route": "Could not explain the route",
@@ -231,6 +232,8 @@
   "delay": {
     "value": "{{value}} ms",
     "untested": "not tested",
+    "noMeasurement": "No measurement",
+    "unavailable": "Measurement unavailable",
     "timedOut": "no answer",
     "test": "Test",
     "testing": "Testing"

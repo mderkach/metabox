@@ -149,6 +149,8 @@ type Options struct {
 	// History returns the traffic history accumulated by the daemon. nil means
 	// nobody accumulates it: a chart deeper than a minute is not shown.
 	History HistoryReader
+	// Latency returns bounded per-server measurements for the current core and its history.
+	Latency func(context.Context) (bool, []history.ServerLatency)
 	// RuleSets returns the catalog of ready rule sets. nil means there is no catalog:
 	// the rule set connection form stays with its own address.
 	RuleSets RuleSetsReader
@@ -261,6 +263,7 @@ type Server struct {
 	explain        Explainer
 	hits           HitsReader
 	history        HistoryReader
+	latency        func(context.Context) (bool, []history.ServerLatency)
 	ruleSets       RuleSetsReader
 	cachedRuleSets CachedRuleSetsReader
 	runtime        RuntimeObserver
@@ -300,6 +303,7 @@ func NewServer(applier Applier, reader ConfigReader, log *slog.Logger, opts Opti
 		explain:        opts.Explain,
 		hits:           opts.Hits,
 		history:        opts.History,
+		latency:        opts.Latency,
 		ruleSets:       opts.RuleSets,
 		cachedRuleSets: opts.CachedRuleSets,
 		runtime:        opts.Runtime,
@@ -356,6 +360,9 @@ func (s *Server) routes() http.Handler {
 
 	if s.history != nil {
 		mux.HandleFunc("GET /api/history", s.handleHistory)
+	}
+	if s.latency != nil {
+		mux.HandleFunc("GET /api/latency", s.handleLatency)
 	}
 
 	if s.ruleSets != nil {
