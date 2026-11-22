@@ -20,6 +20,19 @@ Make omissions visible at the point of import and keep the draft insertion path 
 - A probe outcome currently represents success, node failure, or request failure. Reuse it and the applied outbound by tag. A hint is eligible on a failed manual check of a uniquely matched editable VLESS REALITY outbound with the setting absent or false and supported by the core schema. Use the applied config snapshot, including when a draft differs. Scope the message to the check result and clear it on a later success or a change of the applied node.
 - Guide the operator to edit the node, review the draft, apply it, and manually retest it. Link to the relevant node or give its navigation path. Leave cause attribution to the operator's before-and-after test. Invoke the same existing probe without changing the destination, fingerprint, or timeout.
 
+## Alternatives considered
+
+| Option                                                                                  | Reason for keeping it out of this change                                                                                                                                                        |
+| --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Warn about the omitted hybrid key share flag on every import                            | The pinned extended core can use the setting. Keeping the omission makes the operator repair a link that already carries an explicit value. The lab reproduced this failure with Xray 26.10.21. |
+| Enable the flag automatically for every VLESS REALITY link or update all existing nodes | Missing values keep the core default. Some providers deliberately omit the hint for a host, and existing nodes can need the classical handshake.                                                |
+| Attribute any failed probe to the hybrid key share setting                              | A failed probe does not distinguish a rejected REALITY handshake from network, fingerprint, credential, or destination problems. An unchanged node can also succeed on a later retry.           |
+| Automatically toggle the flag and retry on the active config                            | A diagnostic should leave the active service alone. An isolated A/B check would need its own lifecycle, timeouts and cleanup and can be designed separately.                                    |
+
+## Adding other diagnostic hints
+
+Keep probe handling, applied node lookup and result presentation reusable. Keep the eligibility check and suggested action for each hint specific to its setting. A later change can add a hint when the applied config and available evidence justify it. Document which nodes are eligible, which outcome triggers the hint, how the operator can verify it, and how to edit the setting. Reuse the existing draft and Apply flow for config changes. The first implementation only needs the REALITY hybrid key share hint. A generic rule engine or shared matching framework can wait until a second case demonstrates a need.
+
 ## Risks / Trade-offs
 
 - A long or unusually formatted parameter name can disrupt a narrow form. Use wrapping text, render names as text, and check the form at 375 px with a long name.
