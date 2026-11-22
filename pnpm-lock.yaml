@@ -328,8 +328,8 @@ importers:
         specifier: 3.3.2
         version: 3.3.2(eslint@10.10.0(jiti@2.7.0)(supports-color@7.2.0))
       eslint-plugin-jest-dom:
-        specifier: 5.10.1
-        version: 5.10.1(@testing-library/dom@10.4.2)(eslint@10.10.0(jiti@2.7.0)(supports-color@7.2.0))
+        specifier: 5.10.2
+        version: 5.10.2(@testing-library/dom@10.4.2)(eslint@10.10.0(jiti@2.7.0)(supports-color@7.2.0))
       eslint-plugin-testing-library:
         specifier: 7.16.2
         version: 7.16.2(eslint@10.10.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@7.0.2)
@@ -2873,8 +2873,8 @@ packages:
     peerDependencies:
       eslint: '>=9.0.0'
 
-  eslint-plugin-jest-dom@5.10.1:
-    resolution: {integrity: sha512-IIJdzbACbhJUJyMAqpA9E9gxp1Gv29TeQ3DtL+pepwP8Oq2WiqjOB2HbnEIs23h0ewdKIZRDI56yLro2eUO+DA==}
+  eslint-plugin-jest-dom@5.10.2:
+    resolution: {integrity: sha512-Ij9pCRrBNPEUKqg0oMUv8aMjGzPKdpayOarDW3zWmYdtQ2dt7lZ7myppA2KwJMUJhhHAtSWY5Pgg7iMjC6w6JA==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0, npm: '>=6', yarn: '>=1'}
     peerDependencies:
       '@testing-library/dom': ^8.0.0 || ^9.0.0 || ^10.0.0
@@ -6976,7 +6976,7 @@ snapshots:
       is-glob: 4.0.3
       micromatch: 4.0.8
 
-  eslint-plugin-jest-dom@5.10.1(@testing-library/dom@10.4.2)(eslint@10.10.0(jiti@2.7.0)(supports-color@7.2.0)):
+  eslint-plugin-jest-dom@5.10.2(@testing-library/dom@10.4.2)(eslint@10.10.0(jiti@2.7.0)(supports-color@7.2.0)):
     dependencies:
       eslint: 10.10.0(jiti@2.7.0)(supports-color@7.2.0)
       requireindex: 1.2.0
