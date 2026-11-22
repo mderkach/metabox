@@ -1,15 +1,20 @@
 import {
+  diffNode,
   isNodeRecognized,
   NODE_REGISTRY,
   readSectionNodes,
+  sectionNodePath,
   supportsVlessRealityHybridKeyShare,
 } from '@entities/Config';
 import { DELAY_STATE, type ProxyNode } from '@entities/Proxy';
 import { isRecord } from '@shared/lib/isRecord';
 
-interface RealityRecoveryHint {
-  tag: string;
-  editIndex?: number;
+const HYBRID_KEY_SHARE = 'support_x25519mlkem768';
+
+export interface RealityRecoveryField {
+  path: ReturnType<typeof sectionNodePath>;
+  value: boolean | undefined;
+  endpoint: Record<string, unknown>;
 }
 
 function editablePositions(nodes: readonly unknown[]): Map<string, number | undefined> {
@@ -37,17 +42,40 @@ function hasEditableReality(node: Record<string, unknown>): boolean {
   );
 }
 
+export function realityRecoveryField(text: string, tag: string): RealityRecoveryField | null {
+  const nodes = readSectionNodes(text, 'outbounds');
+  const index = editablePositions(nodes).get(tag);
+  if (index === undefined) return null;
+
+  const node = nodes[index];
+  if (!isRecord(node) || !isRecord(node.tls) || !isRecord(node.tls.reality)) return null;
+
+  const value = node.tls.reality[HYBRID_KEY_SHARE];
+  if (value !== undefined && typeof value !== 'boolean') return null;
+
+  const reality = { ...node.tls.reality };
+  delete reality[HYBRID_KEY_SHARE];
+
+  return {
+    path: [...sectionNodePath('outbounds', index), 'tls', 'reality', HYBRID_KEY_SHARE],
+    value,
+    endpoint: { ...node, tls: { ...node.tls, reality } },
+  };
+}
+
+export function sameRealityEndpoint(left: RealityRecoveryField, right: RealityRecoveryField): boolean {
+  return diffNode([], left.endpoint, right.endpoint).length === 0;
+}
+
 export function realityRecoveryHints(
   applied: string | undefined,
-  draft: string | null,
   failed: ReadonlySet<string>,
   runtime: readonly ProxyNode[]
-): RealityRecoveryHint[] {
+): { tag: string }[] {
   if (applied === undefined || failed.size === 0 || !supportsVlessRealityHybridKeyShare()) return [];
 
   const nodes = readSectionNodes(applied, 'outbounds');
   const positions = editablePositions(nodes);
-  const editPositions = draft === null ? positions : editablePositions(readSectionNodes(draft, 'outbounds'));
 
   return runtime.flatMap(({ name: tag, type, delayState }) => {
     if (type.toLowerCase() !== 'vless' || delayState !== DELAY_STATE.Failed || !failed.has(tag)) return [];
@@ -59,8 +87,6 @@ export function realityRecoveryHints(
     if (!isRecord(node) || !isRecord(node.tls) || !isRecord(node.tls.reality)) return [];
     if (node.tls.reality.support_x25519mlkem768 === true) return [];
 
-    const editIndex = editPositions.get(tag);
-
-    return [{ tag, editIndex }];
+    return [{ tag }];
   });
 }

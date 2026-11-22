@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { getConfigOptions } from '@entities/Config';
-import { isProbeFailure, PROXY_MUTATION, testProxyDelay, type ProbeOutcome } from '@entities/Proxy';
+import { DELAY_TIMEOUT, isProbeFailure, PROXY_MUTATION, testProxyDelay, type ProbeOutcome } from '@entities/Proxy';
 import { CACHE_TIME } from '@shared/api';
 
 /**
@@ -26,14 +26,16 @@ export function useTestProxyDelay() {
     mutationKey: PROXY_MUTATION.delay(),
     mutationFn: async function requestProxyDelay(name: string): Promise<ProbeOutcome> {
       const configEtag = client.getQueryData(getConfigOptions().queryKey)?.etag;
+      const revision = typeof configEtag === 'string' ? { configEtag } : {};
 
       try {
-        await testProxyDelay(name);
+        const { delay } = await testProxyDelay(name);
+        if (!Number.isFinite(delay) || delay < 0) throw new Error('Invalid proxy delay response');
 
-        return { name, failed: false };
+        return { name, failed: delay >= DELAY_TIMEOUT, ...revision };
       } catch (error) {
         if (isProbeFailure(error)) {
-          return { name, failed: true, ...(typeof configEtag === 'string' ? { configEtag } : {}) };
+          return { name, failed: true, ...revision };
         }
 
         throw error;

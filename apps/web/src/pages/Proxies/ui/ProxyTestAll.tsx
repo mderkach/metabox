@@ -15,11 +15,13 @@ export function ProxyTestAll({
   groups,
   nodes,
   onTested,
+  onTestStart,
 }: {
   groups: ProxyGroup[];
   nodes: ProxyNode[];
   /** The measurement passed in all groups: a failure in at least one shows an error toast. */
   onTested: () => void;
+  onTestStart?: (() => void) | undefined;
 }) {
   const { t } = useTranslation('pages/Proxies');
   const delay = useTestProxyDelays();
@@ -31,6 +33,7 @@ export function ProxyTestAll({
       size='sm'
       disabled={names.length === 0 || delay.isPending}
       onClick={() => {
+        onTestStart?.();
         void delay.test(names).then(function announceTested(success) {
           if (success) onTested();
         });

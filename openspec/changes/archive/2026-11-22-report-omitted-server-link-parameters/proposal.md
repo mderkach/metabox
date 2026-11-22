@@ -9,7 +9,7 @@ The server add form silently drops parameters from VLESS links. [#391](https://g
 - Show the names of omitted VLESS link parameters under the link field before the user adds the server.
 - Let the user add the supported fields to the draft and keep the existing validation and subscription guidance.
 - Preserve an explicit boolean hybrid key share setting from a VLESS REALITY link when the config schema supports it.
-- Make the setting easy to find when editing an existing VLESS REALITY outbound. A failed manual latency check on a matching applied node can point to the setting and explain how to test it.
+- Make the setting easy to find when editing an existing VLESS REALITY outbound. A failed manual latency check on a matching applied node opens inline recovery. The operator can stage the setting, retest after confirmation, and stage a field-only return if the same node still does not answer.
 
 ## Capabilities
 

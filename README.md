@@ -51,7 +51,7 @@ metabox installs on the router as one apk package. It contains the `metaboxd` da
 
 ### Check an existing REALITY server
 
-If a VLESS REALITY server stops answering after a server upgrade, run a manual latency check in **Proxies**. If the panel suggests checking the hybrid key share, open the server settings from the hint. For a compatible core, change **Hybrid key share (X25519MLKEM768)**, review and apply the draft, then repeat the check through the same server. A failed check alone cannot identify the cause.
+If a VLESS REALITY server stops answering after an upgrade, run a manual latency check in **Proxies**. Open the diagnostics beside the server and review the proposed hybrid key share setting where offered. Add it to the draft, apply and confirm the changes, then check the same server again. If it still does not answer, you can return that setting through the draft. Check for a new server link or refresh the relevant subscription before testing again. A failed latency check alone cannot identify the cause.
 
 ## Preview
 

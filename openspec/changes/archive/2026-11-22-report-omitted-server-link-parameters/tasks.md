@@ -14,7 +14,13 @@
 
 ## 3. Integration
 
-- [x] 3.1 AC-11, AC-111 and AC-112. Verify the mock-stand form at desktop width and 375 px in both languages. Use the keyboard to paste and import, and check that long names wrap without horizontal overflow. Check locating and editing the REALITY setting from the manual probe failure guidance. Record the results and an independent Impeccable critique on the pull request. Run `pnpm --filter web test`, `pnpm --filter web check:design`, strict OpenSpec validation, and `make trace-check`.
+- [x] 3.1 AC-11, AC-111 and AC-112. Verify the mock-stand form at desktop width and 375 px in both languages. Use the keyboard to paste and import, and check that long names wrap without horizontal overflow. Check opening the in-group or standalone disclosure and staging the setting from the manual probe failure guidance. Record the results and an independent Impeccable critique on the pull request. Run `pnpm --filter web test`, `pnpm --filter web check:design`, strict OpenSpec validation, and `make trace-check`.
+
+## 4. Inline diagnostic follow-up
+
+- [x] 4.1 AC-11. Verify that a failed manual probe can open the disclosure inside the checked group, that a duplicated node has only one disclosure, and that the control stays beside the status without changing the row height. Cover keyboard, desktop and 375 px.
+- [x] 4.2 AC-11. Verify staging, confirmed same-node retest, no response and runtime error, safe inverse for absent and explicit false values, and rejection of a confirmation submitted elsewhere. Cover preserved draft changes and targeted return through the usual Apply flow.
+- [x] 4.3 AC-11. Verify the real OpenWrt and 3x-ui recovery with the same HTTPS endpoint before and after Apply. Use a deliberately unavailable endpoint on the isolated stand to verify the real negative probe and the inverse draft. Exercise completed inverse Apply and daemon request errors on the mock stand.
 
 ## Workflow follow-up
 

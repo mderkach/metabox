@@ -1,29 +1,75 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useProviderNodeChanges, useProxies, useProxyProviders } from '@entities/Proxy';
+import { useProviderNodeChanges, useProxies, useProxyProviders, type ProxyGroup } from '@entities/Proxy';
 import { useLiveRegion } from '@shared/lib/useLiveRegion';
 import { CARD_FLUSH, Card, LiveRegion, QueryFailure, SURFACE, SkeletonRows } from '@shared/ui';
 import { PageHeader } from '@widgets/PageHeader';
-import { ProxyGroups } from '@widgets/ProxyGroups';
+import { ProxyGroups, type ProxyNodeDiagnostics } from '@widgets/ProxyGroups';
 
 import { useMinuteClock } from '../lib/Proxies.lib';
-import { ProxiesRecoveryHints } from './ProxiesRecoveryHints';
+import { useProxiesRecovery, type ProxyRecoveryItem } from '../model/Proxies.recoveryState';
+import { ProxiesRecoveryDetails } from './ProxiesRecoveryDetails';
 import { ProxiesSection } from './ProxiesSection';
 import { ProxyProviderRow } from './ProxyProviderRow';
 import { ProxyTestAll } from './ProxyTestAll';
+
+const EMPTY_GROUPS: ProxyGroup[] = [];
 
 export function ProxiesPage() {
   const { t } = useTranslation('pages/Proxies');
   const proxies = useProxies();
   const providers = useProxyProviders();
 
-  const groups = proxies.data?.groups ?? [];
+  const groups = proxies.data?.groups ?? EMPTY_GROUPS;
   const nodes = proxies.data?.standalone ?? [];
   const subscriptions = providers.data ?? [];
   const toNodeChange = useProviderNodeChanges(providers.data);
   const now = useMinuteClock();
 
+  const recovery = useProxiesRecovery(nodes);
+  const [checkedGroups, setCheckedGroups] = useState<ReadonlyMap<string, string>>(() => new Map());
+  const groupByNode = useMemo(() => {
+    const locations = new Map<string, string>();
+
+    for (const group of groups) {
+      for (const node of group.nodes) {
+        if (!locations.has(node.name) || checkedGroups.get(node.name) === group.name) {
+          locations.set(node.name, group.name);
+        }
+      }
+    }
+
+    return locations;
+  }, [checkedGroups, groups]);
+  const recoveryByTag = new Map(recovery.map((item) => [item.tag, item]));
+  const diagnosticForNode: ProxyNodeDiagnostics = (tag, group) => {
+    const item = recoveryByTag.get(tag);
+    if (item === undefined || groupByNode.get(tag) !== group) return undefined;
+
+    const statusLabel: Partial<Record<ProxyRecoveryItem['state'], string>> = {
+      'no-response': t('recovery.noResponse'),
+      'probe-error': t('recovery.probeError'),
+      ready: t('recovery.verify'),
+      restored: t('recovery.verify'),
+      checking: t('recovery.checking'),
+    };
+    const label = statusLabel[item.state];
+
+    return {
+      label: t('recovery.open', { tag }),
+      content: <ProxiesRecoveryDetails item={item} />,
+      ...(label === undefined ? {} : { status: { label, failed: item.state === 'no-response' } }),
+    };
+  };
+
+  const onGroupTestStart = (group: string, names: readonly string[]) => {
+    setCheckedGroups((current) => {
+      const next = new Map(current);
+      for (const name of names) next.set(name, group);
+      return next;
+    });
+  };
   // The result of an action is visible to the eye — a node mark, a latency number — and
   // for a screen reader one region per screen announces it.
   const { message, announce } = useLiveRegion();
@@ -54,7 +100,16 @@ export function ProxiesPage() {
     <>
       <PageHeader
         title={t('section.proxies', { ns: 'shared' })}
-        actions={<ProxyTestAll groups={groups} nodes={nodes} onTested={onTestedAll} />}
+        actions={
+          <ProxyTestAll
+            groups={groups}
+            nodes={nodes}
+            onTested={onTestedAll}
+            onTestStart={() => {
+              setCheckedGroups(new Map());
+            }}
+          />
+        }
       />
 
       <LiveRegion message={message} />
@@ -66,13 +121,17 @@ export function ProxiesPage() {
 
         {proxies.isSuccess && (
           <ProxiesSection title={t('groups.title')}>
-            <ProxiesRecoveryHints nodes={nodes} />
             <ProxyGroups
               groups={groups}
               nodes={nodes}
               onSelected={onSelected}
               onTested={onTested}
               onTestedOutbounds={onTestedOutbounds}
+              onGroupTestStart={onGroupTestStart}
+              diagnosticForNode={diagnosticForNode}
+              standaloneDiagnostics={nodes.filter(
+                (node) => !groupByNode.has(node.name) && recoveryByTag.has(node.name)
+              )}
             />
           </ProxiesSection>
         )}
