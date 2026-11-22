@@ -58,7 +58,13 @@ const REASON_KEY: Readonly<Record<ServiceErrorCode, ParseKeys<'widgets/Daemon/Da
  * is down. Without a confirmed state there are no commands: whose service runs the process
  * is unknown, and restarting our own with a foreign process would bring up a second copy.
  */
-export function DaemonServiceControl({ heading: Heading = 'h3' }: { heading?: 'h2' | 'h3' }) {
+export function DaemonServiceControl({
+  heading: Heading = 'h3',
+  emphasizeRestart = false,
+}: {
+  heading?: 'h2' | 'h3';
+  emphasizeRestart?: boolean;
+}) {
   const { t } = useTranslation('widgets/Daemon/DaemonService');
   const service = useServiceState();
   const action = useServiceAction();
@@ -135,6 +141,7 @@ export function DaemonServiceControl({ heading: Heading = 'h3' }: { heading?: 'h
           {managed && (
             <DaemonServiceRestart
               disabled={action.isPending}
+              emphasize={emphasizeRestart}
               onConfirm={() => {
                 action.mutate(SERVICE_ACTION.Restart);
               }}

@@ -620,6 +620,12 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-107 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
 | AC-107 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `opens the verified applied rule from the walk`                                                         |
 
+### Overview service controls
+
+| ID    | Kind   | File                                                          | Check                                                                                         |
+| ----- | ------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| AC-95 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx` | `keeps the highlighted core restart in the service card and explains interrupted connections` |
+
 ### Server latency
 
 | ID     | Kind    | File                                                          | Check                                                                                      |

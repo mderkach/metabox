@@ -63,6 +63,21 @@ describe('overview screen', () => {
     serveStatus();
   });
 
+  it('keeps the highlighted core restart in the service card and explains interrupted connections', async () => {
+    const user = userEvent.setup();
+    renderWithRouter(OverviewPage);
+
+    const service = within(await screen.findByRole('region', { name: 'Состояние системы' }));
+    const restart = await service.findByRole('button', { name: 'Перезапустить' });
+    expect(restart).toHaveClass('text-destructive');
+
+    await user.click(restart);
+
+    expect(screen.getByRole('alertdialog', { name: 'Перезапустить ядро?' })).toHaveAccessibleDescription(
+      /Соединения через ядро могут прерваться/
+    );
+  });
+
   it('shows speed from the stream, not the cumulative counter', async () => {
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
 
