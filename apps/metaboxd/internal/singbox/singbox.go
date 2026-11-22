@@ -196,6 +196,39 @@ func (c *Client) CheckDataplane(ctx context.Context) error {
 	return c.service(ctx, "dataplane_check")
 }
 
+// DataplaneCheck is the first missing component reported by the init script.
+type DataplaneCheck string
+
+// The status tokens are part of the init script report protocol.
+const (
+	DataplaneOK                       DataplaneCheck = "ok"
+	DataplaneFwmarkRuleMissing        DataplaneCheck = "fwmark_rule_missing"
+	DataplaneLocalRouteMissing        DataplaneCheck = "local_route_missing"
+	DataplaneDNSmasqForwardingMissing DataplaneCheck = "dnsmasq_forwarding_missing"
+	DataplaneUnavailable              DataplaneCheck = "unavailable"
+)
+
+// ReadDataplaneCheck requires the report-mode verdict. Some older init scripts
+// ignore the argument, so their zero exit status alone cannot prove success.
+func (c *Client) ReadDataplaneCheck(ctx context.Context) (DataplaneCheck, error) {
+	res, err := c.runner.Run(ctx, c.initScript, "dataplane_check", "report")
+	if err != nil {
+		return DataplaneUnavailable, fmt.Errorf("read dataplane check: %w", err)
+	}
+
+	if res.ExitCode != 0 {
+		return DataplaneUnavailable, fmt.Errorf("read dataplane check: exit code %d", res.ExitCode)
+	}
+
+	check := DataplaneCheck(strings.TrimSpace(res.Stdout))
+	switch check {
+	case DataplaneOK, DataplaneFwmarkRuleMissing, DataplaneLocalRouteMissing, DataplaneDNSmasqForwardingMissing, DataplaneUnavailable:
+		return check, nil
+	default:
+		return DataplaneUnavailable, nil
+	}
+}
+
 // Halt stops only the sing-box process and keeps the dataplane: stop would let the traffic of
 // listed devices out directly while the daemon edits a file the core holds.
 func (c *Client) Halt(ctx context.Context) error {

@@ -142,6 +142,7 @@ export const CHECK_NAME = [
   'dns_port',
   'dns_probe',
   'nft_chains',
+  'routing_setup',
   'proxy',
   'direct',
 ] as const
@@ -164,6 +165,10 @@ export const CHECK_REASON = [
   'nft_unavailable',
   'nft_unparsed',
   'chains_missing',
+  'routing_setup_unavailable',
+  'fwmark_rule_missing',
+  'local_route_missing',
+  'dnsmasq_forwarding_missing',
   'proxy_unset',
   'proxy_missing',
   'not_measured',

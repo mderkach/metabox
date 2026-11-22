@@ -53,6 +53,7 @@ const CHECK_AREA: Readonly<Record<CheckName, DiagArea>> = {
   redirect_port: DIAG_AREA.Interception,
   tproxy_port: DIAG_AREA.Interception,
   nft_chains: DIAG_AREA.Interception,
+  routing_setup: DIAG_AREA.Interception,
   dns_port: DIAG_AREA.Dns,
   dns_probe: DIAG_AREA.Dns,
   proxy: DIAG_AREA.Proxy,

@@ -904,7 +904,7 @@ func TestDiagnosticsDoNotRunLatencyCheck(t *testing.T) {
 	t.Cleanup(clash.Close)
 
 	cfg := clashConfig{data: []byte(`{"experimental":{"clash_api":{"external_controller":"` + strings.TrimPrefix(clash.URL, "http://") + `"}}}`)}
-	checker := diag.New(noPlane{}, cfg, nil, diag.Options{ProcNet: t.TempDir(), URL: "http://127.0.0.1:1/generate_204", Timeout: 2 * time.Second})
+	checker := diag.New(noPlane{}, cfg, nil, nil, diag.Options{ProcNet: t.TempDir(), URL: "http://127.0.0.1:1/generate_204", Timeout: 2 * time.Second})
 
 	b := newBenchIn(t, nil, &memoryStore{}, locale.English, checker)
 	session := b.session(b.enable())
