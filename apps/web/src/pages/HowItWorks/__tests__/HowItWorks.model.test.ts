@@ -30,6 +30,7 @@ const EXPLANATION: RouteExplanation = {
     origin: ROUTE_ORIGIN.Computed,
     kind: ROUTE_MATCH.Rule,
     index: 0,
+    appliedRule: null,
     conditions: ROW.rule,
     action: ROW.action,
     reasonCode: null,
@@ -192,7 +193,12 @@ describe('toConnectionWalk', () => {
   it.each(['Media routing', 'media-sites → media'])(
     'shows the verified rule label %s with its number and services',
     (label) => {
-      const verifiedRule = { label, position: 0, services: ['media-sites'], editorPosition: 0 };
+      const verifiedRule = {
+        label,
+        position: 0,
+        services: ['media-sites'],
+        editorSearch: { rule: 1, ruleEtag: '"revision"' },
+      };
       const walk = toConnectionWalk({ row: ROW, explanation: EXPLANATION, verifiedRule });
 
       expect(walk.rule).toEqual({
@@ -208,11 +214,11 @@ describe('toConnectionWalk', () => {
   );
 
   it('keeps the verified rule number when there is no proved editor position', () => {
-    const verifiedRule = { label: 'Media routing', position: 0, services: [] };
+    const verifiedRule = { label: 'Media routing', position: 0, services: [], editorSearch: {} };
     const walk = toConnectionWalk({ row: ROW, explanation: EXPLANATION, verifiedRule });
 
     expect(walk.rule.verified).toEqual(verifiedRule);
-    expect(walk.rule.verified?.editorPosition).toBeUndefined();
+    expect(walk.rule.verified?.editorSearch).toEqual({});
   });
 
   it('retains only the conditions and action when the rule position is unverified', () => {
@@ -229,7 +235,7 @@ describe('toConnectionWalk', () => {
       const walk = toConnectionWalk({
         row: ROW,
         explanation: { ...EXPLANATION, match },
-        verifiedRule: { label: 'Media routing', position: 0, services: ['media-sites'] },
+        verifiedRule: { label: 'Media routing', position: 0, services: ['media-sites'], editorSearch: {} },
       });
 
       expect(walk.rule).toMatchObject({ kind, reason: match.reason, verified: null });

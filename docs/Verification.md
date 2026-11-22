@@ -607,8 +607,16 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `defines and links all eight terms in %s`                                                               |
 | AC-107 | vitest | `apps/web/tools/vocabulary.test.ts`                                      | `finds no forbidden word in the panel dictionaries and the daemon texts`                                |
 | AC-105 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorks.model.test.ts`       | `retains an unknown outbound tag and does not turn a detour into groups`                                |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `shows the confirmed applied rule $label and links its first service`                                   |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `keeps only the observed condition when the confirmed reference names another revision`                 |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `shows the nested services of a logical rule in document order`                                         |
 | AC-106 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
+| AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `shows the confirmed applied rule $label and links its first service`                                   |
+| AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `retains the applied label and opens the rule list after the draft reorders rules`                      |
+| AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `clears a verified service link when the core stops`                                                    |
 | AC-107 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
+| AC-107 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `opens the verified applied rule from the walk`                                                         |
 
 ## Checked by hand on purpose
 

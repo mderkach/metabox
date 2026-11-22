@@ -53,3 +53,18 @@ export const DEVICES_FIXTURE: DevicesWire = {
     },
   ],
 };
+
+export const STAND_DEVICES_FIXTURE: DevicesWire = {
+  devices: [
+    ...DEVICES_FIXTURE.devices,
+    {
+      ip: '192.168.1.121',
+      mac: 'aa:bb:cc:00:01:21',
+      name: 'laptop',
+      name_source: 'custom',
+      static: false,
+      online: true,
+      lease_expires: 1_791_000_000,
+    },
+  ],
+};

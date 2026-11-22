@@ -125,3 +125,28 @@ export const CLASH_PROVIDERS_FIXTURE: ClashProvidersWire = {
     },
   },
 };
+
+const SERVER_A = { type: 'VLESS', name: 'server-a', udp: true, history: [{ time: CHECKED_AT, delay: 108 }] };
+
+export const STAND_PROXIES_FIXTURE: ClashProxiesWire = {
+  proxies: {
+    ...CLASH_PROXIES_FIXTURE.proxies,
+    media: { type: 'Selector', name: 'media', udp: true, history: [], now: 'auto', all: ['auto'] },
+    auto: { type: 'URLTest', name: 'auto', udp: true, history: [], now: 'server-a', all: ['server-a'] },
+    'server-a': SERVER_A,
+    'server-b': { type: 'VLESS', name: 'server-b', udp: true, history: [{ time: CHECKED_AT, delay: 176 }] },
+  },
+};
+
+export const STAND_PROVIDERS_FIXTURE: ClashProvidersWire = {
+  providers: {
+    ...CLASH_PROVIDERS_FIXTURE.providers,
+    'provider-one': {
+      type: 'Proxy',
+      vehicleType: 'Remote',
+      name: 'provider-one',
+      updatedAt: CHECKED_AT,
+      proxies: [SERVER_A],
+    },
+  },
+};

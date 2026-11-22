@@ -1,3 +1,4 @@
+import { defaultParseSearch } from '@tanstack/react-router';
 import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
 import { act, screen, within } from '@testing-library/react';
@@ -6,20 +7,85 @@ import i18next from 'i18next';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { CONFIG_ENDPOINT, ConfigDocumentState } from '@entities/Config';
 import { configHandlers } from '@entities/Config/__tests__/Config.handlers';
 import { ConnectionStore } from '@entities/Connection';
 import { CONNECTIONS_FIXTURE } from '@entities/Connection/__tests__/Connection.fixture';
-import { DAEMON_ENDPOINT } from '@entities/Daemon';
+import { DAEMON_ENDPOINT, DAEMON_QUERY } from '@entities/Daemon';
 import { SERVICE_RUNNING_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
 import { createStatefulProxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
 import { ROUTE_ENDPOINT } from '@entities/Route';
-import { createRouteHandlers } from '@entities/Route/__tests__/Route.handlers';
+import { withAppliedRuleReference } from '@entities/Route/__tests__/Route.fixture';
+import { createRouteExplanationHandler, createRouteHandlers } from '@entities/Route/__tests__/Route.handlers';
 import { NARROW_SCREEN } from '@shared/lib/media';
 
 import { HowItWorksPage } from '../ui/HowItWorksPage';
 
 const LIVE_TITLE = 'Открытые соединения';
+const APPLIED_ETAG = `"${'a'.repeat(64)}"`;
+const NAMED_RULE = `{
+  "type": "logical", "mode": "or", "outbound": "us-fallback", "rules": [
+    { "rule_set": ["media-sites"] },
+    { "type": "logical", "mode": "and", "rules": [ { "rule_set": ["second-set", "media-sites"] } ] }
+  ]
+}`;
+const UNNAMED_RULE = '{ "rule_set": ["geosite-ru"], "outbound": "direct" }';
+const APPLIED_RULES = `{
+  "route": { "rules": [
+    // Media routing
+    ${NAMED_RULE},
+    ${UNNAMED_RULE}
+  ] }
+}`;
+const REORDERED_RULES = `{
+  "route": { "rules": [
+    ${UNNAMED_RULE},
+    // Media routing
+    ${NAMED_RULE}
+  ] }
+}`;
+
+function showLiveRule(index: number, explainedEtag = APPLIED_ETAG) {
+  const sample = CONNECTIONS_FIXTURE.connections.at(0);
+  if (sample === undefined) throw new Error('No initial connection in fixture');
+  const conditions = index === 0 ? 'rule_set=media-sites' : 'rule_set=geosite-ru';
+  const action = index === 0 ? 'route(us-fallback)' : 'route(direct)';
+  const nodes = index === 0 ? sample.chain : ['direct'];
+  const row = { ...sample, rule: conditions, action, chain: nodes };
+
+  server.use(
+    http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(APPLIED_RULES, { headers: { ETag: APPLIED_ETAG } })),
+    createRouteExplanationHandler(
+      withAppliedRuleReference(
+        {
+          connection_id: row.id,
+          match: { origin: 'observed', kind: 'rule', index, conditions, action },
+          chain: { origin: 'observed', nodes },
+          rules: [
+            {
+              origin: 'observed',
+              index: 0,
+              type: 'logical',
+              conditions: 'rule_set=media-sites',
+              action: 'route(us-fallback)',
+            },
+            {
+              origin: 'observed',
+              index: 1,
+              type: 'default',
+              conditions: 'rule_set=geosite-ru',
+              action: 'route(direct)',
+            },
+          ],
+        },
+        index,
+        explainedEtag
+      )
+    )
+  );
+  ConnectionStore.getState().apply({ ...CONNECTIONS_FIXTURE, connections: [row] });
+}
 
 class SilentEventSource {
   addEventListener(): void {}
@@ -42,6 +108,7 @@ describe('How metabox works', () => {
 
   afterEach(async () => {
     vi.unstubAllGlobals();
+    ConfigDocumentState.getState().reset();
     await i18next.changeLanguage('ru');
   });
 
@@ -140,6 +207,92 @@ describe('How metabox works', () => {
 
     await user.click(within(walk).getByRole('button', { name: /^Куда соединение/ }));
     expect(screen.getByRole('link', { name: 'Где настроить' })).toHaveAttribute('href', '/config/rule-set');
+  });
+
+  it.each([
+    { index: 0, label: 'Media routing', tag: 'media-sites' },
+    { index: 1, label: 'geosite-ru → direct', tag: 'geosite-ru' },
+  ])('shows the confirmed applied rule $label and links its first service', async ({ index, label, tag }) => {
+    const user = userEvent.setup();
+    showLiveRule(index);
+    renderWithRouter(HowItWorksPage);
+
+    expect(await screen.findByText(label)).toBeInTheDocument();
+    const walk = screen.getByRole('list', { name: 'Путь соединения' });
+    const rule = within(walk).getByRole('button', { name: /^Правило/ });
+    expect(rule).toHaveTextContent(`Правило ${index + 1}`);
+
+    await user.click(rule);
+    const target = screen.getByRole('link', { name: 'Где настроить' });
+    const { search } = new URL(target.getAttribute('href') ?? '', 'https://example.test');
+    expect(defaultParseSearch(search)).toEqual({ rule: index + 1, ruleEtag: APPLIED_ETAG });
+
+    await user.click(within(walk).getByRole('button', { name: /^Куда соединение/ }));
+    expect(screen.getByRole('link', { name: 'Где настроить' })).toHaveAttribute('href', `/config/rule-set?set=${tag}`);
+  });
+
+  it('retains the applied label and opens the rule list after the draft reorders rules', async () => {
+    const user = userEvent.setup();
+    showLiveRule(0);
+    ConfigDocumentState.getState().load(APPLIED_RULES, APPLIED_ETAG);
+    renderWithRouter(HowItWorksPage);
+
+    expect(await screen.findByText('Media routing')).toBeInTheDocument();
+    const walk = screen.getByRole('list', { name: 'Путь соединения' });
+    await user.click(within(walk).getByRole('button', { name: /^Правило/ }));
+    expect(screen.getByRole('link', { name: 'Где настроить' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('rule=1')
+    );
+
+    act(() => {
+      ConfigDocumentState.getState().replace(REORDERED_RULES);
+    });
+
+    expect(screen.getByText('Media routing')).toBeInTheDocument();
+    expect(within(walk).getByText('Правило 1')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Где настроить' })).toHaveAttribute('href', '/config');
+  });
+
+  it('shows the nested services of a logical rule in document order', async () => {
+    showLiveRule(0);
+    renderWithRouter(HowItWorksPage);
+
+    expect(await screen.findByText('media-sites, second-set')).toBeInTheDocument();
+  });
+
+  it('clears a verified service link when the core stops', async () => {
+    const user = userEvent.setup();
+    showLiveRule(0);
+    const { queryClient } = renderWithRouter(HowItWorksPage);
+
+    expect(await screen.findByText('Media routing')).toBeInTheDocument();
+    const walk = screen.getByRole('list', { name: 'Путь соединения' });
+    await user.click(within(walk).getByRole('button', { name: /^Куда соединение/ }));
+    expect(screen.getByRole('link', { name: 'Где настроить' })).toHaveAttribute(
+      'href',
+      '/config/rule-set?set=media-sites'
+    );
+
+    act(() => {
+      queryClient.setQueryData(DAEMON_QUERY.service(), { ...SERVICE_RUNNING_FIXTURE, status: 'stopped' });
+    });
+
+    expect(await screen.findByRole('link', { name: 'Открыть Обзор' })).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Путь соединения' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Где настроить' })).toHaveAttribute('href', '/config/rule-set');
+  });
+
+  it('keeps only the observed condition when the confirmed reference names another revision', async () => {
+    const user = userEvent.setup();
+    showLiveRule(0, `"${'b'.repeat(64)}"`);
+    renderWithRouter(HowItWorksPage);
+
+    expect(await screen.findByText('rule_set=media-sites')).toBeInTheDocument();
+    expect(screen.queryByText('Media routing')).not.toBeInTheDocument();
+    const walk = screen.getByRole('list', { name: 'Путь соединения' });
+    await user.click(within(walk).getByRole('button', { name: /^Правило/ }));
+    expect(screen.getByRole('link', { name: 'Где настроить' })).toHaveAttribute('href', '/config');
   });
 
   it('shows the request failure with a retry and keeps the glossary available', async () => {

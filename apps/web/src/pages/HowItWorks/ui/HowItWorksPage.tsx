@@ -10,6 +10,7 @@ import { useNarrowScreen } from '@shared/lib/media';
 import { QueryFailure } from '@shared/ui';
 
 import { useHowItWorksLive } from '../lib/HowItWorks.live';
+import { useHowItWorksRule } from '../lib/HowItWorks.rule';
 import { toConnectionWalk } from '../model/HowItWorks.model';
 import type { WalkTerm } from '../model/HowItWorks.terms';
 import { HowItWorksChoices } from './HowItWorksChoices';
@@ -25,6 +26,7 @@ export function HowItWorksPage() {
   const status = service.data === undefined ? null : toConfirmedStatus(service.data);
   const stopped = status === SERVICE_STATUS.Stopped || status === SERVICE_STATUS.Failed;
   const live = useHowItWorksLive(!stopped);
+  const verifiedRule = useHowItWorksRule(stopped ? null : (live.query.data?.match.appliedRule ?? null));
   const proxies = useProxies();
   const providers = useProxyProviders();
   const devices = useDeviceIndex();
@@ -34,7 +36,7 @@ export function HowItWorksPage() {
     source: 'step',
   });
   const walk =
-    live.row === undefined || live.query.data === undefined
+    stopped || live.row === undefined || live.query.data === undefined
       ? null
       : toConnectionWalk({
           row: live.row,
@@ -42,12 +44,12 @@ export function HowItWorksPage() {
           groups: proxies.data?.groups,
           providers: providers.data,
           devices,
+          verifiedRule,
         });
   const showFailure = live.query.isLoadingError && !live.discontinued;
   const inline = narrow && !stopped && !showFailure && selected.source === 'step';
   const pending = live.waitingForFrame || (live.row !== undefined && live.query.isPending);
   const target = walk?.rule.verified;
-  const ruleNumber = target?.editorPosition === undefined ? undefined : target.editorPosition + 1;
 
   return (
     <div className='flex min-h-0 grow flex-col gap-5 overflow-y-auto px-4 py-5 sm:px-6'>
@@ -107,7 +109,7 @@ export function HowItWorksPage() {
       {!inline && !narrow && (
         <HowItWorksTermPanel
           term={selected.term}
-          ruleNumber={ruleNumber}
+          ruleSearch={target?.editorSearch}
           ruleSetTag={target?.services[0]}
           groupExample={walk?.outbound.kind === 'group'}
         />
@@ -118,7 +120,7 @@ export function HowItWorksPage() {
       <HowItWorksTerms
         selected={selected.term}
         inline={narrow && !inline}
-        ruleNumber={ruleNumber}
+        ruleSearch={target?.editorSearch}
         ruleSetTag={target?.services[0]}
         groupExample={walk?.outbound.kind === 'group'}
         onSelect={(term) => {

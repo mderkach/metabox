@@ -1,7 +1,13 @@
 import { ROUTE_KIND, type ConnectionRow } from '@entities/Connection';
 import { deviceLabel, EMPTY_DEVICE_INDEX, type DeviceIndex } from '@entities/Device';
 import { GROUP_TYPES, type ProxyGroup, type ProxyProvider } from '@entities/Proxy';
-import { ROUTE_MATCH, type RouteExplanation, type RouteMatch, type RouteOrigin } from '@entities/Route';
+import {
+  ROUTE_MATCH,
+  type RouteExplanation,
+  type RouteMatch,
+  type RouteOrigin,
+  type RuleEditorSearch,
+} from '@entities/Route';
 
 export const WALK_KIND = {
   Group: 'group',
@@ -21,8 +27,7 @@ export interface VerifiedWalkRule {
   position: number;
   label: string;
   services: readonly string[];
-  /** Provided only when the current editor document is also confirmed. */
-  editorPosition?: number;
+  editorSearch: RuleEditorSearch;
 }
 
 export interface WalkGroup {
@@ -35,7 +40,7 @@ export interface WalkGroup {
 export interface ConnectionWalk {
   device: { address: string; label: string };
   destination: { host: string };
-  rule: Omit<RouteMatch, 'index'> & { verified: VerifiedWalkRule | null };
+  rule: Omit<RouteMatch, 'index' | 'appliedRule'> & { verified: VerifiedWalkRule | null };
   outbound: {
     origin: RouteOrigin;
     kind: WalkKind | 'unknown';

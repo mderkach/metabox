@@ -1,17 +1,19 @@
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
+import type { RuleEditorSearch } from '@entities/Route';
+
 import type { WalkTerm } from '../model/HowItWorks.terms';
 
 const TERM_LINK_CLASS = 'inline-flex min-h-11 items-center rounded-md border px-3 text-sm font-medium hover:bg-muted';
 
 export function HowItWorksTermLink({
   term,
-  ruleNumber,
+  ruleSearch,
   ruleSetTag,
 }: {
   term: WalkTerm;
-  ruleNumber?: number;
+  ruleSearch?: RuleEditorSearch;
   ruleSetTag?: string;
 }) {
   const { t } = useTranslation('pages/HowItWorks');
@@ -32,7 +34,7 @@ export function HowItWorksTermLink({
       );
     case 'rule':
       return (
-        <Link to='/config' search={{ rule: ruleNumber }} className={TERM_LINK_CLASS}>
+        <Link to='/config' search={ruleSearch ?? {}} className={TERM_LINK_CLASS}>
           {label}
         </Link>
       );

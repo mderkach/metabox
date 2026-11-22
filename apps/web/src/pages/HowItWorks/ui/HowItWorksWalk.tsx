@@ -59,7 +59,6 @@ export function HowItWorksWalk({
           },
         };
   const verified = walk?.rule.verified;
-  const editorPosition = verified?.editorPosition;
 
   return (
     <ol
@@ -134,7 +133,7 @@ export function HowItWorksWalk({
             {inline && selected === term && (
               <HowItWorksTermPanel
                 term={term}
-                ruleNumber={editorPosition === undefined ? undefined : editorPosition + 1}
+                ruleSearch={verified?.editorSearch}
                 ruleSetTag={verified?.services[0]}
                 groupExample={walk?.outbound.kind === 'group'}
               />

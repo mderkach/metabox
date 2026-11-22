@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { RuleEditorSearch } from '@entities/Route';
 import { cn } from '@shared/lib/utils';
 
 import { WALK_TERMS, type WalkTerm } from '../model/HowItWorks.terms';
@@ -10,14 +11,14 @@ export function HowItWorksTerms({
   selected,
   onSelect,
   inline,
-  ruleNumber,
+  ruleSearch,
   ruleSetTag,
   groupExample,
 }: {
   selected: WalkTerm;
   onSelect: (term: WalkTerm) => void;
   inline: boolean;
-  ruleNumber?: number;
+  ruleSearch?: RuleEditorSearch;
   ruleSetTag?: string;
   groupExample: boolean;
 }) {
@@ -53,7 +54,7 @@ export function HowItWorksTerms({
             {inline && selected === term && (
               <HowItWorksTermPanel
                 term={term}
-                ruleNumber={ruleNumber}
+                ruleSearch={ruleSearch}
                 ruleSetTag={ruleSetTag}
                 groupExample={groupExample}
               />

@@ -1,16 +1,18 @@
 import { useTranslation } from 'react-i18next';
 
+import type { RuleEditorSearch } from '@entities/Route';
+
 import type { WalkTerm } from '../model/HowItWorks.terms';
 import { HowItWorksTermLink } from './HowItWorksTermLink';
 
 export function HowItWorksTermPanel({
   term,
-  ruleNumber,
+  ruleSearch,
   ruleSetTag,
   groupExample,
 }: {
   term: WalkTerm;
-  ruleNumber?: number;
+  ruleSearch?: RuleEditorSearch;
   ruleSetTag?: string;
   groupExample: boolean;
 }) {
@@ -24,7 +26,7 @@ export function HowItWorksTermPanel({
         <p className='max-w-prose text-sm text-muted-foreground'>{t('terms.groupExample')}</p>
       )}
       <div>
-        <HowItWorksTermLink term={term} ruleNumber={ruleNumber} ruleSetTag={ruleSetTag} />
+        <HowItWorksTermLink term={term} ruleSearch={ruleSearch} ruleSetTag={ruleSetTag} />
       </div>
     </section>
   );
