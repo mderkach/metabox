@@ -2,6 +2,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useCallback, useMemo, useState } from 'react';
 
 import {
+  ConfigDocumentState,
   readRuleNames,
   readRules,
   readRuleSetTags,
@@ -32,6 +33,8 @@ import { RULE_HITS_STATE, type RuleHitsColumn } from '@widgets/Rule/RuleTable';
 export interface RouteEditorState {
   /** Config request: a source failure is a screen state of its own, not an empty list. */
   source: ConfigDocumentView['query'];
+  appliedEtag: string | null;
+  isAppliedDocument: boolean;
   issues: ConfigIssue[];
   rules: RuleRow[];
   outbounds: string[];
@@ -58,6 +61,7 @@ export interface RouteEditorState {
  */
 export function useRouteEditor(): RouteEditorState {
   const document = useConfigDocument();
+  const appliedEtag = ConfigDocumentState.use.appliedEtag();
   const text = document.text;
 
   // Nodes are read from the text, not from the parsed model: a rule that the
@@ -76,6 +80,8 @@ export function useRouteEditor(): RouteEditorState {
 
   return {
     source: document.query,
+    appliedEtag,
+    isAppliedDocument: appliedText !== null && text === appliedText && !document.isDirty,
     issues: document.issues,
     rules,
     outbounds: toOutboundTags(config),
@@ -214,14 +220,18 @@ export interface RuleSelection extends RuleSelectionState {
  * `requestedId` is the rule from the address: it opens when it changes, and
  * otherwise the screen owns the selection, so a closed panel stays closed.
  */
-export function useRuleSelection(requestedId: string | null, rules: readonly RuleRow[]): RuleSelection {
+export function useRuleSelection(
+  requestedId: string | null,
+  rules: readonly RuleRow[],
+  guardedLink?: string
+): RuleSelection {
   const [selection, setSelection] = useState<RuleSelectionState>({
     id: requestedId,
     key: 0,
     pending: null,
     created: null,
   });
-  const [requested, setRequested] = useState(requestedId);
+  const [requested, setRequested] = useState({ id: requestedId, guardedLink });
 
   const { created } = selection;
 
@@ -229,10 +239,11 @@ export function useRuleSelection(requestedId: string | null, rules: readonly Rul
     setSelection({ ...selection, created: null });
   }
 
-  if (requested !== requestedId) {
-    setRequested(requestedId);
+  const openedGuardedLink = guardedLink !== undefined && requested.guardedLink !== guardedLink;
+  if (requested.id !== requestedId || requested.guardedLink !== guardedLink) {
+    setRequested({ id: requestedId, guardedLink });
 
-    if (requestedId !== null) {
+    if (requestedId !== null || openedGuardedLink) {
       setSelection({ id: requestedId, key: selection.key + 1, pending: null, created: null });
     }
   }

@@ -353,3 +353,23 @@ func TestSampleDeviceRecordsProcessMemory(t *testing.T) {
 		t.Errorf("process history: got %+v", points)
 	}
 }
+
+func TestControllerListenerRejectsAnotherListenerOnThePort(t *testing.T) {
+	fs := newTree(t)
+	fs.listener(t, clashPortHex, socketInode)
+	fs.process(t, 5872, "sing-box", socketInode, 83900)
+	reader := fs.reader(clashPort)
+
+	if reader.ControllerListener(t.Context(), 5872, clashPort) != socketInode {
+		t.Fatal("sole listener belongs to the managed PID")
+	}
+	if reader.ControllerListener(t.Context(), 5873, clashPort) != "" {
+		t.Fatal("unrelated PID cannot own the controller")
+	}
+
+	table := filepath.Join(fs.proc, "net", "tcp6")
+	fs.write(t, table, "0: 00000000000000000000000000000000:"+clashPortHex+" 00000000000000000000000000000000:0000 0A 00:00 00:00 00000000 0 0 48121\n")
+	if reader.ControllerListener(t.Context(), 5872, clashPort) != "" {
+		t.Fatal("ownership is ambiguous with another listening socket")
+	}
+}

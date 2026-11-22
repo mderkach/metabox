@@ -7,8 +7,11 @@ export {
   useRuleHits,
 } from './api/Route.query';
 export { toRouteExplanation, toRuleHits } from './model/Route.adapter';
+export { getAppliedRuleIndex, getRuleEditorSearch } from './model/Route.reference';
+export type { RuleEditorContext, RuleEditorSearch } from './model/Route.reference';
 export { ROUTE_MATCH, ROUTE_ORIGIN } from './model/Route.model';
 export type {
+  AppliedRuleReference,
   RouteExplanation,
   RouteMatch,
   RouteMatchKind,

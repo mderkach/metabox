@@ -561,6 +561,25 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficHidesCountAfterLogOutputChanges`                               |
 | AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficRejectsNonRegularLogFile`                                      |
 
+### Verified rule references
+
+| ID     | Kind    | File                                                                        | Check                                                                               |
+| ------ | ------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| AC-103 | go-test | `apps/metaboxd/internal/clashapi/rule_names_test.go`                        | `TestReadRuleNamesMatchesPanelCorpus`                                               |
+| AC-103 | go-test | `apps/metaboxd/internal/clashapi/rule_names_test.go`                        | `TestReadRuleNamesRejectsAmbiguousOrMalformedLists`                                 |
+| AC-103 | go-test | `apps/metaboxd/internal/device/device_test.go`                              | `TestControllerListenerRejectsAnotherListenerOnThePort`                             |
+| AC-103 | go-test | `apps/metaboxd/internal/singbox/revision_test.go`                           | `TestLoadedRevisionRequiresManagedProcessAndExactProtectedSnapshot`                 |
+| AC-103 | go-test | `apps/metaboxd/internal/route/revision_test.go`                             | `TestRuleReferenceRequiresLoadedRevisionAndUniquePosition`                          |
+| AC-103 | go-test | `apps/metaboxd/internal/mcp/rule_names_test.go`                             | `TestConfigVersionReturnsOnlyIndexedMaskedRuleNames`                                |
+| AC-103 | go-test | `apps/metaboxd/internal/mcp/rule_names_test.go`                             | `TestConnectionsExposeOnlyVerifiedMaskedRuleNames`                                  |
+| AC-103 | script  | `.devcontainer/target/files/usr/bin/apply-cycle-check`                      | `The core runs from a private copy of the applied config`                           |
+| AC-34  | go-test | `apps/metaboxd/internal/route/revision_test.go`                             | `TestRuleReferenceRequiresLoadedRevisionAndUniquePosition`                          |
+| AC-34  | vitest  | `apps/web/src/widgets/RouteExplanation/__tests__/RouteExplanation.test.tsx` | `keeps the observed rule when the applied revision changed at the same list length` |
+| AC-34  | vitest  | `apps/web/src/pages/Editor/__tests__/EditorPage.test.tsx`                   | `opens a guarded rule when the loaded editor document matches its ETag`             |
+| AC-34  | vitest  | `apps/web/src/pages/Editor/__tests__/EditorPage.test.tsx`                   | `does not open a guarded position on a`                                             |
+| AC-103 | go-test | `apps/metaboxd/internal/events/pinned_source_test.go`                       | `TestPinnedControllerUsesNewConnections`                                            |
+| AC-34  | vitest  | `apps/web/src/pages/Editor/__tests__/EditorPage.test.tsx`                   | `closes an opened guarded position when the applied config is reordered`            |
+
 ## Checked by hand on purpose
 
 These parts stay by hand: a test on the bench or in CI would not show them. A row names the scenario and why it cannot be automated.

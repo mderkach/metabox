@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { RouteExplanationSchema } from '../api/Route.schema';
 import { toRouteExplanation } from '../model/Route.adapter';
 import { ROUTE_MATCH, ROUTE_ORIGIN } from '../model/Route.model';
-import { ROUTE_EXPLANATION_FIXTURE, ROUTE_FINAL_FIXTURE, ROUTE_UNKNOWN_FIXTURE } from './Route.fixture';
+import {
+  ROUTE_EXPLANATION_FIXTURE,
+  ROUTE_FINAL_FIXTURE,
+  ROUTE_UNKNOWN_FIXTURE,
+  withAppliedRuleReference,
+} from './Route.fixture';
 
 describe('toRouteExplanation', () => {
   it('converts the daemon response to the screen model', () => {
@@ -12,7 +17,18 @@ describe('toRouteExplanation', () => {
     expect(explanation.connectionId).toBe(ROUTE_EXPLANATION_FIXTURE.connection_id);
     expect(explanation.match.kind).toBe(ROUTE_MATCH.Rule);
     expect(explanation.match.index).toBe(ROUTE_EXPLANATION_FIXTURE.match.index);
+    expect(explanation.match.appliedRule).toBeNull();
     expect(explanation.rules).toHaveLength(ROUTE_EXPLANATION_FIXTURE.rules.length);
+  });
+
+  it('reads an applied reference independently of the observed rule text', () => {
+    const etag = '"applied"';
+    const body = withAppliedRuleReference(ROUTE_EXPLANATION_FIXTURE, 6, etag);
+    const explanation = toRouteExplanation(RouteExplanationSchema.parse(body));
+
+    expect(explanation.match.appliedRule).toEqual({ index: 6, etag });
+    expect(explanation.match.conditions).toBe(body.match.conditions);
+    expect(explanation.match.action).toBe(body.match.action);
   });
 
   it('leaves the rule node empty when `route.final` fired', () => {

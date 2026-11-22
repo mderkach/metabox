@@ -53,7 +53,7 @@ RUN --mount=type=secret,id=apk_sign_key \
     mkdir -p /pkgroot/usr/bin /out; \
     cp -R /src/package/. /pkgroot/; \
     install -m 0755 /src/metaboxd /pkgroot/usr/bin/metaboxd; \
-    chmod 0755 /pkgroot/etc/init.d/metaboxd /pkgroot/etc/init.d/metabox-singbox; \
+    chmod 0755 /pkgroot/etc/init.d/metaboxd /pkgroot/etc/init.d/metabox-singbox /pkgroot/lib/metabox/core-start; \
     chown -R root:root /pkgroot; \
     fork="$(sed -n '1s/^[0-9a-f]*  sing-box-extended_\(.*\)_openwrt_.*/\1/p' /src/pin | sed 's/-extended-/./')"; \
     [ -n "$fork" ] || { echo "cannot read the fork version from sing-box-extended.sha256" >&2; exit 1; }; \

@@ -48,6 +48,7 @@ function toMatch(dto: RouteExplanationWire['match']) {
     origin: toOrigin(dto.origin),
     kind,
     index: kind === ROUTE_MATCH.Rule ? (dto.index ?? null) : null,
+    appliedRule: kind === ROUTE_MATCH.Rule ? (dto.applied_rule ?? null) : null,
     conditions: dto.conditions ?? '',
     action: dto.action ?? '',
     reasonCode: toReasonCode(dto.reason_code),

@@ -26,6 +26,7 @@ const TargetParamSchema = z.union([z.array(z.coerce.string().min(1)).min(1), z.c
  */
 export const RuleSearchSchema = z.object({
   rule: z.coerce.number().int().positive().optional(),
+  ruleEtag: z.string().min(1).optional(),
   rule_set: z.coerce.string().min(1).optional(),
   target: TargetParamSchema.optional(),
 });

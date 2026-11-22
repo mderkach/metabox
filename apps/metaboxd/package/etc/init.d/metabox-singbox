@@ -466,10 +466,26 @@ dataplane_check() {
 		dp_fail "dnsmasq fragment %s does not point to port %s" "$dnsmasq_file" "$dp_dns_port"
 }
 
+core_launcher() (
+	local run=/var/run/metabox-core name="${1##*/}" launcher
+
+	umask 077
+	[ -x /lib/metabox/core-start ] && [ ! -L "$run" ] && [ ! -L "$run/launch" ] || exit 1
+	mkdir -p "$run/launch" || exit 1
+	/lib/metabox/core-start --private-directory "$run" || exit 1
+	/lib/metabox/core-start --private-directory "$run/launch" || exit 1
+	# procd derives its syslog tag from the launcher basename.
+	launcher="$run/launch/$name"
+	if [ "$(readlink "$launcher")" != /lib/metabox/core-start ]; then
+		ln -sfn /lib/metabox/core-start "$launcher" || exit 1
+	fi
+	printf '%s\n' "$launcher"
+)
+
 start_service() {
 	config_load metabox
 
-	local singbox config_dir config_name config
+	local singbox config_dir config_name config launcher
 
 	config_get singbox main singbox /usr/bin/sing-box
 	config_get config_dir main config_dir /etc/sing-box
@@ -500,7 +516,11 @@ start_service() {
 	# sing-box resolves from -D, and the daemon writes list files next to the config.
 	# The daemon checks the candidate with the same command, so there is a single -c here.
 	procd_open_instance sing-box
-	procd_set_param command "$singbox" run -c "$config" -D "$config_dir"
+	if launcher=$(core_launcher "$singbox"); then
+		procd_set_param command "$launcher" "$singbox" run -c "$config" -D "$config_dir"
+	else
+		procd_set_param command "$singbox" run -c "$config" -D "$config_dir"
+	fi
 	procd_set_param limits nofile="1000000 1000000"
 	procd_set_param stdout 1
 	# The FATAL that sing-box exits with goes to stderr: the daemon takes the failure
