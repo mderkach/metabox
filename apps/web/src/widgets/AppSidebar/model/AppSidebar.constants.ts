@@ -28,8 +28,14 @@ interface NavItem {
   more?: true;
 }
 
-export const NAV_ITEMS: readonly NavItem[] = [
-  { key: 'section.howItWorks', icon: BookOpen, to: '/how-it-works', more: true },
+export const HELP_NAV_ITEM = {
+  key: 'section.howItWorks',
+  icon: BookOpen,
+  to: '/how-it-works',
+  more: true,
+} as const satisfies NavItem;
+
+export const SIDEBAR_SECTIONS: readonly NavItem[] = [
   { key: 'section.overview', icon: Gauge, to: '/overview' },
   { key: 'section.config', icon: SlidersHorizontal, to: '/config', short: 'short.config' },
   { key: 'section.proxies', icon: Share2, to: '/proxies' },
@@ -40,5 +46,9 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'section.settings', icon: Settings, to: '/settings', more: true },
 ];
 
-/** Section addresses in menu order: the router picks the transition direction by it. */
-export const NAV_TARGETS: readonly string[] = NAV_ITEMS.flatMap((item) => (item.to === undefined ? [] : [item.to]));
+export const NAV_ITEMS: readonly NavItem[] = [HELP_NAV_ITEM, ...SIDEBAR_SECTIONS];
+
+/** Section addresses in desktop menu order: the router picks the transition direction by it. */
+export const NAV_TARGETS: readonly string[] = [...SIDEBAR_SECTIONS, HELP_NAV_ITEM].flatMap((item) =>
+  item.to === undefined ? [] : [item.to]
+);

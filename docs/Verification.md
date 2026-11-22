@@ -587,7 +587,7 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | ------ | ------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
 | AC-105 | vitest | `apps/web/src/app/router/__tests__/Router.test.tsx`                      | `opens How metabox works at its own address`                                                            |
 | AC-105 | vitest | `apps/web/src/app/router/__tests__/Router.test.tsx`                      | `on a phone opens Overview from the root`                                                               |
-| AC-105 | vitest | `apps/web/src/widgets/AppSidebar/__tests__/AppSidebar.test.tsx`          | `lists How metabox works before Overview on desktop`                                                    |
+| AC-105 | vitest | `apps/web/src/widgets/AppSidebar/__tests__/AppSidebar.test.tsx`          | `puts Overview first in the main sections and Help outside them`                                        |
 | AC-105 | vitest | `apps/web/src/widgets/AppSidebar/__tests__/AppSidebarBottomNav.test.tsx` | `puts How metabox works first in More and keeps five bottom links`                                      |
 | AC-106 | vitest | `apps/web/src/entities/Proxy/__tests__/Proxy.adapter.test.ts`            | `retains the names of the servers alongside their count`                                                |
 | AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorks.model.test.ts`       | `offers one example of each kind in order and keeps backups without reshuffling equally preferred rows` |
@@ -608,6 +608,7 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `defines and links all eight terms in %s`                                                               |
 | AC-107 | vitest | `apps/web/tools/vocabulary.test.ts`                                      | `finds no forbidden word in the panel dictionaries and the daemon texts`                                |
 | AC-105 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
+| AC-105 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `keeps Help accessible and current in the collapsed sidebar`                                            |
 | AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorks.model.test.ts`       | `retains an unknown outbound tag and does not turn a detour into groups`                                |
 | AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `shows the confirmed applied rule $label and links its first service`                                   |
 | AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `keeps only the observed condition when the confirmed reference names another revision`                 |
