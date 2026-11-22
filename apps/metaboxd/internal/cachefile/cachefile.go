@@ -1,8 +1,5 @@
-// Package cachefile edits the sing-box cache file (experimental.cache_file), a bbolt database
-// the core owns. It knows only the layout the fork uses for subscriptions: the bucket
-// rule_set keyed by the provider tag, nested under a bucket named 0x00 + cache_id when the
-// config sets one. The core holds the file lock while it runs, so the file is edited only with
-// the sing-box process stopped.
+// Package cachefile reads and repairs the core's bbolt cache. A repair opens the live
+// file only with the service stopped. A metadata read opens a checked copy.
 package cachefile
 
 import (

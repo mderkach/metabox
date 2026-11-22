@@ -1,9 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import {
+  CONFIG_SECTION,
   hasRuleSetCache,
+  readRuleNames,
   readRules,
   readRuleSets,
+  readSectionNodes,
   toOutboundTags,
   useConfigDocument,
   useConfigListStats,
@@ -11,8 +14,9 @@ import {
   type ConfigListStat,
 } from '@entities/Config';
 import {
-  countRuleSetUsage,
+  collectRuleSetUsage,
   filterRuleSets,
+  remoteRuleSetTags,
   RULE_SET_TYPE,
   toRuleSetRowsFromNodes,
   useRuleSetCatalog,
@@ -30,6 +34,7 @@ export interface RuleSetEditorState {
   catalogQuery: ReturnType<typeof useRuleSetCatalog>;
   catalog: RuleSetCatalog;
   sets: RuleSetRow[];
+  appliedTags: ReadonlySet<string>;
   /** `route.rule_set` nodes as they are: editing a rule set compares the typed input against them. */
   nodes: unknown[];
   /** Names of rule sets already attached: a second rule set with the same name is not created. */
@@ -54,16 +59,33 @@ export function useRuleSetEditor(): RuleSetEditorState {
   const catalog = catalogQuery.data ?? EMPTY_CATALOG;
   // A failed or pending read leaves the columns unknown: the list itself does not wait for it.
   const files = useConfigListStats().data ?? NO_FILES;
-  const text = document.text;
+  const { text, appliedText } = document;
 
   const nodes = useMemo(() => (text === null ? [] : readRuleSets(text)), [text]);
 
-  // References are counted over the same rule nodes that the neighboring tab shows:
-  // a rule that references a rule set from inside a logical group references it
-  // at least as much as a direct one.
-  const usage = useMemo(() => countRuleSetUsage(text === null ? [] : readRules(text)), [text]);
+  const usage = useMemo(
+    () =>
+      collectRuleSetUsage(
+        text === null
+          ? []
+          : [
+              { kind: 'route', rules: readRules(text), names: readRuleNames(text) },
+              {
+                kind: 'dns',
+                rules: readSectionNodes(text, CONFIG_SECTION.DnsRules),
+                names: readRuleNames(text, 'dns'),
+              },
+            ]
+      ),
+    [text]
+  );
 
   const sets = useMemo(() => toRuleSetRowsFromNodes(nodes, usage, catalog, files), [nodes, usage, catalog, files]);
+
+  const appliedTags = useMemo(
+    () => remoteRuleSetTags(appliedText === null ? [] : readRuleSets(appliedText)),
+    [appliedText]
+  );
 
   const needsCache = useMemo(() => {
     if (text === null) {
@@ -78,6 +100,7 @@ export function useRuleSetEditor(): RuleSetEditorState {
     catalogQuery,
     catalog,
     sets,
+    appliedTags,
     nodes,
     takenTags: sets.map((set) => set.tag).filter((tag) => tag !== ''),
     outbounds: toOutboundTags(document.config),

@@ -68,7 +68,7 @@ func (m *Manager) repairCache(ctx context.Context, log *slog.Logger, poisoned *p
 		return repair{}, locale.Errorf("sing-box exits on the saved subscription %q, but subscriptions are not cached in this config (store_subscriptions is off), so the daemon cannot repair it", poisoned.tag)
 	}
 
-	path := m.cachePath(ctx, cache.Path)
+	path := m.CachePath(ctx, cache.Path)
 
 	var done repair
 
@@ -165,9 +165,9 @@ func (m *Manager) awaitDown(ctx context.Context) {
 	}
 }
 
-// cachePath resolves the cache file the way the fork does: a relative path from the working
+// CachePath resolves the cache file the way the fork does: a relative path from the working
 // directory of the service, which the metabox service sets to the config directory.
-func (m *Manager) cachePath(ctx context.Context, path string) string {
+func (m *Manager) CachePath(ctx context.Context, path string) string {
 	if filepath.IsAbs(path) {
 		return path
 	}

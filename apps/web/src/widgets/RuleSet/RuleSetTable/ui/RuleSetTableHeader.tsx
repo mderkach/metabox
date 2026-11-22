@@ -17,7 +17,7 @@ export function RuleSetTableHeader() {
       <div
         role='row'
         aria-rowindex={1}
-        className={cn(RULE_SET_COLUMN.Row, 'bg-table-head py-2 max-md:sr-only', TABLE_HEADER)}
+        className={cn(RULE_SET_COLUMN.Row, 'bg-table-head py-2 max-md:sr-only md:pl-12', TABLE_HEADER)}
       >
         {RULE_SET_COLUMNS.map((def) => (
           <span key={def.id} role='columnheader' className={def.meta.className}>

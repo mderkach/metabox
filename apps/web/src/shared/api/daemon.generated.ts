@@ -71,6 +71,14 @@ export const ERROR_CODE = [
   'internal',
 ] as const
 
+export const CACHED_RULE_SET_STATE = [
+  'cached',
+  'not_downloaded',
+  'memory_only',
+  'unreadable',
+  'cache_unavailable',
+] as const
+
 export const NAME_SOURCE = [
   'custom',
   'static',
@@ -367,6 +375,18 @@ export const RuleSetFilesSchema = z.object({
   etag: z.string(),
   /** Stats is the file name → size and modification time on disk. A file missing here was removed between the two reads; no field means there are no files. */
   stats: z.record(z.string(), ListStatSchema).optional(),
+})
+
+/** CachedRuleSet is one remote set from the applied config in GET /api/rule-sets/cached. */
+export const CachedRuleSetSchema = z.object({
+  tag: z.string(),
+  state: z.string(),
+  /** CheckedAt is the Unix time in seconds of the core's last check, including a not-modified answer. */
+  checked_at: z.int().optional(),
+  /** Size is the downloaded file size in bytes when the record could be read. */
+  size: z.int().optional(),
+  /** OtherAddress marks a copy downloaded from another address than the one in the applied config. */
+  other_address: z.boolean(),
 })
 
 /** ApplyEnvelope is a config apply together with the list files of the rule-sets subdirectory. Goes in POST /api/apply with Content-Type application/vnd.metabox.apply+json; a body without this type the daemon reads as bare config bytes. */
@@ -787,6 +807,7 @@ export const CatalogSchema = z.object({
 
 export type ApplyEnvelopeWire = z.infer<typeof ApplyEnvelopeSchema>
 export type AuthWire = z.infer<typeof AuthSchema>
+export type CachedRuleSetWire = z.infer<typeof CachedRuleSetSchema>
 export type CatalogWire = z.infer<typeof CatalogSchema>
 export type ChainWire = z.infer<typeof ChainSchema>
 export type CheckDetailsWire = z.infer<typeof CheckDetailsSchema>

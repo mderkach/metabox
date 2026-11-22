@@ -304,6 +304,34 @@ type RuleSetFiles struct {
 	Stats map[string]ListStat `json:"stats,omitempty"`
 }
 
+// CachedRuleSet is one remote set from the applied config in GET /api/rule-sets/cached.
+type CachedRuleSet struct {
+	Tag   string             `json:"tag"`
+	State CachedRuleSetState `json:"state"`
+	// CheckedAt is the Unix time in seconds of the core's last check, including a not-modified answer.
+	CheckedAt *int64 `json:"checked_at,omitempty"`
+	// Size is the downloaded file size in bytes when the record could be read.
+	Size *int64 `json:"size,omitempty"`
+	// OtherAddress marks a copy downloaded from another address than the one in the applied config.
+	OtherAddress bool `json:"other_address"`
+}
+
+// CachedRuleSetState describes what the daemon could read about a saved remote set.
+type CachedRuleSetState string
+
+const (
+	// CachedRuleSetStateCached means the saved copy's metadata was read.
+	CachedRuleSetStateCached CachedRuleSetState = "cached"
+	// CachedRuleSetStateNotDownloaded means there is no record for the set.
+	CachedRuleSetStateNotDownloaded CachedRuleSetState = "not_downloaded"
+	// CachedRuleSetStateMemoryOnly means saving copies to disk is disabled.
+	CachedRuleSetStateMemoryOnly CachedRuleSetState = "memory_only"
+	// CachedRuleSetStateUnreadable means the record is invalid as a rule set.
+	CachedRuleSetStateUnreadable CachedRuleSetState = "unreadable"
+	// CachedRuleSetStateCacheUnavailable means the cache file cannot be read.
+	CachedRuleSetStateCacheUnavailable CachedRuleSetState = "cache_unavailable"
+)
+
 // Devices is the response of `GET /api/devices` and `PUT /api/devices/{mac}`: LAN
 // devices by address, those without an address at the end.
 type Devices struct {

@@ -171,6 +171,14 @@ The repair takes the apply, so it never runs beside an Apply or a dataplane chan
 
 The dropped provider is logged as a warning, and a rollback names it in the transaction reason, a failed rollback too: the cache file was changed either way. The next update of the subscription writes the entry again: if the subscription still serves the same node, the next restart crashes again and is repaired again.
 
+## Cached rule set metadata
+
+The panel's request reads the remote sets from the applied config and looks up their metadata in a private copy of the core's cache. The daemon opens the live file for ordinary reads without taking the bbolt lock, so the core can open its cache during the request.
+
+The daemon compares the headers and metadata of both bbolt meta pages before and after copying. If either changes, the live file is replaced or changes size, or the copy hits an early end of file, it discards that attempt and tries again, up to three attempts in total. It opens the copy read-only, reads the metadata for the requested tags, and removes the copy when the read finishes. It keeps only the resulting metadata between requests.
+
+The temporary copy uses OpenWrt's `/tmp` on `tmpfs`, so it takes RAM outside the daemon's resident memory. A file larger than 64 MiB is rejected before copying, and only one copy is made at a time.
+
 ## Service crash reason
 
 procd explains a crashed service only by the fact: the instance is known but not running. What the process actually said is known to the device logger, so on `failed` the daemon reads `logread` and selects the lines of its process, by the binary name as procd named it.

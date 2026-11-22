@@ -5,8 +5,7 @@ import (
 	"fmt"
 )
 
-// CacheFile is what the daemon needs from experimental.cache_file to find a cached
-// subscription: the fork keeps them only with the section enabled and store_subscriptions on.
+// CacheFile locates the core's cache and identifies the remote rule sets of the applied config.
 type CacheFile struct {
 	Enabled            bool
 	StoreSubscriptions bool
@@ -15,9 +14,18 @@ type CacheFile struct {
 	Path string
 	// CacheID selects the bucket the core reads; empty means the top level.
 	CacheID string
+
+	RemoteRuleSets []RemoteRuleSet
 }
 
-// ReadCacheFile extracts the cache file settings. The config is not changed.
+// RemoteRuleSet is a cache lookup by tag. URL is the configured download address,
+// kept verbatim for comparison with the address hash in the cached entry.
+type RemoteRuleSet struct {
+	Tag string
+	URL string
+}
+
+// ReadCacheFile projects cache settings and remote rule sets without changing the config.
 func ReadCacheFile(data []byte) (CacheFile, error) {
 	var cfg struct {
 		Experimental struct {
@@ -28,6 +36,13 @@ func ReadCacheFile(data []byte) (CacheFile, error) {
 				StoreSubscriptions bool   `json:"store_subscriptions"`
 			} `json:"cache_file"`
 		} `json:"experimental"`
+		Route struct {
+			RuleSets []struct {
+				Type string `json:"type"`
+				Tag  string `json:"tag"`
+				URL  string `json:"url"`
+			} `json:"rule_set"`
+		} `json:"route"`
 	}
 
 	if err := json.Unmarshal(mask(data), &cfg); err != nil {
@@ -41,10 +56,18 @@ func ReadCacheFile(data []byte) (CacheFile, error) {
 		path = "cache.db"
 	}
 
+	var remote []RemoteRuleSet
+	for _, entry := range cfg.Route.RuleSets {
+		if entry.Type == "remote" {
+			remote = append(remote, RemoteRuleSet{Tag: entry.Tag, URL: entry.URL})
+		}
+	}
+
 	return CacheFile{
 		Enabled:            section.Enabled,
 		StoreSubscriptions: section.StoreSubscriptions,
 		Path:               path,
 		CacheID:            section.CacheID,
+		RemoteRuleSets:     remote,
 	}, nil
 }

@@ -16,7 +16,7 @@ import (
 var editor = cachefile.Editor{LockTimeout: 50 * time.Millisecond}
 
 // fixture copies the cache file the pinned fork wrote (make cache-fixture): top level holds
-// subscriptions sub and other and the rule set geo, the bucket of cache id router holds sub.
+// subscriptions sub and other and the rule set geo, the bucket of cache id router holds sub and two remote rule sets.
 func fixture(t *testing.T) string {
 	t.Helper()
 
@@ -76,7 +76,7 @@ func TestDropDeletesOnlyTheNamedEntry(t *testing.T) {
 	if got, want := keys(t, path, ""), []string{"geo", "other"}; !slices.Equal(got, want) {
 		t.Errorf("top level keys %v, want %v", got, want)
 	}
-	if got, want := keys(t, path, "router"), []string{"sub"}; !slices.Equal(got, want) {
+	if got, want := keys(t, path, "router"), []string{"geo-binary", "geo-source", "sub"}; !slices.Equal(got, want) {
 		t.Errorf("keys of cache id router %v, want %v: another id was touched", got, want)
 	}
 }
@@ -88,8 +88,8 @@ func TestDropFollowsTheCacheID(t *testing.T) {
 		t.Fatalf("drop: %v", err)
 	}
 
-	if got := keys(t, path, "router"); len(got) != 0 {
-		t.Errorf("keys of cache id router %v, want none", got)
+	if got, want := keys(t, path, "router"), []string{"geo-binary", "geo-source"}; !slices.Equal(got, want) {
+		t.Errorf("keys of cache id router %v, want %v", got, want)
 	}
 	if got, want := keys(t, path, ""), []string{"geo", "other", "sub"}; !slices.Equal(got, want) {
 		t.Errorf("top level keys %v, want %v", got, want)
@@ -155,16 +155,31 @@ func TestDropRefusesWhatItCannotDo(t *testing.T) {
 	})
 
 	// A file cut short faults the bbolt reader in its mmap; the daemon must survive it.
-	for _, size := range []string{"one page", "half"} {
+	for _, size := range []string{"one page", "partial last used page"} {
 		t.Run("file cut to "+size, func(t *testing.T) {
-			data, err := os.ReadFile(fixture(t))
+			original := fixture(t)
+			db, err := bolt.Open(original, 0o600, &bolt.Options{ReadOnly: true})
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			cut := len(data) / 2
+			var cut int64
+			pageSize := db.Info().PageSize
+			err = db.View(func(tx *bolt.Tx) error {
+				cut = tx.Size() - 1
+				return nil
+			})
+			if closeErr := db.Close(); closeErr != nil {
+				t.Fatal(closeErr)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
 			if size == "one page" {
-				cut = 4096
+				cut = int64(pageSize)
+			}
+			data, err := os.ReadFile(original)
+			if err != nil {
+				t.Fatal(err)
 			}
 
 			path := filepath.Join(t.TempDir(), "cache.db")

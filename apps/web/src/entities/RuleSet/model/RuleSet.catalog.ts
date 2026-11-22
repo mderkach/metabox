@@ -1,5 +1,12 @@
-import { SET_EXTENSION } from './RuleSet.constants';
-import type { RuleSetCatalog, RuleSetList, RuleSetProvider, RuleSetSource } from './RuleSet.model';
+import { RULE_SET_TYPE, SET_EXTENSION } from './RuleSet.constants';
+import type {
+  RuleSetCatalog,
+  RuleSetDescription,
+  RuleSetList,
+  RuleSetProvider,
+  RuleSetSource,
+  RuleSetType,
+} from './RuleSet.model';
 
 const UNKNOWN_SOURCE: RuleSetSource = { providerId: null, providerName: null, kind: null, category: null };
 
@@ -61,6 +68,39 @@ export function describeURL(catalog: RuleSetCatalog, url: string): RuleSetSource
   }
 
   return UNKNOWN_SOURCE;
+}
+
+export function describeRuleSet(
+  type: RuleSetType,
+  location: string,
+  source: RuleSetSource,
+  catalog: RuleSetCatalog
+): RuleSetDescription {
+  if (type === RULE_SET_TYPE.Local) return { kind: type, path: location };
+  if (type === RULE_SET_TYPE.Inline) return { kind: type };
+  if (!URL.canParse(location)) return { kind: type, host: null, fileName: null };
+
+  const url = new URL(location);
+  const file = url.pathname.split('/').at(-1) ?? '';
+  const fileName = file === '' ? null : file;
+  const { providerId, providerName, kind, category } =
+    url.search || url.hash ? describeURL(catalog, `${url.origin}${url.pathname}`) : source;
+
+  if (
+    kind === null ||
+    providerName === null ||
+    category === null ||
+    category === '' ||
+    category.includes('/') ||
+    fileName === null
+  ) {
+    return { kind: type, host: url.host || null, fileName };
+  }
+
+  const primary = findList(catalog, providerId, kind)?.mirrors.at(0);
+  const mirrorHost = primary !== undefined && !url.href.startsWith(primary.base) ? url.host : null;
+
+  return { kind, providerName, category, fileName, mirrorHost };
 }
 
 const categorySets = new WeakMap<RuleSetList, ReadonlySet<string>>();

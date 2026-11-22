@@ -35,7 +35,7 @@ metabox installs on the router as one apk package. It contains the `metaboxd` da
 ## Features
 
 - Routing rules: search, add, delete, reorder; a form for each rule or the raw rule as JSON
-- Rule sets: attach remote and local sets, see which rules use each one
+- Rule sets: open a row to see its source and the rules that use it. Remote sets also show when the core last checked the address and the size of the saved copy.
 - Every config section as a form generated from the sing-box-extended schema; unknown fields are kept and marked
 - The whole config as text, with a line-by-line diff before applying
 - Apply with health checks and automatic rollback; version history with restore

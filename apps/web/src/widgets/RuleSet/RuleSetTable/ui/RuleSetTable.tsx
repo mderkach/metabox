@@ -1,8 +1,9 @@
 import { useTable } from '@tanstack/react-table';
-import { useMemo, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { RuleSetRow as RuleSetRowModel } from '@entities/RuleSet';
+import type { RuleSetRow as RuleSetRowModel, useCachedRuleSets } from '@entities/RuleSet';
+import type { CachedRuleSet } from '@entities/RuleSet';
 import { cn } from '@shared/lib/utils';
 import { SURFACE } from '@shared/ui';
 
@@ -29,10 +30,16 @@ export function RuleSetTable({
   empty,
   search = null,
   actions = null,
+  openedTag,
+  appliedTags,
+  cache,
   onEdit,
   onRemove,
 }: {
   sets: RuleSetRowModel[];
+  openedTag?: string;
+  appliedTags?: ReadonlySet<string>;
+  cache?: ReturnType<typeof useCachedRuleSets>;
   /** How many rule sets are in the config before filtering: the footer reports both values. */
   total: number;
   /** What to show instead of the list when filtering found nothing. */
@@ -49,6 +56,23 @@ export function RuleSetTable({
   const table = useTable({ features: RULE_SET_TABLE_FEATURES, columns: RULE_SET_COLUMNS, data: sets });
   const rows = table.getRowModel().rows;
   const shown = useMemo(() => rows.map((row) => row.original), [rows]);
+  const saved = useMemo(
+    () => new Map<string, CachedRuleSet>(cache?.data?.map((entry) => [entry.tag, entry])),
+    [cache?.data]
+  );
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() =>
+    openedTag === undefined ? new Set() : new Set([openedTag])
+  );
+  const toggleDetails = useCallback((tag: string) => {
+    setExpanded((previous) => {
+      const next = new Set(previous);
+
+      if (next.has(tag)) next.delete(tag);
+      else next.add(tag);
+
+      return next;
+    });
+  }, []);
 
   return (
     <section className={cn('flex min-w-0 grow flex-col overflow-hidden', SURFACE)}>
@@ -71,6 +95,12 @@ export function RuleSetTable({
                 key={set.id}
                 set={set}
                 rowIndex={position + 1 + HEADER_ROWS}
+                expanded={expanded.has(set.tag)}
+                reveal={set.tag === openedTag}
+                cached={saved.get(set.tag)}
+                draftOnly={appliedTags !== undefined && !appliedTags.has(set.tag)}
+                cache={cache}
+                onToggleDetails={toggleDetails}
                 onEdit={onEdit}
                 onRemove={onRemove}
               />
