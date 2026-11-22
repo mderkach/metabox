@@ -177,6 +177,35 @@ export interface DaemonProcess {
   goroutines: number;
 }
 
+interface TrafficVolume {
+  bytes: number;
+  /** Bytes per second over the latest daemon interval. */
+  rate: number;
+  origin: string;
+}
+
+interface TaggedTraffic extends TrafficVolume {
+  tag: string;
+}
+
+interface OutboundTraffic extends TaggedTraffic {
+  final?: TrafficVolume;
+}
+
+interface BlockedLogKind {
+  used: boolean;
+  visible: boolean;
+}
+
+interface BlockedConnections {
+  /** Absent when a used kind cannot be counted from the core log. */
+  count?: number;
+  incomplete?: boolean;
+  origin: string;
+  reject: BlockedLogKind;
+  block: BlockedLogKind;
+}
+
 /** Device readings: the `system` topic of the single stream. */
 export interface SystemStat {
   load: SystemLoad;
@@ -185,6 +214,9 @@ export interface SystemStat {
   uplink?: SystemUplink;
   /** Channel and sing-box volumes over the daemon observation time. */
   share: TrafficShare;
+  outbounds?: OutboundTraffic[];
+  servers?: TaggedTraffic[];
+  blocked?: BlockedConnections;
   /** Empty when the routing process is not found on the device. */
   singbox?: SystemProcess;
   daemon: DaemonProcess;

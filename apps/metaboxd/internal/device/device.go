@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"metabox/internal/history"
+	"metabox/internal/logs"
 )
 
 const (
@@ -86,7 +87,10 @@ type Stat struct {
 	// Uplink is empty when there is no default route.
 	Uplink *Link `json:"uplink,omitempty"`
 	// Share is the volumes of the channel and of sing-box during the daemon observation.
-	Share Share `json:"share"`
+	Share     Share                `json:"share"`
+	Outbounds *[]OutboundTraffic   `json:"outbounds,omitempty"`
+	Servers   *[]ServerTraffic     `json:"servers,omitempty"`
+	Blocked   *logs.BlockedTraffic `json:"blocked,omitempty"`
 	// Singbox is empty when the process is not found: there may be no routing on the device
 	// at all.
 	Singbox *Process `json:"singbox,omitempty"`
@@ -113,7 +117,9 @@ type Options struct {
 	// History accumulates the readings. nil means nobody keeps a history.
 	History Recorder
 	// Split is the sing-box volume by connection kind. nil means it is not counted.
-	Split VolumeSplit
+	Split   VolumeSplit
+	Traffic func() history.TrafficTotals
+	Blocked func() logs.BlockedTraffic
 	// Now is replaced in tests: the observation window is counted from the first taking
 	// of readings, and a test must not wait for it in real seconds.
 	Now func() time.Time
@@ -126,6 +132,8 @@ type Reader struct {
 	port    PortResolver
 	history Recorder
 	split   VolumeSplit
+	traffic func() history.TrafficTotals
+	blocked func() logs.BlockedTraffic
 	now     func() time.Time
 
 	// link and proxy accumulate counter increments: the reader counts the channel itself,
@@ -150,7 +158,10 @@ type Reader struct {
 
 // New assembles the reader. Empty roots take device values.
 func New(opts Options) *Reader {
-	reader := &Reader{proc: opts.Proc, sys: opts.Sys, port: opts.Port, history: opts.History, split: opts.Split, now: opts.Now}
+	reader := &Reader{
+		proc: opts.Proc, sys: opts.Sys, port: opts.Port, history: opts.History,
+		split: opts.Split, traffic: opts.Traffic, blocked: opts.Blocked, now: opts.Now,
+	}
 
 	if reader.proc == "" {
 		reader.proc = defaultProc
@@ -212,6 +223,15 @@ func (r *Reader) Encoded(log *slog.Logger) func(ctx context.Context) (json.RawMe
 		stat, err := r.Read(ctx)
 		if err != nil {
 			log.Debug("device readings read partially", "err", err)
+		}
+
+		if r.traffic != nil {
+			stat.setTraffic(r.traffic())
+		}
+
+		if r.blocked != nil {
+			blocked := r.blocked()
+			stat.Blocked = &blocked
 		}
 
 		return json.Marshal(stat)
