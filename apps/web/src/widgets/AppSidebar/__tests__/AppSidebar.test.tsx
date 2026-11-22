@@ -15,6 +15,19 @@ import {
 import { AppSidebar } from '../ui/AppSidebar';
 
 describe('AppSidebar', () => {
+  it('lists How metabox works before Overview on desktop', async () => {
+    server.use(
+      http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
+      http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
+    );
+    renderWithRouter(AppSidebar);
+
+    await screen.findByRole('link', { name: 'Как работает metabox' });
+    const paths = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
+
+    expect(paths.indexOf('/how-it-works')).toBeLessThan(paths.indexOf('/overview'));
+  });
+
   // Regression: react-query keeps the last successful service value, and without
   // the daemon availability check the dot would stay green on top of the
   // "metabox is not responding" banner.

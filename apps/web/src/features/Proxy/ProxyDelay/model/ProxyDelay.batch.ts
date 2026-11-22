@@ -44,7 +44,11 @@ export function useTestProxyDelays() {
 
         return success;
       } finally {
-        await queryClient.invalidateQueries({ queryKey: PROXY_QUERY.list() });
+        await queryClient.cancelQueries({ queryKey: PROXY_QUERY.latency() });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: PROXY_QUERY.list() }),
+          queryClient.invalidateQueries({ queryKey: PROXY_QUERY.latency() }),
+        ]);
         running.current = false;
         setPending(false);
       }

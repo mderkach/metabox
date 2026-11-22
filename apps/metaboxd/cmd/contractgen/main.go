@@ -22,6 +22,7 @@ var roots = []rootType{
 	{pkg: "internal/contract", name: "Versions"},
 	{pkg: "internal/contract", name: "Service"},
 	{pkg: "internal/contract", name: "History"},
+	{pkg: "internal/contract", name: "LatencyHistory"},
 	{pkg: "internal/contract", name: "Error"},
 	{pkg: "internal/contract", name: "CheckDetails"},
 	{pkg: "internal/contract", name: "WorkdirDetails"},

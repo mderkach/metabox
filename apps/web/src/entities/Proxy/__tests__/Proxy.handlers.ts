@@ -1,7 +1,10 @@
 import { http, HttpResponse } from 'msw';
 
+import type { LatencyHistoryWire, LatencyResultWire } from '@shared/api/daemon.generated';
+
 import { PROXY_ENDPOINT } from '../api/Proxy.endpoints';
 import type { ClashProvidersWire, ClashProxiesWire } from '../api/Proxy.schema';
+import { DELAY_TIMEOUT, GROUP_TYPES } from '../model/Proxy.model';
 import { CLASH_DELAY_FIXTURE, CLASH_PROVIDERS_FIXTURE, CLASH_PROXIES_FIXTURE } from './Proxy.fixture';
 
 /**
@@ -13,6 +16,7 @@ const NODE_PATTERN = '*';
 
 /** The node the dev mock keeps silent, so the "did not answer" state can be seen. */
 const SILENT_NODE = 'sub-nl/nl-reality';
+const RECENT_LATENCY_LIMIT = 10;
 
 /** Group name from the address: in the path it is encoded, and the state key must be the original. */
 function toGroupName(url: string): string {
@@ -44,6 +48,7 @@ function readOnlyHandlers() {
 
 /** Proxy handlers the daemon does not have yet: shapes taken from the device. */
 export const proxyHandlers = [
+  http.get(PROXY_ENDPOINT.latency(), () => HttpResponse.json({ servers: [] })),
   http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(CLASH_PROXIES_FIXTURE)),
   http.get(PROXY_ENDPOINT.providers(), () => HttpResponse.json(CLASH_PROVIDERS_FIXTURE)),
   http.put(PROXY_ENDPOINT.provider(NODE_PATTERN), () => new HttpResponse(null, { status: 204 })),
@@ -62,16 +67,20 @@ export const proxyHandlers = [
  * State lives in the factory closure, so it cannot get into tests:
  * they use `proxyHandlers`, which has no state of its own.
  */
-export function createStatefulProxyHandlers() {
+export function createStatefulProxyHandlers(
+  initialProxies = CLASH_PROXIES_FIXTURE,
+  initialProviders = CLASH_PROVIDERS_FIXTURE
+) {
   const chosen = new Map<string, string>();
   const silent = new Set<string>();
+  const measurements = new Map<string, LatencyResultWire[]>();
   /** Subscription → the time of its last manual update. */
   const updated = new Map<string, string>();
 
   // The mock answers in the wire shape, so the selection is set right in it:
   // the model `withSelectedNode` works with groups that do not exist here yet.
   function snapshot(): ClashProxiesWire {
-    const proxies = { ...CLASH_PROXIES_FIXTURE.proxies };
+    const proxies = { ...initialProxies.proxies };
 
     for (const [group, node] of chosen) {
       if (Object.hasOwn(proxies, group)) {
@@ -86,8 +95,48 @@ export function createStatefulProxyHandlers() {
     return { proxies };
   }
 
+  function record(tag: string, delay?: number): void {
+    const point = { at: new Date().toISOString(), ...(delay === undefined ? {} : { delay_ms: delay }) };
+    measurements.set(tag, [...(measurements.get(tag) ?? []), point].slice(-RECENT_LATENCY_LIMIT));
+  }
+
+  function latency(): LatencyHistoryWire {
+    return {
+      servers: Object.values(CLASH_PROXIES_FIXTURE.proxies)
+        .filter((proxy) => !GROUP_TYPES.has(proxy.type) && proxy.type !== 'Direct')
+        .map((proxy) => {
+          const manual = measurements.get(proxy.name) ?? [];
+          const current = manual.at(-1);
+          const knownDelay = proxy.history.at(0)?.delay;
+          const usual = knownDelay !== undefined && knownDelay < DELAY_TIMEOUT ? knownDelay : undefined;
+          const recent = [
+            ...proxy.history.map((point) => ({
+              at: point.time,
+              ...(point.delay < DELAY_TIMEOUT ? { delay_ms: point.delay } : {}),
+            })),
+            ...manual,
+          ].slice(-RECENT_LATENCY_LIMIT);
+          let level = 'no_measurement';
+
+          if (current !== undefined) {
+            level = current.delay_ms === undefined ? 'no_answer' : 'within_norm';
+          }
+
+          return {
+            tag: proxy.name,
+            ...(current === undefined ? {} : { current }),
+            ...(usual === undefined ? {} : { usual_ms: usual }),
+            recent,
+            hourly: [],
+            level,
+            origin: 'computed',
+          };
+        }),
+    };
+  }
+
   function providers(): ClashProvidersWire {
-    const result = { ...CLASH_PROVIDERS_FIXTURE.providers };
+    const result = { ...initialProviders.providers };
 
     for (const [name, updatedAt] of updated) {
       if (Object.hasOwn(result, name)) {
@@ -102,6 +151,7 @@ export function createStatefulProxyHandlers() {
   }
 
   return [
+    http.get(PROXY_ENDPOINT.latency(), () => HttpResponse.json(latency())),
     http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(snapshot())),
     http.get(PROXY_ENDPOINT.providers(), () => HttpResponse.json(providers())),
     http.put(PROXY_ENDPOINT.provider(NODE_PATTERN), function rememberUpdate({ request }) {
@@ -113,10 +163,17 @@ export function createStatefulProxyHandlers() {
     // One node never answers, as the fork reports it: an error status, and the history is dropped.
     http.get(PROXY_ENDPOINT.proxyDelay(SILENT_NODE), () => {
       silent.add(SILENT_NODE);
+      record(SILENT_NODE);
 
       return HttpResponse.json({ message: 'An error occurred in the delay test' }, { status: 503 });
     }),
-    ...readOnlyHandlers(),
+    http.get(PROXY_ENDPOINT.proxyDelay(NODE_PATTERN), ({ request }) => {
+      const path = new URL(request.url).pathname;
+      const tag = toGroupName(new URL(path.slice(0, -'/delay'.length), request.url).href);
+      record(tag, CLASH_DELAY_FIXTURE.delay);
+
+      return HttpResponse.json(CLASH_DELAY_FIXTURE);
+    }),
 
     http.put(PROXY_ENDPOINT.proxy(NODE_PATTERN), async function rememberSelect({ request }) {
       const node = toChosenNode(await request.json());

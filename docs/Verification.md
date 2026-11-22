@@ -580,6 +580,62 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-103 | go-test | `apps/metaboxd/internal/events/pinned_source_test.go`                       | `TestPinnedControllerUsesNewConnections`                                            |
 | AC-34  | vitest  | `apps/web/src/pages/Editor/__tests__/EditorPage.test.tsx`                   | `closes an opened guarded position when the applied config is reordered`            |
 
+### How metabox works
+
+| ID     | Kind   | File                                                                     | Check                                                                                                   |
+| ------ | ------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| AC-105 | vitest | `apps/web/src/app/router/__tests__/Router.test.tsx`                      | `opens How metabox works at its own address`                                                            |
+| AC-105 | vitest | `apps/web/src/app/router/__tests__/Router.test.tsx`                      | `on a phone opens Overview from the root`                                                               |
+| AC-105 | vitest | `apps/web/src/widgets/AppSidebar/__tests__/AppSidebar.test.tsx`          | `lists How metabox works before Overview on desktop`                                                    |
+| AC-105 | vitest | `apps/web/src/widgets/AppSidebar/__tests__/AppSidebarBottomNav.test.tsx` | `puts How metabox works first in More and keeps five bottom links`                                      |
+| AC-106 | vitest | `apps/web/src/entities/Proxy/__tests__/Proxy.adapter.test.ts`            | `retains the names of the servers alongside their count`                                                |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorks.model.test.ts`       | `offers one example of each kind in order and keeps backups without reshuffling equally preferred rows` |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorks.model.test.ts`       | `names a known device and retains the destination supplied by the connection`                           |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorks.model.test.ts`       | `uses the explanation chain to nest groups and show the server and its provider`                        |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorks.model.test.ts`       | `retains only the conditions and action when the rule position is unverified`                           |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorks.model.test.ts`       | `keeps the verified rule number when there is no proved editor position`                                |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorks.model.test.ts`       | `shows a direct exit and no server with the chain origin`                                               |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `keeps the terms but shows no invented connection`                                                      |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `points to Overview when the core is stopped`                                                           |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `follows a live group then a direct connection without reshuffling on new frames`                       |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `shows the origin on each step taken from the route explanation`                                        |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `keeps the last explanation after the connection closes`                                                |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `replaces a connection that closes before the explanation arrives`                                      |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `shows the request failure with a retry and keeps the glossary available`                               |
+| AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `opens a term directly below the selected step on a phone`                                              |
+| AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `keeps rule and service links at their lists when the rule is unverified`                               |
+| AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `defines and links all eight terms in %s`                                                               |
+| AC-107 | vitest | `apps/web/tools/vocabulary.test.ts`                                      | `finds no forbidden word in the panel dictionaries and the daemon texts`                                |
+| AC-105 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorks.model.test.ts`       | `retains an unknown outbound tag and does not turn a detour into groups`                                |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `shows the confirmed applied rule $label and links its first service`                                   |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `keeps only the observed condition when the confirmed reference names another revision`                 |
+| AC-106 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `shows the nested services of a logical rule in document order`                                         |
+| AC-106 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
+| AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `shows the confirmed applied rule $label and links its first service`                                   |
+| AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `retains the applied label and opens the rule list after the draft reorders rules`                      |
+| AC-107 | vitest | `apps/web/src/pages/HowItWorks/__tests__/HowItWorksPage.test.tsx`        | `clears a verified service link when the core stops`                                                    |
+| AC-107 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
+| AC-107 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `opens the verified applied rule from the walk`                                                         |
+
+### Server latency
+
+| ID     | Kind    | File                                                          | Check                                                                                      |
+| ------ | ------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| AC-102 | go-test | `apps/metaboxd/internal/clashapi/latency_test.go`             | `TestReadLatencyProjectsServersAndPreservesZero`                                           |
+| AC-102 | go-test | `apps/metaboxd/internal/clashapi/latency_test.go`             | `TestReadLatencyDistinguishesEmptySnapshotFromUnavailable`                                 |
+| AC-102 | go-test | `apps/metaboxd/internal/clashapi/latency_test.go`             | `TestIsLatencyServerChecksExactEscapedTag`                                                 |
+| AC-102 | go-test | `apps/metaboxd/internal/history/latency_test.go`              | `TestLatencyWaitsForManualCheckAfterEachCoreStart`                                         |
+| AC-102 | go-test | `apps/metaboxd/internal/history/latency_test.go`              | `TestLatencyDoesNotTurnStalePollsOrRemovedServersIntoFailure`                              |
+| AC-102 | go-test | `apps/metaboxd/internal/history/latency_test.go`              | `TestLatencyUsesCompletedHourlyMediansAndThreeSlowChecks`                                  |
+| AC-102 | go-test | `apps/metaboxd/internal/history/latency_test.go`              | `TestLatencyBoundsRetainedObservationsAndServers`                                          |
+| AC-102 | go-test | `apps/metaboxd/internal/history/latency_test.go`              | `TestLatencyBoundsTheSamplesUsedForAnHourlyMedian`                                         |
+| AC-102 | go-test | `apps/metaboxd/internal/events/latency_test.go`               | `TestLatencyMonitorRecordsManualProbeWithoutRevivingOldCore`                               |
+| AC-102 | go-test | `apps/metaboxd/internal/events/latency_test.go`               | `TestLatencyMonitorCountsProbeOnceWhenCacheUpdatesBeforeResponse`                          |
+| AC-102 | go-test | `apps/metaboxd/internal/device/device_test.go`                | `TestControllerEpochTracksListenerOwnerAndStart`                                           |
+| AC-102 | go-test | `apps/metaboxd/internal/httpapi/latency_test.go`              | `TestLatencyEndpointKeepsHistoryWithoutCurrentMeasurement`                                 |
+| AC-102 | vitest  | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx` | `gates current delay on a manual check in this core run and retains history after restart` |
+
 ## Checked by hand on purpose
 
 These parts stay by hand: a test on the bench or in CI would not show them. A row names the scenario and why it cannot be automated.

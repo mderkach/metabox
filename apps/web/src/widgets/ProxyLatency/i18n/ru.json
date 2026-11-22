@@ -1,5 +1,12 @@
 {
   "title": "Задержка серверов",
-  "scale": "шкала 0–{{ceiling}} мс, быстро — до {{fast}} мс",
-  "empty": "Групп с выбранным выходом нет"
+  "scale": "шкала 0–{{ceiling}} мс",
+  "empty": "Нет доступных серверов",
+  "usual": "Обычно {{value}} мс",
+  "usualComputed": "Обычно {{value}} мс (расчёт)",
+  "aboveNorm": "Выше нормы",
+  "aboveCeiling": "Выше предела",
+  "history": "Последние замеры",
+  "historyServer": "Замеры {{name}}",
+  "testServer": "Проверить задержку {{name}}"
 }

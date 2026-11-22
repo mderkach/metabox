@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"metabox/internal/procd"
 )
 
 // errNoPort means the Clash API port is unknown: without it there is nothing
@@ -248,4 +250,55 @@ func (r *Reader) ControllerListener(ctx context.Context, pid, port int) string {
 	slices.Sort(owned)
 
 	return strings.Join(owned, ",")
+}
+
+// ControllerEpoch identifies the local core process and its controller listener.
+// A reload can change the listener without changing the PID.
+func (r *Reader) ControllerEpoch(ctx context.Context, port int) string {
+	r.mu.Lock()
+	pid := r.pid
+	r.mu.Unlock()
+
+	if epoch := r.controllerEpoch(ctx, pid, port); epoch != "" {
+		return epoch
+	}
+
+	inodes, err := r.listenerInodes(port)
+	if err != nil || len(inodes) == 0 {
+		return ""
+	}
+
+	pid, err = r.ownerOf(ctx, inodes)
+	if err != nil {
+		return ""
+	}
+
+	epoch := r.controllerEpoch(ctx, pid, port)
+	if epoch != "" {
+		r.mu.Lock()
+		r.pid = pid
+		r.mu.Unlock()
+	}
+
+	return epoch
+}
+
+func (r *Reader) controllerEpoch(ctx context.Context, pid, port int) string {
+	if pid <= 0 {
+		return ""
+	}
+	comm, err := readTrimmed(filepath.Join(r.proc, strconv.Itoa(pid), "comm"))
+	if err != nil || comm != singboxComm {
+		return ""
+	}
+	started, err := procd.ProcessStart(ctx, r.proc, pid)
+	if err != nil {
+		return ""
+	}
+	listener := r.ControllerListener(ctx, pid, port)
+	if listener == "" {
+		return ""
+	}
+
+	return fmt.Sprintf("%d:%d:%s", pid, started, listener)
 }
