@@ -334,8 +334,8 @@ importers:
         specifier: 7.16.2
         version: 7.16.2(eslint@10.10.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@7.0.2)
       impeccable:
-        specifier: 4.8.0
-        version: 4.8.0
+        specifier: 4.10.0
+        version: 4.10.0
       jsdom:
         specifier: 30.1.0
         version: 30.1.0
@@ -869,32 +869,32 @@ packages:
   '@iarna/toml@2.2.5':
     resolution: {integrity: sha512-trnsAYxU3xnS1gPHPyU961coFyLkh4gAD/0zQ5mymY4yOZ+CYvsPqUbOFSw0aDM4y0tV7tiFxL/1XfXPNC6IPg==}
 
-  '@impeccable/cli-darwin-arm64@0.1.18':
-    resolution: {integrity: sha512-Uhs8Vu8lNnwanaPnAY1TeIqQP0h+qPApAAyZozG5JZOgF++U6tFPpA0X1hsXwbwS1ldiZ8zCbkeWp1TgHhQoDw==}
+  '@impeccable/cli-darwin-arm64@0.1.27':
+    resolution: {integrity: sha512-RUnJwxqORDpPf6ctQcAoij2bTXUD26LMb8+mPj/Bw5l1WQBfyCnAH0EeSC3JgmEW83IoKJ2t6WmAxckgevENIQ==}
     cpu: [arm64]
     os: [darwin]
     hasBin: true
 
-  '@impeccable/cli-darwin-x64@0.1.18':
-    resolution: {integrity: sha512-oEdi45ONAkBsWdAAv5V/vzUJJ+aw4qDZlvjWFaVy1QIsSY0tgGK7VUz4aXzCYctdojBL9naEkmA7geNnRHWnAQ==}
+  '@impeccable/cli-darwin-x64@0.1.27':
+    resolution: {integrity: sha512-OCcyITqGiiAwJhbCavjJiTFN6FWQhq2d7BOgFrjRn4QmRZcyDAUmgDSE51oBXsraXh1QN3KPlevwNRmgqJ+Q9w==}
     cpu: [x64]
     os: [darwin]
     hasBin: true
 
-  '@impeccable/cli-linux-arm64@0.1.18':
-    resolution: {integrity: sha512-LHqLzy8YWy8U+xOJm5hGgAZrr5YRoZ0ic3eixSx32XT3OYhkwf6ubJgIFT6L2M/qg/dXaucskGVBG4KV9RQGRw==}
+  '@impeccable/cli-linux-arm64@0.1.27':
+    resolution: {integrity: sha512-mUomPpnEWAC9HGWIjEM7A9AHlAh8fkDkmqpghq4BsICVquQ2Z9a8haTFiQz5d/Xy4j0MRYGhcLj5RC8rYLPaog==}
     cpu: [arm64]
     os: [linux]
     hasBin: true
 
-  '@impeccable/cli-linux-x64@0.1.18':
-    resolution: {integrity: sha512-cksllv5f/VryElehX8CcKCIOSpTHCKX9iLRxCre4A8cqtjmNsDKc8jtVO87hvfmCKISXKzHXfZGEIpJyGEiiBA==}
+  '@impeccable/cli-linux-x64@0.1.27':
+    resolution: {integrity: sha512-gvJUVnuW11/FILcqeLZ1QpGssXHd4OdaExQCi9l/VM0egIN4yQciLeI7WSlDCwd6NC9TCrTcLAfbAkJadYCgZg==}
     cpu: [x64]
     os: [linux]
     hasBin: true
 
-  '@impeccable/cli-windows-x64@0.1.18':
-    resolution: {integrity: sha512-gQa/hDCMeJPdanY8/F6dm+HX8CRUWw0qZemcmS7RnZoI1NFgPi8iYZ+PSA5m+KG/vf/fmkQrVEUJaZRIeHu9Pg==}
+  '@impeccable/cli-windows-x64@0.1.27':
+    resolution: {integrity: sha512-i1vn/sq00PEQ/lhkiF6OsG0w5xym9F7qv/p2vS1uy3bDxavt2DdJq46i/m7/DNqrsKP7PdjiaU2kwmqBcEN1jQ==}
     cpu: [x64]
     os: [win32]
     hasBin: true
@@ -3230,8 +3230,8 @@ packages:
   immer@11.1.18:
     resolution: {integrity: sha512-EQyQtLiYW029lyoczMl/Hh4Xu7cDecSc58JRYpHyL4tIAu3eqd1yJzQX04d2BZHDkzFFvm6qJEJWOtfDSWAXbQ==}
 
-  impeccable@4.8.0:
-    resolution: {integrity: sha512-e0+wbJppJMiQN8npKmIkBbKetfSlarak7OIGlsRhc8folekz4PgStjuprhYi+imjqBb6OCMJLV9II2hHGmcCyg==}
+  impeccable@4.10.0:
+    resolution: {integrity: sha512-eEyW+lJiwwHa6mCQEYoILtA98aTfuiIz61oEFkupvvtfYx5/Uodee3xnrUwihcLw5/XxC7ei4VV0H4Xsh08oxw==}
     engines: {node: '>=18.19.0'}
     hasBin: true
 
@@ -5405,19 +5405,19 @@ snapshots:
 
   '@iarna/toml@2.2.5': {}
 
-  '@impeccable/cli-darwin-arm64@0.1.18':
+  '@impeccable/cli-darwin-arm64@0.1.27':
     optional: true
 
-  '@impeccable/cli-darwin-x64@0.1.18':
+  '@impeccable/cli-darwin-x64@0.1.27':
     optional: true
 
-  '@impeccable/cli-linux-arm64@0.1.18':
+  '@impeccable/cli-linux-arm64@0.1.27':
     optional: true
 
-  '@impeccable/cli-linux-x64@0.1.18':
+  '@impeccable/cli-linux-x64@0.1.27':
     optional: true
 
-  '@impeccable/cli-windows-x64@0.1.18':
+  '@impeccable/cli-windows-x64@0.1.27':
     optional: true
 
   '@inquirer/ansi@2.0.8': {}
@@ -7390,13 +7390,13 @@ snapshots:
   immer@11.1.18:
     optional: true
 
-  impeccable@4.8.0:
+  impeccable@4.10.0:
     optionalDependencies:
-      '@impeccable/cli-darwin-arm64': 0.1.18
-      '@impeccable/cli-darwin-x64': 0.1.18
-      '@impeccable/cli-linux-arm64': 0.1.18
-      '@impeccable/cli-linux-x64': 0.1.18
-      '@impeccable/cli-windows-x64': 0.1.18
+      '@impeccable/cli-darwin-arm64': 0.1.27
+      '@impeccable/cli-darwin-x64': 0.1.27
+      '@impeccable/cli-linux-arm64': 0.1.27
+      '@impeccable/cli-linux-x64': 0.1.27
+      '@impeccable/cli-windows-x64': 0.1.27
 
   import-fresh@3.3.1:
     dependencies:
