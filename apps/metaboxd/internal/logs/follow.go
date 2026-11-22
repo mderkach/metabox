@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -36,23 +37,36 @@ func (r *Reader) Follow(ctx context.Context, minLevel Level, emit func(Entry)) (
 		return nil, err
 	}
 
-	f := r.filter(minLevel)
+	done, err := r.startFollow(ctx, src, r.filter(minLevel), emit, release, fileFollowOptions{})
+	if err != nil {
+		release()
+	}
+
+	return done, err
+}
+
+type fileFollowOptions struct {
+	watchMissing bool
+	onGap        func()
+}
+
+func (r *Reader) startFollow(
+	ctx context.Context, src source, f filter, emit func(Entry), release func(), opts fileFollowOptions,
+) (<-chan error, error) {
 	done := make(chan error, 1)
 
 	if src.file != "" {
 		// The end of the file is taken before returning: a line appended right after
 		// the stream opened could otherwise get into the count and not reach the panel.
-		offset, err := fileSize(src.file)
-		if err != nil {
-			release()
-
+		info, err := inspectFile(src.file)
+		if err != nil && (!opts.watchMissing || !errors.Is(err, os.ErrNotExist)) {
 			return nil, fmt.Errorf("%w: %w", ErrUnavailable, err)
 		}
 
 		go func() {
-			r.followFile(ctx, src.file, offset, f, emit)
+			err := r.followFile(ctx, src.file, info, f, emit, opts.onGap)
 			release()
-			done <- nil
+			done <- err
 		}()
 
 		return done, nil
@@ -60,8 +74,6 @@ func (r *Reader) Follow(ctx context.Context, minLevel Level, emit func(Entry)) (
 
 	out, err := r.start(ctx, r.opts.Logread, "-f", "-e", r.opts.Process)
 	if err != nil {
-		release()
-
 		return nil, fmt.Errorf("%w: %w", ErrUnavailable, err)
 	}
 
@@ -88,7 +100,9 @@ func (r *Reader) Follow(ctx context.Context, minLevel Level, emit func(Entry)) (
 // followFile polls the file size: the standard library has no inotify.
 // A file that became shorter (truncated by cleanup or replaced) is read from the start;
 // a vanished file is waited for until cancellation.
-func (r *Reader) followFile(ctx context.Context, path string, offset int64, f filter, emit func(Entry)) {
+func (r *Reader) followFile(
+	ctx context.Context, path string, previous os.FileInfo, f filter, emit func(Entry), onGap func(),
+) error {
 	ticker := time.NewTicker(r.opts.PollInterval)
 	defer ticker.Stop()
 
@@ -97,22 +111,28 @@ func (r *Reader) followFile(ctx context.Context, path string, offset int64, f fi
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 		case <-ticker.C:
 		}
 
-		chunk, size, err := readFrom(path, offset)
-		if err != nil {
+		chunk, err := readFrom(path, previous)
+		if errors.Is(err, os.ErrNotExist) {
 			continue
 		}
+		if err != nil {
+			return fmt.Errorf("%w: %w", ErrUnavailable, err)
+		}
 
-		if size < offset {
+		if chunk.gap && onGap != nil {
+			onGap()
+		}
+		if chunk.reset {
 			partial = ""
 		}
 
-		offset = size
+		previous = chunk.info
 
-		lines := strings.Split(partial+chunk, "\n")
+		lines := strings.Split(partial+chunk.lines, "\n")
 		partial = lines[len(lines)-1]
 
 		if len(partial) > lineLimit {
@@ -127,47 +147,68 @@ func (r *Reader) followFile(ctx context.Context, path string, offset int64, f fi
 	}
 }
 
-func fileSize(path string) (int64, error) {
+func inspectFile(path string) (os.FileInfo, error) {
 	info, err := os.Stat(path)
 	if err != nil {
-		return 0, err
+		return nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("%w: expected a regular log file", ErrUnavailable)
 	}
 
-	return info.Size(), nil
+	return info, nil
 }
 
-// readFrom returns the file bytes from offset to the end and the new size. A file shorter than
-// offset is read from the start. No more than fileTailBytes is read per poll:
-// a write burst does not take memory beyond that.
-func readFrom(path string, offset int64) (string, int64, error) {
-	f, err := os.Open(path)
+type fileChunk struct {
+	lines string
+	info  os.FileInfo
+	reset bool
+	gap   bool
+}
+
+// readFrom bounds memory by dropping the oldest bytes of a burst. A shorter or
+// replaced file starts a new line stream, even when the replacement is already larger.
+func readFrom(path string, previous os.FileInfo) (fileChunk, error) {
+	if _, err := inspectFile(path); err != nil {
+		return fileChunk{}, err
+	}
+
+	// A path replaced with a FIFO between stat and open must not block shutdown.
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
-		return "", 0, err
+		return fileChunk{}, err
 	}
 	defer func() { _ = f.Close() }()
 
 	info, err := f.Stat()
 	if err != nil {
-		return "", 0, err
+		return fileChunk{}, err
+	}
+	if !info.Mode().IsRegular() {
+		return fileChunk{}, fmt.Errorf("%w: expected a regular log file", ErrUnavailable)
 	}
 
 	size := info.Size()
-	if size < offset {
-		offset = 0
+	var offset int64
+	reset := previous == nil || !os.SameFile(previous, info) || size < previous.Size()
+
+	if !reset {
+		offset = previous.Size()
 	}
 
 	start := max(offset, size-fileTailBytes)
 
 	data, err := io.ReadAll(io.NewSectionReader(f, start, size-start))
 	if err != nil {
-		return "", 0, err
+		return fileChunk{}, err
 	}
 
 	if start > offset {
 		_, after, _ := strings.Cut(string(data), "\n")
 
-		return after, size, nil
+		return fileChunk{lines: after, info: info, reset: true, gap: true}, nil
 	}
 
-	return string(data), size, nil
+	// A replacement or truncation can discard an unread tail between polls.
+	return fileChunk{lines: string(data), info: info, reset: reset, gap: previous != nil && reset}, nil
 }

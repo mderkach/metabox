@@ -6,7 +6,7 @@
 
 ## Context and problem statement
 
-AC-89, a proposal in [`traffic-split-by-outbound`](../../openspec/changes/traffic-split-by-outbound/proposal.md), requires the overview to split the traffic that passed through sing-box into "through a proxy", "direct" and "rejected", and to count the channel share over the proxied part only. The daemon accumulates the split together with the AC-37 history ([ADR-0015](./ADR-0015-keep-traffic-history-in-the-daemon.md)).
+The Overview traffic split separates the bytes that passed through sing-box through a proxy, directly or into a reject. The internet share counts only proxied traffic toward the proxy total. AC-97 in [`overview-for-newcomers`](../../openspec/changes/overview-for-newcomers/proposal.md) uses this split. The daemon accumulates the split together with the AC-37 history ([ADR-0015](./ADR-0015-keep-traffic-history-in-the-daemon.md)).
 
 Facts from the code and the fork:
 
@@ -71,7 +71,7 @@ The problem: a per-connection sum over snapshots misses the bytes a connection s
 
 ## Links
 
-- [`docs/PRD.md`](../PRD.md): AC-89; [`overview`](../../openspec/specs/overview/spec.md): AC-35, AC-37; issue #209;
+- [`overview-for-newcomers`](../../openspec/changes/overview-for-newcomers/specs/overview/spec.md): AC-97; [`overview`](../../openspec/specs/overview/spec.md): AC-35, AC-37; issue #209;
 - [ADR-0015](./ADR-0015-keep-traffic-history-in-the-daemon.md), [ADR-0029](./ADR-0029-count-rule-hits-in-the-daemon-from-connection-snapshots.md);
 - `apps/metaboxd/internal/history/volume.go`, `apps/metaboxd/internal/route/volume.go`, `apps/metaboxd/internal/device/share.go`;
 - `apps/web/src/pages/Overview/ui/OverviewTraffic.tsx`.
