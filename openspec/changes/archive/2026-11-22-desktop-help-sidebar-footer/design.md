@@ -6,7 +6,7 @@ Where can a user find the full connection walkthrough without interrupting the m
 
 ## Implementation
 
-Keep one help destination in the navigation model. Use a desktop section list and a phone list with help at the top for More. Keep route transitions based on the desktop navigation order under [ADR-0026](../../../docs/adr/ADR-0026-animate-screen-changes-with-the-router-and-in-page-changes-with-react.md). The footer uses the same inactive, hover, focus and active styles as the main section links. The help content, path and router redirects are independent of placement.
+Keep one help destination in the navigation model. Use a desktop section list and a phone list with help at the top for More. Keep route transitions based on the desktop navigation order under [ADR-0026](../../../../docs/adr/ADR-0026-animate-screen-changes-with-the-router-and-in-page-changes-with-react.md). The footer uses the same inactive, hover, focus and active styles as the main section links. The help content, path and router redirects are independent of placement.
 
 ## Alternatives considered
 
