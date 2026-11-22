@@ -253,13 +253,21 @@ function withWidgets(plan: readonly FieldPlan[], widgets: NonNullable<NodeOverri
  * (`tls.server_name`), and leaves its group: one field, one control. Without an
  * override there are no main fields, and the form follows the schema as is.
  */
-export function arrangePlan(plan: readonly FieldPlan[], override: NodeOverride | null): NodeFormLayout {
+export function arrangePlan(
+  plan: readonly FieldPlan[],
+  override: NodeOverride | null,
+  node: ConfigNodeFormModel
+): NodeFormLayout {
   if (override === null) {
     return { primary: [], rest: [...plan] };
   }
 
   const fields = override.widgets === undefined ? plan : withWidgets(plan, override.widgets);
   const primary = override.primary.flatMap((name) => {
+    if (override.showPrimary?.(name, node) === false) {
+      return [];
+    }
+
     const field = findField(fields, name);
 
     return field === null ? [] : [{ ...field, key: name }];

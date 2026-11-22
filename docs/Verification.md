@@ -637,6 +637,33 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-102 | go-test | `apps/metaboxd/internal/httpapi/latency_test.go`              | `TestLatencyEndpointKeepsHistoryWithoutCurrentMeasurement`                                 |
 | AC-102 | vitest  | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx` | `gates current delay on a manual check in this core run and retains history after restart` |
 
+### VLESS link import and REALITY recovery
+
+| ID     | Kind   | File                                                                                      | Check                                                                                                          |
+| ------ | ------ | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| AC-111 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.link.test.ts`         | `keeps the explicit Reality hybrid key share value`                                                            |
+| AC-111 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.link.test.ts`         | `reports the hybrid key share when the target schema does not support it`                                      |
+| AC-111 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.link.test.ts`         | `reports each omitted VLESS parameter once by its decoded name`                                                |
+| AC-111 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.link.test.ts`         | `reports settings that the selected transport and security cannot apply`                                       |
+| AC-111 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.link.test.ts`         | `reports an unrecognized hybrid key share value and keeps the existing default`                                |
+| AC-111 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAddLink.test.tsx`         | `shows omitted names before adding and writes the mapped config to the draft`                                  |
+| AC-111 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAddLink.test.tsx`         | `clears the advisory when the user replaces a link`                                                            |
+| AC-111 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAddLink.test.tsx`         | `replaces a stale advisory with the existing error for`                                                        |
+| AC-111 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.link.test.ts`         | `reports unusable TLS boolean parameters and preserves alias precedence for`                                   |
+| AC-111 | e2e    | `apps/web/e2e/realityRecovery.e2e.test.ts`                                                | `announces omitted link parameters before adding a REALITY server`                                             |
+| AC-112 | vitest | `apps/web/src/features/Config/ConfigNodeForm/__tests__/ConfigNodeForm.overrides.test.tsx` | `edits the REALITY hybrid key share on an existing outbound in the draft only`                                 |
+| AC-112 | vitest | `apps/web/src/features/Config/ConfigNodeForm/__tests__/ConfigNodeForm.overrides.test.tsx` | `keeps the hybrid key share hidden when REALITY is disabled`                                                   |
+| AC-112 | vitest | `apps/web/src/features/Config/ConfigNodeForm/__tests__/ConfigNodeForm.overrides.test.tsx` | `does not offer the hybrid key share when the schema has no field for it`                                      |
+| AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/ProxiesPage.test.tsx`                               | `opens collapsed REALITY diagnostics in the tested group and edits only the corresponding server in the draft` |
+| AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/ProxiesPage.test.tsx`                               | `clears the REALITY hint on a successful check or a changed applied config`                                    |
+| AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/ProxiesPage.test.tsx`                               | `does not show the REALITY hint for a daemon error or a node without an eligible edit`                         |
+| AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/ProxiesPage.test.tsx`                               | `does not offer REALITY recovery when the runtime tag belongs to a group`                                      |
+| AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/ProxiesPage.test.tsx`                               | `places only one diagnostic for a server shown in two groups`                                                  |
+| AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/Proxies.recoveryState.test.tsx`                     | `stages the original value $original after a confirmed same-server retest returning $delay`                    |
+| AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/Proxies.recoveryState.test.tsx`                     | `does not attribute a confirm made outside this tab to the staged fix`                                         |
+| AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/Proxies.recoveryState.test.tsx`                     | `ignores a delayed $label retest once a newer probe has started for that same node`                            |
+| AC-11  | e2e    | `apps/web/e2e/realityRecovery.e2e.test.ts`                                                | `applies and restores a REALITY setting after distinct retest failures`                                        |
+
 ## Checked by hand on purpose
 
 These parts stay by hand: a test on the bench or in CI would not show them. A row names the scenario and why it cannot be automated.

@@ -48,6 +48,7 @@ export function ConfigNodeAddLink({
   const insertNode = useNodeInsert(section);
   const id = useId();
   const hintId = useId();
+  const omissionId = useId();
   const errorId = useId();
 
   const form = useForm<NodeLinkModel>({
@@ -89,6 +90,10 @@ export function ConfigNodeAddLink({
           const message = fieldState.error?.message;
           const key = message === undefined ? undefined : LINK_ERROR_KEY[message];
           const error = key === undefined ? (message ?? null) : t(key);
+          const omittedParams = parseShareLink(field.value).link?.omittedParams ?? [];
+          const describedBy = [hintId, omittedParams.length > 0 && omissionId, error !== null && errorId]
+            .filter(Boolean)
+            .join(' ');
 
           return (
             <div className='flex flex-col gap-1.5'>
@@ -101,13 +106,22 @@ export function ConfigNodeAddLink({
                 spellCheck={false}
                 className='min-h-20 font-mono text-xs break-all'
                 aria-invalid={fieldState.invalid}
-                aria-describedby={error === null ? hintId : `${hintId} ${errorId}`}
+                aria-describedby={describedBy}
                 onBlur={field.onBlur}
                 onChange={field.onChange}
               />
-              <p id={hintId} className='text-xs text-pretty text-muted-foreground'>
-                {t('field.link.hint')}
-              </p>
+              <div>
+                <p id={hintId} className='text-xs text-pretty text-muted-foreground'>
+                  {t('field.link.hint')}
+                </p>
+                <p id={omissionId} role='status' className='text-xs wrap-anywhere text-signal-warn'>
+                  {omittedParams.length > 0 && (
+                    <span className='mt-1.5 block'>
+                      {t('field.link.omittedParams', { names: omittedParams.join(', ') })}
+                    </span>
+                  )}
+                </p>
+              </div>
               {error !== null && (
                 <p id={errorId} role='alert' className='text-xs text-pretty text-destructive'>
                   {error}

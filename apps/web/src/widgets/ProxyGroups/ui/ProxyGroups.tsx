@@ -17,6 +17,7 @@ import {
 
 import { ProxyGroupCard } from './ProxyGroupCard';
 import { ProxyGroupsLegend } from './ProxyGroupsLegend';
+import type { ProxyNodeDiagnostics } from './ProxyNodeDiagnostic';
 import { ProxyNodesTest } from './ProxyNodesTest';
 import { ProxyNodeTile } from './ProxyNodeTile';
 
@@ -34,6 +35,9 @@ export function ProxyGroups({
   onSelected,
   onTested,
   onTestedOutbounds,
+  onGroupTestStart,
+  diagnosticForNode,
+  standaloneDiagnostics,
 }: {
   groups: ProxyGroup[];
   nodes: ProxyNode[];
@@ -43,6 +47,9 @@ export function ProxyGroups({
   onTested: (group: string) => void;
   /** The latency measurement of the outbounds passed: the config has no groups. */
   onTestedOutbounds: () => void;
+  onGroupTestStart?: ((group: string, nodes: readonly string[]) => void) | undefined;
+  diagnosticForNode?: ProxyNodeDiagnostics | undefined;
+  standaloneDiagnostics?: readonly ProxyNode[] | undefined;
 }) {
   const { t } = useTranslation('widgets/ProxyGroups');
   if (groups.length > 0) {
@@ -52,10 +59,39 @@ export function ProxyGroups({
         <ul className='flex flex-col gap-3'>
           {groups.map((group) => (
             <li key={group.name}>
-              <ProxyGroupCard group={group} onSelected={onSelected} onTested={onTested} />
+              <ProxyGroupCard
+                group={group}
+                onSelected={onSelected}
+                onTested={onTested}
+                onGroupTestStart={onGroupTestStart}
+                diagnosticForNode={diagnosticForNode}
+              />
             </li>
           ))}
         </ul>
+        {standaloneDiagnostics !== undefined && standaloneDiagnostics.length > 0 && (
+          <Card>
+            <CardHeader className='border-b'>
+              <CardTitle className={SECTION_HEADING}>
+                <h3>{t('empty.outbounds')}</h3>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className='grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3'>
+                {standaloneDiagnostics.map((node) => (
+                  <ProxyNodeTile
+                    key={node.name}
+                    node={node}
+                    selectable={false}
+                    onSelect={NO_OP}
+                    diagnostic={diagnosticForNode?.(node.name)}
+                    reserveDiagnosticSpace
+                  />
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }
@@ -86,7 +122,14 @@ export function ProxyGroups({
           <ProxyGroupsLegend />
           <ul className='grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3'>
             {nodes.map((node) => (
-              <ProxyNodeTile key={node.name} node={node} selectable={false} onSelect={NO_OP} />
+              <ProxyNodeTile
+                key={node.name}
+                node={node}
+                selectable={false}
+                onSelect={NO_OP}
+                diagnostic={diagnosticForNode?.(node.name)}
+                reserveDiagnosticSpace={diagnosticForNode !== undefined}
+              />
             ))}
           </ul>
         </CardContent>

@@ -162,6 +162,7 @@ const proxiesRoute = createRoute({
   loader: async () =>
     Promise.all([
       preloadNamespaces(['pages/Proxies', 'widgets/ProxyGroups']),
+      QueryClientInstance.query(getConfigOptions()).catch(keepFailureForScreen),
       QueryClientInstance.query(getProxiesOptions()).catch(keepFailureForScreen),
       QueryClientInstance.query(getProxyProvidersOptions()).catch(keepFailureForScreen),
     ]),

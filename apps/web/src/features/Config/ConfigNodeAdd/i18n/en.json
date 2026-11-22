@@ -11,7 +11,8 @@
     "link": {
       "label": "Paste a link",
       "placeholder": "vless://…",
-      "hint": "Server link from your provider's app or email: the node is built from it, and the name comes from the link"
+      "hint": "Server link from your provider's app or email: the node is built from it, and the name comes from the link",
+      "omittedParams": "These parameters will be skipped when you add the server: {{names}}"
     }
   },
   "manual": "or choose a type by hand",

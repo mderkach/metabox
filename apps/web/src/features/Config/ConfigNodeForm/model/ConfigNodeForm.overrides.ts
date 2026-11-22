@@ -34,6 +34,7 @@ export interface NodeOverride {
    * fields go into the collapsed "Advanced" group.
    */
   primary: string[];
+  showPrimary?: (name: string, node: NodeValue) => boolean;
   /** Field to the kind it is drawn with instead of the schema kind. */
   widgets?: Readonly<Partial<Record<string, NodeOverrideWidget>>>;
   /**
@@ -142,7 +143,11 @@ const VLESS_OVERRIDE: NodeOverride = {
     'tls.utls.fingerprint',
     'tls.reality.public_key',
     'tls.reality.short_id',
+    'tls.reality.support_x25519mlkem768',
   ],
+  showPrimary: (name, node) =>
+    name !== 'tls.reality.support_x25519mlkem768' ||
+    (readField(node, 'tls.enabled') === true && readField(node, 'tls.reality.enabled') === true),
   widgets: {
     // The fork enables Vision by the `xtls-rprx-vision` prefix (`protocol/vless/outbound.go`).
     flow: { kind: FIELD_KIND.Enum, options: ['', 'xtls-rprx-vision'] },

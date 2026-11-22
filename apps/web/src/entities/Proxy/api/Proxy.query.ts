@@ -68,6 +68,38 @@ function useFailedProbes(): ReadonlySet<string> {
   );
 }
 
+export function useFailedConfigProbes(configEtag: string | null): ReadonlySet<string> {
+  const outcomes = useMutationState({
+    filters: { mutationKey: PROXY_MUTATION.delay() },
+    select: (mutation) => {
+      const name = mutation.state.variables;
+      if (typeof name !== 'string') return null;
+
+      const data: unknown = mutation.state.data;
+      const outcome = mutation.state.status === 'success' ? toProbeOutcome(mutation) : null;
+      const revision =
+        typeof data === 'object' && data !== null && 'configEtag' in data && typeof data.configEtag === 'string'
+          ? data.configEtag
+          : null;
+
+      return { name, failed: outcome?.failed === true, revision };
+    },
+  });
+
+  return useMemo(
+    () =>
+      toFailedProbes(
+        outcomes
+          .filter((outcome) => outcome !== null)
+          .map(({ name, failed, revision }) => ({
+            name,
+            failed: failed && configEtag !== null && revision === configEtag,
+          }))
+      ),
+    [configEtag, outcomes]
+  );
+}
+
 export function useProxies() {
   const failed = useFailedProbes();
   const select = useCallback((wire: ClashProxiesWire) => toProxyRuntime(wire, failed), [failed]);

@@ -5,6 +5,7 @@ export {
   getProxyProvidersOptions,
   PROXY_MUTATION,
   PROXY_QUERY,
+  useFailedConfigProbes,
   useProxies,
   useProxyProviders,
   useProxyLatency,
