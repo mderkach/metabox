@@ -1,0 +1,71 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "security:minimumReleaseAgeNpm", "group:nodeJsWithTypes", "group:pnpm"],
+  "enabledManagers": ["npm", "nvm", "gomod", "dockerfile", "custom.regex"],
+  "timezone": "Europe/Moscow",
+  "schedule": ["* 6-11 * * 1"],
+  "prConcurrentLimit": 3,
+  "automerge": false,
+  "semanticCommits": "enabled",
+  "semanticCommitType": "build",
+  "semanticCommitScope": "deps",
+  "commitMessageTopic": "{{{depName}}}",
+  "minimumReleaseAgePackageManagerSync": true,
+  "gomod": {
+    "constraintsFiltering": "strict",
+    "postUpdateOptions": ["gomodTidy"]
+  },
+  "dockerfile": {
+    "managerFilePatterns": ["/^\\.devcontainer\\/Dockerfile\\.dev$/"]
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.go-version$/"],
+      "matchStrings": ["^(?<currentValue>\\d+\\.\\d+\\.\\d+)\\s*$"],
+      "depNameTemplate": "go",
+      "datasourceTemplate": "golang-version",
+      "versioningTemplate": "semver"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["golang"],
+      "rangeStrategy": "bump"
+    },
+    {
+      "matchDatasources": ["golang-version"],
+      "groupName": "Go",
+      "separateMinorPatch": true
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "enabled": false
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "matchFileNames": [".devcontainer/Dockerfile.dev"],
+      "matchPackageNames": ["golang"],
+      "allowedVersions": "/^\\d+\\.\\d+-trixie$/",
+      "groupName": "Go",
+      "separateMinorPatch": true,
+      "enabled": true
+    },
+    {
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["replace"],
+      "enabled": false
+    },
+    {
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["github.com/sagernet/sing-box"],
+      "enabled": false
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["react-doctor"],
+      "groupName": "React Doctor"
+    }
+  ]
+}
