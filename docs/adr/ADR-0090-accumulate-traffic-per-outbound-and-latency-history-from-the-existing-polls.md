@@ -122,7 +122,7 @@ Additive fields and one new endpoint; an older panel ignores them. Nothing is pe
 - `internal/history` tests: shared AC-97/AC-101 fixture with WAN 100 MiB, proxy 30 MiB and direct through the core 20 MiB. It yields 30/70 MiB in the shares, 30/20 MiB in the outbound rows and 50 MiB estimated past the core; the rule's outbound is the last chain element; a tag absent from the running config and runtime list is dropped from the rows at the next config change and its bytes stay in the kind split; a `final` connection is counted apart; the ring drops the oldest entry and hourly medians older than a day; a repeated core timestamp is not recorded twice; a disappeared result is recorded as a failure; the norm and the levels.
 - `internal/clashapi` test: the latency reader parses `history` with zero or one entry.
 - `internal/logs` or `internal/history` tests: both kinds of blocked lines are counted once; a level that hides a kind reports it unavailable; a core restart continues the count without double counting.
-- Device: RSS and idle CPU with 5000 connections and the owner's provider set, at `log.level` `warn` and at `debug`, recorded here before `Accepted`.
+- Device: RSS and idle CPU with 5000 connections on a disposable device bench with neutral synthetic outbounds and subscriptions, at `log.level` `warn` and at `debug`, recorded here before `Accepted`.
 - Files governed: `apps/metaboxd/internal/history/volume.go`, the new latency ring in `internal/history`, `internal/clashapi`, `internal/route/hits.go`, `internal/device/share.go`, `internal/logs` (the blocked-count follower), `main.go`, `apps/metaboxd/docs/guides/DeviceIO.md`.
 
 ## Links

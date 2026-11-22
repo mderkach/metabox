@@ -152,8 +152,7 @@ Produced with `/impeccable shape`. The discovery round was the owner's review of
      - an outbound with no traffic: "no traffic now", dimmed;
      - a server above its norm: amber latency, with the reason in block 3, not here;
      - no answer: coral "no answer";
-     - no latency on the server in use (a server no group checks): "not checked", amber, with the item in block 3;
-     - no fresh result: "No measurement" with "Check" for this server. After a successful check, show the fresh latency immediately. Until a manual or computed norm exists, show the value without "usually" and apply only the ceiling;
+     - no fresh result: "No measurement" with "Check" for this server. A server in use that has never been measured also appears in block 3. After a successful check, show the fresh latency immediately. Until a manual or computed norm exists, show the value without "usually" and apply only the ceiling;
      - core stopped: replaced by "no data";
      - long names: labels and tags truncate with the full text in the accessible name;
      - 375 px: a row becomes a stacked card in this order: outbound, lines, then rules, then the numbers on one line.

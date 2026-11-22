@@ -166,7 +166,7 @@ A "Needs attention" block SHALL appear on Overview only when there is a problem,
 
 - **GIVEN** a manual-choice group whose server in use has no latency result, because the core checks only groups that pick by latency and subscription servers
 - **WHEN** the overview opens
-- **THEN** the item names the server, says its latency is unknown, and its main action checks it
+- **THEN** the item names the server, shows "No measurement", and its main action checks it
 
 #### Scenario: More than four servers
 
