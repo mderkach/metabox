@@ -82,8 +82,8 @@ describe('overview screen', () => {
     const proxy = items.find((item) => within(item).queryByText('Через прокси') !== null);
     const direct = items.find((item) => within(item).queryByText('Напрямую через ядро') !== null);
 
-    expect(stripWordJoiners(proxy?.textContent ?? '')).toBe('Через прокси30.0 МБ12% от канала');
-    expect(stripWordJoiners(direct?.textContent ?? '')).toBe('Напрямую через ядро16.2 МБ7% от канала');
+    expect(stripWordJoiners(proxy?.textContent ?? '')).toBe('Через прокси30.0 МБ12% всего трафика');
+    expect(stripWordJoiners(direct?.textContent ?? '')).toBe('Напрямую через ядро16.2 МБ7% всего трафика');
     expect(tiles.queryByText('Через ядро')).not.toBeInTheDocument();
   });
 
@@ -98,7 +98,7 @@ describe('overview screen', () => {
 
     const tiles = within(await screen.findByRole('list', { name: 'Скорость' }));
 
-    expect(tiles.getByText('7% от канала, отклонено 2.0 кБ', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+    expect(tiles.getByText('7% всего трафика, отклонено 2.0 кБ', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
   });
 
   // The first stream sample is zero: showing "0 B" would
@@ -108,7 +108,7 @@ describe('overview screen', () => {
 
     renderWithRouter(OverviewPage);
 
-    expect(await screen.findByText('sing-box')).toBeInTheDocument();
+    expect(await screen.findByText('Ядро')).toBeInTheDocument();
     expect(screen.queryByText('Память Go')).not.toBeInTheDocument();
   });
 
@@ -136,7 +136,7 @@ describe('overview screen', () => {
 
     expect(
       await screen.findByRole('figure', {
-        name: (name) => stripWordJoiners(name) === 'Трафик за минуту: входящий до 97.7 кБ/с, исходящий до 1000 Б/с',
+        name: (name) => stripWordJoiners(name) === 'Трафик за минуту: скачивание до 97.7 кБ/с, отправка до 1000 Б/с',
       })
     ).toBeInTheDocument();
   });
@@ -160,7 +160,7 @@ describe('overview screen', () => {
     renderWithRouter(OverviewPage);
 
     expect(await screen.findAllByText('Живых соединений нет')).not.toHaveLength(0);
-    expect(await screen.findByText('Групп с выбранным узлом нет')).toBeInTheDocument();
+    expect(await screen.findByText('Групп с выбранным выходом нет')).toBeInTheDocument();
   });
 
   // A measurement changes the numbers in place: visible to the eye, and for a screen reader the result
@@ -179,7 +179,7 @@ describe('overview screen', () => {
     await user.click(await screen.findByRole('button', { name: 'Проверить' }));
 
     await waitFor(() => {
-      expect(region).toHaveTextContent('Задержка выбранных узлов обновлена');
+      expect(region).toHaveTextContent('Задержка выбранных серверов обновлена');
     });
   });
 
@@ -189,8 +189,8 @@ describe('overview screen', () => {
 
     renderWithRouter(OverviewPage);
 
-    expect(await screen.findByRole('combobox', { name: 'Узел группы us-fallback' })).toBeInTheDocument();
-    expect(screen.queryByRole('combobox', { name: 'Узел группы proxy' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('combobox', { name: 'Выход группы us-fallback' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Выход группы proxy' })).not.toBeInTheDocument();
   });
 
   // A check sends packets from the router: it runs on the button only, and a failure leads
@@ -223,7 +223,7 @@ describe('overview screen', () => {
 
     expect(interception).toHaveTextContent('Перехватне пройдено');
     expect(dns).toHaveTextContent('DNSпройдено');
-    expect(proxy).toHaveTextContent('Через узелпройдено182 мс');
+    expect(proxy).toHaveTextContent('Через проксипройдено182 мс');
     expect(screen.getByRole('link', { name: 'Подробности в диагностике' })).toBeInTheDocument();
     await waitFor(() => {
       expect(region).toHaveTextContent('Быстрая проверка нашла проблему');
@@ -345,7 +345,13 @@ describe('overview screen', () => {
   describe('without core data', () => {
     const STOPPED = 'Ядро не запущено, данных нет.';
     const SILENT = 'Данные от ядра не поступают.';
-    const CORE_CARDS = ['Куда уходит трафик', 'Открытые соединения', 'Типы сети', 'Топ узлов прокси', 'Топ устройств'];
+    const CORE_CARDS = [
+      'Куда уходит трафик',
+      'Открытые соединения',
+      'Типы сети',
+      'Топ серверов прокси',
+      'Топ устройств',
+    ];
 
     /** The card a heading text belongs to. */
     async function card(title: string) {
@@ -378,17 +384,19 @@ describe('overview screen', () => {
 
       expect(await (await card('Всего передано')).findByText(STOPPED)).toBeInTheDocument();
 
-      for (const title of [...CORE_CARDS, 'Задержка узлов']) {
+      for (const title of [...CORE_CARDS, 'Задержка серверов']) {
         expect((await card(title)).getByText(STOPPED)).toBeInTheDocument();
       }
 
-      const down = rateTile('Ядро: входящий');
+      const down = rateTile('Ядро: скачивание');
 
-      expect(down?.textContent).toBe('Ядро: входящий—нет данных');
+      expect(down?.textContent).toBe('Ядро: скачивание—нет данных');
       expect(within(down ?? document.body).getByText('—')).toHaveAttribute('aria-hidden', 'true');
-      expect(stripWordJoiners(rateTile('Через прокси')?.textContent ?? '')).toBe('Через прокси30.0 МБ12% от канала');
+      expect(stripWordJoiners(rateTile('Через прокси')?.textContent ?? '')).toBe(
+        'Через прокси30.0 МБ12% всего трафика'
+      );
       expect(screen.queryByRole('figure', { name: /Трафик за минуту/ })).not.toBeInTheDocument();
-      expect((await card('Задержка узлов')).getByRole('button', { name: 'Проверить' })).toBeDisabled();
+      expect((await card('Задержка серверов')).getByRole('button', { name: 'Проверить' })).toBeDisabled();
     });
 
     // The action is named once, in the header, by what the user sees on screen.
@@ -399,7 +407,7 @@ describe('overview screen', () => {
 
       const status = within(await screen.findByRole('region', { name: 'Состояние системы' }));
       const start = await status.findByRole('button', { name: 'Запустить' });
-      const title = status.getByRole('heading', { name: 'sing-box' }).textContent;
+      const title = status.getByRole('heading', { name: 'Ядро' }).textContent;
 
       expect(
         screen.getByText(
@@ -416,9 +424,9 @@ describe('overview screen', () => {
 
       renderWithRouter(OverviewPage);
 
-      expect(await (await card('Узел')).findByText(STOPPED)).toBeInTheDocument();
-      expect((await card('Узел')).queryByRole('combobox')).not.toBeInTheDocument();
-      expect((await card('Узел')).queryByText(/мс$/)).not.toBeInTheDocument();
+      expect(await (await card('Выбор выхода')).findByText(STOPPED)).toBeInTheDocument();
+      expect((await card('Выбор выхода')).queryByRole('combobox')).not.toBeInTheDocument();
+      expect((await card('Выбор выхода')).queryByText(/мс$/)).not.toBeInTheDocument();
     });
 
     it('past the drop threshold without a first frame stops loading and says no data comes from the core', async () => {
@@ -456,7 +464,7 @@ describe('overview screen', () => {
       expect((await card('Открытые соединения')).getByText(SILENT)).toBeInTheDocument();
       expect((await card('Типы сети')).getByText(SILENT)).toBeInTheDocument();
       expect(screen.queryByText('7')).not.toBeInTheDocument();
-      expect(rateTile('Ядро: входящий')?.textContent).toBe('Ядро: входящий—нет данных');
+      expect(rateTile('Ядро: скачивание')?.textContent).toBe('Ядро: скачивание—нет данных');
       expect(screen.queryByText('42.4 кБ/с', WITHOUT_WORD_JOINERS)).not.toBeInTheDocument();
     });
 
@@ -547,12 +555,12 @@ describe('overview screen', () => {
     renderWithRouter(OverviewPage);
 
     expect(
-      await screen.findByText('канал pppoe-wan сейчас: входящий 2.0 кБ/с, исходящий 1.0 кБ/с', {
+      await screen.findByText('интернет-подключение pppoe-wan сейчас: скачивание 2.0 кБ/с, отправка 1.0 кБ/с', {
         exact: false,
         ...WITHOUT_WORD_JOINERS,
       })
     ).toBeInTheDocument();
-    expect(screen.getByText('Ядро: входящий')).toBeInTheDocument();
+    expect(screen.getByText('Ядро: скачивание')).toBeInTheDocument();
   });
 
   it('shows daemon availability and stream liveness', async () => {

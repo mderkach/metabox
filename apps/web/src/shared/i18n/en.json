@@ -356,7 +356,7 @@
   },
   "groupType": {
     "selector": "manual choice",
-    "urltest": "fastest",
+    "urltest": "picks by latency",
     "fallback": "fallback",
     "loadBalance": "load balance"
   },

@@ -8,7 +8,7 @@
     "silent": "No data from the core",
     "silentHint": "The daemon responds, but the core is sending no data. Check the log for the cause.",
     "stopped": "The core is not running",
-    "stoppedHint": "Traffic does not pass through the core. Start it with the Start button in the sing-box card below. Check the log for the cause.",
+    "stoppedHint": "Traffic does not pass through the core. Start it with the Start button in the Core card below. Check the log for the cause.",
     "nodeDown": "The selected node does not respond",
     "nodeDownHint": "Traffic through this node does not get through. Pick another node or test the latency again.",
     "hot": "The router is overheating: {{celsius}} °C",
@@ -28,7 +28,7 @@
   "node": {
     "title": "Node",
     "noGroups": "The config has no groups: rules send traffic straight to outbounds.",
-    "none": "No group has a manual choice: groups pick their nodes by latency. Add one on the Proxies screen.",
+    "none": "No group has manual choice: the other groups pick their node themselves. Add one on the Proxies screen.",
     "select": "Node of the {{group}} group",
     "selected": "{{group}}: node {{node}} selected"
   },
@@ -43,7 +43,7 @@
     "area": {
       "interception": "Interception",
       "dns": "DNS",
-      "proxy": "Through the node",
+      "proxy": "Through a proxy",
       "direct": "Directly"
     },
     "status": {
@@ -58,17 +58,17 @@
   },
   "traffic": {
     "title": "Traffic",
-    "note": "link {{link}} now: inbound {{down}}, outbound {{up}}",
+    "note": "internet connection {{link}} now: download {{down}}, upload {{up}}",
     "label": "Rate",
     "proxy": "Through a proxy",
     "direct": "Direct through the core",
-    "linkShare": "{{percent}}% of the link",
-    "linkShareRejected": "{{percent}}% of the link, {{volume}} rejected",
-    "linkUnknown": "the link has not been measured yet",
-    "uplink": "Uplink",
+    "linkShare": "{{percent}}% of all traffic",
+    "linkShareRejected": "{{percent}}% of all traffic, {{volume}} rejected",
+    "linkUnknown": "the internet connection has not been measured yet",
+    "uplink": "Internet connection",
     "uplinkSince": "over {{age}} since daemon start",
-    "down": "Core inbound",
-    "up": "Core outbound",
+    "down": "Core download",
+    "up": "Core upload",
     "peak": "peak this minute {{value}}",
     "noPeak": "no peak yet",
     "noData": "no data"

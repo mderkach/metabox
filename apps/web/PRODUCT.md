@@ -10,7 +10,7 @@ web
 
 ## Users
 
-**P1, router owner**: the primary persona of v1. Knows the sing-box schema, edits the config by hand, suffers from the maintenance cycle over SSH. **P2, advanced OpenWrt user**: secondary, appears when the project goes open source. Does not know the schema; for them a GUI is a condition of use.
+**P1, router owner**: the primary persona of v1. Knows the sing-box schema, edits the config by hand, suffers from the maintenance cycle over SSH. **P2, advanced OpenWrt user**: secondary, appears when the project goes open source. Does not know the schema; for them a GUI is a condition of use. **P3, newcomer**: does not know the schema or how routing works; thinks "device → site → how it gets there" and comes with three tasks: send a site through the proxy, add a server or a subscription, find out what broke. Counts for v1 acceptance together with P1. P1 and P3 use one interface: P3 gets plain words and help next to a term; P1 keeps the schema, the editor and JSON one step away.
 
 Usage context: desktop for editing rules, the editor and Apply; phone for the overview, connections and switching the node. Personas, context and scenarios US-1…US-10: PRD section 2.
 
@@ -48,7 +48,7 @@ Open questions that change the interface and are decided by the owner, not in pa
 ## Brand Commitments
 
 - The product name is `metabox`, lowercase. The daemon is `metaboxd`.
-- The managed runtime is called `sing-box`, spelled as upstream spells it; the spelling is the same across interface texts.
+- Interface texts call the managed runtime "core", «ядро»: support for other cores is planned (PRD roadmap item 1). The core type and version are details. `sing-box`, spelled as upstream spells it, names the fork only where its own feature is meant: the binary and its version, `sing-box check`, its cache file, its subscription providers, the links it parses, its Clash API. Words of the interface: [`docs/guides/Glossary.md`](./docs/guides/Glossary.md).
 - Interface languages are Russian and English, both equal (AC-43). Text on any screen exists in both.
 - The visual world is not frozen. The current palette is described in [ADR-0013](../../docs/adr/ADR-0013-build-the-panel-palette-on-routing-semantics.md), but it is an accepted decision, not a brand commitment: a replacement is recorded in a new ADR, and the old one moves to `Superseded`. The technical contract from ADR-0013 survives a replacement: semantic tokens in one file, the vendor zone is not edited.
 

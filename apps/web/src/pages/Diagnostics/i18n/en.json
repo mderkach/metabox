@@ -6,8 +6,8 @@
     "result": "Details"
   },
   "target": {
-    "label": "Node to test the exit through",
-    "none": "do not test the exit through a node"
+    "label": "Outbound to test through",
+    "none": "do not test through a proxy"
   },
   "run": {
     "action": "Check",
@@ -16,7 +16,7 @@
   },
   "idle": {
     "title": "No check has run yet",
-    "description": "Press “Check”: the panel tests traffic interception, DNS and internet access, through the chosen node and directly."
+    "description": "Press “Check”: the panel tests traffic interception, DNS and internet access, through the chosen outbound and directly."
   },
   "check": {
     "redirect_port": "Redirect port (TCP)",
@@ -24,8 +24,8 @@
     "dns_port": "DNS port",
     "dns_probe": "DNS probe through dns-in",
     "nft_chains": "nft chains",
-    "proxy": "Exit through the node",
-    "direct": "Direct exit"
+    "proxy": "Through a proxy",
+    "direct": "Direct"
   },
   "status": {
     "ok": "passed",

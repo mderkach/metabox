@@ -20,5 +20,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "playwright.config.ts", "tools/i18n.ts", "e2e"]
+  "include": ["vite.config.ts", "playwright.config.ts", "tools/i18n.ts", "tools/vocabulary.test.ts", "e2e"]
 }

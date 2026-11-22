@@ -53,11 +53,11 @@ describe('overview screen picked with the mouse', () => {
 
     const region = await screen.findByRole('status', { name: 'Результат действия' });
 
-    await userEvent.click(await screen.findByRole('combobox', { name: 'Узел группы us-fallback' }));
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Выход группы us-fallback' }));
     await userEvent.click(await screen.findByRole('option', { name: 'proxy' }));
 
     await waitFor(() => {
-      expect(region).toHaveTextContent('us-fallback: выбран узел proxy');
+      expect(region).toHaveTextContent('us-fallback: выбран выход proxy');
     });
   });
 

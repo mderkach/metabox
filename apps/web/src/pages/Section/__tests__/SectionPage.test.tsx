@@ -242,7 +242,7 @@ describe('section screen', () => {
 
     renderWithRouter(OutboundsSection);
 
-    const add = await screen.findByRole('button', { name: 'Добавить узел' });
+    const add = await screen.findByRole('button', { name: 'Добавить запись' });
 
     await openNode(user, 'hk-01');
 
@@ -250,13 +250,13 @@ describe('section screen', () => {
 
     await user.click(add);
 
-    expect(screen.getByRole('complementary', { name: 'Новый узел' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Новая запись' })).toBeInTheDocument();
     expect(screen.queryByRole('complementary', { name: 'hk-01' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'hk-01' })).toHaveAttribute('aria-pressed', 'false');
 
     await openNode(user, 'hk-01');
 
-    expect(screen.queryByRole('complementary', { name: 'Новый узел' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Новая запись' })).not.toBeInTheDocument();
     expect(add).toHaveAttribute('aria-expanded', 'false');
   });
 
@@ -274,7 +274,7 @@ describe('section screen', () => {
 
     await user.click(node.getByRole('tab', { name: 'JSON' }));
 
-    expect(node.getByRole('textbox', { name: 'Узел hk-01 текстом' })).toHaveValue(JSON.stringify(HK_01, null, 2));
+    expect(node.getByRole('textbox', { name: 'Запись hk-01 текстом' })).toHaveValue(JSON.stringify(HK_01, null, 2));
     expect(screen.getByRole('button', { name: 'direct' })).toHaveAttribute('aria-pressed', 'false');
   });
 
@@ -315,7 +315,7 @@ describe('section screen', () => {
 
     await user.click(node.getByRole('tab', { name: 'JSON' }));
 
-    const editor = node.getByRole('textbox', { name: 'Узел direct текстом' });
+    const editor = node.getByRole('textbox', { name: 'Запись direct текстом' });
 
     await user.clear(editor);
     await user.paste('{ "type": "direct", "tag": "main" }');
@@ -335,7 +335,7 @@ describe('section screen', () => {
 
     renderWithRouter(ProvidersSection);
 
-    expect(await screen.findByText('Узлов нет')).toBeInTheDocument();
+    expect(await screen.findByText('Записей нет')).toBeInTheDocument();
   });
 
   it('a DNS rule edit lands in dns.rules: servers and the comment are intact', async () => {
@@ -347,7 +347,7 @@ describe('section screen', () => {
 
     const node = within(await openNode(user, 'dns.rules[1]'));
 
-    const editor = node.getByRole('textbox', { name: 'Узел dns.rules[1] текстом' });
+    const editor = node.getByRole('textbox', { name: 'Запись dns.rules[1] текстом' });
 
     await user.clear(editor);
     await user.paste('{ "query_type": ["HTTPS"], "action": "reject" }');
@@ -444,7 +444,7 @@ describe('section screen', () => {
 
     renderWithRouter(NtpSection);
 
-    const editor = await screen.findByRole('textbox', { name: 'Узел ntp текстом' });
+    const editor = await screen.findByRole('textbox', { name: 'Запись ntp текстом' });
 
     expect(editor).toHaveValue('{}');
 
@@ -471,13 +471,13 @@ describe('section screen', () => {
 
     renderWithRouter(OutboundsSection);
 
-    const open = await screen.findByRole('button', { name: 'Добавить узел' });
+    const open = await screen.findByRole('button', { name: 'Добавить запись' });
 
     await user.click(open);
 
-    const panel = screen.getByRole('complementary', { name: 'Новый узел' });
+    const panel = screen.getByRole('complementary', { name: 'Новая запись' });
 
-    expect(within(panel).getByRole('heading', { name: 'Новый узел' })).toHaveFocus();
+    expect(within(panel).getByRole('heading', { name: 'Новая запись' })).toHaveFocus();
     expect(open).toHaveAttribute('aria-expanded', 'true');
 
     await user.keyboard('{Escape}');
@@ -499,9 +499,9 @@ describe('section screen', () => {
 
     renderWithRouter(OutboundsSection);
 
-    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
+    await user.click(await screen.findByRole('button', { name: 'Добавить запись' }));
 
-    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+    const panel = within(screen.getByRole('complementary', { name: 'Новая запись' }));
 
     await user.click(panel.getByRole('textbox', { name: 'Вставить ссылку' }));
     await user.paste(
@@ -538,9 +538,9 @@ describe('section screen', () => {
 
     renderWithRouter(OutboundsSection);
 
-    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
+    await user.click(await screen.findByRole('button', { name: 'Добавить запись' }));
 
-    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+    const panel = within(screen.getByRole('complementary', { name: 'Новая запись' }));
 
     await user.click(panel.getByRole('textbox', { name: 'Вставить ссылку' }));
     await user.paste('tuic://uuid:pass@example.com:443');
@@ -558,7 +558,7 @@ describe('section screen', () => {
     renderWithRouter(DnsRulesSection);
 
     expect(await screen.findByRole('button', { name: 'dns.rules[0]' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Добавить узел' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Добавить запись' })).not.toBeInTheDocument();
   });
 
   it('deletes a node after a confirmation that names what still points to it', async () => {
@@ -614,7 +614,7 @@ describe('section screen', () => {
 
     const node = within(await findRow('auto'));
 
-    expect(node.getByText('самый быстрый')).toBeInTheDocument();
+    expect(node.getByText('выбирает сама по задержке')).toBeInTheDocument();
     expect(node.getByText('urltest')).toBeInTheDocument();
   });
 
@@ -625,9 +625,9 @@ describe('section screen', () => {
 
     renderWithRouter(OutboundsSection);
 
-    await user.click(await screen.findByRole('button', { name: 'Добавить узел' }));
+    await user.click(await screen.findByRole('button', { name: 'Добавить запись' }));
 
-    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+    const panel = within(screen.getByRole('complementary', { name: 'Новая запись' }));
 
     expect(panel.getByRole('button', { name: 'Добавить по ссылке' })).toHaveClass('bg-primary');
     expect(panel.getByRole('button', { name: 'Добавить' })).not.toHaveClass('bg-primary');

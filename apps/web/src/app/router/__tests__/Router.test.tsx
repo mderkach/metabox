@@ -158,7 +158,7 @@ describe('panel routes', () => {
     expect(targets).toHaveLength(Object.values(CONFIG_SECTION).length);
 
     // The section is not in the file: the editor offers an empty node, saving will create it.
-    expect(await screen.findByRole('textbox', { name: 'Узел log текстом' })).toHaveValue('{}');
+    expect(await screen.findByRole('textbox', { name: 'Запись log текстом' })).toHaveValue('{}');
   });
 
   it('the "More" menu item opens a section, and it becomes the selected tab', async () => {

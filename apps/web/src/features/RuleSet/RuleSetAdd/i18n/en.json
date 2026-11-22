@@ -28,7 +28,7 @@
     "interval": {
       "label": "Refresh every",
       "placeholder": "1d",
-      "hint": "Empty — sing-box refetches once a day. Format: 12h, 3d, 1w."
+      "hint": "Empty — the core refetches once a day. Format: 12h, 3d, 1w."
     },
     "detour": {
       "label": "Download through",

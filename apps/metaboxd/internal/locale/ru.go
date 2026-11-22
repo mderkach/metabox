@@ -21,11 +21,11 @@ var ru = map[string]string{
 	"path to uci, used to read static leases from UCI dhcp and to read and write the plumbing model in UCI metabox":                                "путь к uci: через него читаются статические аренды из UCI dhcp, читается и пишется модель обвязки в UCI metabox",
 	"path to the nft command that checks the firewall rules for traffic interception. Leave empty to skip the check":                               "путь к команде nft для проверки правил файрвола, которые перехватывают трафик. Пустое значение отключает проверку",
 	"domain name to resolve through the core DNS listener after restart. A failed lookup rolls back the change. Leave empty to skip the DNS check": "домен, который ядро должно разрешить через свой приём DNS-запросов после перезапуска. Если имя не разрешается, изменение откатывается. Пустое значение отключает проверку DNS",
-	"URL diagnostics uses to check internet access through the node and directly":                                                                  "адрес, по которому диагностика проверяет выход в интернет через узел и напрямую",
+	"URL diagnostics uses to check internet access through the node and directly":                                                                  "адрес, по которому диагностика проверяет выход в интернет через прокси и напрямую",
 	"Clash API port, used when the daemon creates the section itself":                                                                              "порт Clash API, если демон заводит секцию сам",
 	"how long to wait for connectivity confirmation before the automatic rollback":                                                                 "сколько ждать подтверждения связи до автоотката",
 	"time limit for applying changes, from saving a copy of the current configuration to checking that the core works":                             "время на применение изменений от создания резервной копии до проверки работы ядра",
-	"how often to sync the rule set catalog with providers; 0 disables syncing: the catalog comes from the cache or the built-in snapshot":         "как часто сверять каталог наборов с поставщиками; 0 — без сверки: каталог из кэша или встроенного снимка",
+	"how often to sync the rule set catalog with providers; 0 disables syncing: the catalog comes from the cache or the built-in snapshot":         "как часто сверять каталог сетов правил с поставщиками; 0 — без сверки: каталог из кэша или встроенного снимка",
 	"log level: debug, info, warn, error":                                                                                                          "уровень логов: debug, info, warn, error",
 	"language of the texts the daemon shows the operator: en or ru":                                                                                "язык текстов, которые демон показывает оператору: en или ru",
 
@@ -98,7 +98,7 @@ var ru = map[string]string{
 		"the path. An array index may be a number or *, so a path from a real config works. The reference does " +
 		"not read the config on the router: use metabox_config_version for that.": "Справка по одному пути конфига sing-box по схеме форка sing-box-extended, на которой построена панель " +
 		"(schema_version): тип значения, допустимые значения перечисления или дискриминатора type, " +
-		"reference (вид узла, который значение называет по тегу: outbound, dns_server, rule_set и так далее), " +
+		"reference (тип записи, который значение называет по тегу: outbound, dns_server, rule_set и так далее), " +
 		"when (значения дискриминаторов на пути, при которых поле есть, например type vless у outbounds.*), " +
 		"собственный комментарий поля в форке, заметка от руки там, где схемы мало, и ключи под путём. " +
 		"Индекс массива — число или *, так что подходит путь из настоящего конфига. Справка не читает " +
@@ -124,9 +124,9 @@ var ru = map[string]string{
 		"не подходит; об уже закрытых соединениях он ничего не говорит.",
 	"Proxy groups with their selected member, and nodes with the last latency recorded by the routing core. " +
 		"Does not run a latency check: a failed check erases the node's delay history. last_delay_ms is " +
-		"absent when the node was never checked; 0 means the last check failed.": "Группы прокси с выбранным участником и узлы с последней задержкой, которую записало ядро маршрутизации. " +
-		"Проверку задержки не запускает: неудачная проверка стирает историю задержек узла. last_delay_ms " +
-		"нет, если узел ни разу не проверялся; 0 значит, что последняя проверка не удалась.",
+		"absent when the node was never checked; 0 means the last check failed.": "Группы прокси с выбранным участником и серверы с последней задержкой, которую записало ядро маршрутизации. " +
+		"Проверку задержки не запускает: неудачная проверка стирает историю замеров сервера. last_delay_ms " +
+		"нет, если сервер ни разу не проверялся; 0 значит, что последняя проверка не удалась.",
 	"Explains how the routing core routed a domain: for live connections whose host is the domain or its " +
 		"subdomain, the matched rule (its index in route.rules, conditions and action) and the outbound chain, " +
 		"as the core reported them. found=false means there is no live connection to the domain: the tool " +
@@ -168,10 +168,10 @@ var ru = map[string]string{
 		"настроенные порты TCP, UDP и DNS, отвечает ли ядро на DNS-запрос, действуют ли правила " +
 		"файрвола для перехвата трафика и проходит ли запрос в интернет напрямую, в обход перехвата. " +
 		"Результат каждой проверки — ok, fail или skipped с причиной. Если проверка пропущена, состояние этой части системы неизвестно. " +
-		"Параметр proxy задаёт узел, для которого " +
+		"Параметр proxy задаёт выход, для которого " +
 		"выводится последняя задержка, записанная ядром. Время замера можно посмотреть через " +
-		"metabox_proxies. not_measured означает, что записи нет. Узел могли ещё не проверять, либо последняя " +
-		"проверка не прошла и запись была удалена, поэтому о здоровье узла это ничего не говорит. Новый замер можно запустить из панели.",
+		"metabox_proxies. not_measured означает, что записи нет. Сервер могли ещё не проверять, либо последняя " +
+		"проверка не прошла и запись была удалена, поэтому о состоянии сервера это ничего не говорит. Новый замер можно запустить из панели.",
 
 	"save a copy of the configuration and rule-set files: %w": "сохранение копии конфига и файлов сетов правил: %w",
 	"save transaction state: %w":                              "сохранение состояния транзакции: %w",
@@ -211,5 +211,5 @@ var ru = map[string]string{
 	"sing-box exits on the saved subscription %q, but subscriptions are not cached in this config (store_subscriptions is off), so the daemon cannot repair it":                       "sing-box аварийно завершается из-за сохранённой подписки %q, но в этом конфиге подписки не кэшируются (store_subscriptions выключен), демон не может это починить",
 	"could not remove subscription %q from the cache file (the subscription stays in the config): %w":                                                                                 "не удалось убрать подписку %q из файла кэша (сама подписка в конфиге остаётся): %w",
 	"sing-box could not start on the saved subscription %s. The daemon deleted its entry from the cache file; the next subscription update downloads it again":                        "sing-box не мог запуститься из-за сохранённой подписки %s. Демон удалил её запись из файла кэша; при следующем обновлении подписка скачается заново",
-	"sing-box could not start on the saved subscription %s, and the cache file did not open. The daemon renamed the file to %s; sing-box downloads subscriptions and rule sets again": "sing-box не мог запуститься из-за сохранённой подписки %s, а файл кэша не открылся. Демон переименовал файл в %s; sing-box скачает подписки и наборы правил заново",
+	"sing-box could not start on the saved subscription %s, and the cache file did not open. The daemon renamed the file to %s; sing-box downloads subscriptions and rule sets again": "sing-box не мог запуститься из-за сохранённой подписки %s, а файл кэша не открылся. Демон переименовал файл в %s; sing-box скачает подписки и сеты правил заново",
 }

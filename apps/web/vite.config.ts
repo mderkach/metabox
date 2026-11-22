@@ -261,7 +261,7 @@ export default defineConfig({
         test: {
           name: 'tooling',
           environment: 'node',
-          include: ['tools/**/*.test.js'],
+          include: ['tools/**/*.test.{js,ts}'],
           sequence: { groupOrder: 0 },
         },
       },

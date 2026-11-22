@@ -26,7 +26,7 @@ describe('diagnostics screen picked with the mouse', () => {
     renderWithRouter(DiagnosticsPage, { path: '/diagnostics' });
 
     const run = await screen.findByRole('button', { name: 'Проверить' });
-    const select = screen.getByRole('combobox', { name: 'Узел для проверки выхода' });
+    const select = screen.getByRole('combobox', { name: 'Через какой выход проверять' });
 
     await waitFor(() => {
       expect(within(select).getByText('us-fallback')).toBeVisible();
@@ -35,7 +35,7 @@ describe('diagnostics screen picked with the mouse', () => {
     await screen.findByText('90 мс');
 
     await userEvent.click(select);
-    await userEvent.click(await screen.findByRole('option', { name: 'не проверять выход через узел' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'не проверять через прокси' }));
     await userEvent.click(run);
 
     await waitFor(() => {

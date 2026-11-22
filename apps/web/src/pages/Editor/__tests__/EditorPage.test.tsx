@@ -415,7 +415,7 @@ describe('rule list editing', () => {
     renderWithRouter(EditorPage);
 
     expect(await screen.findByRole('button', { name: 'Добавить правило' })).toBeDisabled();
-    expect(screen.getByText(/нет ни route\.final, ни аутбаунда/)).toBeInTheDocument();
+    expect(screen.getByText(/в конфиге нет ни одного выхода и не задан route\.final/)).toBeInTheDocument();
   });
 
   it('adding with an active search clears the filter: the new rule will be visible in the list', async () => {

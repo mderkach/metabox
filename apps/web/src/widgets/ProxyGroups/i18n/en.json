@@ -1,13 +1,13 @@
 {
   "empty": {
     "title": "There are no groups in the config — that is a working setup",
-    "description": "Rules point straight at outbounds. To switch the exit on the fly, the config needs a selector group.",
+    "description": "Rules point straight at outbounds. To switch the outbound on the fly, the config needs a manual-choice group.",
     "outbounds": "Config outbounds",
     "testOutbounds": "Test the config outbounds"
   },
   "card": {
-    "manual": "you pick the node",
-    "automatic": "the node is chosen by delay",
+    "members_one": "{{count}} node",
+    "members_other": "{{count}} nodes",
     "testGroup": "Test the nodes of group {{group}}",
     "none": "no node selected"
   },
@@ -23,7 +23,7 @@
   },
   "auto": {
     "reason": "The core chooses the node for this group automatically.",
-    "hint": "Manual choice puts a selector in front of the group in the draft. Until you pick a node, traffic goes the same way.",
+    "hint": "Adds a manual-choice group in front of this one to the draft. Until you pick a node, traffic goes the same way.",
     "action": "Add manual choice",
     "actionLabel": "Add manual choice over group {{group}}",
     "added": "Manual choice is in the draft. After Apply you can pick the node of this group here.",

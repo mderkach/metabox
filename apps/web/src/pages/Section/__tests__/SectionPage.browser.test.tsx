@@ -43,7 +43,7 @@ function ProvidersSection() {
 
 /** Opens the add panel. */
 async function openAddPanel() {
-  await userEvent.click(await screen.findByRole('button', { name: 'Добавить узел' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Добавить запись' }));
 }
 
 /** Opens a dropdown and picks an option with the mouse. */
@@ -66,7 +66,7 @@ describe('section screen picked with the mouse', () => {
 
     await openAddPanel();
 
-    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+    const panel = within(screen.getByRole('complementary', { name: 'Новая запись' }));
 
     await pick(panel.getByRole('combobox', { name: 'Тип' }), /^direct/);
     await userEvent.type(panel.getByRole('textbox', { name: 'Тег' }), 'direct-2');
@@ -79,7 +79,7 @@ describe('section screen picked with the mouse', () => {
     expect(findValue(draft(), ['outbounds', 1])).toEqual(HK_01);
     expect(await screen.findByRole('complementary', { name: 'direct-2' })).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.queryByRole('complementary', { name: 'Новый узел' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('complementary', { name: 'Новая запись' })).not.toBeInTheDocument();
     });
   });
 
@@ -90,7 +90,7 @@ describe('section screen picked with the mouse', () => {
 
     await openAddPanel();
 
-    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+    const panel = within(screen.getByRole('complementary', { name: 'Новая запись' }));
 
     await pick(panel.getByRole('combobox', { name: 'Тип' }), /^vless/);
     await userEvent.type(panel.getByRole('textbox', { name: 'Тег' }), 'vless-out');
@@ -112,13 +112,13 @@ describe('section screen picked with the mouse', () => {
 
     await openAddPanel();
 
-    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+    const panel = within(screen.getByRole('complementary', { name: 'Новая запись' }));
 
     await pick(panel.getByRole('combobox', { name: 'Тип' }), /^direct/);
     await userEvent.type(panel.getByRole('textbox', { name: 'Тег' }), 'hk-01');
     await userEvent.click(panel.getByRole('button', { name: 'Добавить' }));
 
-    expect(await panel.findByRole('alert')).toHaveTextContent('Тег уже занят другим узлом');
+    expect(await panel.findByRole('alert')).toHaveTextContent('Тег уже занят другой записью');
     expect(ConfigDocumentState.getState().draft).toBeNull();
   });
 
@@ -139,12 +139,12 @@ describe('section screen picked with the mouse', () => {
 
     renderWithRouter(OutboundsSection);
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Добавить узел' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Добавить запись' }));
     await waitFor(() => {
       expect(statusServed).toBe(true);
     });
 
-    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+    const panel = within(screen.getByRole('complementary', { name: 'Новая запись' }));
 
     await pick(panel.getByRole('combobox', { name: 'Тип' }), /^hysteria2/);
 
@@ -165,7 +165,7 @@ describe('section screen picked with the mouse', () => {
 
     await openAddPanel();
 
-    const panel = within(screen.getByRole('complementary', { name: 'Новый узел' }));
+    const panel = within(screen.getByRole('complementary', { name: 'Новая запись' }));
 
     await pick(panel.getByRole('combobox', { name: 'Тип' }), 'inline');
     await userEvent.type(panel.getByRole('textbox', { name: 'Тег' }), 'own');

@@ -66,7 +66,7 @@ describe('service state', () => {
     renderWithQuery(<DaemonServiceControl />);
 
     expect(await screen.findByText('работает')).toBeInTheDocument();
-    expect(screen.getByText('поднят другой службой')).toBeInTheDocument();
+    expect(screen.getByText('поднято другой службой')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Запустить' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Перезапустить' })).not.toBeInTheDocument();
   });
@@ -76,7 +76,7 @@ describe('service state', () => {
 
     renderWithQuery(<DaemonServiceControl />);
 
-    expect(await screen.findByText('упал')).toBeInTheDocument();
+    expect(await screen.findByText('упало')).toBeInTheDocument();
     expect(screen.getByText(/provider sub-nl not found/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Запустить' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Остановить' })).not.toBeInTheDocument();
@@ -102,7 +102,7 @@ describe('service state', () => {
     renderWithQuery(<DaemonServiceControl />);
 
     expect(await screen.findByText('состояние неизвестно')).toBeInTheDocument();
-    expect(screen.queryByText('остановлен')).not.toBeInTheDocument();
+    expect(screen.queryByText('остановлено')).not.toBeInTheDocument();
     expect(screen.queryByText('Служба не запустилась')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Запустить' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Перезапустить' })).not.toBeInTheDocument();
@@ -127,7 +127,7 @@ describe('service state', () => {
 
     expect(await screen.findByText('procd не ответил демону: состояние службы неизвестно')).toBeInTheDocument();
     expect(screen.getByText('работает')).toBeInTheDocument();
-    expect(screen.queryByText('остановлен')).not.toBeInTheDocument();
+    expect(screen.queryByText('остановлено')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Перезапустить' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Остановить' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Запустить' })).not.toBeInTheDocument();
@@ -176,7 +176,7 @@ describe('service state', () => {
     await user.click(await screen.findByRole('button', { name: 'Запустить' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'sing-box' })).toHaveFocus();
+      expect(screen.getByRole('heading', { name: 'Ядро' })).toHaveFocus();
     });
   });
 
@@ -234,7 +234,7 @@ describe('service state', () => {
 
     try {
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: 'sing-box' })).toHaveFocus();
+        expect(screen.getByRole('heading', { name: 'Ядро' })).toHaveFocus();
       });
     } finally {
       finishResponse?.();

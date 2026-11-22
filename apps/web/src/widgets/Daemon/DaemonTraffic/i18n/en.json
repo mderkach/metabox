@@ -3,7 +3,7 @@
     "minute": "this minute"
   },
   "chart": {
-    "label": "Traffic {{window}}: inbound up to {{down}}, outbound up to {{up}}"
+    "label": "Traffic {{window}}: download up to {{down}}, upload up to {{up}}"
   },
   "axis": {
     "down": "↓ {{value}}",

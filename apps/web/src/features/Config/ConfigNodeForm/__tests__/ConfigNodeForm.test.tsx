@@ -580,7 +580,7 @@ describe('node form on the config corpus', () => {
     ConfigDocumentState.getState().load(text);
     render(<NodeFromStore registry={NODE_REGISTRY.Outbound} path={path} />);
 
-    const tag = screen.getByRole('textbox', { name: 'Имя узла' });
+    const tag = screen.getByRole('textbox', { name: 'Имя записи' });
 
     await user.type(tag, '-edited');
 

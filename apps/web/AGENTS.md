@@ -6,18 +6,18 @@ Shared repository rules are in the root [`AGENTS.md`](../../AGENTS.md). This fil
 
 A guide is read by the condition from the table, **in full** and before making a change. What each document covers: [`docs/README.md`](./docs/README.md).
 
-| Read in full before you                                          | Document                                                                                                  |
-| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| create or change application code in `src`                       | [Architecture&Style.md](./docs/guides/Architecture&Style.md): FSD, Public API, naming, components, styles |
-| create or change visual UI, layout, typography, colors or motion | [DESIGN.md](./DESIGN.md): panel design system, alongside the architecture and style guide                 |
-| create or change a store, a selector, any state code             | [StateManagement.md](./docs/guides/StateManagement.md)                                                    |
-| write a fetch function, a query key, a query hook or a mutation  | [Query.md](./docs/guides/Query.md)                                                                        |
-| write a form or a Zod schema                                     | [Form&Validation.md](./docs/guides/Form&Validation.md)                                                    |
-| create or change a list, a table, its columns and filtering      | [Tables.md](./docs/guides/Tables.md)                                                                      |
-| write or edit tests                                              | [testing/README.md](./docs/guides/testing/README.md): which level, then the guide of that level           |
-| write or edit Russian text in an `i18n/ru.json` dictionary       | [Glossary.md](./docs/guides/Glossary.md)                                                                  |
-| claim, measure or fix a performance problem                      | [Performance.md](./docs/guides/Performance.md)                                                            |
-| hand in a frontend change                                        | [ReviewChecklist.md](./docs/guides/ReviewChecklist.md): go through the checklist                          |
+| Read in full before you                                                                      | Document                                                                                                  |
+| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| create or change application code in `src`                                                   | [Architecture&Style.md](./docs/guides/Architecture&Style.md): FSD, Public API, naming, components, styles |
+| create or change visual UI, layout, typography, colors or motion                             | [DESIGN.md](./DESIGN.md): panel design system, alongside the architecture and style guide                 |
+| create or change a store, a selector, any state code                                         | [StateManagement.md](./docs/guides/StateManagement.md)                                                    |
+| write a fetch function, a query key, a query hook or a mutation                              | [Query.md](./docs/guides/Query.md)                                                                        |
+| write a form or a Zod schema                                                                 | [Form&Validation.md](./docs/guides/Form&Validation.md)                                                    |
+| create or change a list, a table, its columns and filtering                                  | [Tables.md](./docs/guides/Tables.md)                                                                      |
+| write or edit tests                                                                          | [testing/README.md](./docs/guides/testing/README.md): which level, then the guide of that level           |
+| write or edit a text in an `i18n/{en,ru}.json` dictionary or a daemon text the operator sees | [Glossary.md](./docs/guides/Glossary.md): the vocabulary                                                  |
+| claim, measure or fix a performance problem                                                  | [Performance.md](./docs/guides/Performance.md)                                                            |
+| hand in a frontend change                                                                    | [ReviewChecklist.md](./docs/guides/ReviewChecklist.md): go through the checklist                          |
 
 ## Changes in `apps/web/`
 

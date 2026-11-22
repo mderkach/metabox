@@ -33,7 +33,7 @@ describe('section node', () => {
     await user.type(server, 'b.example');
     await user.click(screen.getByRole('tab', { name: 'JSON' }));
 
-    expect(screen.getByRole('textbox', { name: 'Узел hk-01 текстом' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Запись hk-01 текстом' })).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByRole('textbox', { name: 'Сервер' })).not.toBeInTheDocument();
     });
@@ -57,7 +57,7 @@ describe('section node', () => {
 
     expect(screen.queryByRole('spinbutton', { name: 'Порт сервера' })).not.toBeInTheDocument();
 
-    await user.type(screen.getByRole('textbox', { name: 'Имя узла' }), '-b');
+    await user.type(screen.getByRole('textbox', { name: 'Имя записи' }), '-b');
 
     expect(findValue(ConfigDocumentState.getState().draft ?? '', ['outbounds', 0])).toEqual({
       type: 'direct',
@@ -73,7 +73,7 @@ describe('section node', () => {
     expect(screen.getByText('только текстом')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('tab', { name: 'JSON' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('textbox', { name: 'Узел hk-01 текстом' })).toHaveValue(JSON.stringify(node, null, 2));
+    expect(screen.getByRole('textbox', { name: 'Запись hk-01 текстом' })).toHaveValue(JSON.stringify(node, null, 2));
   });
 
   it('the api service opens with the form of its override', () => {
@@ -92,7 +92,7 @@ describe('section node', () => {
     render(<ConfigNode section={CONFIG_SECTION.Experimental} node={node} name='experimental' />);
 
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.queryByRole('textbox', { name: 'Узел experimental текстом' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Запись experimental текстом' })).not.toBeInTheDocument();
 
     const secret = screen.getByLabelText('secret');
 
@@ -111,7 +111,7 @@ describe('section node', () => {
 
     expect(screen.getByText('только текстом')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Форма' })).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByRole('textbox', { name: 'Узел experimental текстом' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Запись experimental текстом' })).toBeInTheDocument();
   });
 
   it('any other service is edited only as text: services have no auto forms', () => {
@@ -125,7 +125,7 @@ describe('section node', () => {
     );
 
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Узел resolved текстом' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Запись resolved текстом' })).toBeInTheDocument();
   });
 
   it.each([
@@ -136,6 +136,6 @@ describe('section node', () => {
 
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
     expect(screen.queryByText('только текстом')).not.toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: `Узел ${section} текстом` })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: `Запись ${section} текстом` })).toBeInTheDocument();
   });
 });
