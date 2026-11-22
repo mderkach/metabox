@@ -64,6 +64,13 @@ PRD appendix A is closed to new entries: decisions made before ADRs were introdu
 
 Working notes made during tasks live in `.omc/plans/*`. These files are **not in git**: do not link to them from commits, documentation or code.
 
+## UI mockups and handoffs
+
+- Use a mockup as a visual reference. Make the interactions needed for design review usable. Use fixtures, representative states and simple local behavior where they demonstrate the intended experience.
+- When feedback repeats, identify the common interaction or layout issue, inspect the comparable screens and variants, and address the pattern in one review pass.
+- Keep production complexity in a handoff under `.omc/plans/`. For a behavior that would take disproportionate effort to prototype, record the intended experience, what the mockup demonstrates, what production must implement and verify, and any open decision. This applies to details such as shared popovers, link import, validation and applying changes to the config.
+- Every mockup delivery links to both the mockup and its handoff. In the response, distinguish what reviewers can try in the mockup from what the handoff leaves for production.
+
 ## Change principles
 
 - Follow the architecture, naming conventions and style of the affected part of the repository; do not bring your own.
