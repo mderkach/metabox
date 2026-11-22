@@ -96,7 +96,8 @@ case "$snapshot" in
 	/var/run/metabox-core/"$pid"-*.json) ;;
 	*) fail "the running core did not receive a private config snapshot" ;;
 esac
-[ "$(stat -c '%a' "$snapshot")" = 400 ] || fail "the core config snapshot is accessible outside its owner"
+LC_ALL=C ls -ldn "$snapshot" | awk '$1 == "-r--------" && $3 == "0" { found = 1 } END { exit !found }' ||
+	fail "the core config snapshot is accessible outside its owner"
 cmp -s "$CONF" "$snapshot" || fail "snapshot contents differ from the applied config"
 echo "   The core runs from a private copy of the applied config"
 

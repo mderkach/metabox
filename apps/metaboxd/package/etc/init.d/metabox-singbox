@@ -472,8 +472,8 @@ core_launcher() (
 	umask 077
 	[ -x /lib/metabox/core-start ] && [ ! -L "$run" ] && [ ! -L "$run/launch" ] || exit 1
 	mkdir -p "$run/launch" || exit 1
-	[ "$(stat -c '%u:%a' "$run")" = '0:700' ] || exit 1
-	[ "$(stat -c '%u:%a' "$run/launch")" = '0:700' ] || exit 1
+	/lib/metabox/core-start --private-directory "$run" || exit 1
+	/lib/metabox/core-start --private-directory "$run/launch" || exit 1
 	# procd derives its syslog tag from the launcher basename.
 	launcher="$run/launch/$name"
 	if [ "$(readlink "$launcher")" != /lib/metabox/core-start ]; then
