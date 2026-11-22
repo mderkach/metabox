@@ -72,36 +72,19 @@ func (w *walker) schema(pkg, name string) error {
 		return nil
 	}
 
-	body, ok := w.src.structOf(key)
+	spec, ok := w.src.decls[key]
 	if !ok {
-		return fmt.Errorf("type %s is not declared as a struct", key)
+		return fmt.Errorf("type %s is not declared", key)
 	}
 
 	w.printed[key] = true
 	previous := w.pkg
 	w.pkg = pkg
-
-	fields := w.src.fieldsOf(body)
-	lines := make([]string, 0, len(fields))
-
-	for _, item := range fields {
-		expr, err := w.expr(item.typ)
-		if err != nil {
-			return fmt.Errorf("%s.%s: %w", key, item.json, err)
-		}
-
-		if item.optional {
-			expr += ".optional()"
-		}
-
-		if item.doc != "" {
-			lines = append(lines, "  /** "+item.doc+" */")
-		}
-
-		lines = append(lines, fmt.Sprintf("  %s: %s,", quoteKey(item.json), expr))
-	}
-
+	expr, err := w.schemaExpr(spec.Type)
 	w.pkg = previous
+	if err != nil {
+		return fmt.Errorf("%s: %w", key, err)
+	}
 
 	declared := schemaName(name)
 	text := ""
@@ -110,12 +93,40 @@ func (w *walker) schema(pkg, name string) error {
 		text += "/** " + doc + " */\n"
 	}
 
-	text += fmt.Sprintf("export const %s = z.object({\n%s\n})\n", declared, strings.Join(lines, "\n"))
+	text += fmt.Sprintf("export const %s = %s\n", declared, expr)
 
 	w.bodies[declared] = text
 	w.order = append(w.order, declared)
 
 	return nil
+}
+
+func (w *walker) schemaExpr(typ ast.Expr) (string, error) {
+	switch body := typ.(type) {
+	case *ast.MapType:
+		return w.expr(body)
+	case *ast.StructType:
+		fields := w.src.fieldsOf(body)
+		lines := make([]string, 0, len(fields))
+		for _, item := range fields {
+			expr, err := w.expr(item.typ)
+			if err != nil {
+				return "", fmt.Errorf("%s: %w", item.json, err)
+			}
+			if item.optional {
+				expr += ".optional()"
+			}
+			if item.doc != "" {
+				lines = append(lines, "  /** "+item.doc+" */")
+			}
+
+			lines = append(lines, fmt.Sprintf("  %s: %s,", quoteKey(item.json), expr))
+		}
+
+		return "z.object({\n" + strings.Join(lines, "\n") + "\n})", nil
+	default:
+		return "", fmt.Errorf("expected a struct or map schema")
+	}
 }
 
 func (w *walker) expr(node ast.Expr) (string, error) {

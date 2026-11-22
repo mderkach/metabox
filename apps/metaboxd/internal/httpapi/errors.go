@@ -33,7 +33,8 @@ var (
 	// errBadApplyEnvelope: a body with the apply envelope type was not parsed.
 	errBadApplyEnvelope = locale.New("apply request body not parsed")
 	// errBadDeviceBody: the device name edit body was not parsed.
-	errBadDeviceBody = locale.New("device rename body not parsed")
+	errBadDeviceBody   = locale.New("device rename body not parsed")
+	errBadOutboundBody = locale.New("outbound metadata body not parsed")
 	// errBadDataplaneBody: the dataplane model change body was not parsed as JSON.
 	errBadDataplaneBody = locale.New("dataplane model change body not parsed")
 	// errDataplaneBaseMissing: a model change without If-Match: without it a UCI edit
@@ -199,6 +200,8 @@ func statusFor(err error) (status int, code contract.ErrorCode) {
 	case errors.Is(err, devices.ErrInvalidMAC), errors.Is(err, devices.ErrInvalidName),
 		errors.Is(err, devices.ErrTooManyNames), errors.Is(err, errBadDeviceBody):
 		return http.StatusBadRequest, contract.ErrDeviceInvalid
+	case errors.Is(err, config.ErrOutboundMetadata), errors.Is(err, errBadOutboundBody):
+		return http.StatusBadRequest, contract.ErrOutboundInvalid
 	case errors.Is(err, errBadDataplaneBody):
 		return http.StatusBadRequest, contract.ErrDataplaneInvalid
 	case errors.Is(err, apply.ErrDataplaneModified):

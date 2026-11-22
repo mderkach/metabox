@@ -65,6 +65,17 @@ func (o *OutboundTags) Current(ctx context.Context) (string, map[string]struct{}
 	return o.revision, o.tags, nil
 }
 
+// Configured refreshes the applied inventory on demand before an absence check.
+func (o *OutboundTags) Configured(ctx context.Context) (map[string]struct{}, error) {
+	if _, err := o.Read(ctx); err != nil {
+		return nil, err
+	}
+
+	_, tags, err := o.Current(ctx)
+
+	return tags, err
+}
+
 func configuredOutboundTags(data []byte) (map[string]struct{}, error) {
 	type entry struct {
 		Tag string `json:"tag"`
@@ -89,4 +100,37 @@ func configuredOutboundTags(data []byte) (map[string]struct{}, error) {
 	}
 
 	return tags, nil
+}
+
+type outboundProxies struct {
+	Proxies map[string]struct {
+		Type string `json:"type"`
+	} `json:"proxies"`
+}
+
+// ReadOutboundTypes includes group, server and endpoint tags from a complete proxy list.
+func ReadOutboundTypes(ctx context.Context, source LatencySource) (map[string]string, error) {
+	body, err := source.Snapshot(ctx, "/proxies")
+	if err != nil {
+		return nil, fmt.Errorf("outbound list: %w", err)
+	}
+
+	var list outboundProxies
+	if err := json.Unmarshal(body, &list); err != nil {
+		return nil, fmt.Errorf("parse outbound list: %w", err)
+	}
+
+	if list.Proxies == nil {
+		return nil, errors.New("proxy snapshot has no outbound list")
+	}
+
+	types := make(map[string]string, len(list.Proxies))
+	for tag, proxy := range list.Proxies {
+		if tag == "" || proxy.Type == "" {
+			return nil, errors.New("proxy snapshot entry has no tag or type")
+		}
+		types[tag] = proxy.Type
+	}
+
+	return types, nil
 }

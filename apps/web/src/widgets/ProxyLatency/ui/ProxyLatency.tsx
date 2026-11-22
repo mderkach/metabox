@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useProxies, type useProxyLatency } from '@entities/Proxy';
+import { useOutboundMetadata, useProxies, type useProxyLatency } from '@entities/Proxy';
 import { useTestProxyDelays } from '@features/Proxy/ProxyDelay';
 import {
   Button,
@@ -36,6 +36,8 @@ export function ProxyLatency({
 }) {
   const { t } = useTranslation('widgets/ProxyLatency');
   const proxies = useProxies();
+  const outboundMetadata = useOutboundMetadata();
+  const metadata = outboundMetadata.data;
   const delay = useTestProxyDelays();
   const unavailable = latency.data?.available === false;
   const selected = proxies.data === undefined ? [] : toSelected(proxies.data);
@@ -101,6 +103,9 @@ export function ProxyLatency({
                   key={entry.node.name}
                   name={entry.node.name}
                   group={entry.group}
+                  label={metadata?.get(entry.node.name)?.label}
+                  manualNorm={metadata?.get(entry.node.name)?.normMs}
+                  legacyNorm={outboundMetadata.isError && metadata === undefined}
                   latency={latency.data?.servers.get(entry.node.name)}
                   available={!unavailable && !latency.isLoadingError}
                   testing={delay.isPending && testing?.names.includes(entry.node.name) === true}

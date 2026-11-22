@@ -20,6 +20,7 @@ type LatencyMonitor struct {
 	epoch   func(context.Context, int) string
 	ring    *history.Latency
 	log     *slog.Logger
+	norms   func() map[string]int
 
 	mu      sync.Mutex
 	core    string
@@ -29,9 +30,10 @@ type LatencyMonitor struct {
 
 // NewLatencyMonitor never initiates a probe: only the browser delay request does.
 func NewLatencyMonitor(
-	source *ClashSource, resolve clashapi.Resolver, epoch func(context.Context, int) string, log *slog.Logger,
+	source *ClashSource, resolve clashapi.Resolver, epoch func(context.Context, int) string,
+	norms func() map[string]int, log *slog.Logger,
 ) *LatencyMonitor {
-	return &LatencyMonitor{source: source, resolve: resolve, epoch: epoch, ring: history.NewLatency(), log: log}
+	return &LatencyMonitor{source: source, resolve: resolve, epoch: epoch, ring: history.NewLatency(), log: log, norms: norms}
 }
 
 // Start runs a bounded snapshot poll independently of subscribers. Cancelling
@@ -65,8 +67,12 @@ func (m *LatencyMonitor) Snapshot(ctx context.Context) (bool, []history.ServerLa
 	defer m.mu.Unlock()
 
 	controller := m.current(ctx)
+	var norms map[string]int
+	if m.norms != nil {
+		norms = m.norms()
+	}
 
-	return controller.port != 0, m.ring.Snapshot(time.Now())
+	return controller.port != 0, m.ring.Snapshot(time.Now(), norms)
 }
 
 // ObserveDelay is attached to the panel's existing user-requested delay route.
