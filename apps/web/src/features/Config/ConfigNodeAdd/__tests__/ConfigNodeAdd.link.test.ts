@@ -253,9 +253,15 @@ describe('parseShareLink', () => {
     ['an empty string', ''],
     ['text without a scheme', 'example.com:443'],
     ['an unsupported scheme', 'tuic://uuid:pass@example.com:443'],
-    ['a subscription address', 'https://provider.example/sub/token'],
   ])('rejects %s as an unknown scheme', (_case, text) => {
     expect(parseShareLink(text)).toEqual({ link: null, error: NODE_LINK_ERROR.Scheme });
+  });
+
+  it.each([
+    ['an https address', 'https://provider.example/sub/token'],
+    ['an http address in capitals', 'HTTP://provider.example/sub'],
+  ])('rejects %s as a subscription', (_case, text) => {
+    expect(parseShareLink(text)).toEqual({ link: null, error: NODE_LINK_ERROR.Subscription });
   });
 
   it.each([
