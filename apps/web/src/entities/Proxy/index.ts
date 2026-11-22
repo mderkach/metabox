@@ -10,7 +10,14 @@ export {
   useProxyProviders,
   useProxyLatency,
 } from './api/Proxy.query';
-export { LATENCY_LEVEL, isLatencyServer, serverDelay, toServerDelayLabel } from './model/Proxy.latency';
+export {
+  LATENCY_CEILING_MS,
+  LATENCY_LEVEL,
+  isLatencyServer,
+  serverDelay,
+  toLatencyReading,
+  toServerDelayLabel,
+} from './model/Proxy.latency';
 export type { ServerLatency, ServerLatencyPoint, ServerLatencies } from './model/Proxy.latency';
 export { toDelayLabel } from './model/Proxy.delay';
 export { isProbeFailure, toProxyRuntime, withSelectedNode } from './model/Proxy.adapter';

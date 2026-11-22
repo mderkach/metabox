@@ -6,14 +6,12 @@ import { Button } from '@shared/ui';
 
 export function ProxyMetadataButton({
   tag,
-  server = false,
   expanded,
   editorId,
   onClick,
   ref,
 }: {
   tag: string;
-  server?: boolean;
   expanded: boolean;
   editorId: string;
   onClick: () => void;
@@ -28,7 +26,7 @@ export function ProxyMetadataButton({
       variant='outline'
       className='max-sm:size-11'
       ref={ref}
-      aria-label={t(server ? 'metadata.editServer' : 'metadata.editLabel', { tag })}
+      aria-label={t('metadata.editLabel', { tag })}
       aria-expanded={expanded}
       aria-disabled={expanded}
       aria-controls={expanded ? editorId : undefined}

@@ -1,7 +1,6 @@
+import { LATENCY_CEILING_MS } from '@entities/Proxy';
 import { toValueScale } from '@shared/lib/chart';
-
-export const SCALE_CEILING = 1500;
 
 const SCALE_STEP = 500;
 
-export const SCALE = toValueScale(SCALE_CEILING, [SCALE_STEP]);
+export const SCALE = toValueScale(LATENCY_CEILING_MS, [SCALE_STEP]);

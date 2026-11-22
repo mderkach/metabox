@@ -148,7 +148,7 @@ test(
     const retry = page.getByRole('button', { name: translate(PROXIES, 'recovery.retry') });
     const restore = page.getByRole('button', { name: translate(PROXIES, 'recovery.restore') });
     const node = page.getByRole('listitem').filter({
-      has: page.getByRole('button', { name: translate('widgets/ProxyGroups', 'metadata.editServer', { tag: TAG }) }),
+      has: page.getByRole('button', { name: translate('widgets/ProxyGroups', 'metadata.editLabel', { tag: TAG }) }),
     });
 
     await test.step('opens the server diagnosis and puts just the setting in the draft', async () => {

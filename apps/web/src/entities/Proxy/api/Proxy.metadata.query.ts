@@ -33,13 +33,27 @@ export function useOutboundMetadata() {
   return useQuery({ ...getOutboundMetadataOptions(), select: toOutboundMetadata });
 }
 
+type OutboundMetadataChange = { tag: string } & (
+  | { entry: OutboundMetadata }
+  | { patch: { label?: string | undefined; normMs?: number | undefined } }
+);
+
 export function useSaveOutboundMetadata() {
   const client = useQueryClient();
 
   return useMutation({
     scope: { id: 'outbound-metadata' },
-    mutationFn: async ({ tag, entry }: { tag: string; entry: OutboundMetadata }) =>
-      decodeMetadata(
+    mutationFn: async (change: OutboundMetadataChange) => {
+      const { tag } = change;
+      let entry: { label?: string | undefined; normMs?: number | undefined };
+      if ('entry' in change) {
+        entry = change.entry;
+      } else {
+        const stored = decodeMetadata(await getOutboundMetadata()).find(([key]) => key === tag)?.[1];
+        entry = { label: stored?.label, normMs: stored?.norm_ms, ...change.patch };
+      }
+
+      return decodeMetadata(
         await saveOutboundMetadata({
           tag,
           entry: {
@@ -47,7 +61,8 @@ export function useSaveOutboundMetadata() {
             ...(entry.normMs === undefined ? {} : { norm_ms: entry.normMs }),
           },
         })
-      ),
+      );
+    },
     meta: { showError: true, errorMessageKey: 'toast.outboundMetadata.failed' },
     onSuccess: async (entries) => {
       await client.cancelQueries({ queryKey: PROXY_QUERY.outbounds() });

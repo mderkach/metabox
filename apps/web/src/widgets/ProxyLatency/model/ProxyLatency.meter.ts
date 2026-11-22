@@ -1,12 +1,10 @@
-import { DELAY_TIMEOUT, type ProxyNode } from '@entities/Proxy';
+import { DELAY_TIMEOUT, LATENCY_CEILING_MS, type ProxyNode } from '@entities/Proxy';
 import { toShare } from '@shared/lib/chart';
-
-import { SCALE_CEILING } from './ProxyLatency.scale';
 
 export function toMeter(node: Pick<ProxyNode, 'delay' | 'delayState'>): number | null {
   if (node.delay === null) {
     return null;
   }
 
-  return node.delay >= DELAY_TIMEOUT ? 1 : toShare(Math.min(node.delay, SCALE_CEILING), SCALE_CEILING);
+  return node.delay >= DELAY_TIMEOUT ? 1 : toShare(Math.min(node.delay, LATENCY_CEILING_MS), LATENCY_CEILING_MS);
 }
