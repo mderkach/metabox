@@ -147,7 +147,9 @@ test(
     const stage = page.getByRole('button', { name: translate(PROXIES, 'recovery.stage') });
     const retry = page.getByRole('button', { name: translate(PROXIES, 'recovery.retry') });
     const restore = page.getByRole('button', { name: translate(PROXIES, 'recovery.restore') });
-    const node = page.getByRole('listitem').filter({ has: page.getByText(TAG, { exact: true }) });
+    const node = page.getByRole('listitem').filter({
+      has: page.getByRole('button', { name: translate('widgets/ProxyGroups', 'metadata.editServer', { tag: TAG }) }),
+    });
 
     await test.step('opens the server diagnosis and puts just the setting in the draft', async () => {
       await expect(node).toBeVisible();
