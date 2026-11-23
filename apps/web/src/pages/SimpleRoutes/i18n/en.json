@@ -60,5 +60,58 @@
   },
   "catalog": {
     "action": "Add service"
+  },
+  "custom": {
+    "add": "Add site or address",
+    "exception": "Add device exception",
+    "address": "Domain or IP address",
+    "device": "Device",
+    "outbound": "Outbound",
+    "submit": "Add to draft",
+    "title": "Add site or address",
+    "exceptionTitle": "Add device exception",
+    "preview": "New rule {{position}} · {{scope}} → {{outbound}}",
+    "all": "All devices",
+    "before": "General rule {{position}} moves to position {{next}}.",
+    "unknown": "Possible overlap with rule {{position}}. Review its conditions in Editor or JSON.",
+    "invalid": "Enter an exact domain or a single IPv4 or IPv6 address.",
+    "deviceRequired": "Select a device with a known IP address.",
+    "exit": "Choose an unambiguous outbound from this draft.",
+    "draft": "Simple cannot safely insert a rule into this draft. Review it in Editor or JSON.",
+    "duplicate": "Rule {{position}} already matches this traffic. Review it in Editor or JSON.",
+    "parent": "This rule has conditions that Simple cannot narrow. Open it in Editor or JSON.",
+    "choose": "Choose…",
+    "noDevices": "No devices with a unique address",
+    "noExits": "No eligible outbounds",
+    "description": "Route traffic for one exact domain or IP address. DNS settings stay as configured.",
+    "exceptionDescription": "Route {{subject}} from one device separately from rule {{position}}. DNS settings stay as configured.",
+    "dynamic": "This device uses a dynamic address. The rule matches {{ip}} even if another device receives it later.",
+    "stale": "The draft or the configuration on the device changed. Close this preview and review the current draft.",
+    "cancel": "Cancel"
+  },
+  "list": {
+    "groups": {
+      "services": "Services",
+      "sites": "Custom sites and addresses",
+      "devices": "Device rules",
+      "default": "All traffic",
+      "advanced": "Advanced rules"
+    },
+    "advanced": "Edit in Editor",
+    "all": "All outbounds",
+    "filter": "Filter by outbound",
+    "view": "Rule list view",
+    "byType": "By type",
+    "byOrder": "In matching order",
+    "drag": "Drag rule {{index}}",
+    "help": "How does rule order work?",
+    "explanation": "The core checks routing rules from top to bottom. If a device exception and a general service rule both match, the first terminal rule selects the outbound. Place the exception first.",
+    "filteredOrder": "Show all rules to change their order.",
+    "advancedMove": "Rule {{index}} has conditions or an action that Simple cannot move across. Open Editor to change this order.",
+    "covers": "This move would put a general rule before a rule it covers. Keep the narrower rule first. The move crosses rule {{index}}.",
+    "unknown": "Simple cannot tell whether these rules overlap. The move across rule {{index}} needs review in Editor.",
+    "drop": "Move to position {{index}}",
+    "unsafe": "Simple cannot move this rule safely in the current draft. Review the configuration in JSON.",
+    "sourceUnavailable": "The source of this set is unavailable."
   }
 }

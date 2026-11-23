@@ -1,4 +1,3 @@
-import { Link } from '@tanstack/react-router';
 import { TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -6,7 +5,9 @@ import { RULE_SET_TYPE, type RuleSetRow, type useCachedRuleSets } from '@entitie
 import type { CachedRuleSet } from '@entities/RuleSet';
 import { Button, SkeletonRows } from '@shared/ui';
 
+import { RuleSetReferenceLinks } from './RuleSetReferenceLinks';
 import { RuleSetSizeCell } from './RuleSetSizeCell';
+import { RuleSetSourceDetails } from './RuleSetSourceDetails';
 import { RuleSetUpdatedCell } from './RuleSetUpdatedCell';
 
 const CACHE_STATE_MESSAGE = {
@@ -35,35 +36,11 @@ export function RuleSetDetails({
   draftOnly: boolean;
 }) {
   const { t } = useTranslation('widgets/RuleSet/RuleSetTable');
-  const description = set.description;
   const state = cached?.state;
-
-  const usage = set.usage;
-  const routeRules = usage.filter((item) => item.kind === 'route');
-  const dnsRules = usage.filter((item) => item.kind === 'dns');
 
   return (
     <div className='flex min-w-0 flex-col gap-3 border-b border-border px-4 py-3 text-sm [overflow-wrap:anywhere]'>
-      <div>
-        {(description.kind === 'geosite' || description.kind === 'geoip') && (
-          <>
-            <p>
-              {t(`details.${description.kind}`, { provider: description.providerName, category: description.category })}
-            </p>
-            {description.mirrorHost !== null && <p>{t('details.mirror', { host: description.mirrorHost })}</p>}
-          </>
-        )}
-        {description.kind === 'remote' && (
-          <p>
-            {description.host === null ? t('details.remoteUnknown') : t('details.remote', { host: description.host })}
-          </p>
-        )}
-        {description.kind === 'local' && <p>{t('details.local', { path: description.path })}</p>}
-        {description.kind === 'inline' && <p>{t('details.inline')}</p>}
-        {'fileName' in description && description.fileName !== null && (
-          <p>{t('details.file', { name: description.fileName })}</p>
-        )}
-      </div>
+      <RuleSetSourceDetails description={set.description} />
 
       {set.type === RULE_SET_TYPE.Remote && (
         <div className='flex flex-wrap items-center gap-x-3 gap-y-1'>
@@ -97,47 +74,7 @@ export function RuleSetDetails({
         </div>
       )}
 
-      <div>
-        <p className='font-medium'>{t('details.usage')}</p>
-        {usage.length === 0 && <p>{t('details.unused')}</p>}
-        {routeRules.length > 0 && (
-          <>
-            <p>{t('details.routeRules')}</p>
-            <ul className='list-disc pl-5'>
-              {routeRules.map((item) => (
-                <li key={item.number}>
-                  <Link
-                    to='/config'
-                    search={{ rule: item.number }}
-                    className='inline-flex items-center text-primary underline max-md:min-h-11'
-                  >
-                    {item.name ?? t('details.rule', { number: item.number })}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-        {dnsRules.length > 0 && (
-          <>
-            <p>{t('details.dnsRules')}</p>
-            <ul className='list-disc pl-5'>
-              {dnsRules.map((item) => (
-                <li key={item.number}>
-                  <Link
-                    to='/config/$section'
-                    params={{ section: 'dnsRules' }}
-                    search={{ node: item.number }}
-                    className='inline-flex items-center text-primary underline max-md:min-h-11'
-                  >
-                    {item.name ?? t('details.rule', { number: item.number })}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </div>
+      <RuleSetReferenceLinks usage={set.usage} />
     </div>
   );
 }

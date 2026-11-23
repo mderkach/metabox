@@ -1,5 +1,3 @@
-import { visit } from 'jsonc-parser';
-
 import {
   CONFIG_SECTION,
   insertValue,
@@ -19,6 +17,7 @@ import {
   type RuleSetList,
 } from '@entities/RuleSet';
 import { isRecord } from '@shared/lib/isRecord';
+import { hasDuplicateJsoncKeys } from '@shared/lib/jsonc';
 
 import { eligibleExit, eligibleResolvers, hasCatalogIngress, onlyKeys, strings } from './RuleCatalogAdd.paths';
 
@@ -54,29 +53,6 @@ type BlockReason =
 
 function blocked(reason: BlockReason, detail = '') {
   return { ok: false, reason, detail } as const;
-}
-
-function hasDuplicateKeys(text: string): boolean {
-  const objects: Set<string>[] = [];
-  let duplicate = false;
-  visit(
-    text,
-    {
-      onObjectBegin: () => {
-        objects.push(new Set());
-      },
-      onObjectProperty: (name) => {
-        const keys = objects.at(-1);
-        if (keys?.has(name) === true) duplicate = true;
-        keys?.add(name);
-      },
-      onObjectEnd: () => {
-        objects.pop();
-      },
-    },
-    { allowTrailingComma: true }
-  );
-  return duplicate;
 }
 
 /** The core stores these profiles in the remote set bucket under their effective node tag. */
@@ -125,7 +101,7 @@ export function planCatalogService({ text, coreVersion, list, category, outbound
   }
   const parsed = parseConfig(text);
   const { config } = parsed;
-  if (!config || hasDuplicateKeys(text) || parsed.unknown.some(({ path }) => path === 'route' || path === 'dns')) {
+  if (!config || hasDuplicateJsoncKeys(text) || parsed.unknown.some(({ path }) => path === 'route' || path === 'dns')) {
     return blocked('draft');
   }
   const routeOverride = Object.entries(config.route ?? {}).find(

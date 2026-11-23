@@ -719,6 +719,24 @@ An independent Impeccable review compared the populated form and preview with v1
 | AC-116 | e2e    | `apps/web/e2e/simpleCatalog.e2e.test.ts`                                            | `an imported DNS conflict identifies the blocked rule and leaves the pre-existing draft byte-for-byte intact`  |
 | AC-116 | e2e    | `apps/web/e2e/simpleCatalog.e2e.test.ts`                                            | `the empty configuration opens the same catalog from a suggested service and Escape restores focus`            |
 
+### Simple rule order and device exceptions
+
+| ID     | Kind   | File                                                                          | Check                                                                                                         |
+| ------ | ------ | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutesRules.test.tsx`        | `shows references outside the outbound filter and counts a nested rule only once`                             |
+| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutesRules.test.tsx`        | `keeps actual references visible when the source is $source`                                                  |
+| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.custom.test.ts`       | `inserts a device exception before the general service and retains its JSONC name and DNS rule`               |
+| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.custom.test.ts`       | `leaves service steps ahead and inserts a literal IP before a covering IPv4 prefix`                           |
+| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutesCustomDialog.test.tsx` | `previews the actual position and refuses to overwrite a changed shared draft`                                |
+| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.order.test.ts`        | `protects a device exception when either it or its covering rule is moved`                                    |
+| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.order.test.ts`        | `checks every crossed rule even when the source and drop target are disjoint`                                 |
+| AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                    | `an outbound deep link retains rule positions and reveals actual route and DNS references in the service row` |
+| AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                    | `pointer and keyboard reorder the shared draft while preserving an imported rule and its JSONC comment`       |
+| AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                    | `a device exception precedes its general rule and a new custom domain uses the previewed position`            |
+| AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                    | `an unknown overlap blocks staging and preserves the imported JSONC byte for byte`                            |
+
+An independent Impeccable review on the mock stand at 1280 × 800 and 375 × 812 checked both list views, the service disclosure, keyboard reordering, the custom form and device exceptions. The review led to aligned outbound columns, a separate device action on narrow screens, a refusal message in the affected row, and a preview that gives the general rule's old and new positions. The follow-up confirmed these changes, focus return and a layout that fits both viewport widths.
+
 ### Secondary action layout
 
 | ID     | Kind | File                                                | Check                                                                  |

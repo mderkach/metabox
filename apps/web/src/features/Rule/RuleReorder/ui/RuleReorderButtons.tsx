@@ -25,13 +25,16 @@ export function RuleReorderButtons({
   index,
   total,
   onMoved,
+  allowMove,
 }: {
   /** Rule number, from one. */
   index: number;
   /** `route.rules` length, not the selected list's. */
   total: number;
   /** The number the rule moved to. */
-  onMoved: (index: number) => void;
+  onMoved?: (index: number) => void;
+  /** A restricted view may refuse crossing an imported or overlapping rule. */
+  allowMove?: (target: number) => boolean;
 }) {
   const { t } = useTranslation('features/Rule/RuleReorder');
   const move = ConfigDocumentState.use.move();
@@ -57,6 +60,8 @@ export function RuleReorderButtons({
     const target = index + step;
     const atEdge = target === 1 || target === total;
 
+    if (allowMove?.(target) === false) return;
+
     if (!move(RULES_PATH, index - 1, target - 1)) {
       showQueryError({ showError: true, errorMessageKey: 'toast.rule.reorder.failed' }, null);
 
@@ -64,7 +69,7 @@ export function RuleReorderButtons({
     }
 
     focusAfterMove.current = atEdge ? opposite(step) : step;
-    onMoved(target);
+    onMoved?.(target);
   }
 
   return (
