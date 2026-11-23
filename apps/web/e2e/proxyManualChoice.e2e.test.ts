@@ -6,13 +6,38 @@ const GROUP = 'proxy';
 test(
   'adds a manual choice over an automatic group and applies it through the diff',
   { tag: E2E_TAG.Mock },
-  async ({ proxiesPage, applyBar }) => {
+  async ({ page, proxiesPage, applyBar }) => {
+    let releaseMetadata: () => void = () => undefined;
+    const metadataGate = new Promise<void>((resolve) => {
+      releaseMetadata = resolve;
+    });
+    await page.exposeFunction('waitForProxyMetadata', async () => metadataGate);
+    await page.route(
+      (url) => url.pathname === '/mocks/browser.ts',
+      async (route) => {
+        const response = await route.fetch();
+        const handler = `worker.use(http.get("/api/outbounds", async () => {
+          await window.waitForProxyMetadata();
+          return HttpResponse.json({});
+        }));`;
+        await route.fulfill({
+          response,
+          body: `${await response.text()}
+${handler}`,
+        });
+      }
+    );
     await proxiesPage.goto();
 
     await test.step('the keyboard action leaves a draft and moves focus to its result', async () => {
       await proxiesPage.addManualChoiceButton(GROUP).focus();
       await proxiesPage.page.keyboard.press('Enter');
 
+      await expect(proxiesPage.manualChoiceAdded).toBeFocused();
+      await expect(proxiesPage.normHeader(GROUP)).toBeHidden();
+
+      releaseMetadata();
+      await expect(proxiesPage.normHeader(GROUP)).toBeVisible();
       await expect(proxiesPage.manualChoiceAdded).toBeFocused();
       await expect(proxiesPage.addManualChoiceButton(GROUP)).toBeHidden();
       await expect(applyBar.dirty).toBeVisible();
