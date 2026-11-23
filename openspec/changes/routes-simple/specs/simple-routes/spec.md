@@ -65,15 +65,45 @@ Simple SHALL let users view supported rules by type, filter by outbound, and ins
 #### Scenario: Stage a catalog route and its matching DNS rule together
 
 - **GIVEN** the user adds a catalog service and Simple can prove an eligible DNS mapping for the selected outbound
-- **WHEN** the user stages the addition
-- **THEN** the service route and its matching DNS rule through that outbound are staged as one draft change and both edits appear in the diff before Apply
+- **WHEN** the user reviews the proposed addition
+- **THEN** Simple previews the effective route and DNS rule for the same service and device scope, including their positions, selected outbound and resolver
+- **AND** staging prepares the whole pair in one draft operation, and the diff before Apply shows each actual edit
 - **AND** existing unrelated routing and DNS rules remain intact
+
+#### Scenario: Choose a catalog source and resolver before staging
+
+- **GIVEN** multiple sources publish the same named service
+- **WHEN** the user searches the catalog and picks a source and an outbound
+- **THEN** Simple uses that source’s definition and limits the resolver choices to verified entries for the selected outbound
+- **AND** a compatible service assignment is shown when available. Otherwise the user selects a resolver explicitly
+- **AND** the user can cancel without adding a set, changing shared DNS assignments or modifying the draft
+
+#### Scenario: Reuse a rule that already covers the service
+
+- **GIVEN** an effective rule already covers the requested service and scope with the selected outbound or resolver
+- **WHEN** the user previews the pair
+- **THEN** Simple identifies the reused rule in the preview and keeps it in its original position without a duplicate or a diff entry
+- **AND** only the missing part appears in the diff. Repeating a complete pair makes no edit
+
+#### Scenario: A catalog set shares a cache key with a profile
+
+- **GIVEN** a new or existing remote catalog set would use the effective tag of a WARP endpoint or a MASQUE outbound
+- **WHEN** the user previews the service in Simple
+- **THEN** the form identifies the conflicting tag and leaves the entire draft unchanged
+
+#### Scenario: Separate one service from a shared DNS rule
+
+- **GIVEN** a plain DNS rule matches several service sets and the selected service needs a different eligible resolver
+- **WHEN** Simple previews a service-specific split
+- **THEN** it offers the split only for proven disjoint sets when two adjacent rules at the original position preserve the other services' effective scope
+- **AND** the diff shows the dedicated DNS rule, the selected set's removal from the shared rule, and any required route change
+- **AND** if the sets may overlap or the rule contains conditions or options Simple cannot preserve, it names the shared rule and leaves the entire draft intact
 
 #### Scenario: A catalog addition has no verified DNS mapping
 
 - **GIVEN** the intended pair cannot be proven valid for the current core and draft, for example because the selected path has no eligible resolver or an imported rule would conflict
 - **WHEN** the user attempts to stage the catalog service
-- **THEN** Simple identifies the blocker and leaves both the routing and DNS draft unchanged
+- **THEN** Simple identifies the missing resolver, unsupported path or conflicting rule and its position when known, and leaves both the routing and DNS draft unchanged
 - **AND** it does not guess a fallback or silently rewrite imported DNS rules
 
 #### Scenario: Put an exception ahead of a broad rule
@@ -101,6 +131,13 @@ Simple SHALL let users add supported resolvers to an inventory and separately as
 - **WHEN** the user changes the resolver for direct connections, proxied connections, or a selected outbound
 - **THEN** Simple identifies the affected assignment and stages its supported change
 - **AND** unrelated assignments and unsupported fields stay intact
+
+#### Scenario: A compatible resolver is explicitly configured for a catalog service
+
+- **GIVEN** the selected path has no eligible resolver and the user explicitly configures one
+- **WHEN** that server is available in the candidate configuration and the user selects it for the service
+- **THEN** Simple checks the transport and dial settings against the [verified outbound mapping](../../design.md#catalog-route-and-dns-mapping) and checks effective rule order before it can offer the pair
+- **AND** an unassigned inventory entry alone never changes a route, a DNS rule or a shared assignment
 
 #### Scenario: Edit a supported sequential fallback
 

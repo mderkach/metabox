@@ -26,6 +26,7 @@ declare module 'i18next' {
       'features/Log/LogClear': typeof import('./features/Log/LogClear/i18n/ru.json');
       'features/Mcp/McpAccess': typeof import('./features/Mcp/McpAccess/i18n/ru.json');
       'features/Rule/RuleAdd': typeof import('./features/Rule/RuleAdd/i18n/ru.json');
+      'features/Rule/RuleCatalogAdd': typeof import('./features/Rule/RuleCatalogAdd/i18n/ru.json');
       'features/Rule/RuleDelete': typeof import('./features/Rule/RuleDelete/i18n/ru.json');
       'features/Rule/RuleEdit': typeof import('./features/Rule/RuleEdit/i18n/ru.json');
       'features/Rule/RuleRaw': typeof import('./features/Rule/RuleRaw/i18n/ru.json');

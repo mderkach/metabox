@@ -680,6 +680,45 @@ The Chromium mock scenarios cover a populated desktop configuration and an empty
 | AC-115 | e2e    | `apps/web/e2e/simpleRoutes.e2e.test.ts`             | `Simple, Editor and JSON share the server draft and its Apply flow`               |
 | AC-115 | e2e    | `apps/web/e2e/simpleRoutes.e2e.test.ts`             | `the empty Simple view opens the same focused server dialog from both actions in` |
 
+### Catalog route and DNS mapping
+
+Run `tools/bench/simple-catalog-dns/run.sh` from the repository with its Node version and workspace dependencies installed, Python 3 and Docker. The runner verifies the OpenWrt package against `sing-box-extended.sha256`. Set `SING_BOX_APK` to reuse a local copy. All probes run sequentially inside a disposable container with networking disabled except for loopback and one CPU. The core downloads the synthetic binary domain sets from a loopback HTTP server.
+
+| Evidence                      | Observed on sing-box-extended 1.14.3-extended-2.7.3 (linux/arm64)                                                                                                                                                                                                                                                                                                                               |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Generated schema              | All 14 complete fixture configurations passed `ConfigSchema`, including both shadowed pairs.                                                                                                                                                                                                                                                                                                    |
+| Core configuration            | `sing-box check` accepted all 14. Each configuration also started and served requests.                                                                                                                                                                                                                                                                                                          |
+| Effective rules               | For each of 44 probes the test checks the ordered debug matches for a domain-bearing SOCKS connection and a separate hijacked UDP A query. The ordinary pairs hit `route.rules[1]` and `dns.rules[0]`. In the conflict cases an earlier suffix rule wins on just one side. With only the default, the corresponding service match is absent.                                                    |
+| Actual data and DNS paths     | The TCP destination reports the data peer. The resolver's A reply encodes its listener and the source address of the upstream TCP connection. Both peers were `127.0.0.1` for direct (with or without an explicit direct detour), `.2` for the selector's active SOCKS member, and `.3` for the named outbound. An earlier DNS rule gave data/DNS peers `.3/.1`. An earlier route gave `.1/.3`. |
+| Missing and existing resolver | Without the named resolver, the query reached the default listener directly. Adding the inventory entry alone gave the same result. Adding the service pair sent it through the named relay. Reusing an existing DNS rule kept its index, resolver and peer when the route was added.                                                                                                           |
+| Shared DNS rule               | Splitting the disjoint test sets moved only alpha to the named resolver. Beta stayed direct and the unrelated control kept its selector. With a domain present in both sets, that domain moved from direct to named in the proposed split. This second split must be refused.                                                                                                                   |
+
+The snapshot comparisons check the whole fixture document, including the resolver inventory, rule order and unrelated configuration. These are checks of the [candidate mapping](../openspec/changes/routes-simple/design.md#catalog-route-and-dns-mapping). Draft mutation, refusal in the form and the rendered diff belong to task 2.3.
+
+| ID     | Kind   | File                                             | Check                                                                                   |
+| ------ | ------ | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| AC-116 | script | `tools/bench/simple-catalog-dns/check_deltas.py` | `Fixture diffs passed: three pairs, DNS reuse, explicit resolver and shared rule split` |
+| AC-116 | script | `tools/bench/simple-catalog-dns/probe.py`        | `data/DNS probe pairs passed`                                                           |
+| AC-117 | script | `tools/bench/simple-catalog-dns/checkSchema.mjs` | `configs passed`                                                                        |
+| AC-117 | script | `tools/bench/simple-catalog-dns/probe.py`        | `config check passed`                                                                   |
+
+### Adding a catalog service in Simple
+
+The tests open the catalog from Rules and from an empty configuration, choose between providers publishing the same category, and review the proposed route and DNS positions before staging. The shared draft and Apply diff show the selected set and new rules. Reuse, cancellation and blocked proposals preserve existing entries. The browser checks use a synthetic configuration and the verified core version on the mock stand.
+
+An independent Impeccable review compared the populated form and preview with v11 at 1280 × 800 (light) and 375 × 812 (dark). It found that viewport width alone did not exercise touch sizing. The phone scenario now enables touch, measures the search, selectors and both footer actions at 44 px or larger, and checks for horizontal overflow. The reviewer confirmed both actions and the reuse summary remain visible in the final phone capture.
+
+| ID     | Kind   | File                                                                                | Check                                                                                                          |
+| ------ | ------ | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| AC-116 | vitest | `apps/web/src/features/Rule/RuleCatalogAdd/__tests__/RuleCatalogAdd.plan.test.ts`   | `reserves %s profile cache tags for both new and existing catalog sets`                                        |
+| AC-116 | vitest | `apps/web/src/features/Rule/RuleCatalogAdd/__tests__/RuleCatalogAdd.plan.test.ts`   | `builds a complete pair for %s with %s and keeps both final paths`                                             |
+| AC-116 | vitest | `apps/web/src/features/Rule/RuleCatalogAdd/__tests__/RuleCatalogAddDialog.test.tsx` | `retains a concurrent draft edit when the reviewed catalog pair is submitted`                                  |
+| AC-116 | vitest | `apps/web/src/features/Rule/RuleCatalogAdd/__tests__/RuleCatalogAddDialog.test.tsx` | `blocks an unknown core variant even if it reports the tested version number`                                  |
+| AC-116 | e2e    | `apps/web/e2e/simpleCatalog.e2e.test.ts`                                            | `the desktop catalog previews and stages one source-qualified route and DNS pair before Apply`                 |
+| AC-116 | e2e    | `apps/web/e2e/simpleCatalog.e2e.test.ts`                                            | `the 375px catalog reuses an existing DNS rule, shows only the route diff and keeps a repeated pair unchanged` |
+| AC-116 | e2e    | `apps/web/e2e/simpleCatalog.e2e.test.ts`                                            | `an imported DNS conflict identifies the blocked rule and leaves the pre-existing draft byte-for-byte intact`  |
+| AC-116 | e2e    | `apps/web/e2e/simpleCatalog.e2e.test.ts`                                            | `the empty configuration opens the same catalog from a suggested service and Escape restores focus`            |
+
 ### Secondary action layout
 
 | ID     | Kind | File                                                | Check                                                                  |
