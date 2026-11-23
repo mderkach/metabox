@@ -124,7 +124,12 @@ test(
   }
 );
 
-for (const theme of ['light', 'dark'] as const) {
+const EMPTY_CONFIGS = [
+  { theme: 'light', config: {} },
+  { theme: 'dark', config: { dns: { servers: [], rules: [] }, outbounds: [], route: { rules: [] } } },
+] as const;
+
+for (const { theme, config } of EMPTY_CONFIGS) {
   test(
     `the empty Simple view opens the same focused server dialog from both actions in ${theme} theme`,
     { tag: E2E_TAG.Mock },
@@ -132,7 +137,7 @@ for (const theme of ['light', 'dark'] as const) {
       await page.setViewportSize(PHONE);
       await page.addInitScript(saveTheme, theme);
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      await routes.openEmpty();
+      await routes.openEmpty(config);
 
       await test.step('the empty document leads to the starter and four sections without sideways overflow', async () => {
         await expect(page).toHaveURL('/config/simple');

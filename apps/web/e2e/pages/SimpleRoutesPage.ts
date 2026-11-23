@@ -89,13 +89,14 @@ export class SimpleRoutesPage {
     await this.page.goto(`/config/simple?outbound=${encodeURIComponent(outbound)}`);
   }
 
-  async openEmpty() {
+  async openEmpty(config: Record<string, unknown>) {
     // The dev stand starts its worker before the panel, so the first config request already sees this handler.
     await this.page.route(
       (url) => url.pathname === '/mocks/browser.ts',
       async (route) => {
         const response = await route.fetch();
-        const handler = 'worker.use(http.get("/api/config", () => HttpResponse.text("{}")));';
+        const json = JSON.stringify(config);
+        const handler = `worker.use(http.get("/api/config", () => HttpResponse.text(${JSON.stringify(json)})));`;
         await route.fulfill({ response, body: `${await response.text()}\n${handler}` });
       }
     );

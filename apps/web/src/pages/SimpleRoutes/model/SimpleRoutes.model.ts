@@ -5,6 +5,7 @@ import {
   readRules,
   readSectionNodes,
   readSubscriptionTagReservations,
+  toFinalOutbound,
   type ConfigDocument,
 } from '@entities/Config';
 import { toRuleRowsFromNodes } from '@entities/Rule';
@@ -14,6 +15,7 @@ export function toSimpleRoutes(config: ConfigDocument, text: string, appliedText
   const inbounds = config.inbounds?.length ?? 0;
   const dnsServers = config.dns?.servers?.length ?? 0;
   const dnsRules = config.dns?.rules?.length ?? 0;
+  const dnsFinal = config.dns?.final;
   const outbounds = config.outbounds ?? [];
   const providers = config.providers?.length ?? 0;
   const appliedTags = new Set(
@@ -29,7 +31,7 @@ export function toSimpleRoutes(config: ConfigDocument, text: string, appliedText
     inbounds,
     dnsServers,
     dnsRules,
-    dnsFinal: config.dns?.final,
+    dnsFinal,
     outbounds,
     providers,
     takenTags: [...readNodeTags(text), ...readSubscriptionTagReservations(text, CONFIG_SECTION.Outbounds)],
@@ -40,10 +42,14 @@ export function toSimpleRoutes(config: ConfigDocument, text: string, appliedText
     ),
     empty:
       inbounds === 0 &&
-      config.dns === undefined &&
+      dnsServers === 0 &&
+      dnsRules === 0 &&
+      (dnsFinal ?? '') === '' &&
       outbounds.length === 0 &&
       providers === 0 &&
       (config.endpoints?.length ?? 0) === 0 &&
-      config.route === undefined,
+      rules.length === 0 &&
+      (config.route?.rule_set?.length ?? 0) === 0 &&
+      toFinalOutbound(config) === null,
   };
 }
