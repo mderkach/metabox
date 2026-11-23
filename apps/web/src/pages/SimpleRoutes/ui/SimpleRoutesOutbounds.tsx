@@ -29,7 +29,7 @@ export function SimpleRoutesOutbounds({
   }
 
   return (
-    <SimpleRoutesSection title={t('sections.outbounds')} actions={<SimpleRoutesAddTrigger ref={addTriggerRef} />}>
+    <SimpleRoutesSection section='outbounds' actions={<SimpleRoutesAddTrigger ref={addTriggerRef} />}>
       {outbounds.length === 0 ? (
         <Card size='sm'>
           <CardContent className='text-sm text-muted-foreground'>{t('outbounds.empty')}</CardContent>

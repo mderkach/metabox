@@ -20,7 +20,7 @@ export function SimpleRoutesInterception({ inbounds }: { inbounds: number }) {
   }
 
   return (
-    <SimpleRoutesSection title={t('sections.interception')}>
+    <SimpleRoutesSection section='interception'>
       <Card size='sm'>
         <CardContent className='flex flex-col gap-1 text-sm'>
           <p className='text-pretty'>{interceptionStatus()}</p>

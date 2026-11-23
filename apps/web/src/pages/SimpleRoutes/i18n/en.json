@@ -5,6 +5,17 @@
     "outbounds": "Outbounds",
     "rules": "Rules"
   },
+  "help": {
+    "label": "Help about {{section}}",
+    "interception": "Traffic from the devices in scope goes through the core, where routing rules can act on it.",
+    "dns": "A DNS resolver translates a site name into an IP address.",
+    "outbounds": "An outbound tells the core how to send a connection, for example directly or through a proxy server or group.",
+    "rules": "Rules match traffic by conditions such as the site or device and determine how the core handles it.",
+    "title": "How routes work",
+    "order": "Rule order matters. If “YouTube → direct” comes before “YouTube on the TV → through a proxy”, the TV connects directly too. Put the TV rule first for the exception to work.",
+    "draft": "Edits go into the draft. Review them with Apply. The router restores the previous version if you lose the connection and cannot confirm the change.",
+    "examples": "See how outbounds, servers and groups work in real connections"
+  },
   "starter": {
     "title": "First steps",
     "description": "Add a server or subscription to the draft to get started."

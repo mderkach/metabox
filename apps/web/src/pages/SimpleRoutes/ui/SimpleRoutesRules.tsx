@@ -40,7 +40,7 @@ export function SimpleRoutesRules({
       }}
     >
       <SimpleRoutesSection
-        title={t('sections.rules')}
+        section='rules'
         actions={
           <DialogTrigger ref={addButton} render={<Button variant='outline' />}>
             <Plus data-icon='inline-start' />
