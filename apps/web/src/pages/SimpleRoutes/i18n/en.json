@@ -40,7 +40,7 @@
     "empty": "No outbounds in the config",
     "untagged": "Untagged outbound",
     "manual": "Group · manual choice",
-    "latency": "Group · lowest latency",
+    "latency": "Group · picks by latency",
     "direct": "Direct",
     "staged": "Added to draft",
     "providers_one": "{{count}} configured subscription",
