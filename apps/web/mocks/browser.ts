@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { setupWorker } from 'msw/browser';
 
 import { createMissingHandlers } from '../src/test/handlers';
+import { ROUTES_V11_CONFIG } from './routesV11';
 
 /**
  * For checking failures by hand in dev mode, from the browser console:
@@ -22,4 +23,10 @@ const unmockedApi = http.all('/api/*', ({ request }) => {
   return HttpResponse.error();
 });
 
-export const worker = setupWorker(...createMissingHandlers(__METABOX_MOCK_CONNECTIONS__), unmockedApi);
+const routesPreviews = new Map([
+  ['routes-v11', ROUTES_V11_CONFIG],
+  ['routes-v11-empty', {}],
+]);
+const routesPreview = routesPreviews.get(new URLSearchParams(window.location.search).get('mock') ?? '');
+
+export const worker = setupWorker(...createMissingHandlers(__METABOX_MOCK_CONNECTIONS__, routesPreview), unmockedApi);

@@ -138,6 +138,10 @@ export class SimpleRoutesPage {
     this.history = page.getByRole('dialog', { name: translate(CONFIG_APPLY, 'history.title'), exact: true });
   }
 
+  async openV11Preview(empty = false) {
+    await this.page.goto(`/config/simple?mock=${empty ? 'routes-v11-empty' : 'routes-v11'}`);
+  }
+
   async goto(outbound: string) {
     await this.page.goto(`/config/simple?outbound=${encodeURIComponent(outbound)}`);
   }

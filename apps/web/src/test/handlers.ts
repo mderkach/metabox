@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 
 import { createAuthHandlers, OTHER_SESSIONS_FIXTURE } from '@entities/Auth/__tests__/Auth.handlers';
+import { CONFIG_ENDPOINT, type ConfigDocument } from '@entities/Config';
 import {
   STAND_CONFIG_FIXTURE,
   STAND_PROCESS_RULES,
@@ -14,8 +15,9 @@ import {
   WALK_CONNECTIONS_FIXTURE,
 } from '@entities/Connection/__tests__/Connection.fixture';
 import { connectionHandlers } from '@entities/Connection/__tests__/Connection.handlers';
-import { DAEMON_ENDPOINT } from '@entities/Daemon';
+import { DAEMON_ENDPOINT, SCHEMA_VERSION } from '@entities/Daemon';
 import {
+  DAEMON_STATUS_FIXTURE,
   MEMORY_SAMPLES,
   OUTBOUND_SYSTEM_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
@@ -23,6 +25,7 @@ import {
   TRAFFIC_STREAM_SAMPLES,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { createStatefulDaemonHandlers } from '@entities/Daemon/__tests__/Daemon.handlers';
+import { DATAPLANE_FIXTURE } from '@entities/Dataplane/__tests__/Dataplane.fixture';
 import { createDataplaneMock } from '@entities/Dataplane/__tests__/Dataplane.handlers';
 import { STAND_DEVICES_FIXTURE } from '@entities/Device/__tests__/Device.fixture';
 import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
@@ -46,6 +49,7 @@ import { runtimeStreamHandler } from './runtimeStream';
 
 /** Stream step on the device — measured 2026-09-10: one sample per second. */
 const STREAM_INTERVAL = MS_IN_SECOND;
+const JSON_INDENT = 2;
 const CACHED_RULE_SETS_PATH = '/api/rule-sets/cached';
 
 let memorySample = 0;
@@ -69,7 +73,7 @@ function streamSampleAt(offset: number) {
  * as stateful variants — node selection and the confirmation window must persist
  * until the page reloads, otherwise manual checking looks like breakage.
  */
-export function createMissingHandlers(connections = 0) {
+export function createMissingHandlers(connections = 0, routesPreview?: ConfigDocument) {
   const walkConnections = connections > 0 ? [] : WALK_CONNECTIONS_FIXTURE;
   const walkRouteHandlers = walkConnections.map(({ id, chain }, offset) => {
     const { index, conditions, action } = STAND_PROCESS_RULES[WALK_FIRST_RULE_INDEX + offset];
@@ -103,7 +107,13 @@ export function createMissingHandlers(connections = 0) {
           })),
         };
 
-  const dataplane = createDataplaneMock();
+  const dataplane = createDataplaneMock(
+    routesPreview !== undefined && routesPreview.inbounds === undefined
+      ? { ...DATAPLANE_FIXTURE, model: { ...DATAPLANE_FIXTURE.model, enabled: false, acl_mode: 'off' } }
+      : DATAPLANE_FIXTURE
+  );
+  const service =
+    routesPreview === undefined ? SERVICE_RUNNING_FIXTURE : { ...SERVICE_RUNNING_FIXTURE, binary: SCHEMA_VERSION };
   const checkedAt = Math.floor(Date.now() / MS_IN_SECOND);
   const cacheByTag: Record<string, Partial<Omit<CachedRuleSetWire, 'tag'>>> = {
     gemini: { state: 'cached', checked_at: checkedAt, size: 1328 },
@@ -132,7 +142,11 @@ export function createMissingHandlers(connections = 0) {
   return [
     ...createAuthHandlers({ others: OTHER_SESSIONS_FIXTURE }),
     ...createMcpHandlers(),
-    standConfigHandler,
+    routesPreview === undefined
+      ? standConfigHandler
+      : http.get(CONFIG_ENDPOINT.config(), () =>
+          HttpResponse.text(JSON.stringify(routesPreview, null, JSON_INDENT), { headers: { ETag: STAND_CONFIG_ETAG } })
+        ),
     ...configHandlers,
     // The daemon minute of open connections matches the live snapshot: with the
     // test fixture's 150 the chart would drop where the stream takes over.
@@ -148,7 +162,18 @@ export function createMissingHandlers(connections = 0) {
         recent: TRAFFIC_HISTORY_FIXTURE.recent.map((_, index, all) => streamSampleAt(index - all.length + 1)),
       })
     ),
-    ...createStatefulDaemonHandlers(dataplane.status),
+    ...createStatefulDaemonHandlers(
+      () => ({
+        ...dataplane.status(),
+        ...(routesPreview === undefined
+          ? {}
+          : {
+              singbox_version: SCHEMA_VERSION,
+              core: { ...DAEMON_STATUS_FIXTURE.core, version: SCHEMA_VERSION },
+            }),
+      }),
+      service
+    ),
     ...dataplane.handlers,
     ...createStatefulProxyHandlers(STAND_PROXIES_FIXTURE, STAND_PROVIDERS_FIXTURE, {
       'old-lab': { label: 'Lab', norm_ms: 180, unused: true },
@@ -161,10 +186,10 @@ export function createMissingHandlers(connections = 0) {
     ...createRouteHandlers(connections > 0 ? CONNECTIONS_FIXTURE.connections : snapshot.connections),
     ...ruleSetHandlers,
     http.get(CACHED_RULE_SETS_PATH, () => HttpResponse.json(cachedRuleSets)),
-    createRuleHitsHandler(STAND_CONFIG_FIXTURE.route?.rules ?? []),
+    createRuleHitsHandler((routesPreview ?? STAND_CONFIG_FIXTURE).route?.rules ?? []),
     runtimeStreamHandler(
       [
-        { topic: RUNTIME_TOPIC.Service, data: () => SERVICE_RUNNING_FIXTURE },
+        { topic: RUNTIME_TOPIC.Service, data: () => service },
         {
           topic: RUNTIME_TOPIC.Connections,
           data: () => {

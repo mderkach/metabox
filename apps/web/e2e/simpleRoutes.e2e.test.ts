@@ -432,3 +432,28 @@ for (const { theme, config } of EMPTY_CONFIGS) {
     }
   );
 }
+
+test(
+  'the v11 review fixtures load the populated and empty Routes screens',
+  { tag: E2E_TAG.Mock },
+  async ({ simpleRoutesPage: routes }) => {
+    await routes.openV11Preview();
+
+    await test.step('the populated fixture shows the v11 exits, subscriptions and service rules', async () => {
+      for (const tag of ['proxy', 'ai-services', 'germany', 'netherlands']) {
+        await expect(routes.outbounds).toContainText(tag);
+      }
+      await expect(routes.outbounds).toContainText(translate(SIMPLE_ROUTES, 'outbounds.providers', { count: 3 }));
+      await expect(routes.rules).toContainText('youtube');
+      await expect(routes.rules).toContainText('spotify');
+      await expect(routes.starter).toBeHidden();
+    });
+
+    await test.step('the empty fixture has the same section order and the starter action', async () => {
+      await routes.openV11Preview(true);
+      await expect(routes.sectionHeadings).toHaveText(SIMPLE_SECTION_HEADINGS);
+      await expect(routes.starter).toBeVisible();
+      await expect(routes.outbounds).toContainText(translate(SIMPLE_ROUTES, 'outbounds.empty'));
+    });
+  }
+);

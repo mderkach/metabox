@@ -4,7 +4,7 @@ import { CONFIG_ENDPOINT } from '@entities/Config';
 import { parseJsonc } from '@shared/lib/jsonc';
 
 import { DAEMON_ENDPOINT } from '../api/Daemon.endpoints';
-import type { ApplyTransactionWire, DaemonStatusWire } from '../api/Daemon.schema';
+import type { ApplyTransactionWire, DaemonStatusWire, ServiceStateWire } from '../api/Daemon.schema';
 import {
   CLASH_CONFIGS_FIXTURE,
   DAEMON_STATUS_FIXTURE,
@@ -64,7 +64,10 @@ async function readApplyConfig(request: Request): Promise<string | null> {
  * `extraStatus` appends fields of a foreign mock to the status: a dataplane model change:
  * the status address is one, and this mock holds it.
  */
-export function createStatefulDaemonHandlers(extraStatus: () => Partial<DaemonStatusWire> = () => ({})) {
+export function createStatefulDaemonHandlers(
+  extraStatus: () => Partial<DaemonStatusWire> = () => ({}),
+  service: ServiceStateWire = SERVICE_RUNNING_FIXTURE
+) {
   let transaction: ApplyTransactionWire | null = null;
   let clashConfigs = CLASH_CONFIGS_FIXTURE;
   // A restart answers at once and the next status carries a new process.
@@ -126,8 +129,8 @@ export function createStatefulDaemonHandlers(extraStatus: () => Partial<DaemonSt
       return HttpResponse.json(transaction);
     }),
 
-    http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
-    http.post(DAEMON_ENDPOINT.serviceAction(':action'), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
+    http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(service)),
+    http.post(DAEMON_ENDPOINT.serviceAction(':action'), () => HttpResponse.json(service)),
     http.post(DAEMON_ENDPOINT.restart(), () => {
       instance = `mock-${String(Date.now())}`;
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CONFIG_ENDPOINT, readRules } from '@entities/Config';
 import { CONNECTIONS_FIXTURE, WALK_CONNECTIONS_FIXTURE } from '@entities/Connection/__tests__/Connection.fixture';
-import { DAEMON_ENDPOINT } from '@entities/Daemon';
+import { DAEMON_ENDPOINT, SCHEMA_VERSION } from '@entities/Daemon';
 import { ROUTE_ENDPOINT } from '@entities/Route';
 import { ExplanationSchema, HistorySchema } from '@shared/api/daemon.generated';
 
@@ -51,5 +51,21 @@ describe('mock walkthrough routes', () => {
     expect(index).not.toBeNull();
     expect(explanation.rules[index ?? -1]).toMatchObject({ conditions: rule, action });
     expect(appliedRules[index ?? -1]).toMatchObject({ domain: [host.split(':')[0]] });
+  });
+});
+
+describe('Routes review mocks', () => {
+  it('serves the chosen document and reports a schema-compatible core in both daemon responses', async () => {
+    server.use(...createMissingHandlers(0, {}));
+
+    const [config, status, service] = await Promise.all([
+      fetch(CONFIG_ENDPOINT.config()),
+      fetch(DAEMON_ENDPOINT.status()),
+      fetch(DAEMON_ENDPOINT.service()),
+    ]);
+
+    expect(await config.json()).toEqual({});
+    expect(await status.json()).toMatchObject({ core: { version: SCHEMA_VERSION } });
+    expect(await service.json()).toMatchObject({ binary: SCHEMA_VERSION });
   });
 });

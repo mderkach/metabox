@@ -13,6 +13,8 @@ make dev-mock
 
 `pnpm install` installs the dependencies and the git hooks. `make dev-mock` starts the Vite dev server on mock data: the panel works without a router, a daemon or sing-box. Open the address Vite prints.
 
+For the Routes v11 comparison, open `/config/simple?mock=routes-v11` or `/config/simple?mock=routes-v11-empty` at that address. These fixtures use the v11 group and subscription names, ordered rules, and the core version targeted by the forms.
+
 ## Shared agent harness
 
 Rules and requirements are shared across clients: root and project `AGENTS.md` files, `docs/PRD.md`, the behaviour specs in `openspec/specs/` and project guides. Portable skills live in `.agents/skills/`; `.claude/skills/` contains links to shared skills and workflows that require Claude. `CLAUDE.md` imports the adjacent `AGENTS.md`, while Codex reads it directly.
