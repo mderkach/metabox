@@ -732,6 +732,21 @@ The Chromium mock scenarios cover a populated desktop configuration and an empty
 | AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/Proxies.recoveryState.test.tsx`                     | `ignores a delayed $label retest once a newer probe has started for that same node`                            |
 | AC-11  | e2e    | `apps/web/e2e/realityRecovery.e2e.test.ts`                                                | `applies and restores a REALITY setting after distinct retest failures`                                        |
 
+### Subscription import in Simple Routes
+
+| ID     | Kind    | File                                                                                      | Check                                                                                              |
+| ------ | ------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| AC-119 | e2e     | `apps/web/e2e/simpleRoutes.e2e.test.ts`                                                   | `Simple stages a second subscription at the same URL and rejects applied and staged tag conflicts` |
+| AC-119 | e2e     | `apps/web/e2e/simpleRoutes.e2e.test.ts`                                                   | `the first subscription can be reviewed and staged at 375px in`                                    |
+| AC-119 | vitest  | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.subscription.test.ts` | `rejects cache tags from the base or draft before writing, including numeric defaults`             |
+| AC-119 | vitest  | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.subscription.test.ts` | `adds a new manual group and its subscription in one draft write`                                  |
+| AC-119 | vitest  | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.subscription.test.ts` | `validates the custom interval against the duration limit for its unit`                            |
+| AC-119 | vitest  | `apps/web/src/entities/Config/__tests__/Config.subscriptionUrls.test.ts`                  | `hides credentials for several values on one JSONC line including an escaped URL`                  |
+| AC-119 | vitest  | `apps/web/src/entities/Config/__tests__/Config.subscriptionUrls.test.ts`                  | `hides credentials and tokens embedded in core diagnostics`                                        |
+| AC-119 | go-test | `apps/metaboxd/internal/httpapi/logs_test.go`                                             | `TestLogsTail`                                                                                     |
+| AC-119 | go-test | `apps/metaboxd/internal/httpapi/logs_test.go`                                             | `TestLogsStream`                                                                                   |
+| AC-119 | go-test | `apps/metaboxd/internal/httpapi/httpapi_test.go`                                          | `TestApplyStateMasksSubscriptionCredentials`                                                       |
+
 ### Subscription cache tags
 
 | ID     | Kind    | File                                                                            | Check                                                                    |

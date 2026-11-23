@@ -20,6 +20,7 @@ import (
 	"metabox/internal/events"
 	"metabox/internal/locale"
 	"metabox/internal/logs"
+	"metabox/internal/redaction"
 	"metabox/internal/route"
 	"metabox/internal/singbox"
 )
@@ -573,7 +574,7 @@ func (t tools) logTail(ctx context.Context, in logTailIn) (logTailOut, error) {
 
 	entries := make([]logs.Entry, len(snapshot.Entries))
 	for i, entry := range snapshot.Entries {
-		entry.Message = maskLog(entry.Message)
+		entry.Message = redaction.URLs(entry.Message)
 		entries[i] = entry
 	}
 

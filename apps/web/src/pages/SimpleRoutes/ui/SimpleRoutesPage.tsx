@@ -1,8 +1,9 @@
 import { useSearch } from '@tanstack/react-router';
-import { useId, useMemo, useRef, useState } from 'react';
+import { use, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useConfigDocument } from '@entities/Config';
+import { ConfigNodeAddDialogContext } from '@features/Config/ConfigNodeAdd';
 import {
   Alert,
   AlertDescription,
@@ -29,6 +30,7 @@ export function SimpleRoutesPage() {
   const { t } = useTranslation('pages/SimpleRoutes');
   const { outbound } = useSearch({ from: '/config/simple' });
   const document = useConfigDocument();
+  const addHandle = use(ConfigNodeAddDialogContext);
   const starterId = useId();
   const starterTrigger = useRef<HTMLButtonElement>(null);
   const outboundsTrigger = useRef<HTMLButtonElement>(null);
@@ -66,6 +68,7 @@ export function SimpleRoutesPage() {
 
         {model !== null && (
           <Dialog
+            handle={addHandle}
             open={open}
             onOpenChange={(next, details) => {
               if (next) opener.current = details.trigger;

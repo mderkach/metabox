@@ -11,6 +11,7 @@ import {
   type ListChanges,
 } from './Config.selectors';
 import { ConfigDocumentStore } from './Config.store';
+import { maskSubscriptionUrlLines } from './Config.subscriptionUrls';
 
 export function useConfigCurrent(): string | null {
   return useStore(ConfigDocumentStore, selectConfigCurrent);
@@ -33,11 +34,24 @@ export function useListChanges(): ListChanges {
   return useMemo(() => selectListChanges({ listsDraft, appliedLists }), [listsDraft, appliedLists]);
 }
 
-export function useConfigDiff(): DiffLine[] {
+export function useConfigDiff({ maskSubscriptionUrls = false } = {}): DiffLine[] {
   const { applied, draft } = useStore(ConfigDocumentStore, (state) => ({
     applied: state.applied,
     draft: state.draft,
   }));
 
-  return useMemo(() => (applied === null || draft === null ? [] : diffLines(applied, draft)), [applied, draft]);
+  return useMemo(() => {
+    if (applied === null || draft === null) return [];
+
+    const lines = diffLines(applied, draft);
+    if (!maskSubscriptionUrls) return lines;
+
+    const appliedUrls = maskSubscriptionUrlLines(applied);
+    const draftUrls = maskSubscriptionUrlLines(draft);
+
+    return lines.map((line) => {
+      const masked = line.after === null ? appliedUrls.get(line.before ?? 0) : draftUrls.get(line.after);
+      return masked === undefined ? line : { ...line, text: masked };
+    });
+  }, [applied, draft, maskSubscriptionUrls]);
 }

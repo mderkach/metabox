@@ -3,14 +3,11 @@ package mcp
 import (
 	"bytes"
 	"encoding/json"
-	"net/url"
-	"regexp"
 	"strings"
 	"unicode"
-)
 
-// maskChars stands in place of a hidden secret, the same characters the panel shows.
-const maskChars = "••••••"
+	"metabox/internal/redaction"
+)
 
 type maskRule int
 
@@ -128,7 +125,7 @@ func maskConfig(data []byte) []byte {
 func maskLiteral(literal []byte, rule maskRule) []byte {
 	var value string
 	if err := json.Unmarshal(literal, &value); err != nil {
-		return encodeString(maskChars)
+		return encodeString(redaction.Placeholder)
 	}
 
 	if value == "" {
@@ -136,56 +133,15 @@ func maskLiteral(literal []byte, rule maskRule) []byte {
 	}
 
 	if rule == maskWhole {
-		return encodeString(maskChars)
+		return encodeString(redaction.Placeholder)
 	}
 
-	masked, ok := maskURL(value)
+	masked, ok := redaction.URL(value)
 	if !ok {
 		return literal
 	}
 
 	return encodeString(masked)
-}
-
-// maskURL hides everything after the host: credentials, path, query and fragment. false
-// means there is nothing to hide, the URL is just a host. A value that is not a URL with
-// a host is hidden whole.
-func maskURL(value string) (string, bool) {
-	u, err := url.Parse(value)
-	if err != nil || u.Scheme == "" || u.Host == "" {
-		return maskChars, true
-	}
-
-	path := u.EscapedPath()
-	if path == "/" {
-		path = ""
-	}
-
-	if u.User == nil && path == "" && u.RawQuery == "" && u.Fragment == "" && !u.ForceQuery {
-		return "", false
-	}
-
-	return u.Scheme + "://" + u.Host + "/" + maskChars, true
-}
-
-// logURL finds a URL in a log line. sing-box prints a failed download as Go's url.Error,
-// `Get "<url>": <cause>`, so a quote ends the URL as well as a blank.
-var logURL = regexp.MustCompile("[A-Za-z][A-Za-z0-9+.-]*://[^\\s\"'<>`]+")
-
-// maskLog hides every URL in a log line after its host, as maskURL does for the url
-// keys of the config: subscription and rule-set addresses carry tokens in the path or
-// the query. The rest of the line, other secrets included, is not recognised.
-func maskLog(message string) string {
-	return logURL.ReplaceAllStringFunc(message, func(raw string) string {
-		value := strings.TrimRight(raw, ".,:;)")
-
-		masked, ok := maskURL(value)
-		if !ok {
-			return raw
-		}
-
-		return masked + raw[len(value):]
-	})
 }
 
 func maskRuleName(name string) string {
@@ -199,7 +155,7 @@ func maskRuleName(name string) string {
 		return r
 	}, name)
 
-	return maskLog(clean)
+	return redaction.URLs(clean)
 }
 
 func encodeString(value string) []byte {

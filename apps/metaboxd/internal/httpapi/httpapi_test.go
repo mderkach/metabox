@@ -910,6 +910,33 @@ func TestStatusLinksActiveTransaction(t *testing.T) {
 	}
 }
 
+func TestApplyStateMasksSubscriptionCredentials(t *testing.T) {
+	applier := &fakeApplier{current: apply.Transaction{
+		ID:         "tx-1",
+		Phase:      apply.PhaseRolledBack,
+		ReasonCode: apply.ReasonHealthcheckFailed,
+		Reason:     `Last error in its log: Get "https://user:password@sub.example/api/token": EOF`,
+	}}
+	srv := newTestServer(t, applier, "")
+
+	state := request(t, srv, http.MethodGet, "/api/apply/tx-1", "", nil)
+	var detail contract.Transaction
+	state.decode(t, &detail)
+
+	status := request(t, srv, http.MethodGet, "/api/status", "", nil)
+	var summary contract.Status
+	status.decode(t, &summary)
+
+	for _, tx := range []*contract.Transaction{&detail, summary.Transaction} {
+		if tx == nil || tx.ReasonCode != contract.ReasonHealthcheckFailed {
+			t.Fatalf("transaction %+v lost its failure code", tx)
+		}
+		if want := `Last error in its log: Get "https://sub.example/••••••": EOF`; tx.Reason != want {
+			t.Errorf("reason %q, want %q", tx.Reason, want)
+		}
+	}
+}
+
 // SPA routing is client-side: everything not under /api/ goes to the interface.
 func TestUnknownPathGoesToSPA(t *testing.T) {
 	spa := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

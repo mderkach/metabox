@@ -38,4 +38,4 @@ The Routes screen uses the existing frontend configuration draft, device invento
 
 - Which imported resolver rules and fallback chains can the supported schema map losslessly to Simple, and which must stay view-only? Confirm the support matrix before implementing writes.
 - Which core and router combinations support creating an optional HTTP/SOCKS listener through Simple, and what verified access rules make that safe? Expose only supported and verified cases.
-- Which server or subscription links can be distinguished without a network request, and how should ambiguous links and duplicate candidates be resolved? Keep any explicit choice and diagnostic text in the same flow.
+- Which other server or subscription link types can be classified locally, and which inputs can prove that a manually added server is a duplicate? For an eligible unverified HTTPS URL, open the subscription form with a notice. Simple allows subscriptions with the same full URL through the standard form when each has a unique provider tag.

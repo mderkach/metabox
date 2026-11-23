@@ -24,7 +24,7 @@ const LINE_MARK: Readonly<Record<DiffLine['kind'], string>> = {
 };
 
 /**
- * The file text that goes into Apply, line by line. Folded while the summary
+ * The file text that goes into Apply, with subscription addresses masked. Folded while the summary
  * above names the edits: an edit that only the text shows (a comment, key
  * order) opens it from the start.
  */
@@ -32,7 +32,7 @@ export function ConfigApplyDiffText({ folded }: { folded: boolean }) {
   const { t } = useTranslation('features/Config/ConfigApply');
   const [open, setOpen] = useState(false);
   const contentId = useId();
-  const lines = useConfigDiff();
+  const lines = useConfigDiff({ maskSubscriptionUrls: true });
   // The dialog is redrawn on every outside keystroke, and the pass walks the
   // whole file: on a config of fifteen hundred lines that is noticeable work.
   const hunks = useMemo(() => toDiffHunks(lines, DIFF_CONTEXT), [lines]);

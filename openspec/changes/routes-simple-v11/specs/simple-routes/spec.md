@@ -160,13 +160,53 @@ Simple SHALL use one contextual flow for adding a server or subscription to the 
 
 - **GIVEN** the user provides a supported subscription link
 - **WHEN** Simple recognizes it
-- **THEN** it shows the proposed subscription name, available grouping, preset or custom refresh interval, and supported User-Agent settings
-- **AND** choosing a browser profile supplies editable header text rather than making the browser fetch the subscription
+- **THEN** it shows the subscription name, available grouping, preset or custom refresh interval, and supported User-Agent settings. Groups can use an explicit subscription list or include all subscriptions automatically
+- **AND** choosing a browser profile supplies editable User-Agent header text for the core to send when fetching the subscription
 - **AND** staging the subscription leaves the actual fetch to the router's existing Apply flow
+
+#### Scenario: Open the shared import from the Routes header
+
+- **GIVEN** the Simple view is open with an empty or populated configuration
+- **WHEN** the user opens “Server or subscription” from the Routes header, Outbounds, or the empty state when shown
+- **THEN** the same dialog opens while preserving the current view, filter, and scroll position
+- **AND** the header shows the view tabs, version history, and import action on desktop and mobile
+- **AND** closing the dialog returns focus to the opener or to the remaining Outbounds action when the starter disappears
+
+#### Scenario: An unverified HTTPS link opens the subscription form
+
+- **GIVEN** a pasted HTTPS URL is eligible as a subscription address but its contents are unknown
+- **WHEN** Simple evaluates the URL
+- **THEN** it opens the subscription form in place and indicates that the link has not been verified
+- **AND** evaluating the pasted URL neither fetches it nor stages a subscription
+- **AND** the user can review the fields and explicitly stage or cancel the proposed subscription
+- **AND** the address is masked in the form and its credentials are excluded from feedback and previews
+
+#### Scenario: Credentials stay out of subscription diagnostics and previews
+
+- **GIVEN** the subscription address contains credentials in its authority, path, query, or fragment
+- **WHEN** the panel shows the address field, the draft diff, a validation message, or core output in its journal
+- **THEN** it obscures the address in the field and hides the credentials in the displayed feedback
+- **AND** the configured address sent on Apply is preserved
+
+#### Scenario: Add a subscription at an existing URL
+
+- **GIVEN** the full URL matches a subscription in the configuration or draft, and the new subscription has a provider tag that is unique across both
+- **WHEN** the user stages the subscription from the standard form
+- **THEN** Simple adds it as a separate draft entry with its own User-Agent, refresh interval, and group assignment
+- **AND** the existing subscription stays intact, and the new subscription may use the same User-Agent
+- **AND** Simple may show a non-blocking notice with a shortcut to the existing subscription and keeps URL credentials out of the notice
+- **AND** fetching remains part of the existing Apply flow
+
+#### Scenario: A subscription tag is already in use
+
+- **GIVEN** the proposed provider tag is already in use in the configuration or draft
+- **WHEN** the user attempts to stage the subscription
+- **THEN** Simple asks for a unique tag in the same form and preserves the entered settings
+- **AND** the draft is unchanged
 
 #### Scenario: An import cannot be completed as entered
 
-- **GIVEN** the input is ambiguous, invalid, unsupported, or matches an existing entry
+- **GIVEN** the input is ambiguous, invalid, unsupported, or is identified as a duplicate manually added server
 - **WHEN** Simple evaluates it
 - **THEN** it explains the issue and presents any supported next choice in the same context
 - **AND** it does not overwrite an existing entry or stage an unresolved import automatically

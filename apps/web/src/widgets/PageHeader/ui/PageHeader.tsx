@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { cn } from '@shared/lib/utils';
+
 /**
  * Screen header. `children` is the screen state: the overview verdict, the connection stream
  * progress, the config document and its draft; explanations of the content
@@ -11,9 +13,24 @@ import type { ReactNode } from 'react';
  * place instead of sliding away with the content; between tabs of one section it
  * stays live.
  */
-export function PageHeader({ title, children, actions }: { title: string; children?: ReactNode; actions?: ReactNode }) {
+export function PageHeader({
+  title,
+  children,
+  actions,
+  className,
+}: {
+  title: string;
+  children?: ReactNode;
+  actions?: ReactNode;
+  className?: string;
+}) {
   return (
-    <header className='flex min-h-14 shrink-0 flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-4 py-3 [view-transition-name:page-header] sm:px-6'>
+    <header
+      className={cn(
+        'flex min-h-14 shrink-0 flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-4 py-3 [view-transition-name:page-header] sm:px-6',
+        className
+      )}
+    >
       <h1 className='text-2xl font-semibold'>{title}</h1>
       {children}
       {actions !== undefined && (

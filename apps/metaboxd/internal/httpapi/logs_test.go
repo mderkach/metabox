@@ -86,9 +86,12 @@ func newLogsServer(t *testing.T, reader httpapi.LogReader, diagnoser httpapi.Dia
 func TestLogsTail(t *testing.T) {
 	since := time.Date(2026, 10, 9, 20, 0, 0, 0, time.UTC)
 	reader := &fakeLogs{snapshot: logs.Snapshot{
-		Source:  logs.SourceLogread,
-		Since:   since,
-		Entries: []logs.Entry{{Level: logs.LevelWarn, Message: "legacy option"}},
+		Source: logs.SourceLogread,
+		Since:  since,
+		Entries: []logs.Entry{{
+			Level:   logs.LevelWarn,
+			Message: `provider: Get "https://user:password@sub.example/api/token": unavailable`,
+		}},
 	}}
 	srv := newLogsServer(t, reader, nil)
 
@@ -101,7 +104,10 @@ func TestLogsTail(t *testing.T) {
 	got.decode(t, &body)
 
 	if body.Source != contract.SourceLogread || body.Since != "2026-10-09T20:00:00Z" || len(body.Entries) != 1 {
-		t.Errorf("response %+v", body)
+		t.Fatalf("response %+v", body)
+	}
+	if got, want := body.Entries[0].Message, `provider: Get "https://sub.example/••••••": unavailable`; got != want {
+		t.Errorf("message %q, want %q", got, want)
 	}
 
 	if reader.lines != 50 || reader.level != logs.LevelWarn {
@@ -178,7 +184,7 @@ func TestLogsClear(t *testing.T) {
 func TestLogsStream(t *testing.T) {
 	reader := &fakeLogs{stream: []logs.Entry{
 		{Level: logs.LevelInfo, Message: "первая"},
-		{Level: logs.LevelError, Message: "вторая"},
+		{Level: logs.LevelError, Message: "updating outbound provider sub from URL: https://sub.example/client?token=synthetic"},
 	}}
 	srv := newLogsServer(t, reader, nil)
 
@@ -218,8 +224,11 @@ func TestLogsStream(t *testing.T) {
 		events = append(events, event)
 	}
 
-	if len(events) != 2 || events[0].Seq != 1 || events[1].Seq != 2 || events[1].Entry.Message != "вторая" {
-		t.Errorf("events %+v", events)
+	if len(events) != 2 || events[0].Seq != 1 || events[1].Seq != 2 {
+		t.Fatalf("events %+v", events)
+	}
+	if got, want := events[1].Entry.Message, "updating outbound provider sub from URL: https://sub.example/••••••"; got != want {
+		t.Errorf("message %q, want %q", got, want)
 	}
 }
 

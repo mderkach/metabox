@@ -7,12 +7,12 @@
   },
   "starter": {
     "title": "First steps",
-    "description": "Add a server to the draft. Routing rules can then send traffic through it."
+    "description": "Add a server or subscription to the draft to get started."
   },
   "addServer": {
-    "action": "Add server",
-    "title": "Add server",
-    "description": "Paste a server link to add it to the draft for review.",
+    "action": "Server or subscription",
+    "title": "Add a server or subscription",
+    "description": "Add a connection to the shared Routes draft.",
     "cancel": "Cancel",
     "subscription": "Add subscription in Editor"
   },

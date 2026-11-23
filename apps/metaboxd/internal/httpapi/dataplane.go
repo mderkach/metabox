@@ -66,7 +66,7 @@ func (s *Server) handleDataplaneChange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(s.log, w, http.StatusAccepted, tx)
+	writeJSON(s.log, w, http.StatusAccepted, transactionOut(tx))
 }
 
 func (s *Server) handleDataplaneState(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +77,7 @@ func (s *Server) handleDataplaneState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(s.log, w, http.StatusOK, tx)
+	writeJSON(s.log, w, http.StatusOK, transactionOut(tx))
 }
 
 func (s *Server) handleDataplaneConfirm(w http.ResponseWriter, r *http.Request) {
@@ -88,5 +88,5 @@ func (s *Server) handleDataplaneConfirm(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	writeJSON(s.log, w, http.StatusOK, tx)
+	writeJSON(s.log, w, http.StatusOK, transactionOut(tx))
 }

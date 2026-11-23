@@ -40,7 +40,7 @@ import { ConfigApplyVersionRow } from './ConfigApplyVersionRow';
  * screen, because the bar waits for confirmation and the window is limited to a
  * minute.
  */
-export function ConfigApplyHistory() {
+export function ConfigApplyHistory({ showLabel = false }: { showLabel?: boolean }) {
   const { t } = useTranslation('features/Config/ConfigApply');
   const [open, setOpen] = useState(false);
   const versions = useConfigVersions();
@@ -57,9 +57,9 @@ export function ConfigApplyHistory() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant='outline' size='sm' />}>
-        <History />
-        <span className='max-sm:sr-only'>{t('history.open')}</span>
+      <DialogTrigger render={<Button variant='outline' size={showLabel ? 'default' : 'sm'} />}>
+        <History data-icon='inline-start' />
+        <span className={showLabel ? undefined : 'max-sm:sr-only'}>{t('history.open')}</span>
       </DialogTrigger>
 
       <DialogContent showCloseButton={false} className={DIALOG_SIZE.List}>

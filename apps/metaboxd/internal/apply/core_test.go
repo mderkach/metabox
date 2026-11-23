@@ -25,13 +25,13 @@ func seedConfig(h *harness, cfg string) {
 
 // breakCore makes the core fail from now on: the Clash API does not answer and the service
 // leaves a crash line.
-func breakCore(h *harness) {
+func breakCore(h *harness, line string) {
 	h.health.err = errors.New("connection refused")
 
 	h.service.mu.Lock()
 	defer h.service.mu.Unlock()
 
-	h.service.crash = crashLine
+	h.service.crash = line
 	h.service.relog()
 }
 
@@ -66,7 +66,7 @@ func TestRollbackReportsCoreThatDidNotComeUp(t *testing.T) {
 	}
 	h.waitWindow(t)
 
-	breakCore(h)
+	breakCore(h, `FATAL[0000] start service: provider: Get "https://sub.example/client/synthetic-token": EOF`)
 	h.clock.fire()
 	h.manager.Close()
 
@@ -74,8 +74,8 @@ func TestRollbackReportsCoreThatDidNotComeUp(t *testing.T) {
 	if tx.Phase != apply.PhaseFailed || tx.ReasonCode != apply.ReasonRollbackFailed {
 		t.Fatalf("phase %q, code %q: want failed with rollback_failed", tx.Phase, tx.ReasonCode)
 	}
-	if !strings.Contains(tx.Reason, crashLine) {
-		t.Errorf("reason %q does not carry the crash reason of the service", tx.Reason)
+	if want := `FATAL[0000] start service: provider: Get "https://sub.example/••••••": EOF`; !strings.Contains(tx.Reason, want) {
+		t.Errorf("reason %q does not carry the masked crash reason %q", tx.Reason, want)
 	}
 }
 
@@ -86,7 +86,7 @@ func TestReplayedRollbackReportsCoreThatDidNotComeUp(t *testing.T) {
 	h.store.backup = []byte(controlledConfig)
 	h.store.mu.Unlock()
 	seedState(t, h, apply.Transaction{ID: "истёкшая", Phase: apply.PhaseAwaitingConfirm, Window: 0})
-	breakCore(h)
+	breakCore(h, crashLine)
 
 	if err := h.manager.Replay(t.Context()); err != nil {
 		t.Fatalf("replay: %v", err)

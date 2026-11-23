@@ -38,9 +38,11 @@ export class ApplyBar {
     await this.applyButton.click();
   }
 
-  /** Unfolds the line diff under the summary; `lines` is how many changed lines the button counts. */
-  async showChangesText(lines: number) {
-    await this.diff.getByRole('button', { name: translate(CONFIG_APPLY, 'diff.changed', { count: lines }) }).click();
+  /** Unfolds the line diff under the summary; `lines` can match the displayed count. */
+  async showChangesText(lines?: number) {
+    const plural = translate(CONFIG_APPLY, 'diff.changed', { count: 0 }).replace('0', '\\d+');
+    const name = lines === undefined ? new RegExp(plural) : translate(CONFIG_APPLY, 'diff.changed', { count: lines });
+    await this.diff.getByRole('button', { name }).click();
   }
 
   async confirmDiff() {
