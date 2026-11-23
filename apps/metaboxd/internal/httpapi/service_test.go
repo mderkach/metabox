@@ -353,6 +353,20 @@ func TestServiceStateFollowsLang(t *testing.T) {
 	}
 }
 
+func TestServiceStateMasksSubscriptionCredentials(t *testing.T) {
+	state := singbox.State{
+		Failed:    true,
+		LastError: "provider: https://sub.example/client/synthetic-token returned 403",
+	}
+	body, ok := httpapi.ServiceState(state, testSingboxVersion, nil, false, locale.English).(contract.Service)
+	if !ok || body.Status != "failed" {
+		t.Fatalf("service state %+v", body)
+	}
+	if want := "provider: https://sub.example/•••••• returned 403"; body.LastError != want {
+		t.Errorf("last error %q, want %q", body.LastError, want)
+	}
+}
+
 // A procd read failure is not a stop: the status in such a response is substituted, and
 // the panel tells it from an observed one only by the reason code. The code must
 // arrive on any error, including when a live process is visible and the service

@@ -21,7 +21,8 @@
 
 ## 4. Connection import
 
-- [ ] 4.1 AC-119. Connect the shared server and subscription flow to the draft. Cover recognized and invalid links, warnings without credentials, ambiguous and duplicate input, supported grouping, refresh, and User-Agent options. Verify no fetch is triggered by staging a subscription. Add component and browser checks and verification rows. Run `pnpm --filter web test`, `pnpm --filter web test:e2e` on the mock stand, and `pnpm --filter web check:design`. Record independent Impeccable critique.
+- [ ] 4.1 AC-119. Complete server import in the shared form. Cover recognized and invalid links, warnings without credentials, other ambiguous links, and duplicate server detection. Add component and browser checks and verification rows. Run `pnpm --filter web test`, `pnpm --filter web test:e2e` on the mock stand, and `pnpm --filter web check:design`. Record independent Impeccable critique.
+- [x] 4.1a AC-119. Stage an unverified HTTPS subscription in the shared form in empty and populated configurations, including the header entry alongside the view tabs and history. Verify focus, tab navigation, and the absence of the config path in the Simple header. Cover cancellation, matching full URLs with the same User-Agent, tag conflicts in the base and draft using [#379](https://github.com/mderkach/metabox/issues/379), preservation of entered settings, supported group assignments, custom refresh, request headers, masked addresses in the draft preview and panel diagnostics, and no fetch until Apply. Add verification rows, run `pnpm --filter web test`, `pnpm --filter web test:e2e` on the mock stand, `pnpm --filter web check:design`, strict OpenSpec validation, and `make trace-check`. Record independent Impeccable critique.
 
 ## 5. Integrated verification and documentation
 

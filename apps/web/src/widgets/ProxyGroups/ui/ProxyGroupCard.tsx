@@ -127,7 +127,6 @@ export function ProxyGroupCard({
             <ProxyMetadataForm id={editorId} tag={group.name} entry={entry} onClose={close} onSaved={onMetadataSaved} />
           </div>
         )}
-        {!group.selectable && !showNorms && <ProxyGroupManualChoice group={group.name} />}
 
         {/* The selected node already carries an edge and a checkmark: the row is needed only
             when there is no selected one and nothing to mark. */}
@@ -156,8 +155,8 @@ export function ProxyGroupCard({
             />
           ))}
         </ul>
-        {!group.selectable && showNorms && (
-          <div className='border-t px-(--card-spacing) py-2'>
+        {!group.selectable && (
+          <div className={showNorms ? 'border-t px-(--card-spacing) py-2' : undefined}>
             <ProxyGroupManualChoice group={group.name} />
           </div>
         )}

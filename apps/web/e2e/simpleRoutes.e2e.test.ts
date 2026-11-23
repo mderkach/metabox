@@ -8,10 +8,12 @@ const DIRECT = 'direct';
 const DIRECT_RULE = 'home.example.com';
 const OTHER_RULE = 'docs.example.com';
 const SIMPLE_ROUTES = 'pages/SimpleRoutes';
+const NODE_ADD = 'features/Config/ConfigNodeAdd';
 const STAND_COUNTS = { inbounds: 3, dnsResolvers: 11, dnsRules: 12 };
 const DESKTOP = { width: 1280, height: 600 };
 const PHONE = { width: 375, height: 812 };
 const MOCK_VERSION_COUNT = 2;
+const HALF = 0.5;
 
 function saveTheme(theme: string) {
   localStorage.setItem('theme', theme);
@@ -50,6 +52,28 @@ test(
       expect(await page.evaluate<number>('document.documentElement.scrollWidth')).toBeLessThanOrEqual(DESKTOP.width);
     });
 
+    await test.step('the Simple header groups the title, views and actions without the config path', async () => {
+      await expect(routes.configPath).toBeHidden();
+      await expect(routes.views).toBeVisible();
+      await expect(routes.openHistory).toBeVisible();
+      const bounds = await Promise.all(
+        [routes.title, routes.views, routes.openHistory, routes.addFromHeader].map(async (locator) =>
+          locator.boundingBox()
+        )
+      );
+      const centers = bounds.flatMap((box) => (box === null ? [] : [box.y + box.height * HALF]));
+      expect(centers).toHaveLength(bounds.length);
+      expect(Math.max(...centers) - Math.min(...centers)).toBeLessThanOrEqual(1);
+
+      await routes.addFromHeader.press('Enter');
+      await expect(routes.dialog).toBeVisible();
+      await expect(routes.serverLink).toBeFocused();
+      await page.keyboard.press('Escape');
+      await expect(routes.dialog).toBeHidden();
+      await expect(routes.addFromHeader).toBeFocused();
+      await expect(applyBar.dirty).toBeHidden();
+    });
+
     await test.step('Escape preserves the rule filter, scroll position and trigger focus', async () => {
       await routes.addFromOutbounds.evaluate('(button) => button.scrollIntoView({ block: "center" })');
       const before = await routes.addFromOutbounds.boundingBox();
@@ -85,6 +109,8 @@ test(
       await expect(routes.editorView).toBeFocused();
       await page.keyboard.press('Enter');
       await expect(page).toHaveURL('/config');
+      await expect(routes.configPath).toBeVisible();
+      await expect(routes.addFromHeader).toBeHidden();
 
       await routes.editorOutbounds.click();
       await expect(page).toHaveURL('/config/outbounds');
@@ -94,6 +120,7 @@ test(
       await expect(routes.jsonView).toBeFocused();
       await page.keyboard.press('Enter');
       await expect(page).toHaveURL('/config/raw');
+      await expect(routes.configPath).toBeVisible();
       await expect(routes.configText).toHaveValue(new RegExp(`"tag":\\s*"${SERVER}"`));
 
       await routes.jsonView.press('Home');
@@ -137,7 +164,7 @@ for (const { theme, config } of EMPTY_CONFIGS) {
       await page.setViewportSize(PHONE);
       await page.addInitScript(saveTheme, theme);
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      await routes.openEmpty(config);
+      await routes.openWithConfig(config);
 
       await test.step('the empty document leads to the starter and four sections without sideways overflow', async () => {
         await expect(page).toHaveURL('/config/simple');
@@ -160,7 +187,6 @@ for (const { theme, config } of EMPTY_CONFIGS) {
           await trigger.click();
           await expect(routes.dialog).toBeVisible();
           await expect(routes.serverLink).toBeFocused();
-          await expect(routes.subscription).toHaveAttribute('href', '/config/providers');
           expect(
             await routes.dialog.evaluate(
               (element: { scrollWidth: number; clientWidth: number }) => element.scrollWidth - element.clientWidth
@@ -175,8 +201,10 @@ for (const { theme, config } of EMPTY_CONFIGS) {
         }
       });
 
-      await test.step('the subscription link in the same dialog reaches the existing editor section', async () => {
+      await test.step('an HTTP address offers manual entry in the existing editor section', async () => {
         await routes.addFromStarter.click();
+        await routes.serverLink.fill('http://subscription.example.invalid/list');
+        await expect(routes.subscription).toHaveAttribute('href', '/config/providers');
         await routes.subscription.click();
         await expect(page).toHaveURL('/config/providers');
         await expect(routes.dialog).toBeHidden();
@@ -195,6 +223,211 @@ for (const { theme, config } of EMPTY_CONFIGS) {
 
         await applyBar.apply();
         await expect(applyBar.nodeChanges).toContainText(SERVER);
+      });
+    }
+  );
+}
+
+const SUBSCRIPTION_HOST = 'subscription.example.invalid';
+const SUBSCRIPTION_TOKEN = 'fake-subscription-token';
+const SUBSCRIPTION_URL = `https://${SUBSCRIPTION_HOST}/list?token=${SUBSCRIPTION_TOKEN}`;
+const EXISTING_TAG = 'existing-subscription';
+const STAGED_TAG = 'new-subscription';
+const RULE_SET_TAG = 'catalog';
+const GROUP_TAG = 'proxy-group';
+const USER_AGENT = 'ExampleClient/1.0';
+const CUSTOM_INTERVAL_DAYS = 2;
+const MOBILE_INTERVAL_HOURS = 3;
+const ORIGINAL_SUBSCRIPTION = {
+  type: 'remote',
+  tag: EXISTING_TAG,
+  url: SUBSCRIPTION_URL,
+  user_agent: USER_AGENT,
+  update_interval: '15m',
+};
+const POPULATED_CONFIG = {
+  providers: [ORIGINAL_SUBSCRIPTION],
+  outbounds: [{ type: 'selector', tag: GROUP_TAG, providers: [EXISTING_TAG] }],
+  route: { rule_set: [{ type: 'inline', tag: RULE_SET_TAG, rules: [{ domain_suffix: ['example.com'] }] }] },
+};
+
+test(
+  'Simple stages a second subscription at the same URL and rejects applied and staged tag conflicts',
+  { tag: E2E_TAG.Mock },
+  async ({ page, simpleRoutesPage: routes, applyBar }) => {
+    const subscriptionRequests: string[] = [];
+    await page.route(
+      (url) => url.hostname === SUBSCRIPTION_HOST,
+      async (route) => route.abort()
+    );
+    const applyRequests: string[] = [];
+    page.on('request', (request) => {
+      const url = new URL(request.url());
+      if (url.hostname === SUBSCRIPTION_HOST) subscriptionRequests.push(url.hostname);
+      if (request.method() === 'POST' && url.pathname === '/api/apply') {
+        applyRequests.push(request.postData() ?? '');
+      }
+    });
+    await page.setViewportSize(DESKTOP);
+    await page.addInitScript(saveTheme, 'light');
+    await routes.openWithConfig(POPULATED_CONFIG);
+
+    await test.step('an unverified URL opens subscription fields and leaves the draft clean', async () => {
+      await routes.addFromOutbounds.press('Enter');
+      await expect(routes.serverLink).toBeFocused();
+      await routes.serverLink.fill(SUBSCRIPTION_URL);
+
+      await expect(routes.subscriptionNotice).toBeVisible();
+      await expect(routes.subscription).toBeHidden();
+      await expect(routes.dialog).not.toContainText(SUBSCRIPTION_TOKEN);
+      await expect(applyBar.dirty).toBeHidden();
+      expect(subscriptionRequests).toHaveLength(0);
+      expect(applyRequests).toHaveLength(0);
+    });
+
+    await test.step('an applied rule-set tag blocks staging and preserves the other fields', async () => {
+      await routes.subscriptionTag.fill(RULE_SET_TAG);
+      await routes.selectSubscriptionGroup(GROUP_TAG);
+      await routes.setSubscriptionInterval(CUSTOM_INTERVAL_DAYS, 'days');
+      await routes.selectSubscriptionAgent('customAgent');
+      await routes.subscriptionAgentValue.fill(USER_AGENT);
+      await routes.stageSubscription.click();
+
+      await expect(routes.subscriptionTagError).toBeVisible();
+      await expect(routes.subscriptionTag).toHaveAttribute('aria-invalid', 'true');
+      await expect(routes.serverLink).toHaveValue(SUBSCRIPTION_URL);
+      await expect(routes.subscriptionGroup).toContainText(GROUP_TAG);
+      await expect(routes.subscriptionIntervalValue).toHaveValue(String(CUSTOM_INTERVAL_DAYS));
+      await expect(routes.subscriptionIntervalUnit).toContainText(translate(NODE_ADD, 'subscription.days'));
+      await expect(routes.subscriptionAgentValue).toHaveValue(USER_AGENT);
+      await expect(routes.dialog).not.toContainText(SUBSCRIPTION_TOKEN);
+      await expect(applyBar.dirty).toBeHidden();
+    });
+
+    await test.step('a free tag allows the ordinary Add action with the same URL and User-Agent', async () => {
+      await routes.subscriptionTag.fill(STAGED_TAG);
+      await routes.stageSubscription.click();
+
+      await expect(routes.dialog).toBeHidden();
+      await expect(routes.addFromOutbounds).toBeFocused();
+      await expect(routes.outbounds).toContainText(translate(SIMPLE_ROUTES, 'outbounds.providers', { count: 2 }));
+      await expect(applyBar.dirty).toBeVisible();
+      expect(subscriptionRequests).toHaveLength(0);
+      expect(applyRequests).toHaveLength(0);
+    });
+
+    await test.step('a tag staged moments ago also blocks another addition', async () => {
+      await routes.addFromOutbounds.click();
+      await routes.serverLink.fill(SUBSCRIPTION_URL);
+      await routes.subscriptionTag.fill(STAGED_TAG);
+      await routes.stageSubscription.click();
+
+      await expect(routes.subscriptionTagError).toBeVisible();
+      await expect(routes.serverLink).toHaveValue(SUBSCRIPTION_URL);
+      await routes.cancel.click();
+      await expect(routes.dialog).toBeHidden();
+      await expect(routes.addFromOutbounds).toBeFocused();
+      await expect(routes.outbounds).toContainText(translate(SIMPLE_ROUTES, 'outbounds.providers', { count: 2 }));
+    });
+
+    await test.step('only confirming Apply sends the original and newly staged settings to the mock daemon', async () => {
+      await applyBar.apply();
+      await expect(applyBar.nodeChanges).toContainText(STAGED_TAG);
+      await applyBar.showChangesText();
+      await expect(applyBar.diff).toContainText(`${SUBSCRIPTION_HOST}/••••••`);
+      await expect(applyBar.diff).not.toContainText(SUBSCRIPTION_TOKEN);
+      expect(subscriptionRequests).toHaveLength(0);
+      expect(applyRequests).toHaveLength(0);
+
+      await applyBar.confirmDiff();
+      await expect(applyBar.confirmPrompt).toBeVisible();
+
+      expect(applyRequests).toHaveLength(1);
+      expect(JSON.parse(applyRequests[0])).toMatchObject({
+        providers: [
+          ORIGINAL_SUBSCRIPTION,
+          { ...ORIGINAL_SUBSCRIPTION, tag: STAGED_TAG, update_interval: `${CUSTOM_INTERVAL_DAYS}d` },
+        ],
+        outbounds: [{ type: 'selector', tag: GROUP_TAG, providers: [EXISTING_TAG, STAGED_TAG] }],
+        route: POPULATED_CONFIG.route,
+      });
+      expect(subscriptionRequests).toHaveLength(0);
+    });
+  }
+);
+
+for (const { theme, config } of EMPTY_CONFIGS) {
+  test(
+    `the first subscription can be reviewed and staged at 375px in ${theme} theme`,
+    { tag: E2E_TAG.Mock },
+    async ({ page, simpleRoutesPage: routes, applyBar }) => {
+      await page.setViewportSize(PHONE);
+      await page.addInitScript(saveTheme, theme);
+      await page.route(
+        (url) => url.hostname === SUBSCRIPTION_HOST,
+        async (route) => route.abort()
+      );
+      await routes.openWithConfig(config);
+
+      await test.step('the header keeps the mode tabs and actions available at phone width', async () => {
+        await expect(routes.views).toBeVisible();
+        await expect(routes.addFromHeader).toBeVisible();
+        await expect(routes.openHistory).toBeVisible();
+        await expect(routes.configPath).toBeHidden();
+        expect(
+          await routes.header.evaluate(
+            (element: { scrollWidth: number; clientWidth: number }) => element.scrollWidth - element.clientWidth
+          )
+        ).toBeLessThanOrEqual(0);
+      });
+
+      await test.step('the form fits the viewport, and Escape restores focus without staging', async () => {
+        await routes.addFromStarter.press('Enter');
+        await expect(routes.serverLink).toBeFocused();
+        await routes.serverLink.fill(SUBSCRIPTION_URL);
+        await expect(routes.subscriptionNotice).toBeVisible();
+        await routes.setSubscriptionInterval(MOBILE_INTERVAL_HOURS, 'hours');
+        await routes.selectSubscriptionAgent('chrome');
+        await expect(routes.subscriptionAgentValue).toHaveValue(/Chrome\//);
+        await routes.subscriptionAgentValue.fill(USER_AGENT);
+        await expect(routes.subscriptionAgentValue).toHaveValue(USER_AGENT);
+        await expect(page.locator('html')).toHaveCSS('color-scheme', theme);
+        expect(await page.evaluate<number>('document.documentElement.scrollWidth')).toBeLessThanOrEqual(PHONE.width);
+        expect(
+          await routes.dialog.evaluate(
+            (element: { scrollWidth: number; clientWidth: number }) => element.scrollWidth - element.clientWidth
+          )
+        ).toBeLessThanOrEqual(0);
+
+        await routes.subscriptionAgentHelpButton.scrollIntoViewIfNeeded();
+        const fieldsBeforeHelp = await routes.subscriptionAgent.boundingBox();
+        await routes.subscriptionAgentHelpButton.press('Enter');
+        await expect(routes.subscriptionAgentHelp).toBeVisible();
+        expect(await routes.subscriptionAgent.boundingBox()).toEqual(fieldsBeforeHelp);
+
+        await page.keyboard.press('Escape');
+        await expect(routes.subscriptionAgentHelp).toBeHidden();
+        await expect(routes.dialog).toBeVisible();
+        await expect(routes.subscriptionAgentHelpButton).toBeFocused();
+
+        await page.keyboard.press('Escape');
+        await expect(routes.dialog).toBeHidden();
+        await expect(routes.addFromStarter).toBeFocused();
+        await expect(applyBar.dirty).toBeHidden();
+      });
+
+      await test.step('the same starter adds the first subscription and hands focus to the surviving trigger', async () => {
+        await routes.addFromStarter.press('Enter');
+        await routes.serverLink.fill(SUBSCRIPTION_URL);
+        await routes.subscriptionTag.fill(STAGED_TAG);
+        await routes.stageSubscription.press('Enter');
+
+        await expect(page).toHaveURL('/config/simple');
+        await expect(routes.dialog).toBeHidden();
+        await expect(routes.starter).toBeHidden();
+        await expect(routes.addFromOutbounds).toBeFocused();
+        await expect(routes.outbounds).toContainText(translate(SIMPLE_ROUTES, 'outbounds.providers', { count: 1 }));
+        await expect(applyBar.dirty).toBeVisible();
       });
     }
   );

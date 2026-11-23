@@ -1,0 +1,78 @@
+import { useId, type ReactNode } from 'react';
+import { Controller, useFormContext } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+
+import {
+  Field,
+  FieldError,
+  FieldLabel,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@shared/ui';
+
+import type { ConnectionLinkModel } from '../model/ConfigNodeAdd.schema';
+
+export function ConfigNodeAddSubscriptionSelect({
+  name,
+  label,
+  help,
+  items,
+  onChange,
+}: {
+  name: 'group' | 'intervalUnit' | 'agent';
+  label: string;
+  help?: ReactNode;
+  items: { value: string; label: string }[];
+  onChange?: (value: string) => void;
+}) {
+  const { t } = useTranslation('features/Config/ConfigNodeAdd');
+  const { control } = useFormContext<ConnectionLinkModel>();
+  const id = useId();
+  const errorId = useId();
+
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field, fieldState }) => (
+        <Field className='min-w-0 gap-1.5' data-invalid={fieldState.invalid}>
+          <div className='flex items-center gap-1.5'>
+            <FieldLabel htmlFor={id}>{label}</FieldLabel>
+            {help}
+          </div>
+          <Select
+            items={items}
+            value={field.value}
+            onValueChange={(value) => {
+              if (value === null) return;
+              field.onChange(value);
+              onChange?.(value);
+            }}
+          >
+            <SelectTrigger
+              ref={field.ref}
+              id={id}
+              className='w-full min-w-0'
+              aria-invalid={fieldState.invalid}
+              aria-describedby={fieldState.invalid ? errorId : undefined}
+              onBlur={field.onBlur}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {items.map(({ value, label: itemLabel }) => (
+                <SelectItem key={value} value={value} className='wrap-anywhere whitespace-normal'>
+                  {itemLabel}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {fieldState.invalid && <FieldError id={errorId}>{t('subscription.groupUnavailable')}</FieldError>}
+        </Field>
+      )}
+    />
+  );
+}

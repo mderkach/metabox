@@ -9,6 +9,7 @@ import (
 	"metabox/internal/cachefile"
 	"metabox/internal/clashapi"
 	"metabox/internal/locale"
+	"metabox/internal/redaction"
 )
 
 // core is the service as a rollback sees it after the restart.
@@ -150,7 +151,7 @@ func watch(ctx context.Context, service core, interval time.Duration, mark strin
 			}
 
 			if tag, ok := cachefile.PoisonedProvider(reason); ok {
-				found <- &poisonedError{tag: tag, reason: reason}
+				found <- &poisonedError{tag: tag, reason: redaction.URLs(reason)}
 			} else if anyCrash {
 				found <- errCrashed
 			} else {
@@ -186,5 +187,5 @@ func notUp(ctx context.Context, service core, mark string, err error) error {
 		return locale.Errorf("the routing core did not start: %w", err)
 	}
 
-	return locale.Errorf("the routing core did not start: %w. Last error in its log: %s", err, reason)
+	return locale.Errorf("the routing core did not start: %w. Last error in its log: %s", err, redaction.URLs(reason))
 }

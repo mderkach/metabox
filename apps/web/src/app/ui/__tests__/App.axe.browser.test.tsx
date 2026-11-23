@@ -1,11 +1,12 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { createMissingHandlers } from '@test/handlers';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import axe from 'axe-core';
 import { setupWorker } from 'msw/browser';
 import { ThemeProvider } from 'next-themes';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { userEvent } from 'vitest/browser';
 
 import { QueryClientInstance } from '@shared/api';
 
@@ -17,7 +18,7 @@ const WCAG_AA_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 /** The data a screen shows once its requests are answered: axe runs on the filled screen, not on skeletons. */
 const SCREENS = [
   { name: 'Overview', path: '/overview', heading: 'Обзор', ready: 'Всё работает' },
-  { name: 'Simple', path: '/config/simple', heading: 'Маршруты', ready: 'Добавить сервер' },
+  { name: 'Simple', path: '/config/simple', heading: 'Маршруты', ready: 'Сервер или подписка' },
   { name: 'Editor', path: '/config', heading: 'Маршруты', ready: 'Добавить правило' },
   { name: 'Rule sets', path: '/config/rule-set', heading: 'Маршруты', ready: 'gemini' },
   { name: 'Connections', path: '/connections', heading: 'Соединения', ready: 'video.example:443' },
@@ -71,6 +72,26 @@ afterAll(() => {
   worker.stop();
 });
 
+async function checkAccessibility(root: HTMLElement, checkHeadingOrder: boolean, known: Record<string, number>) {
+  // Contrast must be checked after any fade has finished.
+  await Promise.allSettled(
+    document
+      .getAnimations()
+      .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+      .map(async (animation) => animation.finished)
+  );
+  const { violations } = await axe.run(root, {
+    runOnly: { type: 'tag', values: WCAG_AA_TAGS },
+    rules: { 'heading-order': { enabled: checkHeadingOrder } },
+  });
+  const found = Object.fromEntries(violations.map((violation) => [violation.id, violation.nodes.length]));
+  const details = violations.flatMap((violation) =>
+    violation.nodes.map((node) => `${violation.id}: ${node.target.join(' ')} :: ${node.failureSummary}`)
+  );
+
+  expect({ found, details }).toEqual({ found: known, details });
+}
+
 describe('main screens', () => {
   it.each(CASES)(
     '$name in the $theme theme passes the WCAG 2.2 AA check',
@@ -87,26 +108,23 @@ describe('main screens', () => {
 
       await screen.findByRole('heading', { level: 1, name: heading }, { timeout: READY_TIMEOUT_MS });
       await screen.findAllByText(ready, undefined, { timeout: READY_TIMEOUT_MS });
-      // A fading element has an intermediate color, and the contrast check would measure it.
-      await Promise.allSettled(
-        document
-          .getAnimations()
-          .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
-          .map(async (animation) => animation.finished)
+      await checkAccessibility(
+        document.body,
+        name === 'Overview' || name === 'Simple',
+        KNOWN_VIOLATIONS[`${name} ${theme}`] ?? {}
       );
 
-      const { violations } = await axe.run(document.body, {
-        runOnly: { type: 'tag', values: WCAG_AA_TAGS },
-        rules: { 'heading-order': { enabled: name === 'Overview' || name === 'Simple' } },
-      });
-      const found = Object.fromEntries(violations.map((violation) => [violation.id, violation.nodes.length]));
-      const details = violations.flatMap((violation) =>
-        violation.nodes.map((node) => `${violation.id}: ${node.target.join(' ')} :: ${node.failureSummary}`)
-      );
+      if (name === 'Simple') {
+        const outbounds = screen.getByRole('region', { name: 'Выходы' });
+        await userEvent.click(within(outbounds).getByRole('button', { name: 'Сервер или подписка' }));
+        const dialog = await screen.findByRole('dialog', { name: 'Добавить сервер или подписку' });
+        await userEvent.fill(within(dialog).getByLabelText('Вставить ссылку'), 'https://subscription.example.invalid');
+        await within(dialog).findByRole('textbox', { name: 'Имя подписки' });
+
+        await checkAccessibility(dialog, false, {});
+      }
 
       expect(unhandled).toEqual([]);
-      // On a mismatch the elements go into the message: they say where to look.
-      expect({ found, details }).toEqual({ found: KNOWN_VIOLATIONS[`${name} ${theme}`] ?? {}, details });
     }
   );
 });

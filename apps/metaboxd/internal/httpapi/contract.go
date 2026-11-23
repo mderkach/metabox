@@ -8,6 +8,7 @@ import (
 	"metabox/internal/devices"
 	"metabox/internal/history"
 	"metabox/internal/logs"
+	"metabox/internal/redaction"
 )
 
 // each maps a slice element by element and keeps nil as nil: JSON tells null from an
@@ -34,7 +35,7 @@ func transactionOut(tx apply.Transaction) *contract.Transaction {
 		Lists:         tx.Lists,
 		RemovedLists:  tx.RemovedLists,
 		ReasonCode:    contract.ReasonCode(tx.ReasonCode),
-		Reason:        tx.Reason,
+		Reason:        redaction.URLs(tx.Reason),
 		ClashAPIAdded: tx.ClashAPIAdded,
 	}
 }
@@ -119,5 +120,5 @@ func fieldErrorOut(e dataplane.FieldError) contract.FieldError {
 }
 
 func entryOut(e logs.Entry) contract.Entry {
-	return contract.Entry{Time: e.Time, Level: contract.Level(e.Level), Message: e.Message}
+	return contract.Entry{Time: e.Time, Level: contract.Level(e.Level), Message: redaction.URLs(e.Message)}
 }

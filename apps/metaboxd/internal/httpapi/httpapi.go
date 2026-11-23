@@ -28,6 +28,7 @@ import (
 	"metabox/internal/events"
 	"metabox/internal/history"
 	"metabox/internal/locale"
+	"metabox/internal/redaction"
 	"metabox/internal/route"
 	"metabox/internal/ruleset"
 	"metabox/internal/singbox"
@@ -691,7 +692,7 @@ func (s *Server) handleVersionRestore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(s.log, w, http.StatusAccepted, tx)
+	writeJSON(s.log, w, http.StatusAccepted, transactionOut(tx))
 }
 
 // versionLists builds the list file changes that return them to the version
@@ -757,7 +758,7 @@ func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(s.log, w, http.StatusAccepted, tx)
+	writeJSON(s.log, w, http.StatusAccepted, transactionOut(tx))
 }
 
 func readApplyBody(w http.ResponseWriter, r *http.Request) ([]byte, apply.Lists, string, error) {
@@ -814,7 +815,7 @@ func (s *Server) handleApplyState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(s.log, w, http.StatusOK, tx)
+	writeJSON(s.log, w, http.StatusOK, transactionOut(tx))
 }
 
 func (s *Server) handleApplyConfirm(w http.ResponseWriter, r *http.Request) {
@@ -825,7 +826,7 @@ func (s *Server) handleApplyConfirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(s.log, w, http.StatusOK, tx)
+	writeJSON(s.log, w, http.StatusOK, transactionOut(tx))
 }
 
 // handleExplain explains the route of a connection: the matched rule, its index
@@ -987,7 +988,7 @@ func ServiceState(state singbox.State, binary string, err error, observed bool, 
 		body.Status = "running"
 	case state.Failed:
 		body.Status = "failed"
-		body.LastError = state.LastError
+		body.LastError = redaction.URLs(state.LastError)
 	}
 
 	return body

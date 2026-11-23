@@ -316,9 +316,10 @@ describe('panel routes', () => {
     renderRouter();
 
     await waitFor(() => {
-      expect(screen.getByText('/etc/sing-box/config.json')).toBeInTheDocument();
+      expect(ConfigDocumentState.getState().applied).toBe(MINIMAL_CONFIG);
     });
 
+    expect(screen.queryByText('/etc/sing-box/config.json')).not.toBeInTheDocument();
     expect(screen.queryByText('черновик')).not.toBeInTheDocument();
 
     act(() => {

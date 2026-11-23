@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"metabox/internal/redaction"
 )
 
 func TestMaskConfig(t *testing.T) {
@@ -78,8 +80,8 @@ func TestMaskConfigHidesEveryCataloguedKey(t *testing.T) {
 	if strings.Contains(got, value) {
 		t.Errorf("a catalogued key kept its value:\n%s", got)
 	}
-	if want := 2 * len(secretFieldKeys); strings.Count(got, maskChars) != want {
-		t.Errorf("masked %d values, want %d", strings.Count(got, maskChars), want)
+	if want := 2 * len(secretFieldKeys); strings.Count(got, redaction.Placeholder) != want {
+		t.Errorf("masked %d values, want %d", strings.Count(got, redaction.Placeholder), want)
 	}
 	if !strings.Contains(got, `"tag": "t"`) {
 		t.Error("a key outside the catalogue was masked")
@@ -107,6 +109,8 @@ func TestMaskLog(t *testing.T) {
 		{"credentials", "dial http://u:p@10.0.0.1:8080 failed", "dial http://10.0.0.1:8080/•••••• failed"},
 		{"trailing punctuation kept", "fetch https://h.example/s/t1.", "fetch https://h.example/••••••."},
 		{"single quotes", "url 'https://h.example/k?a=1' rejected", "url 'https://h.example/••••••' rejected"},
+		{"apostrophe inside the path", "fetch https://h.example/private'suffix done", "fetch https://h.example/•••••• done"},
+		{"angle bracket inside the query", "fetch https://h.example/?token=private>suffix done", "fetch https://h.example/•••••• done"},
 		{"two urls", "https://a.example/1 -> https://b.example/2", "https://a.example/•••••• -> https://b.example/••••••"},
 		{"socks credentials", "outbound/socks[s]: dial socks5://u:p@h.example:1080", "outbound/socks[s]: dial socks5://h.example:1080/••••••"},
 		{"ipv6 host with port", "fetch http://[2001:db8::1]:8080/sub?token=x failed", "fetch http://[2001:db8::1]:8080/•••••• failed"},
@@ -118,8 +122,8 @@ func TestMaskLog(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := maskLog(tt.in); got != tt.want {
-				t.Errorf("maskLog(%q) = %q, want %q", tt.in, got, tt.want)
+			if got := redaction.URLs(tt.in); got != tt.want {
+				t.Errorf("redaction.URLs(%q) = %q, want %q", tt.in, got, tt.want)
 			}
 		})
 	}

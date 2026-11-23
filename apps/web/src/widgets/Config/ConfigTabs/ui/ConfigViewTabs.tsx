@@ -8,7 +8,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
 import { CONFIG_SIMPLE_ROUTE, CONFIG_TABS, CONFIG_TEXT_ROUTE, tabPath } from '../model';
 import { ConfigTabs } from './ConfigTabs';
 
-export function ConfigViewTabs({ config, children }: { config: ConfigDocument | null; children: ReactNode }) {
+export function ConfigViewTabs({
+  config,
+  children,
+  renderHeader,
+}: {
+  config: ConfigDocument | null;
+  children: ReactNode;
+  renderHeader: (views: ReactNode, simple: boolean) => ReactNode;
+}) {
   const { t } = useTranslation('widgets/Config/ConfigTabs');
   const pathname = useRouterState({ select: (state) => state.location.pathname.replace(/\/$/u, '') });
   const editorSection = CONFIG_TABS.find((section) => tabPath(section) === pathname);
@@ -23,7 +31,7 @@ export function ConfigViewTabs({ config, children }: { config: ConfigDocument | 
 
   return (
     <Tabs value={view} className='min-h-0 grow gap-0'>
-      <div className='shrink-0 border-b border-border px-4 py-2 sm:px-6'>
+      {renderHeader(
         <TabsList aria-label={t('views.label')}>
           <TabsTrigger
             value='simple'
@@ -46,8 +54,9 @@ export function ConfigViewTabs({ config, children }: { config: ConfigDocument | 
           >
             {t('views.json')}
           </TabsTrigger>
-        </TabsList>
-      </div>
+        </TabsList>,
+        view === 'simple'
+      )}
       <TabsContent value={view} className='flex min-h-0 flex-col'>
         {view === 'editor' && <ConfigTabs config={config} />}
         {children}

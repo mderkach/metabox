@@ -25,7 +25,7 @@ Runtime endpoints (the stream, service state, history, the Clash API proxy) are 
 
 The method in the pattern is mandatory: without it a handler written for `GET` answers `POST`. The parameter is read with `r.PathValue("id")`. API endpoints are under `/api/`, everything else serves the SPA.
 
-A failed cycle carries the step code: `Transaction.ReasonCode` says where the apply stopped, `Reason` holds the step's original error, its daemon wrappers in the operator's language from `-lang`. The panel picks the text for the user by the code ([ADR-0022](../../../../docs/adr/ADR-0022-report-the-apply-failure-step-as-a-code.md)).
+A failed cycle carries the step code: `Transaction.ReasonCode` says where the apply stopped, `Reason` holds the step's original error, its daemon wrappers in the operator's language from `-lang`. URLs in startup failure details show only the scheme and host. The panel picks the text for the user by the code ([ADR-0022](../../../../docs/adr/ADR-0022-report-the-apply-failure-step-as-a-code.md)).
 
 The set of Apply endpoints is not reinvented along the way: `POST /api/apply`, `GET /api/apply/{id}`, `POST /api/apply/{id}/confirm`, a link to the active transaction in `GET /api/status`. The same response carries `confirm_window_seconds`, the confirmation window from the `-confirm-window` flag: the panel names it in the Apply summary before a transaction exists.
 
@@ -218,7 +218,7 @@ An upgrade to WebSocket on the proxy branch is rejected: runtime data goes throu
 
 ## Log and diagnostics
 
-`GET /api/logs?lines=200&level=info` is the tail of the sing-box log: `{source, since?, entries: [{time?, level?, message}]}`, oldest lines first. `lines` is from 1 to 1000, `level` is the minimum level `trace`…`panic`, case-insensitive; anything unparsed is 400 `log_query_invalid`. The source cannot be read: 503 `log_unavailable`, the reason stays in the daemon log.
+`GET /api/logs?lines=200&level=info` is the tail of the sing-box log: `{source, since?, entries: [{time?, level?, message}]}`, oldest lines first. Both the tail and live stream hide the credentials, path, query, and fragment of URLs in returned messages. `lines` is from 1 to 1000, `level` is the minimum level `trace`…`panic`, case-insensitive; anything unparsed is 400 `log_query_invalid`. The source cannot be read: 503 `log_unavailable`, the reason stays in the daemon log.
 
 `GET /api/logs/stream?level=` is SSE, the `log` event with `{seq, entry}`. It works like `/api/events` (flush through the controller, a deadline on each write, a comment every 20 seconds, a bounded queue that drops a line and breaks `seq`), but each reader has its own source: a `logread -f` process or file polling. So there are at most four streams, the fifth gets 429 `log_stream_limit` with `Retry-After: 5`. A slot is freed when the client closes the connection; a client that vanished without closing is dropped by the 30-second `TCP_USER_TIMEOUT` that the listener sets on Linux; otherwise a stream with a `logread` process would live until TCP retries are exhausted.
 
