@@ -49,13 +49,11 @@ export function AppSidebarBottomNav() {
                 to={item.to}
                 // As in the sidebar: nested paths are decided by `active`, not the link.
                 activeOptions={{ exact: true }}
-                aria-current={item.to === active ? 'page' : undefined}
-                className={cn(ITEM_CLASS, item.to === active ? ACTIVE_CLASS : IDLE_CLASS)}
+                aria-current={(item.match ?? item.to) === active ? 'page' : undefined}
+                className={cn(ITEM_CLASS, (item.match ?? item.to) === active ? ACTIVE_CLASS : IDLE_CLASS)}
               >
                 <item.icon aria-hidden='true' className='size-5 shrink-0' />
-                <span className='max-w-full truncate'>
-                  {item.short === undefined ? t(item.key, { ns: 'shared' }) : t(item.short)}
-                </span>
+                <span className='max-w-full truncate'>{t(item.key, { ns: 'shared' })}</span>
               </Link>
             </li>
           )

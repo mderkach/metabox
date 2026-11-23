@@ -280,7 +280,7 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-27 | go-test | `apps/metaboxd/apply_integration_test.go`                                                         | `TestApplyHTTPOnEphemeralBench`                                                                                                                                                                                                                        |
 | AC-27 | vitest  | `apps/web/src/app/router/__tests__/Router.test.tsx`                                               | `with sing-box down the config text editor opens and an edit goes into the draft`                                                                                                                                                                      |
 | AC-28 | vitest  | `apps/web/src/app/ui/__tests__/SchemaDriftNotice.test.tsx`                                        | `binary older than the schema: warns that a field from the form will not pass validation`                                                                                                                                                              |
-| AC-28 | vitest  | `apps/web/src/app/ui/__tests__/SchemaDriftNotice.test.tsx`                                        | `binary newer than the schema: sends new fields to text mode`                                                                                                                                                                                          |
+| AC-28 | vitest  | `apps/web/src/app/ui/__tests__/SchemaDriftNotice.test.tsx`                                        | `binary newer than the schema: sends new fields to the JSON view`                                                                                                                                                                                      |
 | AC-28 | vitest  | `apps/web/src/app/ui/__tests__/SchemaDriftNotice.test.tsx`                                        | `stays silent on matching versions`                                                                                                                                                                                                                    |
 | AC-28 | go-test | `apps/metaboxd/internal/singbox/singbox_test.go`                                                  | `TestBuildReadsVersionAndTags`                                                                                                                                                                                                                         |
 | AC-31 | go-test | `apps/metaboxd/internal/clashapi/clashapi_test.go`                                                | `TestSectionIsCreatedWhenAbsent`                                                                                                                                                                                                                       |
@@ -667,6 +667,18 @@ The layout matrix runs at 320 and 375 px with touch and at 901, 1101, 2213 and 2
 | AC-113 | e2e    | `apps/web/e2e/proxyLatencyNorm.e2e.test.ts`                   | `clears the norm immediately when a raw sample has no hourly median`                               |
 | AC-113 | e2e    | `apps/web/e2e/proxyLatencyNorm.e2e.test.ts`                   | `updates the chart from current automatic data while refetch waits and preserves no-answer status` |
 | AC-113 | vitest | `apps/web/src/entities/Proxy/__tests__/Proxy.latency.test.ts` | `keeps the delay but withholds a stale warning when the current streak cannot be proven`           |
+
+### Simple Routes foundation
+
+The Chromium mock scenarios cover a populated desktop configuration and an empty 375 px configuration in both themes. They verify keyboard view switching, dialog cancellation and focus return, a staged server visible in all three views, and the existing history, diff and Apply flows. The phone scenarios run with reduced motion and verify focus also moves to the remaining Outbounds action after the first server is staged.
+
+| ID     | Kind   | File                                                | Check                                                                             |
+| ------ | ------ | --------------------------------------------------- | --------------------------------------------------------------------------------- |
+| AC-115 | vitest | `apps/web/src/app/router/__tests__/Router.test.tsx` | `opens Simple Routes from the desktop root`                                       |
+| AC-115 | vitest | `apps/web/src/app/router/__tests__/Router.test.tsx` | `switching from JSON to Editor returns to the previous schema section`            |
+| AC-115 | vitest | `apps/web/src/app/router/__tests__/Router.test.tsx` | `offers JSON to repair a malformed config instead of offering empty setup`        |
+| AC-115 | e2e    | `apps/web/e2e/simpleRoutes.e2e.test.ts`             | `Simple, Editor and JSON share the server draft and its Apply flow`               |
+| AC-115 | e2e    | `apps/web/e2e/simpleRoutes.e2e.test.ts`             | `the empty Simple view opens the same focused server dialog from both actions in` |
 
 ### Secondary action layout
 

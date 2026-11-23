@@ -23,9 +23,6 @@
     "sections": "Разделы",
     "withStatus": "Ещё, {{status}}"
   },
-  "short": {
-    "config": "Конфиг"
-  },
   "drift": {
     "newer": "формы для более старого ядра",
     "older": "ядро старше форм"

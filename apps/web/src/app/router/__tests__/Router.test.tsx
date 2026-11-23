@@ -16,6 +16,8 @@ import {
   SERVICE_RUNNING_FIXTURE,
   TRAFFIC_HISTORY_FIXTURE,
 } from '@entities/Daemon/__tests__/Daemon.fixture';
+import { DATAPLANE_ENDPOINT } from '@entities/Dataplane';
+import { DATAPLANE_FIXTURE } from '@entities/Dataplane/__tests__/Dataplane.fixture';
 import { DEVICE_ENDPOINT } from '@entities/Device';
 import { PROXY_ENDPOINT } from '@entities/Proxy';
 import { NARROW_SCREEN } from '@shared/lib/media';
@@ -27,7 +29,8 @@ function serveDaemon() {
     http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
     http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE)),
     http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(MINIMAL_CONFIG)),
-    http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: [] }))
+    http.get(CONFIG_ENDPOINT.versions(), () => HttpResponse.json({ versions: [] })),
+    http.get(DATAPLANE_ENDPOINT.dataplane(), () => HttpResponse.json(DATAPLANE_FIXTURE))
   );
 }
 
@@ -84,17 +87,28 @@ describe('panel routes', () => {
     vi.unstubAllGlobals();
   });
 
-  it('opens the configuration from the root: there is no empty screen at /', async () => {
+  it('opens Simple Routes from the desktop root', async () => {
     serveDaemon();
 
     const router = renderRouter();
 
-    // The screen heading repeats the menu item name, so the screen is identified
-    // by the file path, which exists only on the page itself.
-    await waitFor(() => {
-      expect(screen.getByText('/etc/sing-box/config.json')).toBeInTheDocument();
-    });
-    expect(router.state.location.pathname).toBe('/config');
+    const views = await screen.findByRole('tablist', { name: 'Виды маршрутов' });
+
+    expect(within(views).getByRole('tab', { name: 'Простой', selected: true })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/config/simple');
+  });
+
+  it('offers JSON to repair a malformed config instead of offering empty setup', async () => {
+    serveDaemon();
+    server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text('{ invalid')));
+
+    renderRouter('/config/simple');
+
+    expect(await screen.findByText(i18next.t('unavailable.title', { ns: 'pages/SimpleRoutes' }))).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Начало настройки' })).not.toBeInTheDocument();
+
+    const views = screen.getByRole('tablist', { name: 'Виды маршрутов' });
+    expect(within(views).getByRole('tab', { name: 'JSON' })).toHaveAttribute('href', '/config/raw');
   });
 
   // People open the router from a phone to check that everything works, not to edit the config.
@@ -138,7 +152,7 @@ describe('panel routes', () => {
   it('in the navigation, finished sections lead to their routes', async () => {
     serveDaemon();
 
-    renderRouter();
+    renderRouter('/config');
 
     await screen.findByRole('navigation', { name: 'Разделы панели' });
 
@@ -148,6 +162,7 @@ describe('panel routes', () => {
       link.getAttribute('href')
     );
 
+    expect(targets).toContain('/config/simple');
     expect(targets).toContain('/config');
     expect(targets).toContain('/config/rule-set');
   });
@@ -198,24 +213,20 @@ describe('panel routes', () => {
     expect(within(sections).getAllByRole('tab')).toHaveLength(frequent + 1);
   });
 
-  // The whole file is not a view of one section: the strip has only sections, and the
-  // text opens from the header, next to the version history of the same file.
-  it('the text editor opens from the header, not from the section strip', async () => {
+  it('JSON opens from the mode tabs and leaves the schema section strip to Editor', async () => {
     serveDaemon();
     const user = userEvent.setup();
 
     const router = renderRouter('/config');
 
-    const sections = await screen.findByRole('tablist', { name: 'Секции конфига' });
-
-    expect(screen.getAllByRole('tablist')).toHaveLength(1);
-
-    await user.click(screen.getByRole('link', { name: 'Весь конфиг текстом' }));
+    const views = await screen.findByRole('tablist', { name: 'Виды маршрутов' });
+    await user.click(within(views).getByRole('tab', { name: 'JSON' }));
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/config/raw');
     });
-    expect(within(sections).queryByRole('tab', { selected: true })).not.toBeInTheDocument();
+    expect(within(views).getByRole('tab', { name: 'JSON', selected: true })).toBeInTheDocument();
+    expect(screen.queryByRole('tablist', { name: 'Секции конфига' })).not.toBeInTheDocument();
   });
 
   // The section header belongs to the layout, not to a tab: a copy on each tab
@@ -225,19 +236,20 @@ describe('panel routes', () => {
 
     renderRouter('/config/rule-set');
 
-    expect(await screen.findAllByRole('heading', { level: 1, name: 'Конфигурация' })).toHaveLength(1);
+    expect(await screen.findAllByRole('heading', { level: 1, name: 'Маршруты' })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: 'История версий' })).toHaveLength(1);
   });
 
-  // The text is a detour from a section, not a new start: the way back leads to where it began.
-  it('from the text "Back to forms" returns to the section that was open', async () => {
+  it('switching from JSON to Editor returns to the previous schema section', async () => {
     serveDaemon();
     const user = userEvent.setup();
 
     const router = renderRouter('/config/ntp');
 
-    await user.click(await screen.findByRole('link', { name: 'Весь конфиг текстом' }));
-    await user.click(await screen.findByRole('link', { name: 'К формам' }));
+    const views = await screen.findByRole('tablist', { name: 'Виды маршрутов' });
+    await user.click(within(views).getByRole('tab', { name: 'JSON' }));
+    await within(views).findByRole('tab', { name: 'JSON', selected: true });
+    await user.click(within(views).getByRole('tab', { name: 'Редактор' }));
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/config/ntp');
@@ -248,12 +260,15 @@ describe('panel routes', () => {
     expect(within(sections).getByRole('tab', { selected: true })).toHaveTextContent('NTP');
   });
 
-  it('the text opened by its address leads back to routing', async () => {
+  it('a direct JSON link offers the routing section as its Editor destination', async () => {
     serveDaemon();
 
     renderRouter('/config/raw');
 
-    expect(await screen.findByRole('link', { name: 'К формам' })).toHaveAttribute('href', '/config');
+    const views = await screen.findByRole('tablist', { name: 'Виды маршрутов' });
+
+    expect(within(views).getByRole('tab', { name: 'JSON', selected: true })).toBeInTheDocument();
+    expect(within(views).getByRole('tab', { name: 'Редактор' })).toHaveAttribute('href', '/config');
   });
 
   it('with sing-box down the config text editor opens and an edit goes into the draft', async () => {
@@ -279,7 +294,7 @@ describe('panel routes', () => {
 
     renderRouter('/config/rule-set');
 
-    await screen.findAllByRole('heading', { level: 1, name: 'Конфигурация' });
+    await screen.findAllByRole('heading', { level: 1, name: 'Маршруты' });
 
     const requested = loadNamespaces.mock.calls.flatMap(([namespaces]) => [namespaces].flat());
 
@@ -324,18 +339,18 @@ describe('panel routes', () => {
     expect(screen.getByRole('navigation', { name: 'Разделы панели' })).toBeInTheDocument();
   });
 
-  // Section tabs live at their own addresses, and an exact link match would deactivate
-  // "Configuration" on all but the first.
+  // Routes stays current at every editor section address.
   it('in the navigation exactly one item is marked current, even when the address is nested in another', async () => {
     serveDaemon();
 
     renderRouter('/config/rule-set');
 
-    // Configuration tabs are a separate navigation with its own current item.
+    // Editor tabs have their own selection.
     const sidebar = await screen.findByRole('navigation', { name: 'Разделы панели' });
     const current = within(sidebar).getAllByRole('link', { current: 'page' });
 
     expect(current).toHaveLength(1);
-    expect(current[0]).toHaveAttribute('href', '/config');
+    expect(current[0]).toHaveAccessibleName('Маршруты');
+    expect(current[0]).toHaveAttribute('href', '/config/simple');
   });
 });

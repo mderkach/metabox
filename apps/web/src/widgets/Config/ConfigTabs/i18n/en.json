@@ -19,8 +19,10 @@
     "log": "Logs",
     "experimental": "Experimental"
   },
-  "text": {
-    "open": "Whole config as text",
-    "back": "Back to forms"
+  "views": {
+    "label": "Route views",
+    "simple": "Simple",
+    "editor": "Editor",
+    "json": "JSON"
   }
 }

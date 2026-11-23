@@ -17,8 +17,9 @@ const WCAG_AA_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 /** The data a screen shows once its requests are answered: axe runs on the filled screen, not on skeletons. */
 const SCREENS = [
   { name: 'Overview', path: '/overview', heading: 'Обзор', ready: 'Всё работает' },
-  { name: 'Editor', path: '/config', heading: 'Конфигурация', ready: 'Добавить правило' },
-  { name: 'Rule sets', path: '/config/rule-set', heading: 'Конфигурация', ready: 'gemini' },
+  { name: 'Simple', path: '/config/simple', heading: 'Маршруты', ready: 'Добавить сервер' },
+  { name: 'Editor', path: '/config', heading: 'Маршруты', ready: 'Добавить правило' },
+  { name: 'Rule sets', path: '/config/rule-set', heading: 'Маршруты', ready: 'gemini' },
   { name: 'Connections', path: '/connections', heading: 'Соединения', ready: 'video.example:443' },
   { name: 'Proxies', path: '/proxies', heading: 'Прокси', ready: 'us-fallback' },
 ];
@@ -96,7 +97,7 @@ describe('main screens', () => {
 
       const { violations } = await axe.run(document.body, {
         runOnly: { type: 'tag', values: WCAG_AA_TAGS },
-        rules: { 'heading-order': { enabled: name === 'Overview' } },
+        rules: { 'heading-order': { enabled: name === 'Overview' || name === 'Simple' } },
       });
       const found = Object.fromEntries(violations.map((violation) => [violation.id, violation.nodes.length]));
       const details = violations.flatMap((violation) =>
