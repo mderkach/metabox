@@ -167,10 +167,10 @@ for (const { touch, title } of HELP_SCENARIOS) {
     test(title, { tag: E2E_TAG.Mock }, async ({ page, simpleRoutesPage: routes, applyBar }) => {
       await page.addInitScript(saveTheme, touch ? 'dark' : 'light');
       await routes.goto(DIRECT);
-      await routes.addFromHeader.click();
+      await routes.addFromOutbounds.click();
       await routes.stageServer(LINK);
       await expect(routes.dialog).toBeHidden();
-      await expect(routes.addFromHeader).toBeFocused();
+      await expect(routes.addFromOutbounds).toBeFocused();
       await expect(applyBar.dirty).toBeVisible();
 
       await test.step('short help stays at its anchor without moving the surrounding content', async () => {
