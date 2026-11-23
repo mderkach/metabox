@@ -57,5 +57,8 @@
   "unavailable": {
     "title": "Simple view is unavailable",
     "description": "Open JSON to review or correct the configuration."
+  },
+  "catalog": {
+    "action": "Add service"
   }
 }

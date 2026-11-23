@@ -96,7 +96,12 @@ const simpleRoutesRoute = createRoute({
   getParentRoute: () => configLayoutRoute,
   loader: async () =>
     Promise.all([
-      preloadNamespaces(['pages/SimpleRoutes', 'features/Config/ConfigNodeAdd']),
+      preloadNamespaces([
+        'pages/SimpleRoutes',
+        'features/Config/ConfigNodeAdd',
+        'features/Config/ConfigCacheFile',
+        'features/Rule/RuleCatalogAdd',
+      ]),
       QueryClientInstance.query(getDataplaneOptions()).catch(keepFailureForScreen),
     ]),
   path: 'simple',

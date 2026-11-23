@@ -142,7 +142,7 @@ export class SimpleRoutesPage {
     await this.page.goto(`/config/simple?outbound=${encodeURIComponent(outbound)}`);
   }
 
-  async openWithConfig(config: Record<string, unknown>) {
+  async openWithConfig(config: Record<string, unknown>, coreVersion?: string) {
     // The dev stand starts its worker before the panel, so the first config request already sees this handler.
     await this.page.route(
       (url) => url.pathname === '/mocks/browser.ts',
@@ -150,7 +150,18 @@ export class SimpleRoutesPage {
         const response = await route.fetch();
         const json = JSON.stringify(config);
         const handler = `worker.use(http.get("/api/config", () => HttpResponse.text(${JSON.stringify(json)})));`;
-        await route.fulfill({ response, body: `${await response.text()}\n${handler}` });
+        const status =
+          coreVersion === undefined
+            ? ''
+            : `
+          import { DAEMON_STATUS_FIXTURE } from '/src/entities/Daemon/__tests__/Daemon.fixture.ts';
+          worker.use(http.get('/api/status', () => HttpResponse.json({
+            ...DAEMON_STATUS_FIXTURE,
+            core: { ...DAEMON_STATUS_FIXTURE.core, version: ${JSON.stringify(coreVersion)} },
+            singbox_version: ${JSON.stringify(coreVersion)}
+          })));
+        `;
+        await route.fulfill({ response, body: `${await response.text()}\n${handler}\n${status}` });
       }
     );
     await this.page.goto('/overview');

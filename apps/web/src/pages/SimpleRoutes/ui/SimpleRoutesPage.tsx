@@ -67,41 +67,47 @@ export function SimpleRoutesPage() {
         )}
 
         {model !== null && (
-          <Dialog
-            handle={addHandle}
-            open={open}
-            onOpenChange={(next, details) => {
-              if (next) opener.current = details.trigger;
-              setOpen(next);
-            }}
-          >
-            {model.empty && (
-              <section aria-labelledby={starterId}>
-                <Card size='sm'>
-                  <CardHeader>
-                    <h2 id={starterId} className='text-base font-semibold'>
-                      {t('starter.title')}
-                    </h2>
-                    <CardDescription>{t('starter.description')}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <SimpleRoutesAddTrigger ref={starterTrigger} primary />
-                  </CardContent>
-                </Card>
-              </section>
-            )}
+          <>
+            <Dialog
+              handle={addHandle}
+              open={open}
+              onOpenChange={(next, details) => {
+                if (next) opener.current = details.trigger;
+                setOpen(next);
+              }}
+            >
+              {model.empty && (
+                <section aria-labelledby={starterId}>
+                  <Card size='sm'>
+                    <CardHeader>
+                      <h2 id={starterId} className='text-base font-semibold'>
+                        {t('starter.title')}
+                      </h2>
+                      <CardDescription>{t('starter.description')}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <SimpleRoutesAddTrigger ref={starterTrigger} primary />
+                    </CardContent>
+                  </Card>
+                </section>
+              )}
 
-            <SimpleRoutesInterception inbounds={model.inbounds} />
-            <SimpleRoutesDns servers={model.dnsServers} rules={model.dnsRules} final={model.dnsFinal} />
-            <SimpleRoutesOutbounds
-              outbounds={model.outbounds}
-              providers={model.providers}
-              stagedTags={model.stagedTags}
-              addTriggerRef={outboundsTrigger}
-            />
-            <SimpleRoutesRules rules={model.rules} outbound={outbound} />
-            <SimpleRoutesAddDialog takenTags={model.takenTags} onAdded={closeAddDialog} finalFocus={restoreAddFocus} />
-          </Dialog>
+              <SimpleRoutesInterception inbounds={model.inbounds} />
+              <SimpleRoutesDns servers={model.dnsServers} rules={model.dnsRules} final={model.dnsFinal} />
+              <SimpleRoutesOutbounds
+                outbounds={model.outbounds}
+                providers={model.providers}
+                stagedTags={model.stagedTags}
+                addTriggerRef={outboundsTrigger}
+              />
+              <SimpleRoutesAddDialog
+                takenTags={model.takenTags}
+                onAdded={closeAddDialog}
+                finalFocus={restoreAddFocus}
+              />
+            </Dialog>
+            {text !== null && <SimpleRoutesRules model={model} text={text} outbound={outbound} />}
+          </>
         )}
       </div>
     </div>

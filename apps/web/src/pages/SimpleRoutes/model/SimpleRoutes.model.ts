@@ -1,5 +1,6 @@
 import {
   CONFIG_SECTION,
+  hasRuleSetCache,
   readNodeTags,
   readRuleNames,
   readRules,
@@ -9,6 +10,7 @@ import {
   type ConfigDocument,
 } from '@entities/Config';
 import { toRuleRowsFromNodes } from '@entities/Rule';
+import { RULE_SET_TYPE } from '@entities/RuleSet';
 
 export function toSimpleRoutes(config: ConfigDocument, text: string, appliedText: string | null) {
   const rules = toRuleRowsFromNodes(readRules(text), readRuleNames(text));
@@ -30,6 +32,8 @@ export function toSimpleRoutes(config: ConfigDocument, text: string, appliedText
     rules,
     inbounds,
     dnsServers,
+    needsCache:
+      config.route?.rule_set?.some((set) => set.type === RULE_SET_TYPE.Remote) === true && !hasRuleSetCache(text),
     dnsRules,
     dnsFinal,
     outbounds,

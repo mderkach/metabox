@@ -7,6 +7,7 @@ import { OverviewPage } from '../pages/OverviewPage.ts';
 import { ProxiesPage } from '../pages/ProxiesPage.ts';
 import { SectionPage } from '../pages/SectionPage.ts';
 import { SettingsPage } from '../pages/SettingsPage.ts';
+import { SimpleCatalogDialog } from '../pages/SimpleCatalogDialog.ts';
 import { SimpleRoutesPage } from '../pages/SimpleRoutesPage.ts';
 
 export const test = base.extend<{
@@ -17,6 +18,7 @@ export const test = base.extend<{
   proxiesPage: ProxiesPage;
   sectionPage: SectionPage;
   settingsPage: SettingsPage;
+  simpleCatalog: SimpleCatalogDialog;
   simpleRoutesPage: SimpleRoutesPage;
 }>({
   applyBar: async ({ page }, use) => {
@@ -39,6 +41,9 @@ export const test = base.extend<{
   },
   settingsPage: async ({ page }, use) => {
     await use(new SettingsPage(page));
+  },
+  simpleCatalog: async ({ page }, use) => {
+    await use(new SimpleCatalogDialog(page));
   },
   simpleRoutesPage: async ({ page }, use) => {
     await use(new SimpleRoutesPage(page));
