@@ -8,7 +8,7 @@ export function SimpleRoutesDns({ servers, rules, final }: { servers: number; ru
   const { t } = useTranslation('pages/SimpleRoutes');
 
   return (
-    <SimpleRoutesSection title={t('sections.dns')}>
+    <SimpleRoutesSection section='dns'>
       <Card size='sm'>
         <CardContent className='flex flex-col gap-1 text-sm'>
           <p>{t('dns.servers', { count: servers })}</p>

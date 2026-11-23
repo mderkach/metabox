@@ -438,6 +438,24 @@
   --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+@supports (interpolate-size: allow-keywords) {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-slot='route-help']::details-content {
+      block-size: 0;
+      overflow: clip;
+      interpolate-size: allow-keywords;
+      transition:
+        block-size var(--motion-exit) var(--motion-ease-out),
+        content-visibility var(--motion-exit) allow-discrete;
+    }
+
+    [data-slot='route-help'][open]::details-content {
+      block-size: auto;
+      transition-duration: var(--motion-enter);
+    }
+  }
+}
+
 /* The blur under the sheet is recomputed on every frame of its slide-in and
  * drops frames on a weak phone. The overlay primitive is closed to an outside
  * `className`, hence the rule here. */

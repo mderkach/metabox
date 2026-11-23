@@ -22,6 +22,7 @@ import { toSimpleRoutes } from '../model/SimpleRoutes.model';
 import { SimpleRoutesAddDialog } from './SimpleRoutesAddDialog';
 import { SimpleRoutesAddTrigger } from './SimpleRoutesAddTrigger';
 import { SimpleRoutesDns } from './SimpleRoutesDns';
+import { SimpleRoutesHelp } from './SimpleRoutesHelp';
 import { SimpleRoutesInterception } from './SimpleRoutesInterception';
 import { SimpleRoutesOutbounds } from './SimpleRoutesOutbounds';
 import { SimpleRoutesRules } from './SimpleRoutesRules';
@@ -68,6 +69,7 @@ export function SimpleRoutesPage() {
 
         {model !== null && (
           <>
+            <SimpleRoutesHelp />
             <Dialog
               handle={addHandle}
               open={open}

@@ -151,6 +151,96 @@ test(
   }
 );
 
+const HELP_SCENARIOS = [
+  { touch: false, title: 'Simple help and version history preserve the draft (keyboard)' },
+  { touch: true, title: 'Simple help and version history preserve the draft (touch)' },
+];
+
+for (const { touch, title } of HELP_SCENARIOS) {
+  test.describe(touch ? 'Simple help by touch' : 'Simple help by keyboard', () => {
+    test.use({
+      hasTouch: touch,
+      viewport: touch ? PHONE : DESKTOP,
+      reducedMotion: touch ? 'reduce' : 'no-preference',
+    });
+
+    test(title, { tag: E2E_TAG.Mock }, async ({ page, simpleRoutesPage: routes, applyBar }) => {
+      await page.addInitScript(saveTheme, touch ? 'dark' : 'light');
+      await routes.goto(DIRECT);
+      await routes.addFromHeader.click();
+      await routes.stageServer(LINK);
+      await expect(routes.dialog).toBeHidden();
+      await expect(routes.addFromHeader).toBeFocused();
+      await expect(applyBar.dirty).toBeVisible();
+
+      await test.step('short help stays at its anchor without moving the surrounding content', async () => {
+        const trigger = routes.dnsHelpButton;
+        const popup = routes.dnsHelp;
+        await trigger.scrollIntoViewIfNeeded();
+        const before = await routes.outbounds.boundingBox();
+        if (touch) await trigger.tap();
+        else await trigger.press('Enter');
+
+        await expect(popup).toHaveAccessibleDescription(translate(SIMPLE_ROUTES, 'help.dns'));
+        await expect(popup).toBeInViewport({ ratio: 1 });
+        await expect.poll(async () => routes.outbounds.boundingBox()).toEqual(before);
+        if (touch) {
+          await expect(popup).toHaveCSS('animation-name', 'none');
+          await routes.title.tap();
+        } else {
+          await page.keyboard.press('Escape');
+          await expect(trigger).toBeFocused();
+        }
+        await expect(popup).toBeHidden();
+
+        if (touch) await trigger.tap();
+        else await trigger.press('Space');
+        await expect(popup).toBeFocused();
+        await trigger.hover();
+        await page.mouse.wheel(0, touch ? PHONE.height : DESKTOP.height);
+        await expect(trigger).not.toBeInViewport();
+        await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+        await expect(popup).toBeHidden();
+        await expect(applyBar.dirty).toBeVisible();
+      });
+
+      await test.step('version history opens the existing list and preserves the scroll position', async () => {
+        const before = await routes.rules.boundingBox();
+        await expect(routes.openHistory).toHaveCount(1);
+        if (touch) await routes.openHistory.tap();
+        else await routes.openHistory.press('Enter');
+
+        await expect(routes.history.getByRole('listitem')).toHaveCount(MOCK_VERSION_COUNT);
+        if (touch) await routes.closeHistory.tap();
+        else await page.keyboard.press('Escape');
+        await expect(routes.history).toBeHidden();
+        await expect(routes.openHistory).toBeFocused();
+        await expect.poll(async () => routes.rules.boundingBox()).toEqual(before);
+        await expect(routes.outbounds).toContainText(SERVER);
+        await expect(applyBar.dirty).toBeVisible();
+      });
+
+      await test.step('the route explanation expands in place and links to connection examples', async () => {
+        await routes.openRouteHelp.scrollIntoViewIfNeeded();
+        await expect(routes.routeExamples).toBeHidden();
+        const before = await routes.interception.boundingBox();
+        expect(before).not.toBeNull();
+        if (touch) await routes.openRouteHelp.tap();
+        else await routes.openRouteHelp.press('Space');
+
+        await expect(routes.routeExamples).toHaveAttribute('href', '/how-it-works');
+        await expect(routes.routeExamples).toBeVisible();
+        await expect.poll(async () => (await routes.interception.boundingBox())?.y).toBeGreaterThan(before?.y ?? 0);
+        if (touch) await routes.openRouteHelp.tap();
+        else await routes.openRouteHelp.press('Enter');
+        await expect(routes.routeExamples).toBeHidden();
+        await expect.poll(async () => routes.interception.boundingBox()).toEqual(before);
+        await expect(applyBar.dirty).toBeVisible();
+      });
+    });
+  });
+}
+
 const EMPTY_CONFIGS = [
   { theme: 'light', config: {} },
   { theme: 'dark', config: { dns: { servers: [], rules: [] }, outbounds: [], route: { rules: [] } } },

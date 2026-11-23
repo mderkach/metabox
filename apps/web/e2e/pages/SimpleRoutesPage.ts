@@ -54,7 +54,12 @@ export class SimpleRoutesPage {
   readonly jsonView: Locator;
   readonly editorOutbounds: Locator;
   readonly configText: Locator;
+  readonly openRouteHelp: Locator;
+  readonly routeExamples: Locator;
+  readonly dnsHelpButton: Locator;
+  readonly dnsHelp: Locator;
   readonly openHistory: Locator;
+  readonly closeHistory: Locator;
   readonly history: Locator;
 
   constructor(page: Page) {
@@ -134,8 +139,14 @@ export class SimpleRoutesPage {
       name: translate('widgets/Config/ConfigRawEditor', 'editor.label'),
       exact: true,
     });
+    this.openRouteHelp = page.getByText(translate(SIMPLE_ROUTES, 'help.title'), { exact: true });
+    this.routeExamples = page.getByRole('link', { name: translate(SIMPLE_ROUTES, 'help.examples'), exact: true });
+    const dnsHelpLabel = translate(SIMPLE_ROUTES, 'help.label', { section: translate(SIMPLE_ROUTES, 'sections.dns') });
+    this.dnsHelpButton = this.dns.getByRole('button', { name: dnsHelpLabel });
+    this.dnsHelp = page.getByRole('dialog', { name: dnsHelpLabel });
     this.openHistory = page.getByRole('button', { name: translate(CONFIG_APPLY, 'history.open'), exact: true });
     this.history = page.getByRole('dialog', { name: translate(CONFIG_APPLY, 'history.title'), exact: true });
+    this.closeHistory = this.history.getByLabel(translate('shared', 'action.close'), { exact: true });
   }
 
   async goto(outbound: string) {

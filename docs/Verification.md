@@ -680,6 +680,13 @@ The Chromium mock scenarios cover a populated desktop configuration and an empty
 | AC-115 | e2e    | `apps/web/e2e/simpleRoutes.e2e.test.ts`             | `Simple, Editor and JSON share the server draft and its Apply flow`               |
 | AC-115 | e2e    | `apps/web/e2e/simpleRoutes.e2e.test.ts`             | `the empty Simple view opens the same focused server dialog from both actions in` |
 
+### Contextual help and version history in Simple Routes
+
+| ID     | Kind | File                                    | Check                                                           |
+| ------ | ---- | --------------------------------------- | --------------------------------------------------------------- |
+| AC-115 | e2e  | `apps/web/e2e/simpleRoutes.e2e.test.ts` | `Simple help and version history preserve the draft (keyboard)` |
+| AC-115 | e2e  | `apps/web/e2e/simpleRoutes.e2e.test.ts` | `Simple help and version history preserve the draft (touch)`    |
+
 ### Catalog route and DNS mapping
 
 Run `tools/bench/simple-catalog-dns/run.sh` from the repository with its Node version and workspace dependencies installed, Python 3 and Docker. The runner verifies the OpenWrt package against `sing-box-extended.sha256`. Set `SING_BOX_APK` to reuse a local copy. All probes run sequentially inside a disposable container with networking disabled except for loopback and one CPU. The core downloads the synthetic binary domain sets from a loopback HTTP server.
