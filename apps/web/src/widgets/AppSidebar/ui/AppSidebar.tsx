@@ -71,11 +71,11 @@ export function AppSidebar() {
                   // The link marks itself current by address prefix; an exact
                   // match leaves that to it, and nested paths are decided by `active`.
                   activeOptions={{ exact: true }}
-                  aria-current={item.to === active ? 'page' : undefined}
+                  aria-current={(item.match ?? item.to) === active ? 'page' : undefined}
                   className={cn(
                     ITEM_CLASS,
                     sidebar.collapsed && 'justify-center px-0',
-                    item.to === active
+                    (item.match ?? item.to) === active
                       ? ACTIVE_CLASS
                       : 'text-muted-foreground hover:bg-sidebar-accent hover:text-foreground'
                   )}

@@ -23,9 +23,6 @@
     "sections": "Sections",
     "withStatus": "More, {{status}}"
   },
-  "short": {
-    "config": "Config"
-  },
   "drift": {
     "newer": "forms target an older core",
     "older": "core is older than the forms"

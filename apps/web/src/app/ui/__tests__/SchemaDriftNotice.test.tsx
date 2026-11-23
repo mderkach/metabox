@@ -34,14 +34,12 @@ describe('SchemaDriftNotice', () => {
     expect(notice).toHaveTextContent(SERVICE_DRIFT_FIXTURE.binary);
   });
 
-  it('binary newer than the schema: sends new fields to text mode', async () => {
+  it('binary newer than the schema: sends new fields to the JSON view', async () => {
     serveService({ ...SERVICE_RUNNING_FIXTURE, binary: '99.0.0-extended-0.0.1' });
 
     renderWithQuery(<SchemaDriftNotice />);
 
-    expect(await screen.findByText(/Новые поля правьте через «Весь конфиг текстом»/)).toHaveTextContent(
-      '99.0.0-extended-0.0.1'
-    );
+    expect(await screen.findByText(/Новые поля правьте во вкладке JSON/)).toHaveTextContent('99.0.0-extended-0.0.1');
   });
 
   it('stays silent on matching versions', async () => {

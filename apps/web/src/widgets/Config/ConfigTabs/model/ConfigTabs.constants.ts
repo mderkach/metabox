@@ -66,5 +66,5 @@ export function tabPath(tab: (typeof CONFIG_TABS)[number]): string {
   return 'params' in tab.link ? `/config/${tab.link.params.section}` : tab.link.to;
 }
 
-/** The whole config as text: a screen of its own, outside the sections. */
 export const CONFIG_TEXT_ROUTE = '/config/raw';
+export const CONFIG_SIMPLE_ROUTE = '/config/simple';

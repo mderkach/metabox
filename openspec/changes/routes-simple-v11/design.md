@@ -13,6 +13,8 @@ The panel edits a config document while the daemon owns validation, Apply, confi
 - Show the real configuration and distinguish it from runtime observations, predictions, and unavailable data. A catalog service row reveals its source and known usage. The mock's examples and controls do not establish access to downloaded set contents or to features unsupported by the active core.
 - Cover imported and empty configs, unavailable runtime data, invalid input, unsupported and ambiguous operations, and a failed validation or Apply. Use the shared responsive and accessible components in both languages and themes. Preserve keyboard operation, focus, and reduced-motion behavior.
 
+The first delivery uses one dialog from Outbounds and the empty configuration. The dialog stages supported server links and links to manual subscription entry in Editor. The combined link input expands when subscription staging is available.
+
 ## Goals / Non-Goals
 
 - Let users complete common tasks in Simple and use other views when an edit needs advanced fields.

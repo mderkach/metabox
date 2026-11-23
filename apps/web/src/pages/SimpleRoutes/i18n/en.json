@@ -1,0 +1,61 @@
+{
+  "sections": {
+    "interception": "Interception",
+    "dns": "DNS",
+    "outbounds": "Outbounds",
+    "rules": "Rules"
+  },
+  "starter": {
+    "title": "First steps",
+    "description": "Add a server to the draft. Routing rules can then send traffic through it."
+  },
+  "addServer": {
+    "action": "Add server",
+    "title": "Add server",
+    "description": "Paste a server link to add it to the draft for review.",
+    "cancel": "Cancel",
+    "subscription": "Add subscription in Editor"
+  },
+  "interception": {
+    "unknown": "Router interception settings are unavailable.",
+    "disabled": "Interception is disabled in the router settings.",
+    "all": "Interception is configured for all devices.",
+    "listed": "Interception is configured for listed devices and subnets.",
+    "scopeUnknown": "Interception is enabled in the router settings. Device scope is unknown.",
+    "inbounds_zero": "No inbounds in the config",
+    "inbounds_one": "{{count}} inbound in the config",
+    "inbounds_other": "{{count}} inbounds in the config"
+  },
+  "dns": {
+    "servers_zero": "No resolvers in the config",
+    "servers_one": "{{count}} configured resolver",
+    "servers_other": "{{count}} configured resolvers",
+    "rules_zero": "No DNS rules in the config",
+    "rules_one": "{{count}} DNS rule",
+    "rules_other": "{{count}} DNS rules",
+    "final": "Default resolver · {{tag}}",
+    "finalUnknown": "No default resolver specified in the config"
+  },
+  "outbounds": {
+    "empty": "No outbounds in the config",
+    "untagged": "Untagged outbound",
+    "manual": "Group · manual choice",
+    "latency": "Group · picks by latency",
+    "direct": "Direct",
+    "staged": "Added to draft",
+    "providers_one": "{{count}} configured subscription",
+    "providers_other": "{{count}} configured subscriptions",
+    "inventory": "Groups, servers and subscriptions"
+  },
+  "rules": {
+    "empty": "No routing rules in the config",
+    "noMatches": "No rules for this outbound",
+    "filtered": "Outbound · {{outbound}}",
+    "clear": "Show all rules",
+    "targetUnknown": "Destination unavailable"
+  },
+  "unavailable": {
+    "title": "Simple view is unavailable",
+    "description": "Open JSON to review or correct the configuration."
+  }
+}

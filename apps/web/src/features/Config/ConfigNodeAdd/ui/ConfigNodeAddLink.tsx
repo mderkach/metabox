@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { ParseKeys } from 'i18next';
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import type { GenericSection } from '@entities/Config';
 import { showQueryError } from '@shared/api';
+import { cn } from '@shared/lib/utils';
 import { Button, Label, Textarea } from '@shared/ui';
 
 import { useNodeInsert } from '../model/ConfigNodeAdd.insert';
@@ -39,10 +40,12 @@ export function ConfigNodeAddLink({
   section,
   takenTags,
   onAdded,
+  cancel,
 }: {
   section: GenericSection;
   takenTags: readonly string[];
   onAdded?: (tag: string) => void;
+  cancel?: ReactNode;
 }) {
   const { t } = useTranslation(NS);
   const insertNode = useNodeInsert(section);
@@ -132,9 +135,10 @@ export function ConfigNodeAddLink({
         }}
       />
 
-      <Button type='submit' className='self-start'>
-        {t('submitLink')}
-      </Button>
+      <div className={cn(cancel !== undefined && 'flex flex-wrap justify-end gap-2')}>
+        {cancel}
+        <Button type='submit'>{t('submitLink')}</Button>
+      </div>
     </form>
   );
 }

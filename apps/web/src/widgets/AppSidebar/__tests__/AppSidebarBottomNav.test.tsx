@@ -29,8 +29,7 @@ describe('AppSidebarBottomNav', () => {
       NAV_ITEMS.filter((item) => item.more !== true).map((item) => item.to)
     );
     expect(within(nav).getByRole('link', { name: 'Обзор' })).toBeInTheDocument();
-    // The full "Конфигурация" does not fit in a phone column.
-    expect(within(nav).getByRole('link', { name: 'Конфиг' })).toHaveAttribute('href', '/config');
+    expect(within(nav).getByRole('link', { name: 'Маршруты' })).toHaveAttribute('href', '/config/simple');
     expect(within(nav).getByRole('link', { name: 'Соединения' })).toHaveAttribute('href', '/connections');
     expect(within(nav).getByRole('link', { name: 'Устройства' })).toHaveAttribute('href', '/devices');
   });
@@ -75,7 +74,7 @@ describe('AppSidebarBottomNav', () => {
     const current = within(nav).getAllByRole('link', { current: 'page' });
 
     expect(current).toHaveLength(1);
-    expect(current[0]).toHaveAttribute('href', '/config');
+    expect(current[0]).toHaveAttribute('href', '/config/simple');
   });
 
   // The sixth and seventh columns do not fit at phone width: logs and
