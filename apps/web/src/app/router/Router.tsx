@@ -52,7 +52,7 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   beforeLoad: () => {
-    throw redirect({ to: matchNarrow() ? '/overview' : '/config' });
+    throw redirect({ to: matchNarrow() ? '/overview' : '/config/simple' });
   },
 });
 
@@ -92,6 +92,20 @@ const routeEditorRoute = createRoute({
   component: lazyRouteComponent(async () => import('@pages/Editor'), 'EditorPage'),
 });
 
+const simpleRoutesRoute = createRoute({
+  getParentRoute: () => configLayoutRoute,
+  loader: async () =>
+    Promise.all([
+      preloadNamespaces(['pages/SimpleRoutes', 'features/Config/ConfigNodeAdd']),
+      QueryClientInstance.query(getDataplaneOptions()).catch(keepFailureForScreen),
+    ]),
+  path: 'simple',
+  validateSearch: (search: Record<string, unknown>): { outbound?: string } => ({
+    outbound: typeof search.outbound === 'string' && search.outbound !== '' ? search.outbound : undefined,
+  }),
+  component: lazyRouteComponent(async () => import('@pages/SimpleRoutes'), 'SimpleRoutesPage'),
+});
+
 const ruleSetsRoute = createRoute({
   getParentRoute: () => configLayoutRoute,
   loader: async () =>
@@ -120,8 +134,7 @@ const rawConfigRoute = createRoute({
 
 /**
  * Sections without their own screen share one screen with a parameter: their
- * nodes open as a schema form and as text. The static `rule-set` and `raw`
- * match before the parameter, and a foreign section name is a plain 404.
+ * nodes open as a schema form and as text. Static child paths match before the parameter, and a foreign section name is a plain 404.
  */
 const configSectionRoute = createRoute({
   getParentRoute: () => configLayoutRoute,
@@ -256,7 +269,13 @@ const settingsRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   howItWorksRoute,
-  configLayoutRoute.addChildren([routeEditorRoute, ruleSetsRoute, rawConfigRoute, configSectionRoute]),
+  configLayoutRoute.addChildren([
+    routeEditorRoute,
+    simpleRoutesRoute,
+    ruleSetsRoute,
+    rawConfigRoute,
+    configSectionRoute,
+  ]),
   proxiesRoute,
   connectionsRoute,
   devicesRoute,

@@ -18,8 +18,8 @@ interface NavItem {
   icon: LucideIcon;
   /** A route exists only for finished sections: other items are not clickable. */
   to?: LinkProps['to'];
-  /** Label in the bottom bar if the full name does not fit in its column on a phone. */
-  short?: ParseKeys<'widgets/AppSidebar'>;
+  /** Path prefix shared by every screen in this section. */
+  match?: string;
   /**
    * On a phone the item goes to the "More" sheet: the bottom bar columns are enough for
    * five sections and the "More" item itself, and service screens are
@@ -37,7 +37,7 @@ export const HELP_NAV_ITEM = {
 
 export const SIDEBAR_SECTIONS: readonly NavItem[] = [
   { key: 'section.overview', icon: Gauge, to: '/overview' },
-  { key: 'section.config', icon: SlidersHorizontal, to: '/config', short: 'short.config' },
+  { key: 'section.config', icon: SlidersHorizontal, to: '/config/simple', match: '/config' },
   { key: 'section.proxies', icon: Share2, to: '/proxies' },
   { key: 'section.connections', icon: Activity, to: '/connections' },
   { key: 'section.devices', icon: MonitorSmartphone, to: '/devices' },
@@ -49,6 +49,6 @@ export const SIDEBAR_SECTIONS: readonly NavItem[] = [
 export const NAV_ITEMS: readonly NavItem[] = [HELP_NAV_ITEM, ...SIDEBAR_SECTIONS];
 
 /** Section addresses in desktop menu order: the router picks the transition direction by it. */
-export const NAV_TARGETS: readonly string[] = [...SIDEBAR_SECTIONS, HELP_NAV_ITEM].flatMap((item) =>
-  item.to === undefined ? [] : [item.to]
+export const NAV_TARGETS: readonly string[] = [...SIDEBAR_SECTIONS, HELP_NAV_ITEM].flatMap((item: NavItem) =>
+  item.to === undefined ? [] : [item.match ?? item.to]
 );
