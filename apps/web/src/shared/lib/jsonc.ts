@@ -7,6 +7,7 @@ import {
   findNodeAtLocation,
   parse,
   parseTree,
+  visit,
 } from 'jsonc-parser';
 
 /**
@@ -206,4 +207,27 @@ export function lineOfOffset(text: string, offset: number): number {
   }
 
   return line;
+}
+
+export function hasDuplicateJsoncKeys(text: string): boolean {
+  const objects: Set<string>[] = [];
+  let duplicate = false;
+  visit(
+    text,
+    {
+      onObjectBegin: () => {
+        objects.push(new Set());
+      },
+      onObjectProperty: (name) => {
+        const keys = objects.at(-1);
+        if (keys?.has(name) === true) duplicate = true;
+        keys?.add(name);
+      },
+      onObjectEnd: () => {
+        objects.pop();
+      },
+    },
+    { allowTrailingComma: true }
+  );
+  return duplicate;
 }

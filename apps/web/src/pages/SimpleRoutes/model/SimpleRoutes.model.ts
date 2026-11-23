@@ -4,16 +4,31 @@ import {
   readNodeTags,
   readRuleNames,
   readRules,
+  readRuleSets,
   readSectionNodes,
   readSubscriptionTagReservations,
   toFinalOutbound,
   type ConfigDocument,
 } from '@entities/Config';
 import { toRuleRowsFromNodes } from '@entities/Rule';
-import { RULE_SET_TYPE } from '@entities/RuleSet';
+import { collectRuleSetUsage, RULE_SET_TYPE } from '@entities/RuleSet';
+import { hasDuplicateJsoncKeys } from '@shared/lib/jsonc';
 
 export function toSimpleRoutes(config: ConfigDocument, text: string, appliedText: string | null) {
-  const rules = toRuleRowsFromNodes(readRules(text), readRuleNames(text));
+  const ruleNodes = readRules(text);
+  const names = readRuleNames(text);
+  const rules = toRuleRowsFromNodes(ruleNodes, names);
+  const occurrences = new Map<string, number>();
+  const ruleKeys = ruleNodes.map((node, index) => {
+    const identity = JSON.stringify([node, names[index]]);
+    const occurrence = occurrences.get(identity) ?? 0;
+    occurrences.set(identity, occurrence + 1);
+    return `${String(occurrence)}:${identity}`;
+  });
+  const usage = collectRuleSetUsage([
+    { kind: 'route', rules: ruleNodes, names },
+    { kind: 'dns', rules: readSectionNodes(text, CONFIG_SECTION.DnsRules), names: readRuleNames(text, 'dns') },
+  ]);
   const inbounds = config.inbounds?.length ?? 0;
   const dnsServers = config.dns?.servers?.length ?? 0;
   const dnsRules = config.dns?.rules?.length ?? 0;
@@ -30,6 +45,11 @@ export function toSimpleRoutes(config: ConfigDocument, text: string, appliedText
 
   return {
     rules,
+    ruleKeys,
+    ruleNodes,
+    usage,
+    setNodes: readRuleSets(text),
+    duplicateKeys: hasDuplicateJsoncKeys(text),
     inbounds,
     dnsServers,
     needsCache:

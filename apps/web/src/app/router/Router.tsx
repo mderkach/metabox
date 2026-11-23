@@ -101,6 +101,8 @@ const simpleRoutesRoute = createRoute({
         'features/Config/ConfigNodeAdd',
         'features/Config/ConfigCacheFile',
         'features/Rule/RuleCatalogAdd',
+        'features/Rule/RuleReorder',
+        'widgets/RuleSet/RuleSetTable',
       ]),
       QueryClientInstance.query(getDataplaneOptions()).catch(keepFailureForScreen),
     ]),

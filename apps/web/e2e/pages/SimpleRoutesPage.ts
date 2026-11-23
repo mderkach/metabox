@@ -142,13 +142,13 @@ export class SimpleRoutesPage {
     await this.page.goto(`/config/simple?outbound=${encodeURIComponent(outbound)}`);
   }
 
-  async openWithConfig(config: Record<string, unknown>, coreVersion?: string) {
+  async mockConfig(config: Record<string, unknown> | string, coreVersion?: string) {
     // The dev stand starts its worker before the panel, so the first config request already sees this handler.
     await this.page.route(
       (url) => url.pathname === '/mocks/browser.ts',
       async (route) => {
         const response = await route.fetch();
-        const json = JSON.stringify(config);
+        const json = typeof config === 'string' ? config : JSON.stringify(config);
         const handler = `worker.use(http.get("/api/config", () => HttpResponse.text(${JSON.stringify(json)})));`;
         const status =
           coreVersion === undefined
@@ -164,6 +164,10 @@ export class SimpleRoutesPage {
         await route.fulfill({ response, body: `${await response.text()}\n${handler}\n${status}` });
       }
     );
+  }
+
+  async openWithConfig(config: Record<string, unknown> | string, coreVersion?: string) {
+    await this.mockConfig(config, coreVersion);
     await this.page.goto('/overview');
     await this.configNav.click();
   }
