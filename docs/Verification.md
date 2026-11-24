@@ -709,6 +709,22 @@ The snapshot comparisons check the whole fixture document, including the resolve
 | AC-117 | script | `tools/bench/simple-catalog-dns/checkSchema.mjs` | `configs passed`                                                                        |
 | AC-117 | script | `tools/bench/simple-catalog-dns/probe.py`        | `config check passed`                                                                   |
 
+### Resolver inventory and path assignments in Simple
+
+Vitest covers inventory-only additions, reassignment of exact-domain rules and preservation of imported settings. The Chromium scenarios verify those edits in the shared draft on the mock stand. The [supported assignment scope](../openspec/changes/routes-simple/design.md#dns-assignments-for-exact-domain-routes) lists the rule and transport shapes verified on the pinned core.
+
+An independent Impeccable review used the expanded v11 DNS section and the Chromium mock stand at 1280 × 800 and 375 × 812 with touch. The first review found that partially assigned domains and domains with different resolvers looked unassigned, and that a named exit separated the direct and proxy choices. The reviewer confirmed the replacement notice and the direct, proxy, then named display order at both widths. Form cancellation restored keyboard focus, touch controls measured at least 44 CSS pixels high, and the imported inventory stayed readable on an unsupported core.
+
+| ID     | Kind   | File                                                                         | Check                                                                                                      |
+| ------ | ------ | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.dns.test.ts`         | `appends only the requested server, leaving it unassigned and keeping the implicit final`                  |
+| AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.dns.test.ts`         | `refuses first-server creation, implicit bootstrap changes, collisions and dangling references`            |
+| AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.dns.test.ts`         | `distinguishes mixed and partial explicit assignments and replaces both atomically`                        |
+| AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.dns.test.ts`         | `updates an imported rule in place and adds only missing names for the same exit`                          |
+| AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutesDnsSettings.test.tsx` | `preserves a concurrent draft edit when the DNS server form is submitted`                                  |
+| AC-117 | e2e    | `apps/web/e2e/simpleDns.e2e.test.ts`                                         | `adding a resolver only changes inventory until reassignment in the shared DNS draft`                      |
+| AC-117 | e2e    | `apps/web/e2e/simpleDns.e2e.test.ts`                                         | `the 375px DNS assignment distinguishes the proxy group from a specific exit without an eligible resolver` |
+
 ### Adding a catalog service in Simple
 
 The tests open the catalog from Rules and from an empty configuration, choose between providers publishing the same category, and review the proposed route and DNS positions before staging. The shared draft and Apply diff show the selected set and new rules. Reuse, cancellation and blocked proposals preserve existing entries. The browser checks use a synthetic configuration and the verified core version on the mock stand.

@@ -6,6 +6,8 @@ import type {
   TrafficHistoryWire,
 } from '../api/Daemon.schema';
 
+const CORE_VERSION = '1.14.3-extended-2.7.3';
+
 // Binary tags on the device, `sing-box version` 2026-09-23: ccm, ocm,
 // cloudflared, naive, usbip, openvpn and openconnect are not in the build.
 const DEVICE_BUILD_TAGS = [
@@ -35,10 +37,10 @@ export const DAEMON_STATUS_FIXTURE: DaemonStatusWire = {
   core: {
     type: 'sing-box',
     variant: 'extended',
-    version: '1.14.1-extended-2.7.2',
+    version: CORE_VERSION,
     build: { tags: DEVICE_BUILD_TAGS },
   },
-  singbox_version: '1.14.1-extended-2.7.2',
+  singbox_version: CORE_VERSION,
   singbox_build: { tags: DEVICE_BUILD_TAGS },
   config_path: '/etc/sing-box/config.json',
   confirm_window_seconds: 60,
@@ -132,7 +134,7 @@ export const TRAFFIC_STREAM_SAMPLES = [
 export const SERVICE_RUNNING_FIXTURE: ServiceStateWire = {
   status: 'running',
   uptime: 253_091,
-  binary: '1.14.1-extended-2.7.2',
+  binary: CORE_VERSION,
   managed: true,
 };
 
@@ -143,7 +145,7 @@ export const SERVICE_RUNNING_FIXTURE: ServiceStateWire = {
 export const SERVICE_UNMANAGED_FIXTURE: ServiceStateWire = {
   status: 'running',
   uptime: 0,
-  binary: '1.14.1-extended-2.7.2',
+  binary: CORE_VERSION,
   managed: false,
 };
 
@@ -151,7 +153,7 @@ export const SERVICE_UNMANAGED_FIXTURE: ServiceStateWire = {
 export const SERVICE_FAILED_FIXTURE: ServiceStateWire = {
   status: 'failed',
   uptime: 0,
-  binary: '1.14.1-extended-2.7.2',
+  binary: CORE_VERSION,
   managed: false,
   lastError:
     'FATAL[0000] start service: initialize outbound/urltest[proxy]: provider sub-nl not found\nprocd: instance sing-box::instance1 exit code 1, restart in 5s',
@@ -161,7 +163,7 @@ export const SERVICE_FAILED_FIXTURE: ServiceStateWire = {
 export const SERVICE_UNREAD_FIXTURE: ServiceStateWire = {
   status: 'stopped',
   uptime: 0,
-  binary: '1.14.1-extended-2.7.2',
+  binary: CORE_VERSION,
   managed: false,
   lastError: 'service state not read',
   lastErrorCode: 'service_state_unread',
