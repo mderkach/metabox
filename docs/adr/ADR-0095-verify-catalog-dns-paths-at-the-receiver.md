@@ -30,4 +30,4 @@ The stand can detect a wrong detour even if the DNS answer arrives. It can also 
 
 ## Validation
 
-Run [the stand](../../tools/bench/simple-catalog-dns/run.sh). Its [receiver probes](../../tools/bench/simple-catalog-dns/probe.py) check rule matches, listener identity and source addresses. [Verification](../Verification.md#catalog-route-and-dns-mapping) records the observed paths and the overlapping-set counterexample.
+[Verification](../Verification.md#catalog-route-and-dns-mapping) records the receiver measurements and the overlapping-set counterexample for the tested core release. The [catalog planner](../../apps/web/src/features/Rule/RuleCatalogAdd/model/RuleCatalogAdd.plan.ts) applies those bounds to the draft. Its [unit tests](../../apps/web/src/features/Rule/RuleCatalogAdd/__tests__/RuleCatalogAdd.plan.test.ts) cover resolver choice, rule order and refusal of ambiguous matches.
