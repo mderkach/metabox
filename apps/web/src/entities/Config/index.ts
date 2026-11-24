@@ -55,7 +55,7 @@ export type {
 export { findUnbuiltNodes, findUnbuiltOptions, unbuiltOptionOf } from './model/Config.build';
 export { CONFIG_CHANGE, toConfigChanges } from './model/Config.changes';
 export type { ConfigChange, NodeListSection } from './model/Config.changes';
-export { CONFIG_REFERENCE, findReferences } from './model/Config.references';
+export { CONFIG_REFERENCE, dnsResolverReferenceTags, findReferences } from './model/Config.references';
 export type { ConfigReference } from './model/Config.references';
 export { hasSubscriptionTagConflict, readSubscriptionTagReservations } from './model/Config.subscriptionTags';
 export { CONFIG_SECRET_KEYS } from './model/Config.secrets';
@@ -97,3 +97,14 @@ export {
 } from './model/Config.selectors';
 export type { ListChanges } from './model/Config.selectors';
 export { useConfigCurrent, useConfigDiff, useConfigDirty, useConfigStale, useListChanges } from './model/Config.hooks';
+
+export {
+  dnsPathOverride,
+  effectiveDnsTag,
+  eligibleDnsExit,
+  eligibleResolvers,
+  hasDomainDnsIngress,
+  hasVerifiedDnsCore,
+  onlyKeys,
+  strings,
+} from './model/Config.dnsPath';

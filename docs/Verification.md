@@ -689,7 +689,7 @@ The Chromium mock scenarios cover a populated desktop configuration and an empty
 
 ### Catalog route and DNS mapping
 
-Run `tools/bench/simple-catalog-dns/run.sh` from the repository with its Node version and workspace dependencies installed, Python 3 and Docker. The runner verifies the OpenWrt package against `sing-box-extended.sha256`. Set `SING_BOX_APK` to reuse a local copy. All probes run sequentially inside a disposable container with networking disabled except for loopback and one CPU. The core downloads the synthetic binary domain sets from a loopback HTTP server.
+The measurements below were recorded on the [pinned fork release](../sing-box-extended.sha256) using a local, loopback-only container and synthetic domain sets. They apply to the [catalog configurations listed in the design](../openspec/changes/routes-simple/design.md#catalog-route-and-dns-mapping).
 
 | Evidence                      | Observed on sing-box-extended 1.14.3-extended-2.7.3 (linux/arm64)                                                                                                                                                                                                                                                                                                                               |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -700,14 +700,28 @@ Run `tools/bench/simple-catalog-dns/run.sh` from the repository with its Node ve
 | Missing and existing resolver | Without the named resolver, the query reached the default listener directly. Adding the inventory entry alone gave the same result. Adding the service pair sent it through the named relay. Reusing an existing DNS rule kept its index, resolver and peer when the route was added.                                                                                                           |
 | Shared DNS rule               | Splitting the disjoint test sets moved only alpha to the named resolver. Beta stayed direct and the unrelated control kept its selector. With a domain present in both sets, that domain moved from direct to named in the proposed split. This second split must be refused.                                                                                                                   |
 
-The snapshot comparisons check the whole fixture document, including the resolver inventory, rule order and unrelated configuration. These are checks of the [candidate mapping](../openspec/changes/routes-simple/design.md#catalog-route-and-dns-mapping). Draft mutation, refusal in the form and the rendered diff belong to task 2.3.
+The frontend tests exercise how the catalog form uses this mapping when it prepares the shared draft.
 
-| ID     | Kind   | File                                             | Check                                                                                   |
-| ------ | ------ | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| AC-116 | script | `tools/bench/simple-catalog-dns/check_deltas.py` | `Fixture diffs passed: three pairs, DNS reuse, explicit resolver and shared rule split` |
-| AC-116 | script | `tools/bench/simple-catalog-dns/probe.py`        | `data/DNS probe pairs passed`                                                           |
-| AC-117 | script | `tools/bench/simple-catalog-dns/checkSchema.mjs` | `configs passed`                                                                        |
-| AC-117 | script | `tools/bench/simple-catalog-dns/probe.py`        | `config check passed`                                                                   |
+| ID     | Kind   | File                                                                              | Check                                                                                |
+| ------ | ------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| AC-116 | vitest | `apps/web/src/features/Rule/RuleCatalogAdd/__tests__/RuleCatalogAdd.plan.test.ts` | `reports independent effective positions and rejects a partial or shadowed match`    |
+| AC-117 | vitest | `apps/web/src/features/Rule/RuleCatalogAdd/__tests__/RuleCatalogAdd.plan.test.ts` | `does not infer an assignment from finals or a singleton, or use a different detour` |
+
+### Resolver inventory and path assignments in Simple
+
+Vitest covers inventory-only additions, reassignment of exact-domain rules and preservation of imported settings. The Chromium scenarios verify those edits in the shared draft on the mock stand. The [supported assignment scope](../openspec/changes/routes-simple/design.md#dns-assignments-for-exact-domain-routes) lists the rule and transport shapes verified on the pinned core.
+
+An independent Impeccable review used the expanded v11 DNS section and the Chromium mock stand at 1280 × 800 and 375 × 812 with touch. The first review found that partially assigned domains and domains with different resolvers looked unassigned, and that a named exit separated the direct and proxy choices. The reviewer confirmed the replacement notice and the direct, proxy, then named display order at both widths. Form cancellation restored keyboard focus, touch controls measured at least 44 CSS pixels high, and the imported inventory stayed readable on an unsupported core.
+
+| ID     | Kind   | File                                                                         | Check                                                                                                      |
+| ------ | ------ | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.dns.test.ts`         | `appends only the requested server, leaving it unassigned and keeping the implicit final`                  |
+| AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.dns.test.ts`         | `refuses first-server creation, implicit bootstrap changes, collisions and dangling references`            |
+| AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.dns.test.ts`         | `distinguishes mixed and partial explicit assignments and replaces both atomically`                        |
+| AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.dns.test.ts`         | `updates an imported rule in place and adds only missing names for the same exit`                          |
+| AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutesDnsSettings.test.tsx` | `preserves a concurrent draft edit when the DNS server form is submitted`                                  |
+| AC-117 | e2e    | `apps/web/e2e/simpleDns.e2e.test.ts`                                         | `adding a resolver only changes inventory until reassignment in the shared DNS draft`                      |
+| AC-117 | e2e    | `apps/web/e2e/simpleDns.e2e.test.ts`                                         | `the 375px DNS assignment distinguishes the proxy group from a specific exit without an eligible resolver` |
 
 ### Adding a catalog service in Simple
 

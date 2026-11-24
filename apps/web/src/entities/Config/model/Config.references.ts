@@ -29,14 +29,14 @@ function loopAt(segments: readonly string[]) {
 }
 
 /** Whether the schema marks the value at `path` as a tag reference. */
-function isReference(path: JSONPath): boolean {
+function isReference(path: JSONPath, patterns = TAG_REFERENCE_PATHS): boolean {
   let segments = path.map((key) => (typeof key === 'number' ? ARRAY_INDEX : key));
 
   for (let loop = loopAt(segments); loop !== undefined; loop = loopAt(segments)) {
     segments = [...loop.to, ...segments.slice(loop.from.length)];
   }
 
-  return TAG_REFERENCE_PATHS.some((pattern) => pattern.length === segments.length && matches(pattern, segments));
+  return patterns.some((pattern) => pattern.length === segments.length && matches(pattern, segments));
 }
 
 function collectPaths(value: unknown, tag: string, path: JSONPath, found: JSONPath[]): void {
@@ -125,4 +125,35 @@ export function findReferences(text: string, tag: string): ConfigReference[] {
 
       return true;
     });
+}
+
+const DNS_REFERENCES = TAG_REFERENCE_PATHS.filter((path) => {
+  const key = path.at(-1);
+  return (
+    key?.endsWith('domain_resolver') === true ||
+    key === 'server' ||
+    (path[0] === 'dns' && (key === 'final' || key === 'servers'))
+  );
+});
+
+export function dnsResolverReferenceTags(root: unknown): Set<string> {
+  const references = new Set<string>();
+  function visit(node: unknown, path: JSONPath) {
+    if (typeof node === 'string') {
+      if (isReference(path, DNS_REFERENCES)) references.add(node);
+    } else if (Array.isArray(node)) {
+      const items: readonly unknown[] = node;
+      if (isReference(path, DNS_REFERENCES)) {
+        for (const item of items) if (typeof item === 'string') references.add(item);
+      } else {
+        items.forEach((item, index) => {
+          visit(item, [...path, index]);
+        });
+      }
+    } else if (typeof node === 'object' && node !== null) {
+      for (const [key, value] of Object.entries(node)) visit(value, [...path, key]);
+    }
+  }
+  visit(root, []);
+  return references;
 }

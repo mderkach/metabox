@@ -1,5 +1,12 @@
 import {
   CONFIG_SECTION,
+  dnsPathOverride,
+  eligibleDnsExit,
+  eligibleResolvers,
+  hasDomainDnsIngress,
+  hasVerifiedDnsCore,
+  onlyKeys,
+  strings,
   insertValue,
   parseConfig,
   readSubscriptionTagReservations,
@@ -7,7 +14,6 @@ import {
   ruleSetNodePath,
   sectionNodePath,
 } from '@entities/Config';
-import { SCHEMA_VERSION } from '@entities/Daemon';
 import {
   buildRuleSetURL,
   collectRuleSetUsage,
@@ -19,12 +25,10 @@ import {
 import { isRecord } from '@shared/lib/isRecord';
 import { hasDuplicateJsoncKeys } from '@shared/lib/jsonc';
 
-import { eligibleExit, eligibleResolvers, hasCatalogIngress, onlyKeys, strings } from './RuleCatalogAdd.paths';
-
-export { getCatalogResolvers } from './RuleCatalogAdd.paths';
-
-// A schema update alone does not verify the new binary's DNS egress.
-const VERIFIED_VERSION = '1.14.3-extended-2.7.3';
+export function getCatalogResolvers(text: string, outbound: string): string[] {
+  const { config } = parseConfig(text);
+  return config === null ? [] : eligibleResolvers(config, outbound);
+}
 
 export interface CatalogSelection {
   text: string;
@@ -95,7 +99,7 @@ function positionFor(
 }
 
 export function planCatalogService({ text, coreVersion, list, category, outbound, resolver }: CatalogSelection) {
-  if (coreVersion !== VERIFIED_VERSION || SCHEMA_VERSION !== VERIFIED_VERSION) return blocked('core', coreVersion);
+  if (!hasVerifiedDnsCore(coreVersion)) return blocked('core', coreVersion);
   if (list.kind !== RULE_SET_LIST_KIND.Geosite || !isCatalogCategory(list, category) || !list.mirrors.length) {
     return blocked('service', category);
   }
@@ -104,24 +108,9 @@ export function planCatalogService({ text, coreVersion, list, category, outbound
   if (!config || hasDuplicateJsoncKeys(text) || parsed.unknown.some(({ path }) => path === 'route' || path === 'dns')) {
     return blocked('draft');
   }
-  const routeOverride = Object.entries(config.route ?? {}).find(
-    ([key, value]) =>
-      value !== false &&
-      value !== 0 &&
-      value !== '' &&
-      ((key.startsWith('default_') && key !== 'default_domain_resolver' && key !== 'default_http_client') ||
-        key === 'auto_detect_interface' ||
-        key === 'override_android_vpn')
-  );
-  if (routeOverride) return blocked('draft', `route.${routeOverride[0]}`);
-  const dnsOverride = Object.entries(config.dns ?? {}).find(
-    ([key, value]) =>
-      (key === 'strategy' && value !== '' && value !== 'as_is') ||
-      (key === 'reverse_mapping' && value === true) ||
-      (key === 'client_subnet' && value !== '')
-  );
-  if (dnsOverride) return blocked('draft', `dns.${dnsOverride[0]}`);
-  if (!eligibleExit(config, outbound)) return blocked('exit', outbound);
+  const override = dnsPathOverride(config);
+  if (override !== undefined) return blocked('draft', override);
+  if (!eligibleDnsExit(config, outbound)) return blocked('exit', outbound);
 
   const urls = list.mirrors.map(({ id }) => buildRuleSetURL(list, id, category));
   const sets = config.route?.rule_set ?? [];
@@ -156,7 +145,7 @@ export function planCatalogService({ text, coreVersion, list, category, outbound
     ]).has(setTag)
   )
     return blocked('setConflict', setTag);
-  if (!hasCatalogIngress(config)) return blocked('ingress');
+  if (!hasDomainDnsIngress(config)) return blocked('ingress');
 
   const route = positionFor(routes, 'route', setTag, outbound);
   if ('ok' in route) return route;

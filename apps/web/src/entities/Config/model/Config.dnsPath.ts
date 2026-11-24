@@ -1,7 +1,16 @@
 import { z } from 'zod';
 
-import { type ConfigDocument, parseConfig } from '@entities/Config';
+import { SCHEMA_FORK_VERSION } from '@shared/api/generated';
 import { isRecord } from '@shared/lib/isRecord';
+
+import type { ConfigDocument } from './Config.model';
+
+const VERIFIED_FORK = '1.14.3-extended-2.7.3';
+
+// A schema update alone does not verify the new binary's upstream DNS path.
+export function hasVerifiedDnsCore(version: string | undefined): boolean {
+  return version === VERIFIED_FORK && SCHEMA_FORK_VERSION.replace(/^v/, '') === VERIFIED_FORK;
+}
 
 const IPV4 = z.ipv4();
 const MAX_PORT = 65_535;
@@ -17,8 +26,12 @@ export function strings(value: unknown): string[] {
   return Array.isArray(value) && value.every((item): item is string => typeof item === 'string') ? value : [];
 }
 
+export function effectiveDnsTag(node: { tag?: string }, index: number): string {
+  return node.tag === undefined || node.tag === '' ? String(index) : node.tag;
+}
+
 function tagged<T extends { tag?: string }>(nodes: readonly T[], tag: string) {
-  return nodes.filter((node, index) => (node.tag === undefined || node.tag === '' ? String(index) : node.tag) === tag);
+  return nodes.filter((node, index) => effectiveDnsTag(node, index) === tag);
 }
 
 function isSocks(node: unknown): boolean {
@@ -32,7 +45,7 @@ function isSocks(node: unknown): boolean {
   );
 }
 
-export function eligibleExit(config: ConfigDocument, tag: string) {
+export function eligibleDnsExit(config: ConfigDocument, tag: string) {
   const outbounds = config.outbounds ?? [];
   const unique = (name: string) => {
     const matches = tagged(outbounds, name);
@@ -55,7 +68,7 @@ export function eligibleExit(config: ConfigDocument, tag: string) {
 }
 
 export function eligibleResolvers(config: ConfigDocument, outbound: string): string[] {
-  const exit = eligibleExit(config, outbound);
+  const exit = eligibleDnsExit(config, outbound);
   const servers = config.dns?.servers ?? [];
   if (!exit) return [];
 
@@ -73,12 +86,7 @@ export function eligibleResolvers(config: ConfigDocument, outbound: string): str
   );
 }
 
-export function getCatalogResolvers(text: string, outbound: string): string[] {
-  const { config } = parseConfig(text);
-  return config === null ? [] : eligibleResolvers(config, outbound);
-}
-
-export function hasCatalogIngress(config: ConfigDocument): boolean {
+export function hasDomainDnsIngress(config: ConfigDocument): boolean {
   const first: unknown = config.route?.rules?.at(0);
   if (!isRecord(first) || first.action !== 'hijack-dns' || !onlyKeys(first, 'inbound', 'action')) return false;
 
@@ -111,4 +119,24 @@ export function hasCatalogIngress(config: ConfigDocument): boolean {
       );
     })
   );
+}
+
+export function dnsPathOverride(config: ConfigDocument): string | undefined {
+  const routeOverride = Object.entries(config.route ?? {}).find(
+    ([key, value]) =>
+      value !== false &&
+      value !== 0 &&
+      value !== '' &&
+      ((key.startsWith('default_') && key !== 'default_domain_resolver' && key !== 'default_http_client') ||
+        key === 'auto_detect_interface' ||
+        key === 'override_android_vpn')
+  );
+  if (routeOverride) return `route.${routeOverride[0]}`;
+  const dnsOverride = Object.entries(config.dns ?? {}).find(
+    ([key, value]) =>
+      (key === 'strategy' && value !== '' && value !== 'as_is') ||
+      (key === 'reverse_mapping' && value === true) ||
+      (key === 'client_subnet' && value !== '')
+  );
+  return dnsOverride && `dns.${dnsOverride[0]}`;
 }

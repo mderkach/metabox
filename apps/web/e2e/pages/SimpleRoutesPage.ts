@@ -165,7 +165,10 @@ export class SimpleRoutesPage {
           coreVersion === undefined
             ? ''
             : `
-          import { DAEMON_STATUS_FIXTURE } from '/src/entities/Daemon/__tests__/Daemon.fixture.ts';
+          import { DAEMON_STATUS_FIXTURE, SERVICE_RUNNING_FIXTURE } from '/src/entities/Daemon/__tests__/Daemon.fixture.ts';
+          worker.use(http.get('/api/service', () => HttpResponse.json({
+            ...SERVICE_RUNNING_FIXTURE, binary: ${JSON.stringify(coreVersion)}
+          })));
           worker.use(http.get('/api/status', () => HttpResponse.json({
             ...DAEMON_STATUS_FIXTURE,
             core: { ...DAEMON_STATUS_FIXTURE.core, version: ${JSON.stringify(coreVersion)} },

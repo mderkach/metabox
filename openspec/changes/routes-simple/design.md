@@ -66,6 +66,14 @@ Check the route and DNS lists **independently** at their real positions, includi
 
 The receiver measurements follow [ADR-0095](../../../docs/adr/ADR-0095-verify-catalog-dns-paths-at-the-receiver.md). The [verification cases](../../../docs/Verification.md#catalog-route-and-dns-mapping) record schema acceptance, core validation, rule matches and observations at the upstream. The stand uses synthetic sets with known contents to test the shared-rule split. For independent downloaded catalog sets the panel has no membership or disjointness evidence under the [rule-set detail contract](../../specs/rule-sets/spec.md). It must keep such a split unavailable.
 
+## DNS assignments for exact-domain routes
+
+For an explicit path assignment, Simple can pair terminal traffic and DNS rules for the same exact domain. The selected outbound determines which traffic rules are in scope. The DNS server tag identifies the resolver, and the resolver's dial settings determine its path. The control must identify the affected domains before editing. Domains on other exits and queries outside the displayed scope keep their existing treatment.
+
+A separate receiver check on sing-box-extended `1.14.3-extended-2.7.3` verified direct, selector and named SOCKS assignments for disjoint exact domains. It covered a combined DNS rule and separate imported rules, reassignment on the same path, and an unmatched query with either an explicit or implicit default server. The [frontend checks](../../../docs/Verification.md#resolver-inventory-and-path-assignments-in-simple) cover the corresponding draft edits and refusal cases.
+
+Appending to a nonempty inventory preserves its first entry. In an empty inventory the first configured server would become the default. Simple must explain when an inventory-only addition cannot preserve the default. Adding a second resolver also requires preserving bootstrap for hostname dialers that can implicitly use a sole resolver. Opaque rule order, overlapping matches or mixed conditions require separate evidence. Catalog sets stay in the service-specific workflow: their tags alone cannot establish disjoint membership across exits. A finding about DNS and traffic taking different paths depends on the revision-scoped diagnostic in [#392](https://github.com/mderkach/metabox/issues/392).
+
 ## Risks / Trade-offs
 
 - A simple control may hide a more complex imported configuration. Keep unsupported items visible as such and verify that edits to supported fields preserve the rest of the document.

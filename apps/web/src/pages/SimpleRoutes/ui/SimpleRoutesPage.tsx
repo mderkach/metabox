@@ -95,7 +95,9 @@ export function SimpleRoutesPage() {
               )}
 
               <SimpleRoutesInterception inbounds={model.inbounds} />
-              <SimpleRoutesDns servers={model.dnsServers} rules={model.dnsRules} final={model.dnsFinal} />
+              {text !== null && (
+                <SimpleRoutesDns text={text} servers={model.dnsServers} rules={model.dnsRules} final={model.dnsFinal} />
+              )}
               <SimpleRoutesOutbounds
                 outbounds={model.outbounds}
                 providers={model.providers}

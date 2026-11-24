@@ -8,6 +8,7 @@ import { ProxiesPage } from '../pages/ProxiesPage.ts';
 import { SectionPage } from '../pages/SectionPage.ts';
 import { SettingsPage } from '../pages/SettingsPage.ts';
 import { SimpleCatalogDialog } from '../pages/SimpleCatalogDialog.ts';
+import { SimpleDnsSettings } from '../pages/SimpleDnsSettings.ts';
 import { SimpleRoutesPage } from '../pages/SimpleRoutesPage.ts';
 import { SimpleRuleControls } from '../pages/SimpleRuleControls.ts';
 
@@ -20,6 +21,7 @@ export const test = base.extend<{
   sectionPage: SectionPage;
   settingsPage: SettingsPage;
   simpleCatalog: SimpleCatalogDialog;
+  simpleDns: SimpleDnsSettings;
   simpleRuleControls: SimpleRuleControls;
   simpleRoutesPage: SimpleRoutesPage;
 }>({
@@ -43,6 +45,9 @@ export const test = base.extend<{
   },
   settingsPage: async ({ page }, use) => {
     await use(new SettingsPage(page));
+  },
+  simpleDns: async ({ page, simpleRoutesPage }, use) => {
+    await use(new SimpleDnsSettings(page, simpleRoutesPage));
   },
   simpleCatalog: async ({ page }, use) => {
     await use(new SimpleCatalogDialog(page));
