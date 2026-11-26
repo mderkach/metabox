@@ -43,8 +43,8 @@ Simple SHALL let users view supported rules by type, filter by outbound, and ins
 #### Scenario: Filter by an outbound without renumbering
 
 - **GIVEN** the current draft contains rules for multiple outbounds
-- **WHEN** Simple receives an outbound-specific link or the user chooses an outbound filter
-- **THEN** it shows rules for that outbound with their original positions
+- **WHEN** Simple receives an outbound-specific link or the user selects an outbound tile or uses the rule filter
+- **THEN** it shows rules for that outbound with their original positions and identifies the selected tile when present
 - **AND** clearing the filter restores all rules without affecting the draft
 
 #### Scenario: Inspect a service from its rule row
@@ -207,7 +207,15 @@ Simple SHALL use one contextual flow for adding a server or subscription to the 
 - **WHEN** the user opens “Server or subscription” from the Routes header, Outbounds, or the empty state when shown
 - **THEN** the same dialog opens while preserving the current view, filter, and scroll position
 - **AND** the header shows the view tabs, version history, and import action on desktop and mobile
+- **AND** at narrow widths the header actions and the import dialog actions each stack in full-width rows
 - **AND** closing the dialog returns focus to the opener or to the remaining Outbounds action when the starter disappears
+
+#### Scenario: Keep common Routes controls in place across views
+
+- **GIVEN** the user opens Simple, Editor, or JSON
+- **THEN** the title, view tabs, draft indicator, and version history use the same header layout
+- **AND** on a narrow screen the three tabs divide the available row equally and each outbound control in Simple occupies one full-width row
+- **AND** the document path in Editor and JSON appears below the common controls
 
 #### Scenario: An unverified HTTPS link opens the subscription form
 

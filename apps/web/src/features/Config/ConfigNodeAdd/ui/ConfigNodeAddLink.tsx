@@ -183,7 +183,7 @@ export function ConfigNodeAddLink({
           </p>
         )}
         {allowSubscriptions && /^http:\/\//i.test(input.trim()) && subscriptionFallback}
-        <div className={cn(cancel !== undefined && 'flex flex-wrap items-center justify-end gap-2')}>
+        <div className={cn(cancel !== undefined && 'grid gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end')}>
           {cancel}
           <Button type='submit'>{t(allowSubscriptions ? 'subscription.stage' : 'submitLink')}</Button>
         </div>

@@ -5,7 +5,7 @@ import { useConfigDocument } from '@entities/Config';
 import { useConfigPath } from '@entities/Daemon';
 import { ConfigApplyHistory } from '@features/Config/ConfigApply';
 import { ConfigNodeAddDialogProvider, ConfigNodeAddDialogTrigger } from '@features/Config/ConfigNodeAdd';
-import { cn } from '@shared/lib/utils';
+import { DaemonModeSwitch } from '@features/Daemon/DaemonMode';
 import { Badge } from '@shared/ui';
 import { ConfigBuildNotice } from '@widgets/Config/ConfigBuildNotice';
 import { ConfigViewTabs } from '@widgets/Config/ConfigTabs';
@@ -24,31 +24,25 @@ export function ConfigLayout() {
         config={document.config}
         renderHeader={(views, simple) => (
           <PageHeader
-            className={simple ? 'items-center gap-y-2' : undefined}
+            className='items-center gap-y-2'
             title={t('section.config', { ns: 'shared' })}
             actions={
-              <div className={cn('flex min-w-0 flex-wrap items-center gap-2', simple && 'max-sm:w-full')}>
-                <ConfigApplyHistory showLabel={simple} />
-                {simple && document.config !== null && document.text !== null && (
-                  <ConfigNodeAddDialogTrigger label={t('addServer.action', { ns: 'pages/SimpleRoutes' })} />
-                )}
+              <div className='flex min-w-0 flex-wrap items-center gap-2 max-xl:basis-full max-sm:grid max-sm:w-full max-sm:[&>button]:min-h-11'>
+                <DaemonModeSwitch inHeader />
+                <ConfigApplyHistory showLabel />
+                <div className='contents xl:block xl:w-48 max-sm:[&>button]:min-h-11 xl:[&>button]:w-full'>
+                  {simple && document.config !== null && document.text !== null && (
+                    <ConfigNodeAddDialogTrigger label={t('addServer.action', { ns: 'pages/SimpleRoutes' })} />
+                  )}
+                </div>
               </div>
             }
           >
-            {!simple && (
-              <p className='font-mono text-xs break-all text-muted-foreground max-sm:order-last max-sm:basis-full'>
-                {configPath}
-              </p>
-            )}
-            <div
-              className={cn(
-                'min-w-0',
-                simple ? 'max-sm:basis-full' : 'order-last basis-full border-t border-border pt-2'
-              )}
-            >
-              {views}
-            </div>
             {document.isDirty && <Badge variant='secondary'>{t('config.draft')}</Badge>}
+            <div className='min-w-0 max-sm:basis-full'>{views}</div>
+            {!simple && (
+              <p className='order-last basis-full font-mono text-xs break-all text-muted-foreground'>{configPath}</p>
+            )}
           </PageHeader>
         )}
       >

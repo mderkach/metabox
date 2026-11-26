@@ -32,7 +32,10 @@ export function ConfigViewTabs({
   return (
     <Tabs value={view} className='min-h-0 grow gap-0'>
       {renderHeader(
-        <TabsList aria-label={t('views.label')}>
+        <TabsList
+          aria-label={t('views.label')}
+          className='max-sm:grid max-sm:w-full max-sm:grid-cols-3 max-sm:group-data-horizontal/tabs:h-auto max-sm:[&>[role=tab]]:min-h-11'
+        >
           <TabsTrigger
             value='simple'
             nativeButton={false}

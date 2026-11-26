@@ -1,3 +1,4 @@
+import { Route } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useClashConfigs } from '@entities/Daemon';
@@ -19,10 +20,12 @@ import { toClashModeLabel } from './DaemonMode.labels';
  * While the mode is being read, a skeleton; if it was not read, the reason as
  * text instead of the control: there is nothing to choose from.
  */
-export function DaemonModeSwitch() {
+export function DaemonModeSwitch({ inHeader = false }: { inHeader?: boolean }) {
   const { t } = useTranslation('shared');
   const clash = useClashConfigs();
   const setMode = useSetClashMode();
+
+  if (inHeader && (clash.data?.modeList.length ?? 0) <= 1) return null;
 
   if (clash.isPending) {
     return <Skeleton aria-hidden='true' className={cn('h-8 w-32', PENDING_REVEAL)} />;
@@ -36,6 +39,7 @@ export function DaemonModeSwitch() {
 
   const { mode, modeList } = clash.data;
   const current = toClashModeLabel(t, mode);
+  const label = t(inHeader ? 'clashMode.routing' : 'clashMode.label');
 
   return (
     <Select
@@ -47,8 +51,19 @@ export function DaemonModeSwitch() {
         }
       }}
     >
-      <SelectTrigger aria-label={`${t('clashMode.label')}: ${current}`} className='min-w-0'>
-        <SelectValue placeholder={current} />
+      <SelectTrigger
+        aria-label={`${label}: ${current}`}
+        className={cn('min-w-0', inHeader && 'max-sm:w-full sm:max-w-48')}
+      >
+        {inHeader && (
+          <>
+            <Route aria-hidden className='hidden sm:block' />
+            <span className='text-muted-foreground sm:sr-only'>{label}</span>
+          </>
+        )}
+        <SelectValue className={inHeader ? 'min-w-0' : undefined} placeholder={current}>
+          {inHeader ? <span className='truncate'>{current}</span> : undefined}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {modeList.map((value) => (

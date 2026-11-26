@@ -313,6 +313,7 @@
   },
   "clashMode": {
     "label": "Режим Clash API",
+    "routing": "Режим маршрутизации",
     "rule": "по правилам",
     "global": "глобально",
     "direct": "напрямую",

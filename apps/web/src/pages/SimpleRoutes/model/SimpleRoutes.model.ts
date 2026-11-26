@@ -34,6 +34,19 @@ export function toSimpleRoutes(config: ConfigDocument, text: string, appliedText
   const dnsRules = config.dns?.rules?.length ?? 0;
   const dnsFinal = config.dns?.final;
   const outbounds = config.outbounds ?? [];
+  const outboundTagCounts = new Map<string, number>();
+  for (const { tag } of outbounds) {
+    if (tag !== undefined && tag !== '') outboundTagCounts.set(tag, (outboundTagCounts.get(tag) ?? 0) + 1);
+  }
+  const outboundOccurrences = new Map<string, number>();
+  const outboundEntries = outbounds.map((node) => {
+    if (node.tag !== undefined && outboundTagCounts.get(node.tag) === 1) return { node, key: `tag:${node.tag}` };
+
+    const identity = JSON.stringify(node);
+    const occurrence = outboundOccurrences.get(identity) ?? 0;
+    outboundOccurrences.set(identity, occurrence + 1);
+    return { node, key: `node:${String(occurrence)}:${identity}` };
+  });
   const providers = config.providers?.length ?? 0;
   const appliedTags = new Set(
     appliedText === null
@@ -57,6 +70,7 @@ export function toSimpleRoutes(config: ConfigDocument, text: string, appliedText
     dnsRules,
     dnsFinal,
     outbounds,
+    outboundEntries,
     providers,
     takenTags: [...readNodeTags(text), ...readSubscriptionTagReservations(text, CONFIG_SECTION.Outbounds)],
     stagedTags: new Set(
