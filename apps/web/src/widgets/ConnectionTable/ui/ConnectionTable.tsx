@@ -30,7 +30,6 @@ const OVERSCAN = 10;
 /** The header row is also a table row: row numbering starts with it. */
 const HEADER_ROWS = 1;
 
-/** What to show instead of the table when no rows are left after filtering. */
 export interface ConnectionTableEmpty {
   /** A filter is active: search or screen facets. */
   filtered: boolean;
@@ -72,7 +71,6 @@ function ConnectionTableBodyProto({
   /** How many rows are in the tab before filtering: the footer reports both values. */
   total: number;
   closable: boolean;
-  /** What to show instead of the table when there are no rows. */
   empty: (state: ConnectionTableEmpty) => ReactNode;
   /** Screen filter: search and facets. */
   filtered: boolean;

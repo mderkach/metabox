@@ -296,7 +296,6 @@ describe('rule sets screen', () => {
     expect(screen.getByText('Не удалось получить каталог сетов')).toBeInTheDocument();
   });
 
-  // The router owner is not obliged to read the raw `24h` from the config.
   it('prints the update interval in words', async () => {
     renderWithRouter(RuleSetsScreen);
 

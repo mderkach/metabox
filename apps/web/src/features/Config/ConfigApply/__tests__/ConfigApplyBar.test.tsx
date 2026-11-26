@@ -74,7 +74,6 @@ function loadDocument(draft = true) {
   if (draft) ConfigDocumentState.getState().replace(DRAFT);
 }
 
-/** Apply goes through the summary: the bar button opens it, the dialog button sends. */
 async function applyFromSummary() {
   await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
   const summary = await screen.findByRole('dialog', { name: 'Что уйдёт на устройство' });

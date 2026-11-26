@@ -29,7 +29,6 @@ export function ConfirmDialog({
   finalFocus,
   onConfirm,
 }: {
-  /** The element that opens the dialog, with its label. */
   trigger?: ReactElement;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;

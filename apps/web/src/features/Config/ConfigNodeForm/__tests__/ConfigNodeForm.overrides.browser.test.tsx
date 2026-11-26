@@ -69,7 +69,6 @@ function NodeFromStore({
   return isRecord(node) ? <ConfigNodeForm registry={registry} path={path} node={node} builtTags={builtTags} /> : null;
 }
 
-/** Opens a dropdown and picks an option with the mouse. */
 async function pick(trigger: HTMLElement, name: string | RegExp): Promise<void> {
   await userEvent.click(trigger);
   await userEvent.click(await screen.findByRole('option', { name }));

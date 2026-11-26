@@ -39,7 +39,6 @@ export function App() {
             </Suspense>
           </AuthGate>
         </div>
-        {/* At the top: the apply and interception bars hold the bottom edge with their buttons. */}
         <Toaster position='top-right' containerAriaLabel={t('toasts.label')} />
       </QueryClientProvider>
     </ThemeProvider>

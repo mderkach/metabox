@@ -1,6 +1,5 @@
 import type { Page } from '@playwright/test';
 
-/** What one Tab press focused. */
 export interface FocusStop {
   /** The element's tab stop, stable across re-renders of its neighbours; radios of one group share it. */
   key: string;

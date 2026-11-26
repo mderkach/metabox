@@ -20,7 +20,6 @@ import { MS_IN_SECOND, SECONDS_IN_HOUR, SECONDS_IN_MINUTE } from '@shared/lib/ti
 
 import { DevicesPage } from '../ui/DevicesPage';
 
-/** Dataplane model with a change and the daemon status that serves this change. */
 function serveDataplane(initial = DATAPLANE_FIXTURE) {
   const mock = createDataplaneMock(initial);
 
@@ -32,7 +31,6 @@ function isLocked(toggle: HTMLElement): boolean {
   return toggle.getAttribute('aria-disabled') === 'true';
 }
 
-/** The device toggle when the model is read and it became available. */
 async function readySwitch(device: string): Promise<HTMLElement> {
   const toggle = await screen.findByRole('switch', { name: `Через ядро: ${device}` });
 
@@ -43,7 +41,6 @@ async function readySwitch(device: string): Promise<HTMLElement> {
   return toggle;
 }
 
-/** The device toggle when the model is read and it shows interception. */
 async function readySwitchChecked(device: string): Promise<HTMLElement> {
   const toggle = await screen.findByRole('switch', { name: `Через ядро: ${device}` });
 

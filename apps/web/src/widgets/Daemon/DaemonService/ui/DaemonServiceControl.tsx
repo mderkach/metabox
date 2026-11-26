@@ -28,7 +28,6 @@ const STATUS_LABEL = {
   failed: 'status.failed',
 } as const satisfies Readonly<Record<ServiceState['status'], ParseKeys<typeof DAEMON_SERVICE_NS>>>;
 
-/** State is read by tone, not only by word. */
 const STATUS_TONE: Readonly<Record<ServiceState['status'], string>> = {
   running: 'bg-signal-ok',
   stopped: 'bg-signal-idle',

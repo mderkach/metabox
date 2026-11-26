@@ -204,8 +204,6 @@ describe('list view', () => {
     expect(screen.getByRole('columnheader', { name: /Сеть/ })).toBeInTheDocument();
     expect(headerLabels()[0]).toBe('Куда');
 
-    // Reset writes columns and order with two setters in a row: the second must not
-    // overwrite the first with a view taken before it.
     await user.click(screen.getByRole('button', { name: 'По умолчанию' }));
 
     expect(headerLabels()).toEqual(['Откуда', 'Куда', 'Правило', 'Действие', 'Цепочка', 'Объём', 'Возраст']);

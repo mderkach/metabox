@@ -138,7 +138,6 @@ export function useRuleSetFilter(sets: RuleSetRow[]): RuleSetFilterState {
   return { query, setQuery, reset, sets: shown };
 }
 
-/** Which form is open in the rule set panel. */
 export const RULE_SET_FORM = {
   Catalog: 'catalog',
   Custom: 'custom',
@@ -164,7 +163,6 @@ export interface RuleSetPanelState {
   close: () => void;
 }
 
-/** Form in the rule set panel. */
 export function useRuleSetPanel(): RuleSetPanelState {
   const [form, setForm] = useState<RuleSetForm | null>(null);
   const [shown, setShown] = useState<RuleSetForm>(RULE_SET_FORM.Catalog);

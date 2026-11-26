@@ -57,7 +57,6 @@ function draft(): string {
   return ConfigDocumentState.getState().draft ?? '';
 }
 
-/** Lines by which the draft differs from the source text. */
 function changedLines(before: string, after: string): string[] {
   const lines = before.split('\n');
 

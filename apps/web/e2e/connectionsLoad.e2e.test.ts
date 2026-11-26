@@ -19,7 +19,6 @@ const FRAME_MS = 1000;
  * every second the scenario may last, so a slow runner hits the timeout, not a silent stream.
  */
 const LOAD = { connections: 5000, rules: 500, frames: SCENARIO_MS / FRAME_MS } as const;
-/** Indent of the printed costs. */
 const JSON_INDENT = 2;
 /** `METABOX_E2E_CPU_RATE=4` slows the page down as a weak laptop or a phone would. */
 const CPU_RATE = Number(process.env.METABOX_E2E_CPU_RATE ?? 1);

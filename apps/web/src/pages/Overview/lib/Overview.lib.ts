@@ -63,7 +63,6 @@ export interface OverviewRuntime {
   totals: ConnectionTotals;
   /** Device readings; `null` means no snapshot has arrived yet. */
   system: SystemStat | null;
-  /** Uplink interface speed right now. */
   uplink: UplinkRate;
   /** Channel and sing-box volumes over the daemon's observation window. */
   share: TrafficShare;
@@ -265,7 +264,6 @@ export type VerdictTone = (typeof VERDICT_TONE)[keyof typeof VERDICT_TONE];
 export interface Verdict {
   tone: VerdictTone;
   title: string;
-  /** What it means and what to do. */
   hint: string;
   /** Where to go to investigate; `null` means nowhere to investigate or no need to. */
   action: { to: LinkProps['to']; label: string } | null;

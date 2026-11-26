@@ -21,7 +21,6 @@ interface LoadGlobal {
   __METABOX_CONNECTION_LOAD__: ConnectionLoadRecord;
 }
 
-/** What one step of a scenario cost the main thread. */
 export interface MainThreadCost {
   /** The longest task in ms; 0 when none reached the 50 ms the browser reports from. */
   longest: number;

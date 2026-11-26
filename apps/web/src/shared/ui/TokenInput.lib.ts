@@ -1,4 +1,3 @@
-/** A value the field offers while typing. */
 export interface TokenSuggestion {
   /** What becomes the chip. */
   value: string;

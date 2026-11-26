@@ -4,7 +4,6 @@ import { ConfigNodeEditor, ConfigNodeMeta } from '@widgets/Config/ConfigNode';
 
 import type { SectionPanelNode } from './SectionPanel';
 
-/** The add form, or the picked node with its meta and editor. */
 export function SectionPanelBody({
   section,
   picked,

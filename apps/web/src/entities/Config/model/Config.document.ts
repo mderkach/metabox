@@ -13,7 +13,6 @@ import { useConfigDirty, useConfigCurrent } from './Config.hooks';
 import type { ConfigDocument } from './Config.model';
 import { ConfigDocumentState } from './Config.store';
 
-/** How many recent texts the draft parse remembers. */
 const PARSED_DRAFTS = 2;
 
 /** Parsed drafts by text; insertion order is access order. */

@@ -4,7 +4,6 @@ import { AUTH_PASSWORD_NS } from '../../src/features/Auth/AuthPassword/i18n/Auth
 import { AUTH_SESSIONS_NS } from '../../src/features/Auth/AuthSessions/i18n/AuthSessions.namespace.generated.ts';
 import { translate } from '../lib/i18n.ts';
 
-/** The settings screen: the panel password and the list of panel sessions under it. */
 export class SettingsPage {
   readonly page: Page;
   readonly sessions: Locator;

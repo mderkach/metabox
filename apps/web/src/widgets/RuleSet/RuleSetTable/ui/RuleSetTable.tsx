@@ -47,7 +47,6 @@ export function RuleSetTable({
   cache?: ReturnType<typeof useCachedRuleSets>;
   /** How many rule sets are in the config before filtering: the footer reports both values. */
   total: number;
-  /** What to show instead of the list when filtering found nothing. */
   empty: ReactNode;
   /** Search: left edge of the toolbar. */
   search?: ReactNode;

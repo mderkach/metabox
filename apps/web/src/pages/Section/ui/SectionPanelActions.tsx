@@ -4,7 +4,6 @@ import { ConfigNodeDeleteButton } from '@features/Config/ConfigNodeDelete';
 import { nodeTag } from '../lib';
 import type { SectionPanelNode } from './SectionPanel';
 
-/** Header actions of the picked node. */
 export function SectionPanelActions({
   section,
   picked,

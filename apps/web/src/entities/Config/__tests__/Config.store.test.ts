@@ -540,7 +540,6 @@ describe('list files in the draft', () => {
   });
 });
 
-/** The same config, rewritten on the device: the log level differs. */
 const CHANGED = TEXT.replace('"error"', '"debug"');
 
 /** Page reload: the store module runs again and reads the browser. */

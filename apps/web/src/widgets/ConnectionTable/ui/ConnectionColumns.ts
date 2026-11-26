@@ -56,7 +56,6 @@ export interface ConnectionCellProps {
   now: number;
 }
 
-/** A visible column in the form the row draws it. */
 export interface ConnectionCell {
   id: ConnectionField;
   className: string;
@@ -78,7 +77,6 @@ export const CONNECTION_TABLE_FEATURES = tableFeatures({
 
 export type ConnectionTableFeatures = typeof CONNECTION_TABLE_FEATURES;
 
-/** Label, layout class and a ban on hiding. */
 export interface ConnectionColumnMeta {
   label: ParseKeys<typeof CONNECTION_TABLE_NS>;
   className: string;
@@ -236,7 +234,6 @@ export const CONNECTION_COLUMNS_HIDDEN: Readonly<Partial<Record<ConnectionField,
   [CONNECTION_FIELD.Rate]: false,
 };
 
-/** Column description together with its live state in the table. */
 export interface ConnectionTableColumn {
   def: ConnectionColumnDef;
   column: Column<ConnectionTableFeatures, ConnectionRow>;

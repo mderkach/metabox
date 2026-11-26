@@ -180,7 +180,6 @@ describe('service state', () => {
     });
   });
 
-  // A start that did not take keeps the button: focus stays on it.
   it('leaves focus on Start when the service did not start', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_FAILED_FIXTURE)),

@@ -47,7 +47,6 @@ export function JsonTextarea({
 }: {
   ref?: Ref<JsonTextareaHandle>;
   id: string;
-  /** Accessible field name. */
   label: string;
   value: string;
   onChange: (value: string) => void;

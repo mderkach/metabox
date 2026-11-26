@@ -45,7 +45,6 @@ function clientFailing(error: Error): ApiClient {
   return new ApiClient({ adapter });
 }
 
-/** Narrows a caught value to an API failure without resorting to a type assertion. */
 function asApiError(error: unknown): ApiError {
   if (!(error instanceof ApiError)) {
     throw new TypeError('ожидался ApiError');

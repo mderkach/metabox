@@ -133,7 +133,6 @@ export function readRuleNames(text: string, kind: 'route' | 'dns' = 'route'): (s
   return readElementNames(text, kind === 'dns' ? GENERIC_SECTIONS[CONFIG_SECTION.DnsRules].path : RULES_PATH);
 }
 
-/** Where rule sets lie in the document. */
 export const RULE_SETS_PATH: JSONPath = ['route', 'rule_set'];
 
 /** Path of a set node by its position in the list, counting from zero. */
@@ -161,7 +160,6 @@ export function readRuleSetTags(text: string): string[] {
 /** Where the set cache lies: without it an unavailable provider aborts startup. */
 export const CACHE_FILE_PATH: JSONPath = ['experimental', 'cache_file', 'enabled'];
 
-/** Whether the set cache is enabled in the document. */
 export function hasRuleSetCache(text: string): boolean {
   return findValue(text, CACHE_FILE_PATH) === true;
 }
@@ -386,7 +384,6 @@ export function toOutboundTypes(config: ConfigDocument | null): ReadonlyMap<stri
   return types;
 }
 
-/** Config history entry in the form the screen shows it. */
 export interface ConfigVersion {
   id: number;
   size: number;
@@ -414,7 +411,6 @@ export interface ConfigVersions {
   currentListsUnavailable: boolean;
 }
 
-/** Size and modification time of an own list file on the device. */
 export interface ConfigListStat {
   size: number;
   /**

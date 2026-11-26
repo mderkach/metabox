@@ -20,7 +20,6 @@ import { DAEMON_TRAFFIC_NS } from '../i18n/DaemonTraffic.namespace.generated';
 import { buildOptions } from '../lib/DaemonTraffic.chart';
 import { FILL_ALPHA, HALF_INTERVALS, TRAFFIC_MIN_CEILING } from '../model';
 
-/** A line cannot be drawn through a single point. */
 const MIN_POINTS = 2;
 
 const TONES: readonly PlotTone[] = [

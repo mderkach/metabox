@@ -7,7 +7,6 @@ import { RULE_TARGET, type RuleBranch, type RuleGroup, type RuleMatcher, type Ru
 /** Default action: a rule without `action` routes. */
 const DEFAULT_ACTION = 'route';
 
-/** Value of the union branch for a logical rule. */
 const LOGICAL_TYPE = 'logical';
 
 function toValues(raw: unknown): string[] {

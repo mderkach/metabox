@@ -5,7 +5,6 @@ import { SearchInput } from '@shared/ui';
 import { EDITOR_NS } from '../i18n/Editor.namespace.generated';
 import type { RuleFilterState } from '../lib/Editor.lib';
 
-/** Search: left edge of the table toolbar. */
 export function EditorRuleSearch({ filter }: { filter: RuleFilterState }) {
   const { t } = useTranslation(EDITOR_NS);
 

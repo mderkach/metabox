@@ -5,7 +5,6 @@ import type { ReactNode } from 'react';
 import type { StaticPagePath } from '@shared/lib/navigation';
 import { CARD_TITLE, Card, CardContent, CardHeader } from '@shared/ui';
 
-/** The "panel computes" mark is carried by the section title, not the card. */
 export function ConnectionSummaryPanel({
   title,
   href,

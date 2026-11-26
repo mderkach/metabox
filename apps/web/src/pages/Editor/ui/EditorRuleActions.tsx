@@ -2,7 +2,6 @@ import { RuleDeleteButton } from '@features/Rule/RuleDelete';
 import { RuleReorderButtons } from '@features/Rule/RuleReorder';
 import { Separator } from '@shared/ui';
 
-/** Actions on the selected rule in the panel header. */
 export function EditorRuleActions({
   index,
   total,

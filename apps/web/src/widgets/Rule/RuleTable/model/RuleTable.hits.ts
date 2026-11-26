@@ -25,7 +25,6 @@ export type RuleHitsColumn =
       counts: ReadonlyMap<string, number | null>;
     };
 
-/** What stands in the hits cell besides the number. */
 export const RULE_HIT = {
   /** The rule is changed in the draft: only the applied one has a count. */
   Edited: 'edited',

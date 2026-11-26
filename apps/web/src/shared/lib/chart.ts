@@ -73,7 +73,6 @@ export function toPercents(values: number[]): number[] {
 /** No more than four ticks on the scale: otherwise labels in a narrow card overlap each other. */
 const TICK_INTERVALS = 4;
 
-/** Round scale multipliers: 1, 2 and 5 at each decimal order. */
 const NICE = { One: 1, Two: 2, Five: 5 } as const;
 const DECADE = 10;
 const DECADES_IN_STAGE = 3;

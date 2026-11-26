@@ -131,9 +131,7 @@ export interface ConnectionView extends StoredView {
  */
 export function useConnectionView(): ConnectionView {
   const [view, setView] = useState(readView);
-  // The latest view lives in a ref rather than being taken from the closure: a reset calls two
-  // setters from one handler, and the second, closed over the view of the same render,
-  // would overwrite the first's edit — both in state and in storage.
+  // Consecutive updates before a render must see the latest view or a later write can undo the earlier one in storage.
   const latest = useRef(view);
 
   // Storage is written outside the state update: React calls the updater

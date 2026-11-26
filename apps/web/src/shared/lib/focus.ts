@@ -1,4 +1,3 @@
-/** Input types that take typed text, not a click or a pick. */
 const TEXT_INPUT_TYPES = new Set(['text', 'search', 'url', 'number', 'password', 'email', 'tel']);
 
 /** Focus is in a field the user types into: a text input or a multiline field. */

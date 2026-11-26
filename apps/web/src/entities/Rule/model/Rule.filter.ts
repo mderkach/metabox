@@ -40,7 +40,6 @@ export function parseRuleSearch(search: Record<string, unknown>): RuleSearch {
   return parsed.success ? parsed.data : {};
 }
 
-/** Outbound facet selection from the URL. */
 export function toTargetFilter(param: RuleSearch['target']): RuleTargetFilter {
   if (param === undefined) {
     return [];

@@ -4,7 +4,6 @@ import { CONFIG_APPLY_NS } from '../../src/features/Config/ConfigApply/i18n/Conf
 import { SHARED_NS } from '../../src/shared/i18n/Shared.namespace.generated.ts';
 import { translate } from '../lib/i18n.ts';
 
-/** The apply bar at the bottom of the panel, its diff dialog and the confirmation window. */
 export class ApplyBar {
   readonly page: Page;
   readonly region: Locator;

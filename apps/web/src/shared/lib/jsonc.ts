@@ -47,10 +47,8 @@ function parseErrorText(code: number): string {
  */
 const DIALECT = { allowTrailingComma: true, allowEmptyContent: false } as const;
 
-/** Indent when it could not be determined from the text. */
 const DEFAULT_TAB_SIZE = 2;
 
-/** First indented line: it shows what the text is indented with. */
 const FIRST_INDENT = /\n([\t ]+)\S/;
 
 /**
@@ -128,7 +126,6 @@ export function jsonPathLocator(text: string): (path: JSONPath) => number | null
   };
 }
 
-/** An object property in the text outline. */
 export interface JsoncOutlineEntry {
   key: string;
   /** Offset of the key together with the opening quote: the cursor is placed here. */

@@ -3,7 +3,6 @@ import type { Locator, Page } from '@playwright/test';
 import { OVERVIEW_NS } from '../../src/pages/Overview/i18n/Overview.namespace.generated.ts';
 import { translate } from '../lib/i18n.ts';
 
-/** The overview screen: the verdict at its top. */
 export class OverviewPage {
   readonly page: Page;
   readonly allWorks: Locator;

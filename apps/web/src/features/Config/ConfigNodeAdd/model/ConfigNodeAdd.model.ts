@@ -1,6 +1,5 @@
 import { buildTagOfType, NODE_REGISTRY, nodeVariants, type NodeRegistry } from '@entities/Config';
 
-/** Node type choice item. */
 export interface NodeTypeOption {
   type: string;
   /**
@@ -98,11 +97,11 @@ export type DescribedNodeType =
   | { registry: typeof NODE_REGISTRY.Outbound; type: DescribedOutboundType }
   | { registry: typeof NODE_REGISTRY.Inbound; type: DescribedInboundType };
 
-/** Groups of a registry in the order the list shows them, and the table that assigns a type to one. */
 function isKeyOf<T extends object>(table: T, key: string): key is Extract<keyof T, string> {
   return Object.hasOwn(table, key);
 }
 
+/** Registry groups appear in this order in the type picker. */
 const REGISTRY_GROUPS: Readonly<
   Partial<
     Record<

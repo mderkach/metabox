@@ -21,7 +21,6 @@ const STATIC: RouteSource = { mac: 'aa:bb:cc:00:00:70', ip: '192.168.1.60', stat
 const BY_MAC: RouteSource = { mac: 'aa:bb:cc:00:01:04', ip: '192.168.1.120', static: false };
 const BY_IP: RouteSource = { mac: 'aa:bb:cc:00:01:60', ip: '192.168.1.180', static: true };
 
-/** Interception list: subnets of different length and one host. */
 const ROUTER_SOURCE_IP = [
   '192.168.1.36/32',
   '192.168.1.60/31',

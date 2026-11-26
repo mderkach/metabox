@@ -3,7 +3,6 @@ import { useMemo } from 'react';
 import { newRulePlace, type NewRulePlace, type RuleRow } from '@entities/Rule';
 import { RuleAddButton } from '@features/Rule/RuleAdd';
 
-/** The add button with the position and outbound the rule list gives the new rule. */
 export function EditorRuleAdd({
   rules,
   total,

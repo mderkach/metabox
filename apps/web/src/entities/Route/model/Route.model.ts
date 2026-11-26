@@ -12,7 +12,6 @@ export const ROUTE_ORIGIN = {
   Observed: 'observed',
   /** Computed by metabox or obtained by asking the binary. */
   Computed: 'computed',
-  /** Nothing to compute with. */
   Unknown: 'unknown',
 } as const;
 

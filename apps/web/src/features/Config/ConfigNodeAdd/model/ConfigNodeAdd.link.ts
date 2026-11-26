@@ -519,7 +519,6 @@ function parseHysteria2(body: string): ShareLinkResult {
   });
 }
 
-/** Link parser by scheme: a new scheme is added by an entry. */
 const LINK_PARSER: ReadonlyMap<string, (body: string) => ShareLinkResult> = new Map([
   ['vless', parseVless],
   ['vmess', parseVmess],

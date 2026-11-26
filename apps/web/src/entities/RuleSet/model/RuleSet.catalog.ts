@@ -28,7 +28,6 @@ export function findList(catalog: RuleSetCatalog, providerId: string | null, kin
   return findProvider(catalog, providerId)?.lists.find((list) => list.kind === kind) ?? null;
 }
 
-/** Builds a set URL from the list template. */
 export function buildRuleSetURL(list: RuleSetList, mirrorId: string, category: string): string {
   const mirror = list.mirrors.find((item) => item.id === mirrorId) ?? list.mirrors.at(0);
 

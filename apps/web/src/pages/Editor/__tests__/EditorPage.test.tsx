@@ -451,7 +451,6 @@ describe('rule list editing', () => {
     );
 
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
-    // The file without rule 2 is the same text as it was, line for line.
     expect(ConfigDocumentState.getState().draft).toBe(editConfig([EDIT_RULES[0], EDIT_RULES[2]]));
     expect(screen.getByRole('status')).toHaveTextContent('2 правила');
   });

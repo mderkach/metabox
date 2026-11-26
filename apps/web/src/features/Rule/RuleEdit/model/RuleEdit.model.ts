@@ -238,7 +238,6 @@ export function dynamicSourceNames(values: readonly string[], devices: DeviceInd
   return [...new Set(names)];
 }
 
-/** Ports of a port condition worth offering: what a rule by port is usually about. */
 export const COMMON_PORTS = ['443', '80', '853'] as const;
 
 /** A home router serves a `/24`; a wider network still contains each of these subnets. */

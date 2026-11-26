@@ -82,7 +82,6 @@ describe('config as text', () => {
     expect(ConfigDocumentState.getState().applied).toBe(VALID_CONFIG);
   });
 
-  // One action does not exist under two names: the apply bar owns the rollback.
   it('the screen has no rollback button of its own: the apply bar owns the document', async () => {
     serveConfig(VALID_CONFIG);
 

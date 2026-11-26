@@ -44,7 +44,6 @@ function serveStatus(transaction?: typeof AWAITING | typeof CONFIRMED) {
   server.use(http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json({ ...DAEMON_STATUS_FIXTURE, transaction })));
 }
 
-/** Starts an Apply of the current draft through the summary dialog. */
 async function applyFromSummary() {
   await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
   const summary = await screen.findByRole('dialog', { name: 'Что уйдёт на устройство' });

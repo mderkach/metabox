@@ -75,7 +75,6 @@ export function composeRuleSetURL(list: RuleSetList | null, mirrorId: string, ca
   return buildRuleSetURL(list, mirrorId, category.trim());
 }
 
-/** Tag the form suggests for a category. */
 export function composeRuleSetTag(list: RuleSetList | null, category: string): string {
   return list === null ? '' : suggestTag(list, category.trim());
 }
@@ -143,7 +142,6 @@ export function makeRuleSetAddSchema(takenTags: readonly string[], outbounds: re
   });
 }
 
-/** Builds a set node from the filled form. */
 export function toRuleSetPatch(data: RuleSetAddModel): RuleSetAddPatch {
   const url = data.url.trim();
   const interval = data.updateInterval.trim();

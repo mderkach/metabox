@@ -500,7 +500,6 @@ describe('overview screen', () => {
       'Топ устройств',
     ];
 
-    /** The card a heading text belongs to. */
     async function card(title: string) {
       // oxlint-disable-next-line testing-library/no-node-access -- a summary card has no role of its own, its heading is the only handle
       const element = (await screen.findByRole('heading', { name: title })).closest('[data-slot="card"]');

@@ -1,10 +1,4 @@
 /**
- * Classes shared by several screens. Only the sets that
- * repeat more than twice are here: if they drift apart, they give two different looks of one
- * and the same element on neighboring screens.
- */
-
-/**
  * Title of a card inside a screen section: sentence case, one step below
  * `SECTION_HEADING`. Small caps stay with the table header: a card titled like
  * a column reads as a part of a table.
@@ -115,7 +109,6 @@ export const JSON_HEIGHT = {
   Content: 'min-h-40',
 } as const;
 
-/** JSON highlight tones, the `--code-*` tokens. */
 export const JSON_TONE = {
   String: 'text-code-string',
   Number: 'text-code-number',

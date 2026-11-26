@@ -10,7 +10,6 @@ import {
   type RuleEditorSearch,
 } from '@entities/Route';
 
-/** How many rules to show before the one that hit. */
 const VISIBLE_BEFORE = 5;
 
 export interface RouteExplanationState {
