@@ -3,7 +3,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { deleteSession, getSessionsOptions } from '@entities/Auth';
 import { ApiError } from '@shared/api';
 
-/** How an end request finished when it did not fail. */
 export const END_SESSION_RESULT = {
   Ended: 'ended',
   // The daemon closed the session, but its session file was not written: a daemon restart brings it back.

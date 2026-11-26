@@ -7,7 +7,6 @@ import { SECTION_NS } from '../i18n/Section.namespace.generated';
 import { SectionPanelActions } from './SectionPanelActions';
 import { SectionPanelBody } from './SectionPanelBody';
 
-/** The picked node: its place in the section, the node from the text and its name on screen. */
 export interface SectionPanelNode {
   index: number;
   node: unknown;

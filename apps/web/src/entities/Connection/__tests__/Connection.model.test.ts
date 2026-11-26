@@ -14,7 +14,6 @@ describe('toRouteKind', () => {
     expect(toRouteKind('route(block-out)')).toBe(ROUTE_KIND.Block);
   });
 
-  // A connection without a rule has no conditions, and the chain shows its fate.
   it('for a connection without a rule reads the outbound from the chain', () => {
     expect(toRouteKind(FINAL_ACTION, ['direct'])).toBe(ROUTE_KIND.Direct);
     expect(toRouteKind(FINAL_ACTION, ['proxy', 'sub/node'])).toBe(ROUTE_KIND.Proxy);

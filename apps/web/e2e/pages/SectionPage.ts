@@ -4,7 +4,6 @@ import { CONFIG_NODE_FORM_NS } from '../../src/features/Config/ConfigNodeForm/i1
 import { SHARED_NS } from '../../src/shared/i18n/Shared.namespace.generated.ts';
 import { translate } from '../lib/i18n.ts';
 
-/** A config section screen with a node list, such as DNS servers, and the side panel of the open node. */
 export class SectionPage {
   readonly page: Page;
   readonly closePanel: Locator;

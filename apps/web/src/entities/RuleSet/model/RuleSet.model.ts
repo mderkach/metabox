@@ -18,7 +18,6 @@ export interface RuleSetMirror {
   base: string;
 }
 
-/** One list kind of a provider. */
 export interface RuleSetList {
   kind: RuleSetListKind;
   /** File name prefix: `geosite-` + category + `.srs`. */
@@ -69,7 +68,6 @@ export interface RuleSetUsage {
   name: string | null;
 }
 
-/** What the device disk says about a rule set file. */
 export interface RuleSetFileStat {
   /** Size in bytes. */
   size: number;

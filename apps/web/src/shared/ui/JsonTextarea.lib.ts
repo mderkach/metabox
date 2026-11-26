@@ -122,7 +122,6 @@ export function tokenIndexAt(tokens: readonly JsonToken[], position: number): nu
   return tokens.length - 1;
 }
 
-/** Line feed code: the line number is counted by it. */
 const LINE_FEED = 10;
 
 /** Line number counted from zero: the field scrolls to a selection by it. */

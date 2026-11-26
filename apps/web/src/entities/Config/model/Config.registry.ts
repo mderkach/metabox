@@ -43,7 +43,6 @@ const REGISTRY_SCHEMA: Readonly<Record<NodeRegistry, z.core.$ZodType>> = {
   [NODE_REGISTRY.Dns]: DnsSchema,
 };
 
-/** Document section and the fork registry it takes types from. */
 export const SECTION_REGISTRY: readonly { section: GenericSection; registry: NodeRegistry }[] = [
   { section: CONFIG_SECTION.Inbounds, registry: NODE_REGISTRY.Inbound },
   { section: CONFIG_SECTION.Outbounds, registry: NODE_REGISTRY.Outbound },

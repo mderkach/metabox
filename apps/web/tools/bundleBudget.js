@@ -10,7 +10,6 @@ export const BUDGET_BYTES = 650_000;
 /** Chunks that must load with their screens, never with the first page: the fork schema. */
 export const FORBIDDEN_CHUNKS = [/^generated-/];
 
-/** Width of the byte column in the printed list. */
 const SIZE_WIDTH = 8;
 
 const SCRIPT_PATTERN = /<(?:script[^>]*\ssrc|link[^>]*\srel="modulepreload"[^>]*\shref)="\/([^"]+\.js)"/g;

@@ -6,7 +6,6 @@ import { Button, Empty, EmptyContent, EmptyHeader, EmptyTitle } from '@shared/ui
 import { EDITOR_NS } from '../i18n/Editor.namespace.generated';
 import type { RuleFilterState } from '../lib/Editor.lib';
 
-/** The filter left no rules: the list is not empty, it is trimmed. */
 export function EditorFilteredEmpty({ filter }: { filter: RuleFilterState }) {
   const { t } = useTranslation(EDITOR_NS);
 

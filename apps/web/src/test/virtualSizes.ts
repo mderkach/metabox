@@ -1,6 +1,5 @@
 import { vi } from 'vitest';
 
-/** The scroll container of a virtualized list marks itself. */
 const VIEWPORT_ATTRIBUTE = 'data-virtual-viewport';
 
 /**

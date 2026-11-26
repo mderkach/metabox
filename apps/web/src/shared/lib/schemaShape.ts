@@ -25,7 +25,6 @@ export type FieldKind = (typeof FIELD_KIND)[keyof typeof FIELD_KIND];
 
 /** A node field parsed from the schema: everything the widget needs, without the schema itself. */
 export interface FieldPlan {
-  /** Field key in its own object. */
   key: string;
   /** Path from the node root: `['tls', 'reality', 'public_key']`. */
   path: string[];

@@ -150,8 +150,6 @@ describe('panel routes', () => {
     expect(router.state.location.pathname).toBe('/how-it-works');
   });
 
-  // The rule sets section is done, and its menu item must lead to it: an item without
-  // a route looks the same as a working one and lies about the panel state.
   it('in the navigation, finished sections lead to their routes', async () => {
     serveDaemon();
 
@@ -170,8 +168,6 @@ describe('panel routes', () => {
     expect(targets).toContain('/config/rule-set');
   });
 
-  // Rare sections do not take up the strip, but do not vanish either: they are in the "More" menu
-  // next to it, and a selected rare one appears in the strip as a tab while selected.
   it('every section is reachable: frequent and selected ones as tabs, the rest in the "More" menu', async () => {
     serveDaemon();
     const user = userEvent.setup();
@@ -343,13 +339,11 @@ describe('panel routes', () => {
     expect(screen.getByRole('navigation', { name: 'Разделы панели' })).toBeInTheDocument();
   });
 
-  // Routes stays current at every editor section address.
   it('in the navigation exactly one item is marked current, even when the address is nested in another', async () => {
     serveDaemon();
 
     renderRouter('/config/rule-set');
 
-    // Editor tabs have their own selection.
     const sidebar = await screen.findByRole('navigation', { name: 'Разделы панели' });
     const current = within(sidebar).getAllByRole('link', { current: 'page' });
 

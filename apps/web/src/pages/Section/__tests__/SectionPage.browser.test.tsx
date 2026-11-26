@@ -42,12 +42,10 @@ function ProvidersSection() {
   return <SectionNodes section='providers' />;
 }
 
-/** Opens the add panel. */
 async function openAddPanel() {
   await userEvent.click(await screen.findByRole('button', { name: 'Добавить запись' }));
 }
 
-/** Opens a dropdown and picks an option with the mouse. */
 async function pick(trigger: HTMLElement, name: string | RegExp): Promise<void> {
   await userEvent.click(trigger);
   await userEvent.click(await screen.findByRole('option', { name }));

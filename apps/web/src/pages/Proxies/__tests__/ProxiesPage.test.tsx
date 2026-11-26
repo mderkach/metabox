@@ -49,8 +49,6 @@ function serveProxyList(proxies: typeof CLASH_PROXIES_FIXTURE.proxies) {
   server.use(http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json({ proxies })));
 }
 
-// The screen is brought up whole together with requests, so the test lives in `src/test`:
-// from the `pages` layer the shared tooling cannot be reached without crossing layer boundaries.
 describe('proxies screen', () => {
   afterEach(() => {
     ConfigDocumentStore.getState().reset();

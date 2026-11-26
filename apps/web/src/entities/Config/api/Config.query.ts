@@ -40,7 +40,6 @@ export function getConfigOptions() {
   });
 }
 
-/** A remark on the shown document: what is wrong and where it is in the text. */
 export interface ConfigIssue {
   /** Ready text: the node, the reason and the line when the node is found in the text. */
   text: string;

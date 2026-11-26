@@ -38,7 +38,6 @@ function draft(): string {
   return ConfigDocumentState.getState().draft ?? '';
 }
 
-/** Opens a dropdown and picks an option with the mouse. */
 async function pick(trigger: HTMLElement, name: string): Promise<void> {
   await userEvent.click(trigger);
   await userEvent.click(await screen.findByRole('option', { name }));

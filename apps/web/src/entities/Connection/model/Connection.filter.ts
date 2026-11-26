@@ -4,7 +4,6 @@ import { matchesWords, toQueryWords } from '@shared/lib/search';
 
 import { ROUTE_KIND, type ConnectionRow, type RouteKind } from './Connection.model';
 
-/** Which set of connections is shown: live or already closed. */
 export const CONNECTION_TAB = {
   Active: 'active',
   Closed: 'closed',
@@ -95,7 +94,6 @@ function toValues(param: string | readonly string[] | undefined): readonly strin
   return typeof param === 'string' ? [param] : param;
 }
 
-/** Facet selection from the URL. */
 export function toFacetSelection(search: ConnectionFacetSearch): ConnectionFacetSelection {
   return {
     [CONNECTION_FACET.Source]: toValues(search.source),
@@ -138,7 +136,6 @@ export function hasFacetSelection(selection: ConnectionFacetSelection): boolean 
   return CONNECTION_FACETS.some((facet) => selection[facet].length > 0);
 }
 
-/** Facet value and the number of rows under it. */
 export interface ConnectionFacetValue {
   value: string;
   count: number;

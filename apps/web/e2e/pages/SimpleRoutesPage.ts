@@ -18,7 +18,6 @@ function subscriptionText(key: string): string {
 const SECTIONS = ['interception', 'dns', 'outbounds', 'rules'] as const;
 export const SIMPLE_SECTION_HEADINGS = SECTIONS.map((section) => translate(SIMPLE_ROUTES_NS, `sections.${section}`));
 
-/** The Simple Routes sections, the shared add dialog and navigation between the three views. */
 export class SimpleRoutesPage {
   readonly page: Page;
   readonly sectionHeadings: Locator;

@@ -70,7 +70,6 @@ function NodeFromStore({
   return isRecord(node) ? <ConfigNodeForm registry={registry} path={path} node={node} builtTags={builtTags} /> : null;
 }
 
-/** Whether the elements go in the document in the order they are listed. */
 function inDocumentOrder(elements: readonly HTMLElement[]): boolean {
   return elements.every(
     (element, index) =>

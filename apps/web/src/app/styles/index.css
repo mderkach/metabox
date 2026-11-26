@@ -97,7 +97,6 @@
    * output the string stops matching what is in the config. */
   --font-mono--font-feature-settings: 'calt' 0;
 
-  /* Steps are multiples of two (style guide, "Styles"). */
   --text-2xs: 0.625rem;
   --text-2xs--line-height: 0.875rem;
   --text-xs: 0.75rem;
@@ -162,7 +161,6 @@
   --color-selected: var(--selected);
   --color-selected-edge: var(--selected-edge);
 
-  /* Rule action: different fates of a packet. */
   --color-route-direct: var(--route-direct);
   --color-route-proxy: var(--route-proxy);
   --color-route-block: var(--route-block);

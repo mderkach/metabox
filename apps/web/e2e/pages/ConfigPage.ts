@@ -5,7 +5,6 @@ import { SHARED_NS } from '../../src/shared/i18n/Shared.namespace.generated.ts';
 import { RULE_TABLE_NS } from '../../src/widgets/Rule/RuleTable/i18n/RuleTable.namespace.generated.ts';
 import { translate } from '../lib/i18n.ts';
 
-/** The routing tab of the config editor: the rule table and the side panel of the open rule. */
 export class ConfigPage {
   readonly page: Page;
   readonly rules: Locator;

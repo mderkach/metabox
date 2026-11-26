@@ -54,7 +54,6 @@ describe('AuthPasswordSection', () => {
     await user.type(screen.getByLabelText('Новый пароль ещё раз'), PASSWORD);
     await user.click(screen.getByRole('button', { name: 'Сохранить' }));
 
-    // The section now offers a change, and the form starts empty again.
     expect(await screen.findByRole('heading', { name: 'Сменить пароль' })).toBeInTheDocument();
     expect(screen.getByLabelText('Новый пароль')).toHaveValue('');
     expect(bodies).toEqual([{ current: '', password: PASSWORD }]);

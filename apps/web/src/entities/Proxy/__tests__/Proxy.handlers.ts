@@ -52,7 +52,7 @@ function readOnlyHandlers() {
   return [http.get(PROXY_ENDPOINT.proxyDelay(NODE_PATTERN), () => HttpResponse.json(CLASH_DELAY_FIXTURE))];
 }
 
-/** Proxy handlers the daemon does not have yet: shapes taken from the device. */
+/** Response shapes come from captures on the device. */
 export const proxyHandlers = [
   http.get(PROXY_ENDPOINT.outbounds(), () => HttpResponse.json({})),
   http.get(PROXY_ENDPOINT.latency(), () => HttpResponse.json({ servers: [] })),

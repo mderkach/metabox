@@ -55,7 +55,6 @@ export function RuleTable({
   /** How many rules are in the config before filtering: the footer reports both values. */
   total: number;
   selectedId: string | null;
-  /** What to show instead of the list when there are no rows. */
   empty: ReactNode;
   /** Search: left edge of the toolbar. */
   search?: ReactNode;

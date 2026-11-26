@@ -130,7 +130,6 @@ export const APPLY_BLOCK = {
   Unparsed: 'unparsed',
 } as const;
 
-/** Why there is something to apply but Apply is off. */
 export type ApplyBlock =
   | { kind: typeof APPLY_BLOCK.Unreachable }
   | { kind: typeof APPLY_BLOCK.NotLoaded }

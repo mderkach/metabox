@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { advanceConnectionsSnapshot, CONNECTIONS_FIXTURE, makeConnectionsSnapshot } from './Connection.fixture';
 
-/** Frames per hour of a dev session at a one-second stream step: that is what we check. */
 const FRAMES = 50;
 const SNAPSHOT_SIZE = 64;
 

@@ -31,13 +31,11 @@ const HEADER = `/*
 export interface Locale {
   namespace: string;
   language: string;
-  /** Path to the file on disk. */
   file: string;
   /** Dev server URL: there the dictionary is read from source and not cached. */
   url: string;
 }
 
-/** Dictionary key in the URL map: language and namespace together. */
 export function localeKey(language: string, namespace: string): string {
   return `${language}:${namespace}`;
 }

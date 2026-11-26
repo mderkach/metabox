@@ -29,7 +29,6 @@ export function getRuleSetCatalogOptions() {
   });
 }
 
-/** Catalog of ready-made sets: providers, their lists and categories. */
 export function useRuleSetCatalog() {
   return useQuery({ ...getRuleSetCatalogOptions(), select: toRuleSetCatalog });
 }

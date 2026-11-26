@@ -10,7 +10,6 @@ import { LOG_ENDPOINT } from './Log.endpoints';
 import { LOG_QUERY } from './Log.query';
 import { LogEventSchema } from './Log.schema';
 
-/** SSE event name of the log stream. */
 const LOG_EVENT = 'log';
 
 /**

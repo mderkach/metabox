@@ -28,9 +28,7 @@ const CurrentSchema = z.string().min(1, AUTH_PASSWORD_ERROR.CurrentRequired);
 export function toAuthPasswordSchema(protectedPanel: boolean) {
   return z
     .object({
-      /** Password in force */
       current: protectedPanel ? CurrentSchema : z.string(),
-      /** New password */
       password: z
         .string()
         .refine((value) => characters(value) >= PASSWORD_LIMIT.Min, AUTH_PASSWORD_ERROR.TooShort)

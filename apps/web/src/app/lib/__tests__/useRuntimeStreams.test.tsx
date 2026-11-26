@@ -41,7 +41,6 @@ class FakeEventSource {
     this.closed = true;
   }
 
-  /** The daemon accepted the stream. */
   open(): void {
     this.listeners.get('open')?.();
   }

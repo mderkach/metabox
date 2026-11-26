@@ -4,7 +4,6 @@ import { CONNECTIONS_NS } from '../../src/pages/Connections/i18n/Connections.nam
 import { CONNECTION_TABLE_NS } from '../../src/widgets/ConnectionTable/i18n/ConnectionTable.namespace.generated.ts';
 import { translate } from '../lib/i18n.ts';
 
-/** The connections screen: its tabs, the search, the sortable column headers and the row actions. */
 export class ConnectionsPage {
   readonly page: Page;
   readonly activeTab: Locator;

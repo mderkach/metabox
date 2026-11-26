@@ -35,7 +35,6 @@ export function OverviewConnections({
 
   return (
     <OverviewSection title={t('section.connections', { ns: SHARED_NS })}>
-      {/* Six panels: two rows of three on a wide screen, three of two below it. */}
       <div className='grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3'>
         <ConnectionSummaryAction
           shares={runtime.summary.actions}

@@ -32,7 +32,6 @@ export interface ProxyNode {
   /** `null` means the node was never checked. */
   delay: number | null;
   delayState: DelayState;
-  /** The node is selected by the group right now. */
   selected: boolean;
 }
 
