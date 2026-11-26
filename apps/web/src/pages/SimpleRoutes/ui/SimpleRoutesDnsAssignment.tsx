@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
+import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
 import type { DnsReason, SimpleDnsPath } from '../model/SimpleRoutes.dns';
 
 export function SimpleRoutesDnsAssignment({
@@ -16,7 +17,7 @@ export function SimpleRoutesDnsAssignment({
   stale: boolean;
   onAssign: (outbound: string, resolver: string) => DnsReason | 'stale' | null;
 }) {
-  const { t } = useTranslation('pages/SimpleRoutes');
+  const { t } = useTranslation(SIMPLE_ROUTES_NS);
   const id = useId();
   const openedAt = useRef(text);
   const [error, setError] = useState<DnsReason | 'stale' | null>(null);

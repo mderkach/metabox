@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { APPLY_PHASE, type ApplyTransaction } from '@entities/Daemon';
 
+import { DEVICE_ROUTE_NS } from '../i18n/DeviceRoute.namespace.generated';
 import { DeviceRouteConfirmWindow } from './DeviceRouteConfirmWindow';
 import { DeviceRouteFailure } from './DeviceRouteFailure';
 
@@ -22,7 +23,7 @@ export function DeviceRouteBar({
   isConfirming: boolean;
   onConfirm: () => void;
 }) {
-  const { t } = useTranslation('features/Device/DeviceRoute');
+  const { t } = useTranslation(DEVICE_ROUTE_NS);
   const [dismissed, setDismissed] = useState<string | null>(null);
 
   if (transaction === null) return null;

@@ -1,3 +1,5 @@
+import { APP_NS } from '../src/app/i18n/App.namespace.generated.ts';
+import { RULE_SETS_NS } from '../src/pages/RuleSets/i18n/RuleSets.namespace.generated.ts';
 import { E2E_TAG, expect, test, translate } from './fixtures/index.ts';
 
 // The first two DNS servers of the mock config.
@@ -15,7 +17,7 @@ test('moves through the list and the node panel from the keyboard', { tag: E2E_T
   await test.step('? opens the list of shortcuts, Escape closes it', async () => {
     await page.keyboard.press('?');
 
-    const help = page.getByRole('dialog', { name: translate('app', 'shortcuts.title') });
+    const help = page.getByRole('dialog', { name: translate(APP_NS, 'shortcuts.title') });
 
     await expect(help).toBeVisible();
 
@@ -43,8 +45,8 @@ test(
   'Shift+N opens the own list form and N the catalog on the Rule sets screen',
   { tag: E2E_TAG.Mock },
   async ({ page }) => {
-    const custom = page.getByRole('button', { name: translate('pages/RuleSets', 'custom.open'), exact: true });
-    const catalog = page.getByRole('button', { name: translate('pages/RuleSets', 'add.open'), exact: true });
+    const custom = page.getByRole('button', { name: translate(RULE_SETS_NS, 'custom.open'), exact: true });
+    const catalog = page.getByRole('button', { name: translate(RULE_SETS_NS, 'add.open'), exact: true });
 
     await page.goto('/config/rule-set');
     await expect(custom).toBeVisible();
@@ -52,9 +54,7 @@ test(
     await test.step('Shift+N opens the own list form', async () => {
       await page.keyboard.press('Shift+N');
 
-      await expect(
-        page.getByRole('complementary', { name: translate('pages/RuleSets', 'custom.title') })
-      ).toBeVisible();
+      await expect(page.getByRole('complementary', { name: translate(RULE_SETS_NS, 'custom.title') })).toBeVisible();
       await expect(custom).toHaveAttribute('aria-expanded', 'true');
     });
 

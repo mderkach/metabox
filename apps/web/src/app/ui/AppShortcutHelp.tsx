@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '@shared/i18n';
 import { SHORTCUT, toShortcutLabel } from '@shared/lib/shortcuts';
 import {
   DIALOG_SIZE,
@@ -12,6 +13,8 @@ import {
   Kbd,
   KbdGroup,
 } from '@shared/ui';
+
+import { APP_NS } from '../i18n';
 
 /** Keys as the list names them, in the order the list shows them; the text key is the row's description. */
 const HELP_ROWS = [
@@ -28,12 +31,12 @@ const HELP_ROWS = [
 
 /** The keyboard shortcuts of the panel, opened by `?` from any screen. */
 export function AppShortcutHelp({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const { t } = useTranslation('app');
+  const { t } = useTranslation(APP_NS);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={false} className={DIALOG_SIZE.List}>
-        <DialogCloseButton label={t('action.close', { ns: 'shared' })} />
+        <DialogCloseButton label={t('action.close', { ns: SHARED_NS })} />
         <DialogHeader>
           <DialogTitle>{t('shortcuts.title')}</DialogTitle>
           <DialogDescription>{t('shortcuts.description')}</DialogDescription>

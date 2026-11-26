@@ -5,7 +5,9 @@ import { cn } from '@shared/lib/utils';
 import { PENDING_REVEAL, Skeleton } from '@shared/ui';
 import { ConnectionSummaryPanel } from '@widgets/ConnectionSummary';
 
+import { OVERVIEW_NS } from '../i18n/Overview.namespace.generated';
 import type { OverviewRuntime } from '../lib';
+import type { OverviewLinks } from '../model/Overview.links';
 import { OverviewCoreGap } from './OverviewCoreGap';
 import { OverviewTrend } from './OverviewTrend';
 
@@ -14,13 +16,19 @@ import { OverviewTrend } from './OverviewTrend';
  * by the tab: the source returns only live ones, so zero right after opening is
  * not a failure but the start of the count.
  */
-export function OverviewActivity({ runtime }: { runtime: OverviewRuntime }) {
-  const { t } = useTranslation('pages/Overview');
+export function OverviewActivity({
+  runtime,
+  connectionsTo,
+}: {
+  connectionsTo: OverviewLinks['connections'];
+  runtime: OverviewRuntime;
+}) {
+  const { t } = useTranslation(OVERVIEW_NS);
   const minute = runtime.history.slice(-HISTORY_WINDOW_POINTS);
   const gap = runtime.connectionsGap;
 
   return (
-    <ConnectionSummaryPanel title={t('connections.title')} href='/connections'>
+    <ConnectionSummaryPanel title={t('connections.title')} href={connectionsTo}>
       <div className='flex flex-col gap-1'>
         {gap !== null && <OverviewCoreGap gap={gap} />}
         {gap === null && runtime.connectionsAwaiting && (

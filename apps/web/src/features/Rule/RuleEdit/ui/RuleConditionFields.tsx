@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
+import { RULE_EDIT_NS } from '../i18n/RuleEdit.namespace.generated';
 import { RULE_CONDITIONS, type RuleCondition } from '../model/RuleEdit.schema';
 import { RuleConditionField } from './RuleConditionField';
 
@@ -12,7 +13,7 @@ import { RuleConditionField } from './RuleConditionField';
  * conditions.
  */
 export function RuleConditionFields({ initial }: { initial: readonly RuleCondition[] }) {
-  const { t } = useTranslation('features/Rule/RuleEdit');
+  const { t } = useTranslation(RULE_EDIT_NS);
   const [opened, setOpened] = useState<readonly RuleCondition[]>(initial);
   const shown = RULE_CONDITIONS.filter((key) => initial.includes(key) || opened.includes(key));
   const [added, setAdded] = useState<RuleCondition | null>(null);

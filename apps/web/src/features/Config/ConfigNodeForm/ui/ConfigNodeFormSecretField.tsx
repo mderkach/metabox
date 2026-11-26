@@ -5,13 +5,13 @@ import { useTranslation } from 'react-i18next';
 
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@shared/ui';
 
+import { CONFIG_NODE_FORM_NS } from '../i18n/ConfigNodeForm.namespace.generated';
 import { SECRET_MASK, toInputText, UNSET, type ConfigNodeFormModel, type SecretMask } from '../model';
 import { isUrlMask } from '../model/ConfigNodeForm.mask';
 import { maskUrl } from '../model/ConfigNodeForm.mask';
 import { errorText } from './ConfigNodeForm.error';
 import type { NodeFieldProps } from './ConfigNodeForm.field';
 import { useFieldLabel } from './ConfigNodeForm.labels';
-import { NS } from './ConfigNodeForm.namespace';
 import { ConfigNodeFormFieldRow } from './ConfigNodeFormFieldRow';
 
 /**
@@ -21,7 +21,7 @@ import { ConfigNodeFormFieldRow } from './ConfigNodeFormFieldRow';
  * is visible, and editing opens by revealing: masked text is not a value.
  */
 export function ConfigNodeFormSecretField({ field, name, mask }: NodeFieldProps & { mask: SecretMask }) {
-  const { t } = useTranslation(NS);
+  const { t } = useTranslation(CONFIG_NODE_FORM_NS);
   const label = useFieldLabel(name) ?? field.key;
   const { control } = useFormContext<ConfigNodeFormModel>();
   const id = useId();

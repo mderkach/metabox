@@ -1,7 +1,10 @@
 import { useTranslation } from 'react-i18next';
 
 import { useTestProxyDelays } from '@features/Proxy/ProxyDelay';
+import { SHARED_NS } from '@shared/i18n';
 import { Button } from '@shared/ui';
+
+import { PROXY_GROUPS_NS } from '../i18n/ProxyGroups.namespace.generated';
 
 /** Probes every listed node: a group probe would measure only the node the group uses now. */
 export function ProxyNodesTest({
@@ -16,7 +19,7 @@ export function ProxyNodesTest({
   onTested: () => void;
   onTestStart?: (() => void) | undefined;
 }) {
-  const { t } = useTranslation('widgets/ProxyGroups');
+  const { t } = useTranslation(PROXY_GROUPS_NS);
   const delay = useTestProxyDelays();
 
   return (
@@ -32,7 +35,7 @@ export function ProxyNodesTest({
         });
       }}
     >
-      {delay.isPending ? t('delay.testing', { ns: 'shared' }) : t('delay.test', { ns: 'shared' })}
+      {delay.isPending ? t('delay.testing', { ns: SHARED_NS }) : t('delay.test', { ns: SHARED_NS })}
     </Button>
   );
 }

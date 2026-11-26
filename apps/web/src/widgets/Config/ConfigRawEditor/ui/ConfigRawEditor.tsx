@@ -6,6 +6,7 @@ import type { ConfigIssue } from '@entities/Config';
 import { cn } from '@shared/lib/utils';
 import { Badge, Button, JsonTextarea, type JsonTextareaHandle, SearchInput } from '@shared/ui';
 
+import { CONFIG_RAW_EDITOR_NS } from '../i18n/ConfigRawEditor.namespace.generated';
 import { findMatches, useRawEditorWrap } from '../lib';
 import { parseError } from '../lib/ConfigRawEditor.error';
 import { ConfigRawOutline } from './ConfigRawOutline';
@@ -30,7 +31,7 @@ export function ConfigRawEditor({
   onChange: (text: string) => void;
   issues: ConfigIssue[];
 }) {
-  const { t } = useTranslation('widgets/Config/ConfigRawEditor');
+  const { t } = useTranslation(CONFIG_RAW_EDITOR_NS);
   const [draft, setDraft] = useState(text);
   const [query, setQuery] = useState('');
   const [match, setMatch] = useState(0);

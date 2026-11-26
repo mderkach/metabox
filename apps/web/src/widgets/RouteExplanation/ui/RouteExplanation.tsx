@@ -1,10 +1,12 @@
 import { type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { StaticPagePath } from '@shared/lib/navigation';
 import { useFocusReturn } from '@shared/lib/useFocusReturn';
 import { cn } from '@shared/lib/utils';
 import { SURFACE } from '@shared/ui';
 
+import { ROUTE_EXPLANATION_NS } from '../i18n/RouteExplanation.namespace.generated';
 import { HEADING } from './RouteExplanation.styles';
 import { RouteExplanationBody } from './RouteExplanationBody';
 import { RouteExplanationHeader } from './RouteExplanationHeader';
@@ -17,6 +19,7 @@ import { RouteExplanationTitle } from './RouteExplanationTitle';
  * statement on the screen shows its origin, and a guess is not presented as fact.
  */
 export function RouteExplanation({
+  editorTo,
   id,
   connectionId,
   host,
@@ -24,6 +27,7 @@ export function RouteExplanation({
   actions = null,
   onClose,
 }: {
+  editorTo: StaticPagePath;
   id?: string;
   connectionId: string;
   /** Destination node: the panel must name the connection it describes. */
@@ -34,7 +38,7 @@ export function RouteExplanation({
   actions?: ReactNode;
   onClose: () => void;
 }) {
-  const { t } = useTranslation('widgets/RouteExplanation');
+  const { t } = useTranslation(ROUTE_EXPLANATION_NS);
   const headingRef = useFocusReturn<HTMLHeadingElement>();
 
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
@@ -62,7 +66,7 @@ export function RouteExplanation({
         actions={actions}
         onClose={onClose}
       />
-      <RouteExplanationBody connectionId={connectionId} />
+      <RouteExplanationBody editorTo={editorTo} connectionId={connectionId} />
     </aside>
   );
 }

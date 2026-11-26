@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next';
 
 import { formatBytes, formatRate } from '@shared/lib/format';
 
+import type { OVERVIEW_NS } from '../i18n/Overview.namespace.generated';
 import { CORE_GAP, type CoreGap } from './Overview.lib';
 
 export function toVolume(pending: boolean, bytes: number): string | null {
@@ -14,7 +15,7 @@ export function toVolume(pending: boolean, bytes: number): string | null {
 
 /** Rejected bytes go into the direct tile context: the fork does not list a rejected connection, so the volume is rarely above zero. */
 export function toDirectContext(
-  t: TFunction<'pages/Overview'>,
+  t: TFunction<typeof OVERVIEW_NS>,
   link: number,
   percent: number,
   rejected: number
@@ -33,7 +34,7 @@ export function toRate(awaiting: boolean, rate: number): string | null {
 }
 
 export function toRateContext(
-  t: TFunction<'pages/Overview'>,
+  t: TFunction<typeof OVERVIEW_NS>,
   awaiting: boolean,
   gap: CoreGap | null,
   peak: number
@@ -45,10 +46,10 @@ export function toRateContext(
   return awaiting ? null : toPeak(t, peak);
 }
 
-export function toCoreGapText(t: TFunction<'pages/Overview'>, gap: CoreGap): string {
+export function toCoreGapText(t: TFunction<typeof OVERVIEW_NS>, gap: CoreGap): string {
   return gap === CORE_GAP.Stopped ? t('coreGap.stopped') : t('coreGap.silent');
 }
 
-export function toPeak(t: TFunction<'pages/Overview'>, peak: number): string {
+export function toPeak(t: TFunction<typeof OVERVIEW_NS>, peak: number): string {
   return peak > 0 ? t('traffic.peak', { value: formatRate(peak) }) : t('traffic.noPeak');
 }

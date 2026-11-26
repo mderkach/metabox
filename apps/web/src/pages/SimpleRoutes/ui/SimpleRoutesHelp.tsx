@@ -4,10 +4,13 @@ import { useTranslation } from 'react-i18next';
 
 import { Card } from '@shared/ui';
 
+import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
+import type { SimpleRoutesLinks } from '../model/SimpleRoutes.links';
+
 const SECTIONS = ['interception', 'dns', 'outbounds', 'rules'] as const;
 
-export function SimpleRoutesHelp() {
-  const { t } = useTranslation('pages/SimpleRoutes');
+export function SimpleRoutesHelp({ to }: { to: SimpleRoutesLinks['help'] }) {
+  const { t } = useTranslation(SIMPLE_ROUTES_NS);
 
   return (
     <Card size='sm' className='overflow-visible py-0'>
@@ -32,7 +35,7 @@ export function SimpleRoutesHelp() {
           <p>{t('help.order')}</p>
           <p>{t('help.draft')}</p>
           <Link
-            to='/how-it-works'
+            to={to}
             className='inline-flex w-fit items-center gap-1 rounded-sm text-primary underline underline-offset-4 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none pointer-coarse:min-h-11'
           >
             {t('help.examples')}

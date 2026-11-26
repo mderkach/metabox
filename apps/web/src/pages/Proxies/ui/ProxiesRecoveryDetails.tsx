@@ -2,10 +2,11 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@shared/ui';
 
+import { PROXIES_NS } from '../i18n/Proxies.namespace.generated';
 import type { ProxyRecoveryItem } from '../model/Proxies.recoveryState';
 
 export function ProxiesRecoveryDetails({ item }: { item: ProxyRecoveryItem }) {
-  const { t } = useTranslation('pages/Proxies');
+  const { t } = useTranslation(PROXIES_NS);
 
   return (
     <div className='mt-2 flex min-w-0 flex-col gap-3 rounded-md border bg-muted/40 p-3'>

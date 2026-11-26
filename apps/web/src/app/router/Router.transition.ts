@@ -1,6 +1,8 @@
 import type { ParsedLocation } from '@tanstack/react-router';
 
-import { NAV_TARGETS, pickActiveNav } from '@widgets/AppSidebar';
+import { pickActiveNav } from '@widgets/AppSidebar';
+
+import { getSidebarNavigation } from './Router.sidebar';
 
 /**
  * Transition types between screens. They are read by
@@ -35,10 +37,10 @@ function toSection(pathname: string): string {
   return pathname.split('/')[1] ?? '';
 }
 
-function toNavIndex(pathname: string): number {
-  const target = pickActiveNav(pathname, NAV_TARGETS);
+function toNavIndex(pathname: string, targets: readonly string[]): number {
+  const target = pickActiveNav(pathname, targets);
 
-  return target === null ? -1 : NAV_TARGETS.indexOf(target);
+  return target === null ? -1 : targets.indexOf(target);
 }
 
 /**
@@ -63,8 +65,9 @@ export function toPageTransitionTypes({
 
   if (toSection(fromLocation.pathname) === toSection(toLocation.pathname)) return [PAGE_TRANSITION.Hold];
 
-  const from = toNavIndex(fromLocation.pathname);
-  const to = toNavIndex(toLocation.pathname);
+  const { targets } = getSidebarNavigation();
+  const from = toNavIndex(fromLocation.pathname, targets);
+  const to = toNavIndex(toLocation.pathname, targets);
   if (from < 0 || to < 0 || from === to) return [PAGE_TRANSITION.Fade];
 
   return [from < to ? PAGE_TRANSITION.Forward : PAGE_TRANSITION.Backward];

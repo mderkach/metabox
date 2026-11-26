@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import type { Plugin } from 'vite';
 
-import { LOCALE_ROOT, checkLocales, collectLocales, hashedLocaleUrl, localeKey, writeI18nTypes } from './i18n.ts';
+import { LOCALE_ROOT, checkLocales, collectLocales, hashedLocaleUrl, localeKey, writeI18nArtifacts } from './i18n.ts';
 
 const LOCALE_SEGMENT = 'i18n';
 const LOCALE_GLOB = `src/**/${LOCALE_SEGMENT}/*.json`;
@@ -50,7 +50,7 @@ export function metaboxI18n(root: string): Plugin {
       return `export const LOCALE_URLS = ${JSON.stringify(Object.fromEntries(urls))};`;
     },
     buildStart() {
-      writeI18nTypes(root);
+      writeI18nArtifacts(root);
 
       const problems = checkLocales(root);
 
@@ -89,7 +89,7 @@ export function metaboxI18n(root: string): Plugin {
           return;
         }
 
-        writeI18nTypes(root);
+        writeI18nArtifacts(root);
         report(checkLocales(root));
         refreshUrls();
 

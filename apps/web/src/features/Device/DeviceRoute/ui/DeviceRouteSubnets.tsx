@@ -7,6 +7,7 @@ import { ACL_MODE, sourceIpError, type DataplaneModel } from '@entities/Dataplan
 import { cn } from '@shared/lib/utils';
 import { Button, CARD_TITLE, ConfirmDialog, FORM_ACTIONS, SURFACE, TokenInput } from '@shared/ui';
 
+import { DEVICE_ROUTE_NS } from '../i18n/DeviceRoute.namespace.generated';
 import { DEVICE_ROUTE_ERROR, DeviceRouteSubnetsSchema, type DeviceRouteSubnetsModel } from '../model';
 import { DeviceRouteSubnetsError } from './DeviceRouteSubnetsError';
 
@@ -30,7 +31,7 @@ export function DeviceRouteSubnets({
   locked: boolean;
   onApply: (sourceIp: string[]) => void;
 }) {
-  const { t } = useTranslation('features/Device/DeviceRoute');
+  const { t } = useTranslation(DEVICE_ROUTE_NS);
   const titleId = useId();
   const hintId = useId();
   const [confirming, setConfirming] = useState(false);

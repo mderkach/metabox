@@ -5,6 +5,7 @@ import { CARD_FLUSH, Card } from '@shared/ui';
 import { ConnectionSummaryVolume } from '@widgets/ConnectionSummary';
 import { DaemonTraffic } from '@widgets/Daemon/DaemonTraffic';
 
+import { OVERVIEW_NS } from '../i18n/Overview.namespace.generated';
 import type { OverviewRuntime } from '../lib';
 import { toDirectContext, toRate, toRateContext, toVolume } from '../lib/Overview.traffic';
 import { OverviewCoreGap } from './OverviewCoreGap';
@@ -14,7 +15,7 @@ import { OverviewTile } from './OverviewTile';
 const PERCENT = 100;
 
 export function OverviewTraffic({ runtime }: { runtime: OverviewRuntime }) {
-  const { t } = useTranslation('pages/Overview');
+  const { t } = useTranslation(OVERVIEW_NS);
   const uplink = runtime.system?.uplink;
   const { link, split } = runtime.share;
   // Proxy encapsulation adds bytes on top of the original traffic, so the share

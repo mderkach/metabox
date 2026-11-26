@@ -34,7 +34,7 @@ async function openFacet(user: ReturnType<typeof userEvent.setup>, name: RegExp)
 
 /** The screen filter lives in the address, so it is mounted on its own route. */
 function renderScreen(search = '') {
-  return renderWithRouter(ConnectionsPage, {
+  return renderWithRouter(() => <ConnectionsPage editorTo='/config' />, {
     path: '/connections',
     validateSearch: parseConnectionSearch,
     initialEntry: `/connections${search}`,

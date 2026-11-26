@@ -2,6 +2,7 @@ import { Ellipsis } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '@shared/i18n';
 import {
   Button,
   ConfirmDialog,
@@ -10,6 +11,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@shared/ui';
+
+import { CONNECTIONS_NS } from '../i18n/Connections.namespace.generated';
 
 /**
  * Tearing all live connections, from the list menu and after a confirmation:
@@ -25,7 +28,7 @@ export function ConnectionCloseAll({
   disabled?: boolean;
   onConfirm: () => void;
 }) {
-  const { t } = useTranslation('pages/Connections');
+  const { t } = useTranslation(CONNECTIONS_NS);
   const [open, setOpen] = useState(false);
   const menuTrigger = useRef<HTMLButtonElement>(null);
 
@@ -53,7 +56,7 @@ export function ConnectionCloseAll({
         onOpenChange={setOpen}
         title={t('closeAll.title')}
         description={t('closeAll.description', { count })}
-        cancelLabel={t('action.cancel', { ns: 'shared' })}
+        cancelLabel={t('action.cancel', { ns: SHARED_NS })}
         confirmLabel={t('closeAll.confirm')}
         destructive
         finalFocus={menuTrigger}

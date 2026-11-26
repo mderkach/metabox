@@ -8,6 +8,8 @@ import { RULE_TARGET, useRuleTitle } from '@entities/Rule';
 import { toRuleSetRowsFromNodes, useRuleSetCatalog, type RuleSetRow } from '@entities/RuleSet';
 import { Button, Card, CardContent } from '@shared/ui';
 
+import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
+import type { SimpleRuleNavigation } from '../model/SimpleRoutes.links';
 import type { toSimpleRoutes } from '../model/SimpleRoutes.model';
 import {
   SIMPLE_RULE_GROUPS,
@@ -21,15 +23,18 @@ import { SimpleRoutesRuleRow } from './SimpleRoutesRuleRow';
 import { SimpleRoutesServiceSuggestions } from './SimpleRoutesServiceSuggestions';
 
 export function SimpleRoutesRuleList({
+  links,
+  referenceLink,
+  onOutboundChange,
   model,
   text,
   outbound,
-}: {
+}: SimpleRuleNavigation & {
   model: ReturnType<typeof toSimpleRoutes>;
   text: string;
   outbound?: string;
 }) {
-  const { t } = useTranslation('pages/SimpleRoutes');
+  const { t } = useTranslation(SIMPLE_ROUTES_NS);
   const { subject } = useRuleTitle();
   const catalog = useRuleSetCatalog();
   const sets = useMemo(() => {
@@ -159,7 +164,7 @@ export function SimpleRoutesRuleList({
                 {t('list.byOrder')}
               </Button>
             </div>
-            <SimpleRoutesRuleFilter tags={tags} outbound={outbound} />
+            <SimpleRoutesRuleFilter onOutboundChange={onOutboundChange} tags={tags} outbound={outbound} />
           </div>
         </>
       )}
@@ -167,7 +172,7 @@ export function SimpleRoutesRuleList({
         <div className='flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm wrap-anywhere'>
           <p>{t('rules.filtered', { outbound })}</p>
           <Link
-            to='/config/simple'
+            to={links.self}
             search={{ outbound: undefined }}
             resetScroll={false}
             className='text-primary underline underline-offset-4'
@@ -187,6 +192,8 @@ export function SimpleRoutesRuleList({
               <ol className='divide-y divide-border'>
                 {rows.map(({ rule, group, node }) => (
                   <SimpleRoutesRuleRow
+                    ruleLink={links.rule}
+                    referenceLink={referenceLink}
                     key={model.ruleKeys[rule.index - 1]}
                     rule={rule}
                     group={group}

@@ -18,7 +18,7 @@ import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers
 import { PROXY_ENDPOINT } from '@entities/Proxy';
 import { proxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
 
-import { OverviewPage } from '../ui/OverviewPage';
+import { OverviewScreen } from './OverviewScreen';
 
 const MINIMAL_CONFIG = JSON.stringify({ outbounds: [{ type: 'direct', tag: 'direct' }] }, null, 2);
 
@@ -50,7 +50,7 @@ describe('overview screen picked with the mouse', () => {
   it('switches the node of a selector group from the status strip and announces it', async () => {
     worker.use(...proxyHandlers);
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     const region = await screen.findByRole('status', { name: 'Результат действия' });
 
@@ -76,7 +76,7 @@ describe('overview screen picked with the mouse', () => {
       })
     );
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     const control = await screen.findByRole('combobox', { name: 'Выход группы us-fallback' });
     expect(await within(control).findByText('America', { exact: true })).toBeVisible();
@@ -101,7 +101,7 @@ describe('overview screen picked with the mouse', () => {
       })
     );
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     await userEvent.click(await screen.findByRole('combobox', { name: 'Режим Clash API: по правилам' }));
     await userEvent.click(await screen.findByRole('option', { name: 'напрямую' }));

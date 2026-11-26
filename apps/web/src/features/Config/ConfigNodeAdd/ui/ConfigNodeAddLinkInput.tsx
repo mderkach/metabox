@@ -5,13 +5,12 @@ import { useTranslation } from 'react-i18next';
 
 import { Field, FieldError, FieldLabel, Input } from '@shared/ui';
 
+import { CONFIG_NODE_ADD_NS } from '../i18n/ConfigNodeAdd.namespace.generated';
 import { NODE_ADD_ERROR, type ConnectionLinkModel } from '../model/ConfigNodeAdd.schema';
 import { SERVER_ERROR } from '../model/ConfigNodeAdd.server';
 import { SUBSCRIPTION_ERROR } from '../model/ConfigNodeAdd.subscription';
 
-const NS = 'features/Config/ConfigNodeAdd';
-
-const INPUT_ERRORS: Readonly<Record<string, ParseKeys<typeof NS> | undefined>> = {
+const INPUT_ERRORS: Readonly<Record<string, ParseKeys<typeof CONFIG_NODE_ADD_NS> | undefined>> = {
   [SERVER_ERROR.TagRequired]: 'server.tagRequired',
   [SERVER_ERROR.TagTaken]: 'server.tagTaken',
   [SERVER_ERROR.GroupRequired]: 'subscription.groupNameRequired',
@@ -39,7 +38,7 @@ export function ConfigNodeAddLinkInput({
   max?: number;
   suggestedValue?: string;
 }) {
-  const { t } = useTranslation(NS);
+  const { t } = useTranslation(CONFIG_NODE_ADD_NS);
   const { control, trigger } = useFormContext<ConnectionLinkModel>();
   const id = useId();
   const errorId = useId();

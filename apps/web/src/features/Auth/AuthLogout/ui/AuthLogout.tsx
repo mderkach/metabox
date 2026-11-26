@@ -5,10 +5,11 @@ import { useAuth } from '@entities/Auth';
 import { Button } from '@shared/ui';
 
 import { useLogout } from '../api';
+import { AUTH_LOGOUT_NS } from '../i18n/AuthLogout.namespace.generated';
 
 /** Shown only with a password and a live session: without a password there is nothing to leave. */
 export function AuthLogout({ collapsed = false }: { collapsed?: boolean }) {
-  const { t } = useTranslation('features/Auth/AuthLogout');
+  const { t } = useTranslation(AUTH_LOGOUT_NS);
   const auth = useAuth();
   const logout = useLogout();
 

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { type RuleSetCatalog } from '@entities/RuleSet';
 import { Input, Label } from '@shared/ui';
 
+import { RULE_SET_ADD_NS } from '../i18n/RuleSetAdd.namespace.generated';
 import { CUSTOM_PROVIDER } from '../model/RuleSetAdd.constants';
 import { type RuleSetAddModel } from '../model/RuleSetAdd.schema';
 import { useSelectedList } from '../model/RuleSetAdd.selection';
@@ -18,7 +19,7 @@ import { RuleSetAddMirrorField } from './RuleSetAddMirrorField';
  * may not guess a provider from a foreign address.
  */
 export function RuleSetAddAddressField({ catalog }: { catalog: RuleSetCatalog }) {
-  const { t } = useTranslation('features/RuleSet/RuleSetAdd');
+  const { t } = useTranslation(RULE_SET_ADD_NS);
   const { control, setValue } = useFormContext<RuleSetAddModel>();
   const list = useSelectedList(catalog);
   const id = useId();

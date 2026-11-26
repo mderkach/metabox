@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { CACHE_FILE_PATH, ConfigDocumentState } from '@entities/Config';
 import { Alert, AlertAction, AlertDescription, AlertTitle, Button } from '@shared/ui';
 
+import { CONFIG_CACHE_FILE_NS } from '../i18n/ConfigCacheFile.namespace.generated';
+
 /**
  * The set cache is off, and the config has a remote set.
  *
@@ -17,7 +19,7 @@ import { Alert, AlertAction, AlertDescription, AlertTitle, Button } from '@share
  * user will see as a diff before applying.
  */
 export function ConfigCacheNotice() {
-  const { t } = useTranslation('features/Config/ConfigCacheFile');
+  const { t } = useTranslation(CONFIG_CACHE_FILE_NS);
   const edit = ConfigDocumentState.use.edit();
 
   return (

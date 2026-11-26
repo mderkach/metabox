@@ -13,11 +13,13 @@ import {
   type ProxyGroup,
 } from '@entities/Proxy';
 import { ApiError } from '@shared/api';
+import { SHARED_NS } from '@shared/i18n';
 import { useLiveRegion } from '@shared/lib/useLiveRegion';
 import { CARD_FLUSH, Card, LiveRegion, QueryFailure, SURFACE, SkeletonRows } from '@shared/ui';
 import { PageHeader } from '@widgets/PageHeader';
 import { ProxyGroups, type ProxyNodeDiagnostics } from '@widgets/ProxyGroups';
 
+import { PROXIES_NS } from '../i18n/Proxies.namespace.generated';
 import { useMinuteClock } from '../lib/Proxies.lib';
 import { useProxiesRecovery, type ProxyRecoveryItem } from '../model/Proxies.recoveryState';
 import { ProxiesRecoveryDetails } from './ProxiesRecoveryDetails';
@@ -30,7 +32,7 @@ const NOT_FOUND = 404;
 const EMPTY_GROUPS: ProxyGroup[] = [];
 
 export function ProxiesPage() {
-  const { t } = useTranslation('pages/Proxies');
+  const { t } = useTranslation(PROXIES_NS);
   const proxies = useProxies();
   const providers = useProxyProviders();
   const metadataQuery = useOutboundMetadata();
@@ -116,8 +118,8 @@ export function ProxiesPage() {
     (tag: string, label?: string) => {
       const text =
         label === undefined
-          ? t('toast.outboundMetadata.saved', { ns: 'shared' })
-          : t('toast.outboundMetadata.named', { ns: 'shared', tag, label });
+          ? t('toast.outboundMetadata.saved', { ns: SHARED_NS })
+          : t('toast.outboundMetadata.named', { ns: SHARED_NS, tag, label });
 
       toast.success(text);
       announce(text);
@@ -132,7 +134,7 @@ export function ProxiesPage() {
   return (
     <>
       <PageHeader
-        title={t('section.proxies', { ns: 'shared' })}
+        title={t('section.proxies', { ns: SHARED_NS })}
         actions={
           <ProxyTestAll
             groups={groups}

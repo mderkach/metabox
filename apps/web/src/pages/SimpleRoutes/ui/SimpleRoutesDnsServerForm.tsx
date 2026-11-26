@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
+import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
 import { DnsServerSchema, type DnsReason, type DnsServerForm } from '../model/SimpleRoutes.dns';
 
 export function SimpleRoutesDnsServerForm({
@@ -18,7 +19,7 @@ export function SimpleRoutesDnsServerForm({
   onSubmit: (values: DnsServerForm) => DnsReason | 'stale' | null;
   onClose: () => void;
 }) {
-  const { t } = useTranslation('pages/SimpleRoutes');
+  const { t } = useTranslation(SIMPLE_ROUTES_NS);
   const id = useId();
   const [failure, setFailure] = useState<DnsReason | 'stale' | null>(null);
   const form = useForm<DnsServerForm>({

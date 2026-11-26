@@ -8,8 +8,11 @@ import { useShortcuts } from '@shared/lib/shortcuts';
 import { cn } from '@shared/lib/utils';
 import { AppSidebar, AppSidebarBottomNav } from '@widgets/AppSidebar';
 
+import { APP_NS } from '../i18n';
 import { useConfigLeaveGuard } from '../lib/useConfigLeaveGuard';
 import { useRuntimeStreams } from '../lib/useRuntimeStreams';
+import { ConfigChangeLink } from '../router/ConfigChangeLink';
+import { getSidebarNavigation } from '../router/Router.sidebar';
 import { AppShortcutHelp } from './AppShortcutHelp';
 import { DaemonBanner } from './DaemonBanner';
 import { DeviceRouteLayer } from './DeviceRouteLayer';
@@ -25,6 +28,7 @@ const SKIP_LINK_CLASS =
  * the full width.
  */
 export function AppLayout() {
+  const navigation = getSidebarNavigation();
   useRuntimeStreams();
   useConfigLeaveGuard();
   const [help, setHelp] = useState(false);
@@ -32,7 +36,7 @@ export function AppLayout() {
     setHelp(true);
   }, []);
   useShortcuts(openHelp);
-  const { t } = useTranslation('app');
+  const { t } = useTranslation(APP_NS);
   const narrow = useNarrowScreen();
   const [applySpace, setApplySpace] = useState(0);
   const [deviceRouteSpace, setDeviceRouteSpace] = useState(0);
@@ -49,7 +53,7 @@ export function AppLayout() {
       <a href='#content' className={SKIP_LINK_CLASS}>
         {t('skip.content')}
       </a>
-      {!narrow && <AppSidebar />}
+      {!narrow && <AppSidebar navigation={navigation} />}
       <div className='flex min-h-0 min-w-0 grow flex-col'>
         <DaemonBanner />
         <div className='relative flex min-h-0 grow flex-col'>
@@ -65,11 +69,11 @@ export function AppLayout() {
           >
             <Outlet />
           </main>
-          <ConfigApplyBar onSpaceChange={setApplySpace} />
+          <ConfigApplyBar ChangeLink={ConfigChangeLink} onSpaceChange={setApplySpace} />
           <DeviceRouteLayer bottom={applySpace} onSpaceChange={setDeviceRouteSpace} />
         </div>
       </div>
-      {narrow && <AppSidebarBottomNav />}
+      {narrow && <AppSidebarBottomNav navigation={navigation} />}
       <AppShortcutHelp open={help} onOpenChange={setHelp} />
     </div>
   );

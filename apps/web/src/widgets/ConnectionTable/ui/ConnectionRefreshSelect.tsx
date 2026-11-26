@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
+import { CONNECTION_TABLE_NS } from '../i18n/ConnectionTable.namespace.generated';
 import { type RefreshInterval } from '../lib';
 import { toInterval, REFRESH_OPTIONS } from '../lib/ConnectionTable.interval';
 
@@ -19,7 +20,7 @@ export function ConnectionRefreshSelect({
   interval: RefreshInterval;
   onIntervalChange: (interval: RefreshInterval) => void;
 }) {
-  const { t } = useTranslation('widgets/ConnectionTable');
+  const { t } = useTranslation(CONNECTION_TABLE_NS);
   // Without `items` the trigger prints the value itself — milliseconds instead of a label.
   const items = REFRESH_OPTIONS.map((option) => ({ value: String(option.interval), label: t(option.label) }));
 

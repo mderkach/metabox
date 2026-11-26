@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { ProviderNodeChange, ProxyProvider } from '@entities/Proxy';
 import { formatBytes, formatDate } from '@shared/lib/format';
 
+import { PROXIES_NS } from '../i18n/Proxies.namespace.generated';
 import { ProxiesProviderUpdatedAt } from './ProxiesProviderUpdatedAt';
 import { ProxyProviderNodeDrop } from './ProxyProviderNodeDrop';
 import { ProxyProviderNodes } from './ProxyProviderNodes';
@@ -17,7 +18,7 @@ export function ProxyProviderRow({
   change: ProviderNodeChange;
   now: number;
 }) {
-  const { t } = useTranslation('pages/Proxies');
+  const { t } = useTranslation(PROXIES_NS);
   const { usage, expiresAt } = provider;
 
   return (

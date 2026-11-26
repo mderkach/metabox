@@ -25,14 +25,13 @@ import {
   SelectValue,
 } from '@shared/ui';
 
+import { CONFIG_NODE_ADD_NS } from '../i18n/ConfigNodeAdd.namespace.generated';
 import { nodeAddErrorText } from '../model/ConfigNodeAdd.errors';
 import { useNodeInsert } from '../model/ConfigNodeAdd.insert';
 import { nodeTypeDocsUrl, nodeTypeOptions, nodeTypeSections } from '../model/ConfigNodeAdd.model';
 import { makeNodeAddSchema, NODE_ADD_DEFAULTS, NODE_ADD_ERROR, type NodeAddModel } from '../model/ConfigNodeAdd.schema';
 import { ConfigNodeAddDocsLink } from './ConfigNodeAddDocsLink';
 import { ConfigNodeAddTypeItem } from './ConfigNodeAddTypeItem';
-
-const NS = 'features/Config/ConfigNodeAdd';
 
 /** Type and tag of a new node, chosen by hand. */
 export function ConfigNodeAddManual({
@@ -51,7 +50,7 @@ export function ConfigNodeAddManual({
   secondary?: boolean;
   onAdded?: (tag: string) => void;
 }) {
-  const { t } = useTranslation(NS);
+  const { t } = useTranslation(CONFIG_NODE_ADD_NS);
   const insertNode = useNodeInsert(section);
   const options = useMemo(() => nodeTypeOptions(registry, builtTags), [registry, builtTags]);
   const sections = useMemo(() => nodeTypeSections(options, registry), [options, registry]);

@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next';
 
 import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
+import { RULE_EDIT_NS } from '../i18n/RuleEdit.namespace.generated';
 import { RULE_ACTION, type RuleEditModel } from '../model/RuleEdit.schema';
 
 export function RuleActionField() {
-  const { t } = useTranslation('features/Rule/RuleEdit');
+  const { t } = useTranslation(RULE_EDIT_NS);
   const { control } = useFormContext<RuleEditModel>();
 
   return (

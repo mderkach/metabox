@@ -1,6 +1,7 @@
 import type { ParseKeys } from 'i18next';
 
 import { NODE_REGISTRY, type NodeRegistry } from '@entities/Config';
+import type { SHARED_NS } from '@shared/i18n';
 
 /** Where a registry node gets its form from. */
 export const FORM_POLICY = {
@@ -28,7 +29,7 @@ export const NODE_FORM_POLICY: Readonly<Record<NodeRegistry, FormPolicy>> = {
 };
 
 /** Outbound group types named in words, the same as on the proxies screen. */
-export const GROUP_TYPE_LABEL: Readonly<Record<string, ParseKeys<'shared'> | undefined>> = {
+export const GROUP_TYPE_LABEL: Readonly<Record<string, ParseKeys<typeof SHARED_NS> | undefined>> = {
   selector: 'groupType.selector',
   urltest: 'groupType.urltest',
   fallback: 'groupType.fallback',

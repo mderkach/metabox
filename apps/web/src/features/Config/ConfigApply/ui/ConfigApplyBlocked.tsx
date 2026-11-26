@@ -1,8 +1,10 @@
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 import { Button } from '@shared/ui';
 
+import { CONFIG_APPLY_NS } from '../i18n/ConfigApply.namespace.generated';
 import { APPLY_BLOCK, type ApplyBlock } from '../lib/ConfigApply.lib';
 
 const BLOCKED_TEXT = {
@@ -22,14 +24,14 @@ export function ConfigApplyBlocked({
   className?: string;
   onRetry?: () => void;
 }) {
-  const { t } = useTranslation('features/Config/ConfigApply');
+  const { t } = useTranslation(CONFIG_APPLY_NS);
 
   return (
     <p role='status' className={cn('text-xs text-muted-foreground', className)}>
       {t(BLOCKED_TEXT[blocked.kind], 'line' in blocked ? { line: blocked.line } : undefined)}
       {blocked.kind === APPLY_BLOCK.LoadFailed && onRetry !== undefined && (
         <Button variant='link' size='xs' className='ml-1 px-1' onClick={onRetry}>
-          {t('source.retry', { ns: 'shared' })}
+          {t('source.retry', { ns: SHARED_NS })}
         </Button>
       )}
     </p>

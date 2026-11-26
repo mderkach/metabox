@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { isCatalogCategory, type RuleSetList } from '@entities/RuleSet';
 
+import { RULE_SET_ADD_NS } from '../i18n/RuleSetAdd.namespace.generated';
 import { type RuleSetAddModel } from '../model/RuleSetAdd.schema';
 
 /**
@@ -12,7 +13,7 @@ import { type RuleSetAddModel } from '../model/RuleSetAdd.schema';
  * check the address; the binary will do it on apply.
  */
 export function RuleSetAddCategoryNotice({ list }: { list: RuleSetList | null }) {
-  const { t } = useTranslation('features/RuleSet/RuleSetAdd');
+  const { t } = useTranslation(RULE_SET_ADD_NS);
   const { control } = useFormContext<RuleSetAddModel>();
   const category = useWatch({ control, name: 'category' }).trim();
 

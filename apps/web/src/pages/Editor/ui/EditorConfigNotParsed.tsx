@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import type { ConfigIssue } from '@entities/Config';
 import { Alert, AlertDescription, AlertTitle } from '@shared/ui';
 
+import { EDITOR_NS } from '../i18n/Editor.namespace.generated';
+
 /** How many schema remarks to show so they do not crowd out the screen. */
 const VISIBLE_ISSUES = 5;
 
@@ -15,7 +17,7 @@ const VISIBLE_ISSUES = 5;
  * they show which node is not parsed.
  */
 export function EditorConfigNotParsed({ issues }: { issues: ConfigIssue[] }) {
-  const { t } = useTranslation('pages/Editor');
+  const { t } = useTranslation(EDITOR_NS);
   const shown = issues.slice(0, VISIBLE_ISSUES);
   const hidden = issues.length - shown.length;
 

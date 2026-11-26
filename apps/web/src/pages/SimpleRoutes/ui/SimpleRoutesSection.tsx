@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, Popover, PopoverContent, PopoverDescription, PopoverTrigger, SECTION_HEADING } from '@shared/ui';
 
+import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
+
 export function SimpleRoutesSection({
   section,
   actions,
@@ -17,7 +19,7 @@ export function SimpleRoutesSection({
   const trigger = useRef<HTMLButtonElement>(null);
   const dismissedByScroll = useRef(false);
   const [open, setOpen] = useState(false);
-  const { t } = useTranslation('pages/SimpleRoutes');
+  const { t } = useTranslation(SIMPLE_ROUTES_NS);
   const title = t(`sections.${section}`);
   const helpLabel = t('help.label', { section: title });
 

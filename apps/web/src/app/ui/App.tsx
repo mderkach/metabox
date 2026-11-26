@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { QueryClientInstance } from '@shared/api';
 import { Toaster } from '@shared/ui';
 
+import { APP_NS } from '../i18n';
 import { AuthGate } from './AuthGate';
 
 // The provider's own script never runs in a client-rendered panel; `index.html` has the working one.
@@ -20,7 +21,7 @@ function reloadRoutes() {
 }
 
 export function App() {
-  const { t } = useTranslation('app');
+  const { t } = useTranslation(APP_NS);
 
   return (
     <ThemeProvider

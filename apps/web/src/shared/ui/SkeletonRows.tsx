@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '../i18n';
 import { cn } from '../lib/utils';
 import { Skeleton } from './shadcn/skeleton';
 import { PENDING_REVEAL } from './styles';
@@ -21,7 +22,7 @@ export function SkeletonRows({
   /** Row height: a line for a list, the whole area for a chart. */
   rowClassName?: string;
 }) {
-  const { t } = useTranslation('shared');
+  const { t } = useTranslation(SHARED_NS);
 
   return (
     <div role='status' className={cn('flex flex-col gap-3 p-4', PENDING_REVEAL, className)}>

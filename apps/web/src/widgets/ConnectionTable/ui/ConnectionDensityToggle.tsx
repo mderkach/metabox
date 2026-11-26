@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@shared/lib/utils';
 import { Button } from '@shared/ui';
 
+import { CONNECTION_TABLE_NS } from '../i18n/ConnectionTable.namespace.generated';
 import { TABLE_DENSITY, type TableDensity } from '../lib';
 
 /**
@@ -17,7 +18,7 @@ export function ConnectionDensityToggle({
   density: TableDensity;
   onDensityChange: (density: TableDensity) => void;
 }) {
-  const { t } = useTranslation('widgets/ConnectionTable');
+  const { t } = useTranslation(CONNECTION_TABLE_NS);
   const compact = density === TABLE_DENSITY.Compact;
   const Icon = compact ? Rows4 : Rows3;
 

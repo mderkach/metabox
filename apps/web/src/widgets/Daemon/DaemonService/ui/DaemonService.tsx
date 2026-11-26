@@ -5,6 +5,7 @@ import { useServiceState, type SystemProcess } from '@entities/Daemon';
 import { formatBytes } from '@shared/lib/format';
 import { CARD_TITLE, Card, CardContent, CardHeader } from '@shared/ui';
 
+import { DAEMON_SERVICE_NS } from '../i18n/DaemonService.namespace.generated';
 import { DaemonServiceRow } from './DaemonServiceRow';
 
 /**
@@ -27,7 +28,7 @@ export function DaemonService({
    */
   memoryTrend?: ReactNode;
 }) {
-  const { t } = useTranslation('widgets/Daemon/DaemonService');
+  const { t } = useTranslation(DAEMON_SERVICE_NS);
   const service = useServiceState();
 
   if (service.data === undefined) {

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { isRecord } from '@shared/lib/isRecord';
 import { Checkbox, FieldGroup, Label } from '@shared/ui';
 
+import { CONFIG_NODE_ADD_NS } from '../i18n/ConfigNodeAdd.namespace.generated';
 import { shareLinkTag, type ShareLink } from '../model/ConfigNodeAdd.link';
 import type { ConnectionLinkModel } from '../model/ConfigNodeAdd.schema';
 import {
@@ -29,7 +30,7 @@ export function ConfigNodeAddServerFields({
   applied: string;
   match: ReturnType<typeof serverImportMatch>;
 }) {
-  const { t } = useTranslation('features/Config/ConfigNodeAdd');
+  const { t } = useTranslation(CONFIG_NODE_ADD_NS);
   const { control } = useFormContext<ConnectionLinkModel>();
   const group = useWatch({ control, name: 'serverGroup' });
   const confirmationId = useId();

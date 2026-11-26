@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { filterCategories, type RuleSetCatalog } from '@entities/RuleSet';
 import { Autocomplete, Label } from '@shared/ui';
 
+import { RULE_SET_ADD_NS } from '../i18n/RuleSetAdd.namespace.generated';
 import { listFreshness } from '../lib/RuleSetAdd.freshness';
 import { SUGGESTION_LIMIT } from '../model/RuleSetAdd.constants';
 import { composeRuleSetTag, composeRuleSetURL, type RuleSetAddModel } from '../model/RuleSetAdd.schema';
@@ -16,7 +17,7 @@ import { useSelectedList } from '../model/RuleSetAdd.selection';
  * the same template: the provider may have added a category after the check.
  */
 export function RuleSetAddCategoryField({ catalog }: { catalog: RuleSetCatalog }) {
-  const { t } = useTranslation('features/RuleSet/RuleSetAdd');
+  const { t } = useTranslation(RULE_SET_ADD_NS);
   const { control, setValue, getValues } = useFormContext<RuleSetAddModel>();
   const category = useWatch({ control, name: 'category' });
   const list = useSelectedList(catalog);

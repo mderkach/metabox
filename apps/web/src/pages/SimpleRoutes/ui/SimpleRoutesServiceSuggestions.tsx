@@ -3,12 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { isCatalogCategory, RULE_SET_LIST_KIND, useRuleSetCatalog } from '@entities/RuleSet';
 import { Button, DialogTrigger } from '@shared/ui';
 
+import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
 import { SIMPLE_SERVICE_SUGGESTIONS_ID } from '../model/SimpleRoutes.model';
 
 const SERVICES = ['YouTube', 'Instagram', 'ChatGPT', 'Claude', 'Discord', 'Spotify', 'GitHub'];
 
 export function SimpleRoutesServiceSuggestions() {
-  const { t } = useTranslation('pages/SimpleRoutes');
+  const { t } = useTranslation(SIMPLE_ROUTES_NS);
   const catalog = useRuleSetCatalog();
   const suggestions = SERVICES.filter(
     (name) =>

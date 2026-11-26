@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { findProvider, type RuleSetCatalog } from '@entities/RuleSet';
 import { ToggleGroup, ToggleGroupItem } from '@shared/ui';
 
+import { RULE_SET_ADD_NS } from '../i18n/RuleSetAdd.namespace.generated';
 import { type RuleSetAddModel } from '../model/RuleSetAdd.schema';
 import { useRecompose } from '../model/RuleSetAdd.selection';
 
@@ -13,7 +14,7 @@ import { useRecompose } from '../model/RuleSetAdd.selection';
  * two different questions: whose list to trust and what to look for in it.
  */
 export function RuleSetAddKindField({ catalog }: { catalog: RuleSetCatalog }) {
-  const { t } = useTranslation('features/RuleSet/RuleSetAdd');
+  const { t } = useTranslation(RULE_SET_ADD_NS);
   const { control } = useFormContext<RuleSetAddModel>();
   const providerId = useWatch({ control, name: 'providerId' });
   const recompose = useRecompose(catalog);

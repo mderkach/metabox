@@ -4,7 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { useSaveOutboundMetadata, type OutboundMetadata, type OutboundMetadataMap } from '@entities/Proxy';
+import { SHARED_NS } from '@shared/i18n';
 import { Button, ConfirmDialog, DESTRUCTIVE_OUTLINE } from '@shared/ui';
+
+import { PROXIES_NS } from '../i18n/Proxies.namespace.generated';
 
 export function ProxiesUnusedMetadataRow({
   tag,
@@ -19,7 +22,7 @@ export function ProxiesUnusedMetadataRow({
   metadata: OutboundMetadataMap;
   announce: (message: string) => void;
 }) {
-  const { t } = useTranslation('pages/Proxies');
+  const { t } = useTranslation(PROXIES_NS);
   const save = useSaveOutboundMetadata();
   const [target, setTarget] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
@@ -32,7 +35,7 @@ export function ProxiesUnusedMetadataRow({
   function announceSaved(
     key: 'toast.outboundMetadata.removed' | 'toast.outboundMetadata.restored' | 'toast.outboundMetadata.moved'
   ) {
-    const text = t(key, { ns: 'shared' });
+    const text = t(key, { ns: SHARED_NS });
     announce(text);
 
     return text;
@@ -155,7 +158,7 @@ export function ProxiesUnusedMetadataRow({
         onOpenChange={setConfirm}
         title={t('metadata.overwriteTitle', { tag: target ?? '' })}
         description={t('metadata.overwriteDescription')}
-        cancelLabel={t('action.cancel', { ns: 'shared' })}
+        cancelLabel={t('action.cancel', { ns: SHARED_NS })}
         confirmLabel={t('metadata.overwrite')}
         finalFocus={moveButton}
         destructive

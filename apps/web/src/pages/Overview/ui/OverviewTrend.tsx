@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { formatAge } from '@shared/lib/format';
 import { DaemonSparkline } from '@widgets/Daemon/DaemonTraffic';
 
+import { OVERVIEW_NS } from '../i18n/Overview.namespace.generated';
+
 /** A series cannot be drawn from a single point. */
 const MIN_POINTS = 2;
 
@@ -34,7 +36,7 @@ export function OverviewTrend({
   label: string;
   tone?: string;
 }) {
-  const { t } = useTranslation('pages/Overview');
+  const { t } = useTranslation(OVERVIEW_NS);
 
   if (samples.length < MIN_POINTS) {
     return null;

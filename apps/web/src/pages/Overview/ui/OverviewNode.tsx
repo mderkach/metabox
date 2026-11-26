@@ -25,6 +25,8 @@ import {
 } from '@shared/ui';
 import { DELAY_TONE } from '@widgets/ProxyGroups';
 
+import { OVERVIEW_NS } from '../i18n/Overview.namespace.generated';
+import type { OverviewLinks } from '../model/Overview.links';
 import { OverviewCoreGap } from './OverviewCoreGap';
 import { OverviewOutboundName } from './OverviewOutboundName';
 
@@ -34,18 +36,20 @@ import { OverviewOutboundName } from './OverviewOutboundName';
  * picks its node itself, and its choice is on the proxies screen.
  */
 export function OverviewNode({
+  proxiesTo,
   onSelected,
   stopped,
   latencies,
   latencyAvailable,
 }: {
+  proxiesTo: OverviewLinks['proxies'];
   onSelected: (message: string) => void;
   /** The core is confirmed stopped and cannot switch a group. */
   stopped: boolean;
   latencies?: ServerLatencies | undefined;
   latencyAvailable?: boolean;
 }) {
-  const { t } = useTranslation('pages/Overview');
+  const { t } = useTranslation(OVERVIEW_NS);
   const proxies = useProxies();
   const metadata = useOutboundMetadata();
   const select = useSelectProxy();
@@ -56,7 +60,7 @@ export function OverviewNode({
     <div className='flex flex-col gap-3'>
       <h2>
         <Link
-          to='/proxies'
+          to={proxiesTo}
           className='flex w-fit items-center gap-1 transition-colors hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none pointer-coarse:min-h-11'
         >
           <span className={CARD_TITLE}>{t('node.title')}</span>

@@ -23,6 +23,7 @@ import {
   SECTION_HEADING,
 } from '@shared/ui';
 
+import { PROXY_GROUPS_NS } from '../i18n/ProxyGroups.namespace.generated';
 import { ProxyGroupCard } from './ProxyGroupCard';
 import { ProxyGroupsLegend } from './ProxyGroupsLegend';
 import type { ProxyNodeDiagnostics } from './ProxyNodeDiagnostic';
@@ -68,7 +69,7 @@ export function ProxyGroups({
   latencies: ServerLatencies | undefined;
   onMetadataSaved: (tag: string, label?: string) => void;
 }) {
-  const { t } = useTranslation('widgets/ProxyGroups');
+  const { t } = useTranslation(PROXY_GROUPS_NS);
   const primaryGroup = new Map<string, string>();
   for (const group of groups) {
     for (const node of group.nodes) {

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useMcp } from '@entities/Mcp';
 import { CARD_TITLE, Card, CardContent, CardHeader } from '@shared/ui';
 
+import { MCP_ACCESS_NS } from '../i18n/McpAccess.namespace.generated';
 import { McpAccessBody } from './McpAccessBody';
 
 /**
@@ -11,7 +12,7 @@ import { McpAccessBody } from './McpAccessBody';
  * an older daemon without the endpoint has nothing to switch.
  */
 export function McpAccessSection() {
-  const { t } = useTranslation('features/Mcp/McpAccess');
+  const { t } = useTranslation(MCP_ACCESS_NS);
   const mcp = useMcp();
   // "Done" after a token remounts the body: the issued token lives in its mutation and goes with it.
   const [round, setRound] = useState(0);

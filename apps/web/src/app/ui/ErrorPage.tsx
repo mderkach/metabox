@@ -3,7 +3,10 @@ import { TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { failureText } from '@shared/api';
+import { SHARED_NS } from '@shared/i18n';
 import { Button, Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@shared/ui';
+
+import { APP_NS } from '../i18n';
 
 /**
  * An error the section did not handle itself. Sections show source failures in
@@ -13,7 +16,7 @@ import { Button, Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia,
  * The sidebar stays: the boundary is inside the shell.
  */
 export function ErrorPage({ error }: ErrorComponentProps) {
-  const { t } = useTranslation('app');
+  const { t } = useTranslation(APP_NS);
   const reason = failureText(error);
 
   return (
@@ -23,7 +26,7 @@ export function ErrorPage({ error }: ErrorComponentProps) {
           <TriangleAlert />
         </EmptyMedia>
         <EmptyTitle>
-          <h1>{t('error.unknown', { ns: 'shared' })}</h1>
+          <h1>{t('error.unknown', { ns: SHARED_NS })}</h1>
         </EmptyTitle>
         <EmptyDescription>{reason ?? t('error.description')}</EmptyDescription>
       </EmptyHeader>

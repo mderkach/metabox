@@ -2,11 +2,12 @@ import { TriangleAlert } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { RULE_EDIT_NS } from '../i18n/RuleEdit.namespace.generated';
 import { conditionLines, RULE_CONDITIONS, type RuleEditModel } from '../model/RuleEdit.schema';
 
 /** Warns, does not block: a rule without conditions is sometimes intended. */
 export function RuleCatchAllWarning() {
-  const { t } = useTranslation('features/Rule/RuleEdit');
+  const { t } = useTranslation(RULE_EDIT_NS);
   const { watch } = useFormContext<RuleEditModel>();
   const sets = watch('ruleSet');
   const conditions = watch('conditions');

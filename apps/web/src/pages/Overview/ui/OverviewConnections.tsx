@@ -3,24 +3,29 @@ import { useTranslation } from 'react-i18next';
 
 import { deviceLabel, useDeviceIndex } from '@entities/Device';
 import type { useProxyLatency } from '@entities/Proxy';
+import { SHARED_NS } from '@shared/i18n';
 import { ConnectionSummaryAction, ConnectionSummaryNetwork, ConnectionSummaryTop } from '@widgets/ConnectionSummary';
 import { ProxyLatency } from '@widgets/ProxyLatency';
 
+import { OVERVIEW_NS } from '../i18n/Overview.namespace.generated';
 import type { OverviewRuntime } from '../lib';
+import type { OverviewLinks } from '../model/Overview.links';
 import { OverviewActivity } from './OverviewActivity';
 import { OverviewCoreGap } from './OverviewCoreGap';
 import { OverviewSection } from './OverviewSection';
 
 export function OverviewConnections({
+  links,
   runtime,
   latency,
   onLatencyTested,
 }: {
+  links: Pick<OverviewLinks, 'proxies' | 'connections'>;
   runtime: OverviewRuntime;
   latency: ReturnType<typeof useProxyLatency>;
   onLatencyTested: () => void;
 }) {
-  const { t } = useTranslation('pages/Overview');
+  const { t } = useTranslation(OVERVIEW_NS);
   // The overview is kept open for hours: a new device on the network should get a name
   // without a reload, so the device list is polled here.
   const devices = useDeviceIndex({ poll: true });
@@ -29,28 +34,28 @@ export function OverviewConnections({
   const missing = runtime.connectionsGap !== null || runtime.connectionsAwaiting;
 
   return (
-    <OverviewSection title={t('section.connections', { ns: 'shared' })}>
+    <OverviewSection title={t('section.connections', { ns: SHARED_NS })}>
       {/* Six panels: two rows of three on a wide screen, three of two below it. */}
       <div className='grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3'>
         <ConnectionSummaryAction
           shares={runtime.summary.actions}
           placeholder={missing ? <OverviewCoreGap gap={runtime.connectionsGap} /> : undefined}
         />
-        <OverviewActivity runtime={runtime} />
+        <OverviewActivity connectionsTo={links.connections} runtime={runtime} />
         <ConnectionSummaryNetwork
           shares={runtime.summary.networks}
           placeholder={missing ? <OverviewCoreGap gap={runtime.connectionsGap} /> : undefined}
         />
         <ConnectionSummaryTop
           title={t('connections.topNodes')}
-          href='/proxies'
+          href={links.proxies}
           shares={runtime.summary.nodes}
           empty={t('connections.topNodesEmpty')}
           placeholder={missing ? <OverviewCoreGap gap={runtime.connectionsGap} /> : undefined}
         />
         <ConnectionSummaryTop
           title={t('connections.topSources')}
-          href='/connections'
+          href={links.connections}
           shares={runtime.summary.sources}
           label={sourceLabel}
           placeholder={missing ? <OverviewCoreGap gap={runtime.connectionsGap} /> : undefined}

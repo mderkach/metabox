@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@entities/Auth';
 import { CARD_TITLE, Card, CardContent, CardHeader } from '@shared/ui';
 
+import { AUTH_SESSIONS_NS } from '../i18n/AuthSessions.namespace.generated';
 import { AuthSessionsList } from './AuthSessionsList';
 
 /**
@@ -11,7 +12,7 @@ import { AuthSessionsList } from './AuthSessionsList';
  * sessions to list.
  */
 export function AuthSessionsSection() {
-  const { t } = useTranslation('features/Auth/AuthSessions');
+  const { t } = useTranslation(AUTH_SESSIONS_NS);
   const auth = useAuth();
 
   if (!auth.isSuccess || !auth.data.authenticated) {

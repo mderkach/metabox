@@ -4,11 +4,12 @@ import { useTranslation } from 'react-i18next';
 
 import { Input, Label } from '@shared/ui';
 
+import { RULE_EDIT_NS } from '../i18n/RuleEdit.namespace.generated';
 import type { RuleEditModel } from '../model/RuleEdit.schema';
 
 /** `placeholder` is the label the rule gets without a name, so an empty field shows what it will be called. */
 export function RuleNameField({ placeholder }: { placeholder: string }) {
-  const { t } = useTranslation('features/Rule/RuleEdit');
+  const { t } = useTranslation(RULE_EDIT_NS);
   const { control } = useFormContext<RuleEditModel>();
   const id = useId();
   const hintId = useId();

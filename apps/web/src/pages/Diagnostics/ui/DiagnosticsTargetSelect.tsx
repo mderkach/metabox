@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
+import { DIAGNOSTICS_NS } from '../i18n/Diagnostics.namespace.generated';
+
 /** Empty value: the outbound through a node is not checked; the daemon takes this string as a skip. */
 const NO_TARGET = '';
 
@@ -15,7 +17,7 @@ export function DiagnosticsTargetSelect({
   target: string;
   onTargetChange: (target: string) => void;
 }) {
-  const { t } = useTranslation('pages/Diagnostics');
+  const { t } = useTranslation(DIAGNOSTICS_NS);
   const id = useId();
   const items = [
     { value: NO_TARGET, label: t('target.none') },

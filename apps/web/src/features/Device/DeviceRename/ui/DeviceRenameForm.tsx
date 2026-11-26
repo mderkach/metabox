@@ -8,9 +8,10 @@ import { toDevices, type Device, type NameSource } from '@entities/Device';
 import { Button, Input } from '@shared/ui';
 
 import { useRenameDevice } from '../api';
+import { DEVICE_RENAME_NS } from '../i18n/DeviceRename.namespace.generated';
 import { DEVICE_NAME_LIMIT, DEVICE_RENAME_ERROR, DeviceRenameSchema, type DeviceRenameModel } from '../model';
 
-const ERROR_KEY: Readonly<Record<string, ParseKeys<'features/Device/DeviceRename'> | undefined>> = {
+const ERROR_KEY: Readonly<Record<string, ParseKeys<typeof DEVICE_RENAME_NS> | undefined>> = {
   [DEVICE_RENAME_ERROR.TooLong]: 'error.tooLong',
   [DEVICE_RENAME_ERROR.ControlChars]: 'error.controlChars',
 };
@@ -30,7 +31,7 @@ export function DeviceRenameForm({
   /** The form closed: the name is saved (`label` is the new label) or the edit is cancelled (`null`). */
   onDone: (label: string | null) => void;
 }) {
-  const { t } = useTranslation('features/Device/DeviceRename');
+  const { t } = useTranslation(DEVICE_RENAME_NS);
   const rename = useRenameDevice();
   const inputId = useId();
   const hintId = useId();

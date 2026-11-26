@@ -13,6 +13,7 @@ import {
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 
 import { AppSidebar } from '../ui/AppSidebar';
+import { navigation } from './AppSidebar.fixture';
 
 describe('AppSidebar', () => {
   it('puts Overview first in the main sections and Help outside them', async () => {
@@ -20,7 +21,7 @@ describe('AppSidebar', () => {
       http.get(DAEMON_ENDPOINT.status(), () => HttpResponse.json(DAEMON_STATUS_FIXTURE)),
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
     );
-    renderWithRouter(AppSidebar, { path: '/overview' });
+    renderWithRouter(() => <AppSidebar navigation={navigation} />, { path: '/overview' });
 
     const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
     expect(within(nav).getAllByRole('link')[0]).toHaveAccessibleName('Обзор');
@@ -39,7 +40,7 @@ describe('AppSidebar', () => {
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
     );
 
-    renderWithRouter(AppSidebar);
+    renderWithRouter(() => <AppSidebar navigation={navigation} />);
 
     expect(await screen.findByText('состояние ядра неизвестно')).toBeInTheDocument();
     expect(screen.queryByText('ядро работает')).not.toBeInTheDocument();
@@ -52,7 +53,7 @@ describe('AppSidebar', () => {
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_DRIFT_FIXTURE))
     );
 
-    renderWithRouter(AppSidebar);
+    renderWithRouter(() => <AppSidebar navigation={navigation} />);
 
     expect(await screen.findByText('ядро старше форм')).toBeInTheDocument();
   });
@@ -63,7 +64,7 @@ describe('AppSidebar', () => {
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
     );
 
-    renderWithRouter(AppSidebar);
+    renderWithRouter(() => <AppSidebar navigation={navigation} />);
 
     expect(await screen.findByText('ядро работает')).toBeInTheDocument();
   });
@@ -75,7 +76,7 @@ describe('AppSidebar', () => {
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_UNREAD_FIXTURE))
     );
 
-    renderWithRouter(AppSidebar);
+    renderWithRouter(() => <AppSidebar navigation={navigation} />);
 
     expect(await screen.findByText('состояние ядра неизвестно')).toBeInTheDocument();
     expect(screen.queryByText('ядро остановлено')).not.toBeInTheDocument();
@@ -88,7 +89,7 @@ describe('AppSidebar', () => {
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
     );
 
-    renderWithRouter(AppSidebar);
+    renderWithRouter(() => <AppSidebar navigation={navigation} />);
 
     expect(await screen.findByText('ядро работает')).toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
@@ -101,7 +102,7 @@ describe('AppSidebar', () => {
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
     );
 
-    renderWithRouter(AppSidebar);
+    renderWithRouter(() => <AppSidebar navigation={navigation} />);
 
     expect(await screen.findByRole('link', { name: 'Настройки' })).toHaveAttribute('href', '/settings');
     expect(screen.queryByRole('button', { name: /пароль/i })).not.toBeInTheDocument();

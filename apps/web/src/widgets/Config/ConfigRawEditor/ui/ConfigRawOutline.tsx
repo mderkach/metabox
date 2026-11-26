@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { type JsoncOutlineEntry, jsoncOutline } from '@shared/lib/jsonc';
 import { Button, Popover, PopoverContent, PopoverTrigger } from '@shared/ui';
 
+import { CONFIG_RAW_EDITOR_NS } from '../i18n/ConfigRawEditor.namespace.generated';
 import { ConfigRawOutlineEntry } from './ConfigRawOutlineEntry';
 
 /**
@@ -23,7 +24,7 @@ export function ConfigRawOutline({
   /** Select the section key in the field and scroll to it. */
   onJump: (offset: number, length: number) => void;
 }) {
-  const { t } = useTranslation('widgets/Config/ConfigRawEditor');
+  const { t } = useTranslation(CONFIG_RAW_EDITOR_NS);
   const [open, setOpen] = useState(false);
   const outline = useMemo(() => (open ? jsoncOutline(text) : []), [open, text]);
 

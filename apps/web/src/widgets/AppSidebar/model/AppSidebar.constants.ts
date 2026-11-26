@@ -1,4 +1,3 @@
-import type { LinkProps } from '@tanstack/react-router';
 import type { ParseKeys } from 'i18next';
 import {
   Activity,
@@ -13,11 +12,14 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
+import type { SHARED_NS } from '@shared/i18n';
+import type { StaticPagePath } from '@shared/lib/navigation';
+
 interface NavItem {
-  key: ParseKeys<'shared'>;
+  key: ParseKeys<typeof SHARED_NS>;
   icon: LucideIcon;
   /** A route exists only for finished sections: other items are not clickable. */
-  to?: LinkProps['to'];
+  to?: StaticPagePath;
   /** Path prefix shared by every screen in this section. */
   match?: string;
   /**
@@ -28,27 +30,35 @@ interface NavItem {
   more?: true;
 }
 
-export const HELP_NAV_ITEM = {
-  key: 'section.howItWorks',
-  icon: BookOpen,
-  to: '/how-it-works',
-  more: true,
-} as const satisfies NavItem;
+export function createSidebarNavigation(routes: {
+  overview: StaticPagePath;
+  config: StaticPagePath;
+  simple: StaticPagePath;
+  proxies: StaticPagePath;
+  connections: StaticPagePath;
+  devices: StaticPagePath;
+  logs: StaticPagePath;
+  diagnostics: StaticPagePath;
+  settings: StaticPagePath;
+  help: StaticPagePath;
+}) {
+  const help = { key: 'section.howItWorks', icon: BookOpen, to: routes.help, more: true } as const satisfies NavItem;
+  const sections: readonly NavItem[] = [
+    { key: 'section.overview', icon: Gauge, to: routes.overview },
+    { key: 'section.config', icon: SlidersHorizontal, to: routes.simple, match: routes.config },
+    { key: 'section.proxies', icon: Share2, to: routes.proxies },
+    { key: 'section.connections', icon: Activity, to: routes.connections },
+    { key: 'section.devices', icon: MonitorSmartphone, to: routes.devices },
+    { key: 'section.logs', icon: ScrollText, to: routes.logs, more: true },
+    { key: 'section.diagnostics', icon: Stethoscope, to: routes.diagnostics, more: true },
+    { key: 'section.settings', icon: Settings, to: routes.settings, more: true },
+  ];
+  const items: readonly NavItem[] = [help, ...sections];
+  const targets = [...sections, help].flatMap((item: NavItem) =>
+    item.to === undefined ? [] : [item.match ?? item.to]
+  );
 
-export const SIDEBAR_SECTIONS: readonly NavItem[] = [
-  { key: 'section.overview', icon: Gauge, to: '/overview' },
-  { key: 'section.config', icon: SlidersHorizontal, to: '/config/simple', match: '/config' },
-  { key: 'section.proxies', icon: Share2, to: '/proxies' },
-  { key: 'section.connections', icon: Activity, to: '/connections' },
-  { key: 'section.devices', icon: MonitorSmartphone, to: '/devices' },
-  { key: 'section.logs', icon: ScrollText, to: '/logs', more: true },
-  { key: 'section.diagnostics', icon: Stethoscope, to: '/diagnostics', more: true },
-  { key: 'section.settings', icon: Settings, to: '/settings', more: true },
-];
+  return { help, sections, items, targets };
+}
 
-export const NAV_ITEMS: readonly NavItem[] = [HELP_NAV_ITEM, ...SIDEBAR_SECTIONS];
-
-/** Section addresses in desktop menu order: the router picks the transition direction by it. */
-export const NAV_TARGETS: readonly string[] = [...SIDEBAR_SECTIONS, HELP_NAV_ITEM].flatMap((item: NavItem) =>
-  item.to === undefined ? [] : [item.match ?? item.to]
-);
+export type SidebarNavigation = ReturnType<typeof createSidebarNavigation>;

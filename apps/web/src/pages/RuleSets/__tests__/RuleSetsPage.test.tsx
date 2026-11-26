@@ -1,4 +1,6 @@
+import { useSearch } from '@tanstack/react-router';
 import { renderWithRouter as renderScreen } from '@test/renderWithRouter';
+import { RULE_SET_LINKS } from '@test/ruleSetLinks';
 import { server } from '@test/server';
 import { finishSidePanelTransition } from '@test/sidePanel';
 import { screen, waitFor, within } from '@testing-library/react';
@@ -20,10 +22,16 @@ import { RuleSetsPage } from '../ui/RuleSetsPage';
 function RuleSetsWithShortcuts() {
   useShortcuts();
 
-  return <RuleSetsPage />;
+  return <RuleSetsScreen />;
 }
 
-function renderWithRouter(component: typeof RuleSetsPage, initialEntry?: string) {
+function RuleSetsScreen() {
+  const { set } = useSearch({ from: '/config/rule-set' });
+
+  return <RuleSetsPage openedTag={set} ruleSetLinks={RULE_SET_LINKS} />;
+}
+
+function renderWithRouter(component: typeof RuleSetsScreen, initialEntry?: string) {
   return renderScreen(component, { path: '/config/rule-set', validateSearch: parseRuleSetSearch, initialEntry });
 }
 
@@ -109,7 +117,7 @@ describe('rule sets screen', () => {
   });
 
   it('opens the set named in the address and shows where it is used', async () => {
-    renderWithRouter(RuleSetsPage, '/config/rule-set?set=geosite-google');
+    renderWithRouter(RuleSetsScreen, '/config/rule-set?set=geosite-google');
 
     expect(await screen.findByRole('button', { name: 'Скрыть подробности о сете geosite-google' })).toHaveAttribute(
       'aria-expanded',
@@ -119,7 +127,7 @@ describe('rule sets screen', () => {
   });
 
   it('leaves every set collapsed for an unknown tag', async () => {
-    renderWithRouter(RuleSetsPage, '/config/rule-set?set=missing');
+    renderWithRouter(RuleSetsScreen, '/config/rule-set?set=missing');
 
     const toggles = await screen.findAllByRole('button', { name: /Подробнее о сете/ });
     expect(toggles).toHaveLength(2);
@@ -128,7 +136,7 @@ describe('rule sets screen', () => {
 
   it('expands and collapses a set with the keyboard, keeping focus on the toggle', async () => {
     const user = userEvent.setup();
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
     const toggle = await screen.findByRole('button', { name: 'Подробнее о сете geoip-ru' });
     toggle.focus();
     await user.keyboard('{Enter}');
@@ -142,7 +150,7 @@ describe('rule sets screen', () => {
 
   it('allows two details panels without adding table rows', async () => {
     const user = userEvent.setup();
-    renderWithRouter(RuleSetsPage, '/config/rule-set?set=geosite-google');
+    renderWithRouter(RuleSetsScreen, '/config/rule-set?set=geosite-google');
 
     const second = await screen.findByRole('button', { name: 'Подробнее о сете geoip-ru' });
     await user.click(second);
@@ -169,7 +177,7 @@ describe('rule sets screen', () => {
       )
     );
 
-    renderWithRouter(RuleSetsPage, '/config/rule-set?set=geosite-google');
+    renderWithRouter(RuleSetsScreen, '/config/rule-set?set=geosite-google');
     expect(await screen.findByText(message)).toBeInTheDocument();
   });
 
@@ -183,7 +191,7 @@ describe('rule sets screen', () => {
       )
     );
 
-    renderWithRouter(RuleSetsPage, '/config/rule-set?set=geosite-google');
+    renderWithRouter(RuleSetsScreen, '/config/rule-set?set=geosite-google');
     expect(await screen.findByText(/Сохранённая копия скачана с другого адреса/)).toBeInTheDocument();
     expect(screen.getAllByText('2.0 кБ')).toHaveLength(2);
     for (const time of screen.getAllByRole('time')) {
@@ -204,7 +212,7 @@ describe('rule sets screen', () => {
     );
 
     const user = userEvent.setup();
-    renderWithRouter(RuleSetsPage, '/config/rule-set?set=geosite-google');
+    renderWithRouter(RuleSetsScreen, '/config/rule-set?set=geosite-google');
 
     expect(await screen.findByText('Не удалось загрузить время проверки и размер.')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Подключённые сеты' })).toBeInTheDocument();
@@ -221,14 +229,14 @@ describe('rule sets screen', () => {
     ConfigDocumentState.getState().load(CONFIG_WITHOUT_REMOTE);
     ConfigDocumentState.getState().replace(CONFIG_WITHOUT_CACHE);
 
-    renderWithRouter(RuleSetsPage, '/config/rule-set?set=geoip-ru');
+    renderWithRouter(RuleSetsScreen, '/config/rule-set?set=geoip-ru');
 
     expect(await screen.findByText('Есть только в черновике. Ядро получит его после применения.')).toBeInTheDocument();
     expect(loadCache).not.toHaveBeenCalled();
   });
 
   it('the header names the list columns', async () => {
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
 
     const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
 
@@ -253,7 +261,7 @@ describe('rule sets screen', () => {
       )
     );
 
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
 
     const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
     const [inline, local] = within(table).getAllByRole('row').slice(HEADER_ROWS);
@@ -266,7 +274,7 @@ describe('rule sets screen', () => {
   });
 
   it('names the provider and list kind by the daemon catalog', async () => {
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
 
     const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
     const rows = within(table).getAllByRole('row').slice(HEADER_ROWS);
@@ -280,7 +288,7 @@ describe('rule sets screen', () => {
   it('on a catalog failure shows the list and reports the failure', async () => {
     server.use(http.get(RULE_SET_ENDPOINT.catalog(), () => HttpResponse.json({}, { status: 500 })));
 
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
 
     const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
 
@@ -290,14 +298,14 @@ describe('rule sets screen', () => {
 
   // The router owner is not obliged to read the raw `24h` from the config.
   it('prints the update interval in words', async () => {
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
 
     expect(await screen.findByText('обновляется раз в сутки')).toBeInTheDocument();
     expect(screen.getByText('обновляется каждые 12 ч')).toBeInTheDocument();
   });
 
   it('the usage mark leads to the rules filtered by the rule set', async () => {
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
 
     const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
 
@@ -316,7 +324,7 @@ describe('rule sets screen', () => {
   it('removing a rule set requires confirmation and names the rules that refer to it', async () => {
     const user = userEvent.setup();
 
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
 
     await user.click(await screen.findByRole('button', { name: 'Убрать сет geosite-google' }));
 
@@ -337,7 +345,7 @@ describe('rule sets screen', () => {
   it('cancelling the confirmation leaves the rule set in place', async () => {
     const user = userEvent.setup();
 
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
 
     await user.click(await screen.findByRole('button', { name: 'Убрать сет geoip-ru' }));
     await user.click(
@@ -356,7 +364,7 @@ describe('rule sets screen', () => {
   it('search filters rows and is reset by the empty screen button', async () => {
     const user = userEvent.setup();
 
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
 
     const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
 
@@ -396,7 +404,7 @@ describe('rule set panel', () => {
   it('the toolbar button opens the form in a panel next to the list and moves focus to its heading', async () => {
     const user = userEvent.setup();
 
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
 
     const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
     const open = screen.getByRole('button', { name: 'Подключить сет' });
@@ -446,7 +454,7 @@ describe('rule set panel', () => {
   it('Escape closes the panel and returns focus to the button that opened it', async () => {
     const user = userEvent.setup();
 
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
 
     await screen.findByRole('table', { name: 'Подключённые сеты' });
 
@@ -466,7 +474,7 @@ describe('rule set panel', () => {
   it('a custom list from the panel lands in the list, and the panel closes', async () => {
     const user = userEvent.setup();
 
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
 
     const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
 
@@ -488,7 +496,7 @@ describe('rule set panel', () => {
   it('the row pencil opens a rule set edit in the panel, the edit goes into the draft as typed', async () => {
     const user = userEvent.setup();
 
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
 
     await screen.findByRole('table', { name: 'Подключённые сеты' });
     await user.click(screen.getByRole('button', { name: 'Изменить сет geoip-ru' }));
@@ -547,7 +555,7 @@ describe('rule set panel on a narrow screen', () => {
   it('opens the form as a sheet over the list, not next to it', async () => {
     const user = userEvent.setup();
 
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
 
     await screen.findByRole('table', { name: 'Подключённые сеты' });
     await user.click(screen.getByRole('button', { name: 'Подключить сет' }));
@@ -581,7 +589,7 @@ describe('rule set cache warning', () => {
 
     const user = userEvent.setup();
 
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
 
     expect(await screen.findByText(CACHE_NOTICE)).toBeInTheDocument();
 
@@ -599,7 +607,7 @@ describe('rule set cache warning', () => {
   it('a document without remote rule sets shows no warning', async () => {
     server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(CONFIG_WITHOUT_REMOTE)));
 
-    renderWithRouter(RuleSetsPage);
+    renderWithRouter(RuleSetsScreen);
 
     const table = await screen.findByRole('table', { name: 'Подключённые сеты' });
 

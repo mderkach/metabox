@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Input, Label } from '@shared/ui';
 
+import { RULE_CATALOG_ADD_NS } from '../i18n/RuleCatalogAdd.namespace.generated';
 import type { CatalogChoice, RuleCatalogForm } from '../model/RuleCatalogAdd.form';
 
 const RESULT_LIMIT = 12;
@@ -17,7 +18,7 @@ export function RuleCatalogAddSearch({
   selected: CatalogChoice | undefined;
   pending: boolean;
 }) {
-  const { t } = useTranslation('features/Rule/RuleCatalogAdd');
+  const { t } = useTranslation(RULE_CATALOG_ADD_NS);
   const { control, setValue } = useFormContext<RuleCatalogForm>();
   const id = useId();
   const firstFocus = useRef(true);

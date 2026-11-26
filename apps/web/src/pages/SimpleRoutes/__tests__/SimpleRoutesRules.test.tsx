@@ -1,4 +1,6 @@
+import { linkOptions } from '@tanstack/react-router';
 import { renderWithRouter } from '@test/renderWithRouter';
+import { RULE_SET_LINKS } from '@test/ruleSetLinks';
 import { server } from '@test/server';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -9,6 +11,7 @@ import { ConfigDocumentStore, selectConfigCurrent, type ConfigDocument } from '@
 import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
 import { ruleSetHandlers } from '@entities/RuleSet/__tests__/RuleSet.handlers';
 
+import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
 import { toSimpleRoutes } from '../model/SimpleRoutes.model';
 import { SimpleRoutesRules } from '../ui/SimpleRoutesRules';
 
@@ -35,7 +38,16 @@ function renderService(ruleSets: NonNullable<NonNullable<ConfigDocument['route']
   ConfigDocumentStore.getState().load(text);
 
   renderWithRouter(
-    () => <SimpleRoutesRules model={toSimpleRoutes(config, text, text)} text={text} outbound='office' />,
+    () => (
+      <SimpleRoutesRules
+        links={{ self: '/config/simple', rule: (rule) => linkOptions({ to: '/config', search: { rule } }) }}
+        referenceLink={RULE_SET_LINKS.reference}
+        onOutboundChange={() => {}}
+        model={toSimpleRoutes(config, text, text)}
+        text={text}
+        outbound='office'
+      />
+    ),
     {
       path: '/config/simple',
       initialEntry: '/config/simple?outbound=office',
@@ -80,7 +92,7 @@ describe('SimpleRoutesRules', () => {
     renderService(definitions);
     await user.click(await screen.findByRole('button', { name: 'work' }));
 
-    expect(screen.getByText(i18next.t('list.sourceUnavailable', { ns: 'pages/SimpleRoutes' }))).toBeVisible();
+    expect(screen.getByText(i18next.t('list.sourceUnavailable', { ns: SIMPLE_ROUTES_NS }))).toBeVisible();
     expect(screen.queryByText(/work\.srs|other\.srs/u)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Правило 3' })).toHaveAttribute('href', '/config?rule=3');
   });

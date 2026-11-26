@@ -6,6 +6,7 @@ import { ConfigNodeForm, ConfigSectionForm } from '@features/Config/ConfigNodeFo
 import { ConfigNodeRawEditor } from '@features/Config/ConfigNodeRaw';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui';
 
+import { CONFIG_NODE_NS } from '../i18n/ConfigNode.namespace.generated';
 import { isNodeObject, toNodeForm } from '../model';
 
 const TAB = {
@@ -33,7 +34,7 @@ export function ConfigNodeEditor({
   /** Binary build tags: the form marks options outside the build by them; `null` means not read. */
   builtTags?: readonly string[] | null;
 }) {
-  const { t } = useTranslation('widgets/Config/ConfigNode');
+  const { t } = useTranslation(CONFIG_NODE_NS);
   const path = sectionNodePath(section, index);
   const form = toNodeForm(section, node);
   const [tab, setTab] = useState<string>(form.recognized ? TAB.Form : TAB.Raw);

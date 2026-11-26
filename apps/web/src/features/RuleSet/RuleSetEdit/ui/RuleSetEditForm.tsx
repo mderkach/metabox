@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ConfigDocumentState, ConfigDocumentStore } from '@entities/Config';
 import { StringField } from '@features/Config/ConfigNodeForm/@x/RuleSetEdit';
 import { ExtraFields, TagField, type RuleSetAddModel } from '@features/RuleSet/RuleSetAdd/@x/RuleSetEdit';
+import { SHARED_NS } from '@shared/i18n';
 import { FIELD_KIND, type FieldPlan } from '@shared/lib/schemaShape';
 import { useWriteOnChange } from '@shared/lib/useWriteOnChange';
 import { Button } from '@shared/ui';
@@ -36,7 +37,7 @@ export function RuleSetEditForm({
   outbounds: readonly string[];
   onDone: () => void;
 }) {
-  const { t } = useTranslation('shared');
+  const { t } = useTranslation(SHARED_NS);
   const editMany = ConfigDocumentState.use.editMany();
   const revision = ConfigDocumentState.use.revision();
   const defaults = ruleSetEditDefaults(node);

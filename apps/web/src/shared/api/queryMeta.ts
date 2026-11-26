@@ -1,6 +1,7 @@
 import i18next, { type ParseKeys } from 'i18next';
 import { toast } from 'sonner';
 
+import { SHARED_NS } from '../i18n';
 import { API_FAILURE, ApiError, isSessionLost } from './ApiError';
 import { failureText } from './failureText';
 
@@ -9,7 +10,7 @@ import { failureText } from './failureText';
  * for the whole application shows them, and the slice dictionary may not be
  * loaded yet by then.
  */
-export type MessageKey = ParseKeys<'shared'>;
+export type MessageKey = ParseKeys<typeof SHARED_NS>;
 
 /**
  * Error display. A union, not a set of optional fields: otherwise
@@ -54,14 +55,14 @@ function isDaemonUnreachable(error: unknown): boolean {
  * is unfamiliar — it is in its language, not the user's.
  */
 function errorText(meta: ErrorMeta, error: unknown): string {
-  const action = meta.errorMessageKey === undefined ? null : i18next.t(meta.errorMessageKey, { ns: 'shared' });
+  const action = meta.errorMessageKey === undefined ? null : i18next.t(meta.errorMessageKey, { ns: SHARED_NS });
   const reason = failureText(error) ?? (error instanceof Error ? error.message : null);
 
   if (action !== null && reason !== null) {
-    return i18next.t('failure.withReason', { ns: 'shared', action, reason });
+    return i18next.t('failure.withReason', { ns: SHARED_NS, action, reason });
   }
 
-  return action ?? reason ?? i18next.t('error.unknown', { ns: 'shared' });
+  return action ?? reason ?? i18next.t('error.unknown', { ns: SHARED_NS });
 }
 
 /**
@@ -81,5 +82,5 @@ export function showQuerySuccess(meta: QueryMeta | undefined) {
     return;
   }
 
-  toast.success(i18next.t(meta.successMessageKey, { ns: 'shared' }));
+  toast.success(i18next.t(meta.successMessageKey, { ns: SHARED_NS }));
 }

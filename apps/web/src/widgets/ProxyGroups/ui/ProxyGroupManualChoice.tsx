@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { MANUAL_CHOICE, useManualChoice, type ManualChoiceStatus } from '@features/Proxy/ProxyManualChoice';
 import { Button } from '@shared/ui';
 
+import { PROXY_GROUPS_NS } from '../i18n/ProxyGroups.namespace.generated';
+
 const NOTE_KEY = {
   [MANUAL_CHOICE.Unavailable]: null,
   [MANUAL_CHOICE.Available]: 'auto.hint',
@@ -14,7 +16,7 @@ const NOTE_KEY = {
 
 /** Why an automatic group cannot be switched, and the way to a manual choice over it. */
 export function ProxyGroupManualChoice({ group }: { group: string }) {
-  const { t } = useTranslation('widgets/ProxyGroups');
+  const { t } = useTranslation(PROXY_GROUPS_NS);
   const choice = useManualChoice(group);
   const [refused, setRefused] = useState(false);
   const focusAddedNote = useRef(false);

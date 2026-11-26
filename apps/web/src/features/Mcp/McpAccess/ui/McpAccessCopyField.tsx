@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, Input, Textarea } from '@shared/ui';
 
+import { MCP_ACCESS_NS } from '../i18n/McpAccess.namespace.generated';
 import { copyText } from '../lib';
 
 /**
@@ -24,7 +25,7 @@ export function McpAccessCopyField({
   focusOnMount?: boolean;
   announce: (text: string) => void;
 }) {
-  const { t } = useTranslation('features/Mcp/McpAccess');
+  const { t } = useTranslation(MCP_ACCESS_NS);
   const fieldId = useId();
   const field = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
   const [copied, setCopied] = useState(false);

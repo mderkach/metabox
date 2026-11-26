@@ -1,9 +1,12 @@
 import type { ParseKeys } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '@shared/i18n';
 import { Button, ConfirmDialog, FORM_ACTIONS } from '@shared/ui';
 
-type McpKey = ParseKeys<'features/Mcp/McpAccess'>;
+import { MCP_ACCESS_NS } from '../i18n/McpAccess.namespace.generated';
+
+type McpKey = ParseKeys<typeof MCP_ACCESS_NS>;
 
 const PERMISSION_KEY: Readonly<Record<string, McpKey | undefined>> = {
   read: 'permission.read',
@@ -22,7 +25,7 @@ export function McpAccessOn({
   onRegenerate: () => void;
   onDisable: () => void;
 }) {
-  const { t } = useTranslation('features/Mcp/McpAccess');
+  const { t } = useTranslation(MCP_ACCESS_NS);
   const permissionTexts = permissions.map((permission) => {
     const key = PERMISSION_KEY[permission];
 
@@ -49,7 +52,7 @@ export function McpAccessOn({
           }
           title={t('on.disable.title')}
           description={t('on.disable.description')}
-          cancelLabel={t('action.cancel', { ns: 'shared' })}
+          cancelLabel={t('action.cancel', { ns: SHARED_NS })}
           confirmLabel={t('on.disable.confirm')}
           destructive
           onConfirm={onDisable}
@@ -62,7 +65,7 @@ export function McpAccessOn({
           }
           title={t('on.regenerate.title')}
           description={t('on.regenerate.description')}
-          cancelLabel={t('action.cancel', { ns: 'shared' })}
+          cancelLabel={t('action.cancel', { ns: SHARED_NS })}
           confirmLabel={t('on.regenerate.confirm')}
           destructive
           onConfirm={onRegenerate}

@@ -5,19 +5,19 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, Textarea } from '@shared/ui';
 
+import { CONFIG_NODE_FORM_NS } from '../i18n/ConfigNodeForm.namespace.generated';
 import { secretMaskOf, type ConfigNodeFormModel } from '../model';
 import { maskedListText } from '../model/ConfigNodeForm.mask';
 import { NodeRegistryContext } from './ConfigNodeForm.context';
 import { errorText } from './ConfigNodeForm.error';
 import type { NodeFieldProps } from './ConfigNodeForm.field';
 import { useFieldLabel } from './ConfigNodeForm.labels';
-import { NS } from './ConfigNodeForm.namespace';
 import { ConfigNodeFormFieldRow } from './ConfigNodeFormFieldRow';
 import { ConfigNodeFormListInput } from './ConfigNodeFormListInput';
 
 /** List of strings: each value is a chip. */
 export function ConfigNodeFormListField({ field, name }: NodeFieldProps) {
-  const { t } = useTranslation(NS);
+  const { t } = useTranslation(CONFIG_NODE_FORM_NS);
   const label = useFieldLabel(name) ?? field.key;
   const { control } = useFormContext<ConfigNodeFormModel>();
   const id = useId();

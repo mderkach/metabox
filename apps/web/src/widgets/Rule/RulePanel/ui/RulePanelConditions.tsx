@@ -1,12 +1,14 @@
 import { useTranslation } from 'react-i18next';
 
 import { isNamedRuleMatcher, type RuleRow } from '@entities/Rule';
+import { SHARED_NS } from '@shared/i18n';
 import { CARD_TITLE } from '@shared/ui';
 
+import { RULE_PANEL_NS } from '../i18n/RulePanel.namespace.generated';
 import { RulePanelBreakText } from './RulePanelBreakText';
 
 export function RulePanelConditions({ rule }: { rule: RuleRow }) {
-  const { t } = useTranslation('widgets/Rule/RulePanel');
+  const { t } = useTranslation(RULE_PANEL_NS);
   // An unrecognized node is never "without conditions": there is a condition in it, it is just that
   // the schema does not know its fields, and there is no way to show it as a form.
   if (rule.isCatchAll && !rule.recognized) {
@@ -27,13 +29,13 @@ export function RulePanelConditions({ rule }: { rule: RuleRow }) {
 
   return (
     <section className='flex flex-col gap-1.5'>
-      <h3 className={CARD_TITLE}>{t('rule.conditions', { ns: 'shared' })}</h3>
+      <h3 className={CARD_TITLE}>{t('rule.conditions', { ns: SHARED_NS })}</h3>
       <dl className='flex flex-col gap-1'>
         {rule.matchers.map((matcher) => (
           <div key={matcher.key} className='flex gap-3 border-t border-border py-1.5 text-xs first:border-t-0'>
             {isNamedRuleMatcher(matcher.key) ? (
               <dt className='w-32 shrink-0 wrap-anywhere text-muted-foreground' title={matcher.key}>
-                {t(`matcher.${matcher.key}`, { ns: 'shared' })}
+                {t(`matcher.${matcher.key}`, { ns: SHARED_NS })}
               </dt>
             ) : (
               <dt className='w-32 shrink-0 font-mono wrap-anywhere text-muted-foreground'>

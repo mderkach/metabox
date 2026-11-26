@@ -6,6 +6,7 @@ import { NS_IN_SECOND } from '@shared/lib/time';
 import { useCountdown } from '@shared/lib/useCountdown';
 import { Button } from '@shared/ui';
 
+import { CONFIG_APPLY_NS } from '../i18n/ConfigApply.namespace.generated';
 import { ConfigApplyClashApiAdded } from './ConfigApplyClashApiAdded';
 
 /**
@@ -24,7 +25,7 @@ export function ConfigApplyConfirmWindow({
   isConfirming: boolean;
   onConfirm: () => void;
 }) {
-  const { t } = useTranslation('features/Config/ConfigApply');
+  const { t } = useTranslation(CONFIG_APPLY_NS);
   const remaining = useCountdown(Math.ceil(transaction.window / NS_IN_SECOND));
 
   return (

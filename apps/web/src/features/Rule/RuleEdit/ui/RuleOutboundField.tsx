@@ -4,14 +4,15 @@ import { useTranslation } from 'react-i18next';
 
 import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
+import { RULE_EDIT_NS } from '../i18n/RuleEdit.namespace.generated';
 import { RULE_ACTION, RULE_EDIT_ERROR, type RuleEditModel } from '../model/RuleEdit.schema';
 
-const ERROR_KEY: Readonly<Record<string, ParseKeys<'features/Rule/RuleEdit'> | undefined>> = {
+const ERROR_KEY: Readonly<Record<string, ParseKeys<typeof RULE_EDIT_NS> | undefined>> = {
   [RULE_EDIT_ERROR.OutboundRequired]: 'error.outboundRequired',
 };
 
 export function RuleOutboundField({ outbounds }: { outbounds: string[] }) {
-  const { t } = useTranslation('features/Rule/RuleEdit');
+  const { t } = useTranslation(RULE_EDIT_NS);
   const { control, watch } = useFormContext<RuleEditModel>();
   const action = watch('action');
 
@@ -49,7 +50,7 @@ export function RuleOutboundField({ outbounds }: { outbounds: string[] }) {
   );
 }
 
-function errorText(t: TFunction<'features/Rule/RuleEdit'>, message: string | undefined): string | null {
+function errorText(t: TFunction<typeof RULE_EDIT_NS>, message: string | undefined): string | null {
   const key = message === undefined ? undefined : ERROR_KEY[message];
 
   return key === undefined ? null : t(key);

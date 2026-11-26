@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Card } from '@shared/ui';
 
+import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
 import { SimpleRoutesDnsSettings } from './SimpleRoutesDnsSettings';
 import { SimpleRoutesSection } from './SimpleRoutesSection';
 
@@ -18,7 +19,7 @@ export function SimpleRoutesDns({
   rules: number;
   final?: string;
 }) {
-  const { t } = useTranslation('pages/SimpleRoutes');
+  const { t } = useTranslation(SIMPLE_ROUTES_NS);
   const [opened, setOpened] = useState(false);
 
   return (

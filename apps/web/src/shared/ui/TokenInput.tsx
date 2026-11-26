@@ -3,6 +3,7 @@ import { XIcon } from 'lucide-react';
 import { useId, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '../i18n';
 import { cn } from '../lib/utils';
 import { Badge } from './shadcn/badge';
 import { offeredSuggestions, type TokenSuggestion } from './TokenInput.lib';
@@ -60,7 +61,7 @@ export function TokenInput({
   /** A repeated value is dropped. */
   distinct?: boolean;
 }) {
-  const { t } = useTranslation('shared');
+  const { t } = useTranslation(SHARED_NS);
   const [typed, setTyped] = useState('');
   const input = useRef<HTMLInputElement | null>(null);
   const footerId = useId();

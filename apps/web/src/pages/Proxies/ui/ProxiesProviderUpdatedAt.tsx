@@ -4,8 +4,10 @@ import type { ProviderUpdate } from '@entities/Proxy';
 import { formatAge, formatDateTime } from '@shared/lib/format';
 import { MS_IN_SECOND, SECONDS_IN_MINUTE } from '@shared/lib/time';
 
+import { PROXIES_NS } from '../i18n/Proxies.namespace.generated';
+
 export function ProxiesProviderUpdatedAt({ update, now }: { update: ProviderUpdate; now: number }) {
-  const { t } = useTranslation('pages/Proxies');
+  const { t } = useTranslation(PROXIES_NS);
 
   if (update.kind === 'never') {
     return <span>{t('providers.neverUpdated')}</span>;

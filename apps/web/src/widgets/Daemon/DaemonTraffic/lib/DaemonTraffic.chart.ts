@@ -1,20 +1,22 @@
 import type { TFunction } from 'i18next';
 
+import { SHARED_NS } from '@shared/i18n';
 import { BYTE_STEPS, toMirroredTicks, toTimeTicks, toValueScale } from '@shared/lib/chart';
 import { formatRate } from '@shared/lib/format';
 import { type PlotOptions } from '@shared/ui';
 
+import type { DAEMON_TRAFFIC_NS } from '../i18n/DaemonTraffic.namespace.generated';
 import { GRID_DASH, HALF_INTERVALS, LINE_WIDTH, TIME_TICK_SECONDS } from '../model';
 
-function toTimeLabels(t: TFunction<'widgets/Daemon/DaemonTraffic'>, splits: number[], max: number): string[] {
+function toTimeLabels(t: TFunction<typeof DAEMON_TRAFFIC_NS>, splits: number[], max: number): string[] {
   return splits.map((value) => {
     const age = Math.round(max - value);
 
-    return age === 0 ? t('chart.now', { ns: 'shared' }) : t('chart.ago', { ns: 'shared', value: age });
+    return age === 0 ? t('chart.now', { ns: SHARED_NS }) : t('chart.ago', { ns: SHARED_NS, value: age });
   });
 }
 
-function toRateLabel(t: TFunction<'widgets/Daemon/DaemonTraffic'>, value: number): string {
+function toRateLabel(t: TFunction<typeof DAEMON_TRAFFIC_NS>, value: number): string {
   if (value === 0) {
     return formatRate(0);
   }
@@ -24,7 +26,7 @@ function toRateLabel(t: TFunction<'widgets/Daemon/DaemonTraffic'>, value: number
 
 const SERIES = { fillTo: 0, width: LINE_WIDTH, points: { show: false } };
 
-export function buildOptions(t: TFunction<'widgets/Daemon/DaemonTraffic'>): PlotOptions {
+export function buildOptions(t: TFunction<typeof DAEMON_TRAFFIC_NS>): PlotOptions {
   return {
     scales: { x: { time: false, auto: false }, y: { auto: false } },
     series: [{}, SERIES, SERIES],

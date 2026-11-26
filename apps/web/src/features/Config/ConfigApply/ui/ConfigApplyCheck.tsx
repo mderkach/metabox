@@ -5,8 +5,10 @@ import type { CheckFailure } from '@entities/Config';
 import { maskPrivateUrls } from '@shared/lib/maskPrivateUrl';
 import { Alert, AlertDescription, AlertTitle } from '@shared/ui';
 
+import { CONFIG_APPLY_NS } from '../i18n/ConfigApply.namespace.generated';
+
 export function ConfigApplyCheck({ check }: { check: CheckFailure }) {
-  const { t } = useTranslation('features/Config/ConfigApply');
+  const { t } = useTranslation(CONFIG_APPLY_NS);
   const output = [check.stderr, check.stdout].filter((part) => part.length > 0).join('\n');
 
   return (

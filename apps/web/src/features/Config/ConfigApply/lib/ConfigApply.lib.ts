@@ -8,10 +8,8 @@ import {
   selectConfigStale,
   selectListChanges,
   CONFIG_QUERY,
-  CONFIG_SECTION,
   ConfigDocumentState,
   ConfigDocumentStore,
-  isGenericSection,
   getConfigOptions,
   readRuleNames,
   readRules,
@@ -23,8 +21,6 @@ import {
   useListChanges,
   type CheckFailure,
   type ConfigChange,
-  type ConfigSection,
-  type GenericSection,
   type WorkdirMismatch,
 } from '@entities/Config';
 import {
@@ -309,28 +305,6 @@ export function useConfigChanges(): ConfigChange[] {
   const draft = ConfigDocumentState.use.draft();
 
   return useMemo(() => (applied === null || draft === null ? [] : toConfigChanges(applied, draft)), [applied, draft]);
-}
-
-export type SectionLink =
-  | { to: '/config'; search?: { rule: number } }
-  | { to: '/config/rule-set' }
-  | { to: '/config/$section'; params: { section: GenericSection }; search?: { node: number } };
-
-/** `node` is the number of the node in the draft, from one: the link opens it in the section panel. */
-export function toSectionLink(section: ConfigSection, node?: number): SectionLink | null {
-  if (section === CONFIG_SECTION.Route) {
-    return { to: '/config' };
-  }
-
-  if (section === CONFIG_SECTION.RuleSet) {
-    return { to: '/config/rule-set' };
-  }
-
-  if (!isGenericSection(section)) return null;
-
-  return node === undefined
-    ? { to: '/config/$section', params: { section } }
-    : { to: '/config/$section', params: { section }, search: { node } };
 }
 
 /** A value as one line of the summary; `null` means a list or an object, which are named as changed without a value. */

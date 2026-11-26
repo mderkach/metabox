@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@shared/lib/utils';
 import { Autocomplete, Input, Label } from '@shared/ui';
 
+import { RULE_SET_ADD_NS } from '../i18n/RuleSetAdd.namespace.generated';
 import { describedBy } from '../lib/RuleSetAdd.descriptions';
 import { type RuleSetAddModel } from '../model/RuleSetAdd.schema';
 import { matchOutbounds } from '../model/RuleSetAdd.search';
@@ -18,7 +19,7 @@ import { RuleSetAddFieldError } from './RuleSetAddFieldError';
  * disclosure.
  */
 export function RuleSetAddExtraFields({ outbounds }: { outbounds: readonly string[] }) {
-  const { t } = useTranslation('features/RuleSet/RuleSetAdd');
+  const { t } = useTranslation(RULE_SET_ADD_NS);
   const { control, formState } = useFormContext<RuleSetAddModel>();
   const [open, setOpen] = useState(false);
   const intervalId = useId();

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { GenericSection } from '@entities/Config';
 import { ConfigNodePanel, ConfigNodePanelSheet } from '@widgets/Config/ConfigNodePanel';
 
+import { SECTION_NS } from '../i18n/Section.namespace.generated';
 import { SectionPanelActions } from './SectionPanelActions';
 import { SectionPanelBody } from './SectionPanelBody';
 
@@ -43,7 +44,7 @@ export function SectionPanel({
   /** Opens the neighbouring node: the arrow keys on the panel title. */
   onStep?: (step: 1 | -1) => void;
 }) {
-  const { t } = useTranslation('pages/Section');
+  const { t } = useTranslation(SECTION_NS);
   const title = picked === null ? t('add.title') : picked.name;
 
   return sheet ? (

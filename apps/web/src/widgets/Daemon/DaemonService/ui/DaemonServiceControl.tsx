@@ -16,6 +16,7 @@ import { failureText } from '@shared/api';
 import { cn } from '@shared/lib/utils';
 import { Alert, AlertDescription, AlertTitle, Button, CARD_TITLE, Separator } from '@shared/ui';
 
+import { DAEMON_SERVICE_NS } from '../i18n/DaemonService.namespace.generated';
 import { useLastConfirmedService } from '../lib';
 import { formatUptime } from '../lib/DaemonService.uptime';
 import { DaemonServiceRestart } from './DaemonServiceRestart';
@@ -25,7 +26,7 @@ const STATUS_LABEL = {
   running: 'status.running',
   stopped: 'status.stopped',
   failed: 'status.failed',
-} as const satisfies Readonly<Record<ServiceState['status'], ParseKeys<'widgets/Daemon/DaemonService'>>>;
+} as const satisfies Readonly<Record<ServiceState['status'], ParseKeys<typeof DAEMON_SERVICE_NS>>>;
 
 /** State is read by tone, not only by word. */
 const STATUS_TONE: Readonly<Record<ServiceState['status'], string>> = {
@@ -35,7 +36,7 @@ const STATUS_TONE: Readonly<Record<ServiceState['status'], string>> = {
 };
 
 /** Why the state is substituted, in the user's words: a new daemon code is a compile error here. */
-const REASON_KEY: Readonly<Record<ServiceErrorCode, ParseKeys<'widgets/Daemon/DaemonService'>>> = {
+const REASON_KEY: Readonly<Record<ServiceErrorCode, ParseKeys<typeof DAEMON_SERVICE_NS>>> = {
   service_state_unread: 'reason.service_state_unread',
 };
 
@@ -67,7 +68,7 @@ export function DaemonServiceControl({
   emphasizeRestart?: boolean;
   showStatus?: boolean;
 }) {
-  const { t } = useTranslation('widgets/Daemon/DaemonService');
+  const { t } = useTranslation(DAEMON_SERVICE_NS);
   const service = useServiceState();
   const action = useServiceAction();
   const shown = useLastConfirmedService(service.data);

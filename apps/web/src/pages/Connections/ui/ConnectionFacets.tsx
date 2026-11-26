@@ -10,13 +10,15 @@ import {
   ROUTE_KIND,
   type ConnectionFacet,
 } from '@entities/Connection';
+import { SHARED_NS } from '@shared/i18n';
 import { useScrollEdges } from '@shared/lib/useScrollEdges';
 import { cn } from '@shared/lib/utils';
 import { Button, FacetFilter, type FacetText } from '@shared/ui';
 
+import { CONNECTIONS_NS } from '../i18n/Connections.namespace.generated';
 import type { ConnectionsScreen } from '../lib';
 
-const FACET_LABEL: Readonly<Record<ConnectionFacet, ParseKeys<'pages/Connections'>>> = {
+const FACET_LABEL: Readonly<Record<ConnectionFacet, ParseKeys<typeof CONNECTIONS_NS>>> = {
   [CONNECTION_FACET.Source]: 'facet.source',
   [CONNECTION_FACET.Kind]: 'facet.kind',
   [CONNECTION_FACET.Rule]: 'facet.rule',
@@ -25,7 +27,7 @@ const FACET_LABEL: Readonly<Record<ConnectionFacet, ParseKeys<'pages/Connections
 };
 
 /** Packet fate label: the overview summary shows it too, so the dictionary is shared. */
-const KIND_LABEL: ReadonlyMap<string, ParseKeys<'shared'>> = new Map([
+const KIND_LABEL: ReadonlyMap<string, ParseKeys<typeof SHARED_NS>> = new Map([
   [ROUTE_KIND.Proxy, 'route.proxy'],
   [ROUTE_KIND.Direct, 'route.direct'],
   [ROUTE_KIND.Block, 'route.block'],
@@ -42,7 +44,7 @@ const KIND_LABEL: ReadonlyMap<string, ParseKeys<'shared'>> = new Map([
  * be changed, and a selection link must not break because of it.
  */
 export function ConnectionFacets({ screen }: { screen: ConnectionsScreen }) {
-  const { t } = useTranslation('pages/Connections');
+  const { t } = useTranslation(CONNECTIONS_NS);
   const { sourceLabel } = screen;
 
   const describe = useMemo<Readonly<Record<ConnectionFacet, (value: string) => FacetText>>>(
@@ -55,10 +57,10 @@ export function ConnectionFacets({ screen }: { screen: ConnectionsScreen }) {
       [CONNECTION_FACET.Kind]: (value) => {
         const key = KIND_LABEL.get(value);
 
-        return { label: key === undefined ? value : t(key, { ns: 'shared' }), detail: null };
+        return { label: key === undefined ? value : t(key, { ns: SHARED_NS }), detail: null };
       },
       [CONNECTION_FACET.Rule]: (value) => ({
-        label: value === '' ? t('rule.unconditional', { ns: 'shared' }) : value,
+        label: value === '' ? t('rule.unconditional', { ns: SHARED_NS }) : value,
         detail: null,
       }),
       [CONNECTION_FACET.Chain]: (value) => ({ label: value, detail: null }),

@@ -5,11 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { isCheckName, type CheckName, type CheckStatus, type DiagCheck } from '@entities/Diag';
 import { cn } from '@shared/lib/utils';
 
+import { DIAGNOSTICS_NS } from '../i18n/Diagnostics.namespace.generated';
 import { toReasonKey } from '../lib/Diagnostics.reason';
 import { DIAGNOSTICS_COLUMN } from './DiagnosticsColumns';
 
 /** The tables must cover the daemon's set: a new check or reason is a compile error here. */
-const NAME_KEY: Readonly<Record<CheckName, ParseKeys<'pages/Diagnostics'>>> = {
+const NAME_KEY: Readonly<Record<CheckName, ParseKeys<typeof DIAGNOSTICS_NS>>> = {
   redirect_port: 'check.redirect_port',
   tproxy_port: 'check.tproxy_port',
   dns_port: 'check.dns_port',
@@ -22,7 +23,7 @@ const NAME_KEY: Readonly<Record<CheckName, ParseKeys<'pages/Diagnostics'>>> = {
 
 /** The result carries two signs, an icon and a color: one of them is not color-based. */
 const STATUS_VIEW: Readonly<
-  Record<CheckStatus, { icon: LucideIcon; tone: string; label: ParseKeys<'pages/Diagnostics'> }>
+  Record<CheckStatus, { icon: LucideIcon; tone: string; label: ParseKeys<typeof DIAGNOSTICS_NS> }>
 > = {
   ok: { icon: CircleCheck, tone: 'text-signal-ok', label: 'status.ok' },
   fail: { icon: CircleX, tone: 'text-signal-bad', label: 'status.fail' },
@@ -30,7 +31,7 @@ const STATUS_VIEW: Readonly<
 };
 
 export function DiagnosticsRow({ check, rowIndex }: { check: DiagCheck; rowIndex: number }) {
-  const { t } = useTranslation('pages/Diagnostics');
+  const { t } = useTranslation(DIAGNOSTICS_NS);
   const status = STATUS_VIEW[check.status];
   const reasonKey = toReasonKey(check.reason);
 

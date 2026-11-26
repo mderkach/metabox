@@ -20,6 +20,7 @@ import { DATAPLANE_ENDPOINT } from '@entities/Dataplane';
 import { DATAPLANE_FIXTURE } from '@entities/Dataplane/__tests__/Dataplane.fixture';
 import { DEVICE_ENDPOINT } from '@entities/Device';
 import { PROXY_ENDPOINT } from '@entities/Proxy';
+import { SIMPLE_ROUTES_NS } from '@pages/SimpleRoutes';
 import { NARROW_SCREEN } from '@shared/lib/media';
 
 import { createPanelRouter } from '../Router';
@@ -87,14 +88,17 @@ describe('panel routes', () => {
     vi.unstubAllGlobals();
   });
 
-  it('opens Simple Routes from the desktop root', async () => {
+  it('opens Simple Routes from the Configuration menu', async () => {
+    const user = userEvent.setup();
     serveDaemon();
-
-    const router = renderRouter();
+    const router = renderRouter('/config/raw');
+    const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
+    await user.click(within(nav).getByRole('link', { name: 'Маршруты' }));
 
     const views = await screen.findByRole('tablist', { name: 'Виды маршрутов' });
-
-    expect(within(views).getByRole('tab', { name: 'Простой', selected: true })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(views).getByRole('tab', { name: 'Простой', selected: true })).toBeInTheDocument();
+    });
     expect(router.state.location.pathname).toBe('/config/simple');
   });
 
@@ -104,22 +108,21 @@ describe('panel routes', () => {
 
     renderRouter('/config/simple');
 
-    expect(await screen.findByText(i18next.t('unavailable.title', { ns: 'pages/SimpleRoutes' }))).toBeInTheDocument();
+    expect(await screen.findByText(i18next.t('unavailable.title', { ns: SIMPLE_ROUTES_NS }))).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Начало настройки' })).not.toBeInTheDocument();
 
     const views = screen.getByRole('tablist', { name: 'Виды маршрутов' });
     expect(within(views).getByRole('tab', { name: 'JSON' })).toHaveAttribute('href', '/config/raw');
   });
 
-  // People open the router from a phone to check that everything works, not to edit the config.
-  it('on a phone opens Overview from the root', async () => {
+  it.each(['desktop', 'phone'])('opens Overview from the root on %s', async (viewport) => {
     serveDaemon();
     server.use(
       http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json(CLASH_CONFIGS_FIXTURE)),
       http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json({ proxies: {} })),
       http.get(DAEMON_ENDPOINT.history(), () => HttpResponse.json(TRAFFIC_HISTORY_FIXTURE))
     );
-    mockNarrowScreen();
+    if (viewport === 'phone') mockNarrowScreen();
     vi.stubGlobal('EventSource', SilentEventSource);
 
     const router = renderRouter();
@@ -313,7 +316,7 @@ describe('panel routes', () => {
   it('the draft badge is shown by the section header, and there is one', async () => {
     serveDaemon();
 
-    renderRouter();
+    renderRouter('/config/simple');
 
     await waitFor(() => {
       expect(ConfigDocumentState.getState().applied).toBe(MINIMAL_CONFIG);

@@ -2,7 +2,10 @@ import { useTranslation } from 'react-i18next';
 
 import type { ProxyGroup, ProxyNode } from '@entities/Proxy';
 import { useTestProxyDelays } from '@features/Proxy/ProxyDelay';
+import { SHARED_NS } from '@shared/i18n';
 import { Button } from '@shared/ui';
+
+import { PROXIES_NS } from '../i18n/Proxies.namespace.generated';
 
 /**
  * Measurement of every node on the screen: the members of all groups and, without
@@ -23,7 +26,7 @@ export function ProxyTestAll({
   onTested: () => void;
   onTestStart?: (() => void) | undefined;
 }) {
-  const { t } = useTranslation('pages/Proxies');
+  const { t } = useTranslation(PROXIES_NS);
   const delay = useTestProxyDelays();
   const names = [...groups.flatMap((group) => group.nodes), ...nodes].map((node) => node.name);
 
@@ -39,7 +42,7 @@ export function ProxyTestAll({
         });
       }}
     >
-      {delay.isPending ? t('delay.testing', { ns: 'shared' }) : t('testAll.action')}
+      {delay.isPending ? t('delay.testing', { ns: SHARED_NS }) : t('testAll.action')}
     </Button>
   );
 }

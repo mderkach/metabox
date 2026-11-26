@@ -4,13 +4,15 @@ import { LANGUAGES, changeLanguage, currentLanguage } from '@shared/lib/i18n';
 import { cn } from '@shared/lib/utils';
 import { ToggleGroup, ToggleGroupItem } from '@shared/ui';
 
+import { LANGUAGE_SWITCH_NS } from '../i18n/LanguageSwitch.namespace.generated';
+
 /**
  * Interface language choice. The active language is taken from i18next
  * directly: it is also the source of truth for `t`, and a state of its own here
  * would diverge from it when the language is changed from another place.
  */
 export function LanguageSwitch({ vertical = false }: { vertical?: boolean }) {
-  const { t } = useTranslation('features/Language/LanguageSwitch');
+  const { t } = useTranslation(LANGUAGE_SWITCH_NS);
 
   return (
     <ToggleGroup

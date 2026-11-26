@@ -2,6 +2,8 @@ import type { ParseKeys } from 'i18next';
 
 import { SERVICE_STATUS, type ServiceStatus } from '@entities/Daemon';
 
+import type { APP_SIDEBAR_NS } from '../i18n/AppSidebar.namespace.generated';
+
 export const SERVICE_TONE: Readonly<Record<ServiceStatus, string>> = {
   [SERVICE_STATUS.Running]: 'bg-signal-ok',
   [SERVICE_STATUS.Stopped]: 'bg-signal-idle',
@@ -12,4 +14,4 @@ export const SERVICE_LABEL = {
   [SERVICE_STATUS.Running]: 'service.running',
   [SERVICE_STATUS.Stopped]: 'service.stopped',
   [SERVICE_STATUS.Failed]: 'service.failed',
-} as const satisfies Readonly<Record<ServiceStatus, ParseKeys<'widgets/AppSidebar'>>>;
+} as const satisfies Readonly<Record<ServiceStatus, ParseKeys<typeof APP_SIDEBAR_NS>>>;

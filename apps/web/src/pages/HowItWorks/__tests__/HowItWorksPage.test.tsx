@@ -1,3 +1,4 @@
+import { linkOptions } from '@tanstack/react-router';
 import { defaultParseSearch } from '@tanstack/react-router';
 import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
@@ -20,7 +21,22 @@ import { withAppliedRuleReference } from '@entities/Route/__tests__/Route.fixtur
 import { createRouteExplanationHandler, createRouteHandlers } from '@entities/Route/__tests__/Route.handlers';
 import { NARROW_SCREEN } from '@shared/lib/media';
 
+import type { HowItWorksLinks } from '../model/HowItWorks.links';
 import { HowItWorksPage } from '../ui/HowItWorksPage';
+
+const LINKS: HowItWorksLinks = {
+  overview: '/overview',
+  devices: '/devices',
+  proxies: '/proxies',
+  settings: '/settings',
+  ruleSet: (set) => linkOptions({ to: '/config/rule-set', search: { set } }),
+  rule: (search) => linkOptions({ to: '/config', search }),
+  section: (section) => linkOptions({ to: '/config/$section', params: { section } }),
+};
+
+function HowItWorksScreen() {
+  return <HowItWorksPage links={LINKS} />;
+}
 
 const LIVE_TITLE = 'Открытые соединения';
 const APPLIED_ETAG = `"${'a'.repeat(64)}"`;
@@ -114,7 +130,7 @@ describe('How metabox works', () => {
 
   it('keeps the terms but shows no invented connection', async () => {
     ConnectionStore.getState().apply({ ...CONNECTIONS_FIXTURE, connections: [] });
-    renderWithRouter(HowItWorksPage);
+    renderWithRouter(HowItWorksScreen);
 
     expect(await screen.findByText('Сейчас нет соединений.')).toBeInTheDocument();
     expect(within(screen.getByRole('group', { name: LIVE_TITLE })).queryByRole('button')).not.toBeInTheDocument();
@@ -125,7 +141,7 @@ describe('How metabox works', () => {
     server.use(
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json({ ...SERVICE_RUNNING_FIXTURE, status: 'stopped' }))
     );
-    renderWithRouter(HowItWorksPage);
+    renderWithRouter(HowItWorksScreen);
 
     expect(await screen.findByRole('link', { name: 'Открыть Обзор' })).toHaveAttribute('href', '/overview');
     expect(screen.queryByRole('group', { name: LIVE_TITLE })).not.toBeInTheDocument();
@@ -135,7 +151,7 @@ describe('How metabox works', () => {
   it('follows a live group then a direct connection without reshuffling on new frames', async () => {
     const user = userEvent.setup();
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
-    renderWithRouter(HowItWorksPage);
+    renderWithRouter(HowItWorksScreen);
 
     const choices = await screen.findByRole('group', { name: LIVE_TITLE });
     const first = await within(choices).findByRole('button', { pressed: true });
@@ -158,7 +174,7 @@ describe('How metabox works', () => {
 
   it('shows the origin on each step taken from the route explanation', async () => {
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
-    renderWithRouter(HowItWorksPage);
+    renderWithRouter(HowItWorksScreen);
 
     const walk = await screen.findByRole('list', { name: 'Путь соединения' });
     expect(await within(walk).findAllByText('от ядра')).toHaveLength(3);
@@ -168,7 +184,7 @@ describe('How metabox works', () => {
 
   it('keeps the last explanation after the connection closes', async () => {
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
-    renderWithRouter(HowItWorksPage);
+    renderWithRouter(HowItWorksScreen);
     expect(await screen.findByText(/Выбран us/)).toBeInTheDocument();
 
     act(() => {
@@ -188,7 +204,7 @@ describe('How metabox works', () => {
       )
     );
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
-    renderWithRouter(HowItWorksPage);
+    renderWithRouter(HowItWorksScreen);
 
     const choices = await screen.findByRole('group', { name: LIVE_TITLE });
     expect(await within(choices).findByRole('button', { pressed: true, name: /api.git.example/ })).toBeInTheDocument();
@@ -198,7 +214,7 @@ describe('How metabox works', () => {
   it('keeps rule and service links at their lists when the rule is unverified', async () => {
     const user = userEvent.setup();
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
-    renderWithRouter(HowItWorksPage);
+    renderWithRouter(HowItWorksScreen);
 
     await screen.findByText(/Не удалось сопоставить правило/);
     const walk = screen.getByRole('list', { name: 'Путь соединения' });
@@ -215,7 +231,7 @@ describe('How metabox works', () => {
   ])('shows the confirmed applied rule $label and links its first service', async ({ index, label, tag }) => {
     const user = userEvent.setup();
     showLiveRule(index);
-    renderWithRouter(HowItWorksPage);
+    renderWithRouter(HowItWorksScreen);
 
     expect(await screen.findByText(label)).toBeInTheDocument();
     const walk = screen.getByRole('list', { name: 'Путь соединения' });
@@ -235,7 +251,7 @@ describe('How metabox works', () => {
     const user = userEvent.setup();
     showLiveRule(0);
     ConfigDocumentState.getState().load(APPLIED_RULES, APPLIED_ETAG);
-    renderWithRouter(HowItWorksPage);
+    renderWithRouter(HowItWorksScreen);
 
     expect(await screen.findByText('Media routing')).toBeInTheDocument();
     const walk = screen.getByRole('list', { name: 'Путь соединения' });
@@ -256,7 +272,7 @@ describe('How metabox works', () => {
 
   it('shows the nested services of a logical rule in document order', async () => {
     showLiveRule(0);
-    renderWithRouter(HowItWorksPage);
+    renderWithRouter(HowItWorksScreen);
 
     expect(await screen.findByText('media-sites, second-set')).toBeInTheDocument();
   });
@@ -264,7 +280,7 @@ describe('How metabox works', () => {
   it('clears a verified service link when the core stops', async () => {
     const user = userEvent.setup();
     showLiveRule(0);
-    const { queryClient } = renderWithRouter(HowItWorksPage);
+    const { queryClient } = renderWithRouter(HowItWorksScreen);
 
     expect(await screen.findByText('Media routing')).toBeInTheDocument();
     const walk = screen.getByRole('list', { name: 'Путь соединения' });
@@ -286,7 +302,7 @@ describe('How metabox works', () => {
   it('keeps only the observed condition when the confirmed reference names another revision', async () => {
     const user = userEvent.setup();
     showLiveRule(0, `"${'b'.repeat(64)}"`);
-    renderWithRouter(HowItWorksPage);
+    renderWithRouter(HowItWorksScreen);
 
     expect(await screen.findByText('rule_set=media-sites')).toBeInTheDocument();
     expect(screen.queryByText('Media routing')).not.toBeInTheDocument();
@@ -305,7 +321,7 @@ describe('How metabox works', () => {
       )
     );
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
-    renderWithRouter(HowItWorksPage);
+    renderWithRouter(HowItWorksScreen);
 
     expect(await screen.findByText('mock failure')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Термины' })).toBeInTheDocument();
@@ -333,7 +349,7 @@ describe('How metabox works', () => {
     server.use(
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json({ ...SERVICE_RUNNING_FIXTURE, status: 'stopped' }))
     );
-    renderWithRouter(HowItWorksPage);
+    renderWithRouter(HowItWorksScreen);
     await screen.findByRole('link', { name: overview });
 
     const destinations = [
@@ -363,7 +379,7 @@ describe('How metabox works', () => {
     }));
     const user = userEvent.setup();
     ConnectionStore.getState().apply({ ...CONNECTIONS_FIXTURE, connections: [] });
-    renderWithRouter(HowItWorksPage);
+    renderWithRouter(HowItWorksScreen);
 
     const north = await screen.findByRole('button', { name: /^Куда соединение/ });
     await user.click(north);

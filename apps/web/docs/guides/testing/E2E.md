@@ -35,7 +35,7 @@ The config is `playwright.config.ts`; the directory is typed by `tsconfig.node.j
 
 ## Texts
 
-The stand runs in English (`locale: 'en-US'`). A panel text is taken by its dictionary key with `translate` from `e2e/lib/i18n.ts`, not written as a string in the scenario: `translate('features/Config/ConfigApply', 'bar.dirty')`. The namespace is the slice path under `src`, as in i18next. The text is rendered by i18next with the panel's own options (`I18N_OPTIONS` from `src/shared/lib/i18nConfig.ts`) over the dictionaries `tools/i18n.ts` collects, so plurals and placeholders come out as the panel shows them. An unknown key or a missing placeholder value throws before the scenario acts. A string is written only for user data: a rule name, a domain, a line of config.
+The stand runs in English (`locale: 'en-US'`). A panel text is taken by its dictionary key with `translate` from `e2e/lib/i18n.ts`, not written as a string in the scenario: `translate(CONFIG_APPLY_NS, 'bar.dirty')`. In the Node test harness, import the owner’s generated namespace module by its relative file path, so reading a key does not load the browser UI. A scenario testing an external URL or dictionary name may spell out its expected value. The text is rendered by i18next with the panel's own options (`I18N_OPTIONS` from `src/shared/lib/i18nConfig.ts`) over the dictionaries `tools/i18n.ts` collects, so plurals and placeholders come out as the panel shows them. An unknown key or a missing placeholder value throws before the scenario acts. A string is written only for user data: a rule name, a domain, a line of config.
 
 ## Structure of a scenario
 

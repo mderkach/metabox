@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 import { z } from 'zod';
 
+import { SHARED_NS } from '../i18n';
 import { API_FAILURE, ApiError } from './ApiError';
 
 /**
@@ -18,7 +19,7 @@ export function decodeResponse<Schema extends z.ZodType>(
     return parsed.data;
   }
 
-  throw new ApiError(API_FAILURE.Schema, i18next.t('response.unparsed', { ns: 'shared', source }), {
+  throw new ApiError(API_FAILURE.Schema, i18next.t('response.unparsed', { ns: SHARED_NS, source }), {
     cause: parsed.error,
     details: z.prettifyError(parsed.error),
   });

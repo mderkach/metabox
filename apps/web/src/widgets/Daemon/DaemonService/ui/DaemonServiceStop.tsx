@@ -1,6 +1,9 @@
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '@shared/i18n';
 import { Button, ConfirmDialog, DESTRUCTIVE_OUTLINE } from '@shared/ui';
+
+import { DAEMON_SERVICE_NS } from '../i18n/DaemonService.namespace.generated';
 
 /**
  * Stopping sing-box. Asks for confirmation: stopping cuts off
@@ -8,7 +11,7 @@ import { Button, ConfirmDialog, DESTRUCTIVE_OUTLINE } from '@shared/ui';
  * internet access for all devices.
  */
 export function DaemonServiceStop({ disabled, onConfirm }: { disabled: boolean; onConfirm: () => void }) {
-  const { t } = useTranslation('widgets/Daemon/DaemonService');
+  const { t } = useTranslation(DAEMON_SERVICE_NS);
 
   return (
     <ConfirmDialog
@@ -19,7 +22,7 @@ export function DaemonServiceStop({ disabled, onConfirm }: { disabled: boolean; 
       }
       title={t('stop.title')}
       description={t('stop.description')}
-      cancelLabel={t('action.cancel', { ns: 'shared' })}
+      cancelLabel={t('action.cancel', { ns: SHARED_NS })}
       confirmLabel={t('stop.confirm')}
       destructive
       onConfirm={onConfirm}

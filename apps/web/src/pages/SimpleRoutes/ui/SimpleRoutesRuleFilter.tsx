@@ -1,11 +1,16 @@
-import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
-export function SimpleRoutesRuleFilter({ tags, outbound }: { tags: readonly string[]; outbound?: string }) {
-  const { t } = useTranslation('pages/SimpleRoutes');
-  const navigate = useNavigate({ from: '/config/simple' });
+import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
+import type { SimpleRuleNavigation } from '../model/SimpleRoutes.links';
+
+export function SimpleRoutesRuleFilter({
+  tags,
+  outbound,
+  onOutboundChange,
+}: Pick<SimpleRuleNavigation, 'onOutboundChange'> & { tags: readonly string[]; outbound?: string }) {
+  const { t } = useTranslation(SIMPLE_ROUTES_NS);
   const items = [{ value: '', label: t('list.all') }, ...tags.map((tag) => ({ value: tag, label: tag }))];
 
   return (
@@ -13,7 +18,7 @@ export function SimpleRoutesRuleFilter({ tags, outbound }: { tags: readonly stri
       items={items}
       value={outbound ?? ''}
       onValueChange={(value: string | null) => {
-        void navigate({ search: { outbound: value === '' ? undefined : (value ?? undefined) }, resetScroll: false });
+        onOutboundChange(value === '' ? undefined : (value ?? undefined));
       }}
     >
       <SelectTrigger aria-label={t('list.filter')} size='sm' className='max-w-full'>

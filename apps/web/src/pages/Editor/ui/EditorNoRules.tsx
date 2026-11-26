@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { NewRulePlace, RuleRow } from '@entities/Rule';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@shared/ui';
 
+import { EDITOR_NS } from '../i18n/Editor.namespace.generated';
 import { EditorRuleAdd } from './EditorRuleAdd';
 
 /** The config is read but has no rules: this is a config state, not a loading state. */
@@ -17,7 +18,7 @@ export function EditorNoRules({
   finalOutbound: string | null;
   onAdd: (place: NewRulePlace) => void;
 }) {
-  const { t } = useTranslation('pages/Editor');
+  const { t } = useTranslation(EDITOR_NS);
 
   return (
     <Empty className='border'>

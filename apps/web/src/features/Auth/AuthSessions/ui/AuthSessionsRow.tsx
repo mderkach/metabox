@@ -5,6 +5,8 @@ import { formatAge } from '@shared/lib/format';
 import { SECONDS_IN_MINUTE } from '@shared/lib/time';
 import { Badge, Button, DESTRUCTIVE_OUTLINE } from '@shared/ui';
 
+import { AUTH_SESSIONS_NS } from '../i18n/AuthSessions.namespace.generated';
+
 /** One session: the address it signed in from, when, and its last request. */
 export function AuthSessionsRow({
   session,
@@ -15,7 +17,7 @@ export function AuthSessionsRow({
   ending: boolean;
   onEnd: () => void;
 }) {
-  const { t } = useTranslation('features/Auth/AuthSessions');
+  const { t } = useTranslation(AUTH_SESSIONS_NS);
   const age = formatAge(session.age_seconds);
   const activity =
     session.idle_seconds < SECONDS_IN_MINUTE

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { LATENCY_CEILING_MS, useOutboundMetadata, useProxies, type useProxyLatency } from '@entities/Proxy';
 import { useTestProxyDelays } from '@features/Proxy/ProxyDelay';
+import { SHARED_NS } from '@shared/i18n';
 import {
   Button,
   CARD_TITLE,
@@ -18,6 +19,7 @@ import {
   ValueAxis,
 } from '@shared/ui';
 
+import { PROXY_LATENCY_NS } from '../i18n/ProxyLatency.namespace.generated';
 import { toSelected } from '../model/ProxyLatency.model';
 import { SCALE } from '../model/ProxyLatency.scale';
 import { ProxyLatencyRow } from './ProxyLatencyRow';
@@ -34,7 +36,7 @@ export function ProxyLatency({
   /** Replaces the latencies and disables the test when the page knows they cannot be measured now. */
   placeholder?: ReactNode;
 }) {
-  const { t } = useTranslation('widgets/ProxyLatency');
+  const { t } = useTranslation(PROXY_LATENCY_NS);
   const proxies = useProxies();
   const outboundMetadata = useOutboundMetadata();
   const metadata = outboundMetadata.data;
@@ -76,8 +78,8 @@ export function ProxyLatency({
           }}
         >
           {delay.isPending && testing?.batch === true
-            ? t('delay.testing', { ns: 'shared' })
-            : t('delay.test', { ns: 'shared' })}
+            ? t('delay.testing', { ns: SHARED_NS })
+            : t('delay.test', { ns: SHARED_NS })}
         </Button>
       </CardHeader>
 
@@ -118,7 +120,7 @@ export function ProxyLatency({
                 />
               ))}
             </ul>
-            <ValueAxis scale={SCALE} format={(value) => t('delay.value', { ns: 'shared', value })} />
+            <ValueAxis scale={SCALE} format={(value) => t('delay.value', { ns: SHARED_NS, value })} />
           </div>
         )}
       </CardContent>

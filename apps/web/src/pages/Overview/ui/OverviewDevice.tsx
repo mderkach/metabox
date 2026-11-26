@@ -1,9 +1,11 @@
 import { useTranslation } from 'react-i18next';
 
 import { useTrafficHistory, type SystemStat } from '@entities/Daemon';
+import { SHARED_NS } from '@shared/i18n';
 import { formatAge, formatBytes } from '@shared/lib/format';
 import { CARD_FLUSH, Card } from '@shared/ui';
 
+import { OVERVIEW_NS } from '../i18n/Overview.namespace.generated';
 import { formatLoad, formatCelsius, toTemperature } from '../lib/Overview.temperature';
 import { OverviewSection } from './OverviewSection';
 import { OverviewTile } from './OverviewTile';
@@ -17,7 +19,7 @@ import { OverviewTrend } from './OverviewTrend';
 const TEMPERATURE_CAPACITY = 100;
 
 export function OverviewDevice({ system, collapsible }: { system: SystemStat | null; collapsible: boolean }) {
-  const { t } = useTranslation('pages/Overview');
+  const { t } = useTranslation(OVERVIEW_NS);
   const history = useTrafficHistory();
   const deviceHistory = history.data?.device ?? [];
   const stepSeconds = history.data?.deviceStepSeconds ?? 0;
@@ -37,7 +39,7 @@ export function OverviewDevice({ system, collapsible }: { system: SystemStat | n
             context={
               system === null
                 ? null
-                : t('device.ofCores', { cores: t('count.core', { ns: 'shared', count: system.load.cores }) })
+                : t('device.ofCores', { cores: t('count.core', { ns: SHARED_NS, count: system.load.cores }) })
             }
             chart={
               <OverviewTrend
@@ -78,7 +80,7 @@ export function OverviewDevice({ system, collapsible }: { system: SystemStat | n
             }
           />
           <OverviewTile
-            label={t('stat.uptime', { ns: 'shared' })}
+            label={t('stat.uptime', { ns: SHARED_NS })}
             value={system === null ? null : formatAge(system.uptime)}
             context={system === null ? null : t('device.sinceBoot')}
           />

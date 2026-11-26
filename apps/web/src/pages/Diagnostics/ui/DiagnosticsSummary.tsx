@@ -4,12 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { DIAG_STATUS, type DiagCheck } from '@entities/Diag';
 import { cn } from '@shared/lib/utils';
 
+import { DIAGNOSTICS_NS } from '../i18n/Diagnostics.namespace.generated';
+
 /**
  * The outcome of a run in one line above the checks: without it a failure has to
  * be found by eye among seven rows. Announced once per run, like the overview check.
  */
 export function DiagnosticsSummary({ checks }: { checks: DiagCheck[] }) {
-  const { t } = useTranslation('pages/Diagnostics');
+  const { t } = useTranslation(DIAGNOSTICS_NS);
   const failed = checks.filter((check) => check.status === DIAG_STATUS.Fail).length;
   const passed = checks.filter((check) => check.status === DIAG_STATUS.Ok).length;
   const skipped = checks.length - failed - passed;

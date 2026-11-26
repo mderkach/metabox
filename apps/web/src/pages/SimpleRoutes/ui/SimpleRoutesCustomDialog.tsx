@@ -24,6 +24,7 @@ import {
   QueryFailure,
 } from '@shared/ui';
 
+import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
 import { isDeviceAddress, simpleTerminalConditions } from '../model/SimpleRoutes.conditions';
 import { CustomRuleSchema, customExits, planCustomRule, type CustomRuleForm } from '../model/SimpleRoutes.custom';
 import { SimpleRoutesCustomSelect } from './SimpleRoutesCustomSelect';
@@ -41,7 +42,7 @@ export function SimpleRoutesCustomDialog({
   changed: boolean;
   onAdded: () => void;
 }) {
-  const { t } = useTranslation('pages/SimpleRoutes');
+  const { t } = useTranslation(SIMPLE_ROUTES_NS);
   const addressId = useId();
   const serverChanged = useConfigStale();
   const config = useMemo(() => parseConfig(text).config, [text]);

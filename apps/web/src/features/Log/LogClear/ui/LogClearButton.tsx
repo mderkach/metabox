@@ -7,6 +7,7 @@ import { cn } from '@shared/lib/utils';
 import { Button, DESTRUCTIVE_OUTLINE } from '@shared/ui';
 
 import { useClearLog } from '../api';
+import { LOG_CLEAR_NS } from '../i18n/LogClear.namespace.generated';
 
 /**
  * Clear with a hint of what exactly is cleared. With `logread` the logd ring
@@ -14,7 +15,7 @@ import { useClearLog } from '../api';
  * hiding, not as an irreversible clear.
  */
 export function LogClearButton({ source }: { source: string | null }) {
-  const { t } = useTranslation('features/Log/LogClear');
+  const { t } = useTranslation(LOG_CLEAR_NS);
   const clear = useClearLog();
   const hintId = useId();
   const file = source === LOG_SOURCE.File;

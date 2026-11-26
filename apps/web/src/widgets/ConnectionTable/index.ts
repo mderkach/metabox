@@ -4,3 +4,4 @@ export * as ConnectionTable from './ui/ConnectionTable';
 export type { ConnectionTableEmpty } from './ui/ConnectionTable';
 export { CONNECTION_FIELD } from './ui/ConnectionColumns';
 export type { ConnectionField } from './ui/ConnectionColumns';
+export { CONNECTION_TABLE_NS } from './i18n/ConnectionTable.namespace.generated';

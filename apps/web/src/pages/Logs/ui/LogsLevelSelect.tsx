@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { isLogLevel, LOG_LEVELS, type LogLevel } from '@entities/Log';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
+import { LOGS_NS } from '../i18n/Logs.namespace.generated';
+
 /** Minimum level: the daemon returns it and everything more severe. */
 export function LogsLevelSelect({
   level,
@@ -11,7 +13,7 @@ export function LogsLevelSelect({
   level: LogLevel;
   onLevelChange: (level: LogLevel) => void;
 }) {
-  const { t } = useTranslation('pages/Logs');
+  const { t } = useTranslation(LOGS_NS);
   const items = LOG_LEVELS.map((value) => ({ value, label: t('level.option', { level: value }) }));
 
   return (

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, FORM_ACTIONS } from '@shared/ui';
 
 import { useRemovePassword, useSetPassword } from '../api';
+import { AUTH_PASSWORD_NS } from '../i18n/AuthPassword.namespace.generated';
 import {
   AUTH_PASSWORD_ERROR,
   AuthPasswordRemoveSchema,
@@ -21,7 +22,7 @@ import { AuthPasswordField } from './AuthPasswordField';
  * then the current one is asked for, and the form offers removal.
  */
 export function AuthPasswordForm({ protectedPanel, onDone }: { protectedPanel: boolean; onDone: () => void }) {
-  const { t } = useTranslation('features/Auth/AuthPassword');
+  const { t } = useTranslation(AUTH_PASSWORD_NS);
   const save = useSetPassword();
   const remove = useRemovePassword();
   const schema = useMemo(() => toAuthPasswordSchema(protectedPanel), [protectedPanel]);

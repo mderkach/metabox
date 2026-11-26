@@ -1,8 +1,8 @@
 import type { Locator, Page } from '@playwright/test';
 
+import { RULE_CATALOG_ADD_NS } from '../../src/features/Rule/RuleCatalogAdd/i18n/RuleCatalogAdd.namespace.generated.ts';
+import { SIMPLE_ROUTES_NS } from '../../src/pages/SimpleRoutes/i18n/SimpleRoutes.namespace.generated.ts';
 import { translate } from '../lib/i18n.ts';
-
-const CATALOG = 'features/Rule/RuleCatalogAdd';
 
 export class SimpleCatalogDialog {
   readonly page: Page;
@@ -17,15 +17,21 @@ export class SimpleCatalogDialog {
 
   constructor(page: Page) {
     this.page = page;
-    const rules = page.getByRole('region', { name: translate('pages/SimpleRoutes', 'sections.rules'), exact: true });
-    this.trigger = rules.getByRole('button', { name: translate('pages/SimpleRoutes', 'catalog.action'), exact: true });
-    this.dialog = page.getByRole('dialog', { name: translate(CATALOG, 'title'), exact: true });
-    this.search = this.dialog.getByRole('searchbox', { name: translate(CATALOG, 'search'), exact: true });
-    this.outbound = this.dialog.getByRole('combobox', { name: translate(CATALOG, 'outbound'), exact: true });
-    this.resolver = this.dialog.getByRole('combobox', { name: translate(CATALOG, 'resolver'), exact: true });
-    this.submit = this.dialog.getByRole('button', { name: translate(CATALOG, 'submit'), exact: true });
-    this.done = this.dialog.getByRole('button', { name: translate(CATALOG, 'done'), exact: true });
-    this.cancel = this.dialog.getByRole('button', { name: translate(CATALOG, 'cancel'), exact: true });
+    const rules = page.getByRole('region', { name: translate(SIMPLE_ROUTES_NS, 'sections.rules'), exact: true });
+    this.trigger = rules.getByRole('button', { name: translate(SIMPLE_ROUTES_NS, 'catalog.action'), exact: true });
+    this.dialog = page.getByRole('dialog', { name: translate(RULE_CATALOG_ADD_NS, 'title'), exact: true });
+    this.search = this.dialog.getByRole('searchbox', { name: translate(RULE_CATALOG_ADD_NS, 'search'), exact: true });
+    this.outbound = this.dialog.getByRole('combobox', {
+      name: translate(RULE_CATALOG_ADD_NS, 'outbound'),
+      exact: true,
+    });
+    this.resolver = this.dialog.getByRole('combobox', {
+      name: translate(RULE_CATALOG_ADD_NS, 'resolver'),
+      exact: true,
+    });
+    this.submit = this.dialog.getByRole('button', { name: translate(RULE_CATALOG_ADD_NS, 'submit'), exact: true });
+    this.done = this.dialog.getByRole('button', { name: translate(RULE_CATALOG_ADD_NS, 'done'), exact: true });
+    this.cancel = this.dialog.getByRole('button', { name: translate(RULE_CATALOG_ADD_NS, 'cancel'), exact: true });
   }
 
   service(category: string, provider: string) {

@@ -9,6 +9,7 @@ import {
   runServiceAction,
 } from '@entities/Daemon';
 import { isSessionLost } from '@shared/api';
+import { SHARED_NS } from '@shared/i18n';
 import { MS_IN_MINUTE, MS_IN_SECOND } from '@shared/lib/time';
 
 /** The response carries the new service state: there is no need to reread it with a separate query. */
@@ -51,7 +52,7 @@ async function pause(ms: number): Promise<void> {
  */
 async function waitForNewInstance(queryClient: QueryClient, previous: string | undefined): Promise<void> {
   const deadline = Date.now() + DAEMON_RESTART.Timeout;
-  let failure: unknown = new Error(i18next.t('toast.daemon.restart.stalled', { ns: 'shared' }));
+  let failure: unknown = new Error(i18next.t('toast.daemon.restart.stalled', { ns: SHARED_NS }));
 
   while (Date.now() < deadline) {
     await pause(DAEMON_RESTART.Poll);
@@ -65,7 +66,7 @@ async function waitForNewInstance(queryClient: QueryClient, previous: string | u
         return;
       }
 
-      failure = new Error(i18next.t('toast.daemon.restart.stalled', { ns: 'shared' }));
+      failure = new Error(i18next.t('toast.daemon.restart.stalled', { ns: SHARED_NS }));
     } catch (error) {
       if (isSessionLost(error)) {
         throw error;

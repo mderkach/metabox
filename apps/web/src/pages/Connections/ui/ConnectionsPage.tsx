@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import { CONNECTION_TAB, ConnectionState, useConnectionStream, type ConnectionRow } from '@entities/Connection';
 import { useCloseAllConnections } from '@features/Connection/ConnectionClose';
+import { SHARED_NS } from '@shared/i18n';
 import { usePanelAsSheet } from '@shared/lib/media';
+import type { StaticPagePath } from '@shared/lib/navigation';
 import { useLiveRegion } from '@shared/lib/useLiveRegion';
 import {
   Alert,
@@ -19,6 +21,7 @@ import { ConnectionTable, useConnectionView, type ConnectionTableEmpty } from '@
 import { PageHeader } from '@widgets/PageHeader';
 import { RouteExplanation, RouteExplanationSheet } from '@widgets/RouteExplanation';
 
+import { CONNECTIONS_NS } from '../i18n/Connections.namespace.generated';
 import { useConnectionsScreen, useStreamStale, useWhileVisible } from '../lib';
 import { ConnectionActions } from './ConnectionActions';
 import { ConnectionExport } from './ConnectionExport';
@@ -31,8 +34,8 @@ import { ConnectionsStreamStatus } from './ConnectionsStreamStatus';
 /** Tab counter: the same look as for the configuration section tabs. */
 const TAB_COUNT = 'text-xs text-muted-foreground tabular-nums';
 
-export function ConnectionsPage() {
-  const { t } = useTranslation('pages/Connections');
+export function ConnectionsPage({ editorTo }: { editorTo: StaticPagePath }) {
+  const { t } = useTranslation(CONNECTIONS_NS);
   useConnectionStream();
 
   const view = useConnectionView();
@@ -110,7 +113,7 @@ export function ConnectionsPage() {
 
   return (
     <>
-      <PageHeader title={t('section.connections', { ns: 'shared' })}>
+      <PageHeader title={t('section.connections', { ns: SHARED_NS })}>
         <ConnectionsStreamStatus paused={paused} stale={stale} />
         {dropped > 0 && (
           <p role='status' className='text-xs text-destructive'>
@@ -222,6 +225,7 @@ export function ConnectionsPage() {
           <SidePanelLayout.Panel>
             {explainedId !== null && (
               <RouteExplanation
+                editorTo={editorTo}
                 key={explainedId}
                 id={explainPanelId}
                 connectionId={explainedId}
@@ -238,6 +242,7 @@ export function ConnectionsPage() {
 
         {sheet && (
           <RouteExplanationSheet
+            editorTo={editorTo}
             id={explainPanelId}
             connectionId={explainedId}
             host={explainedHost}

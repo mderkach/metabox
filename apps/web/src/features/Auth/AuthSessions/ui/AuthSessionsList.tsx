@@ -5,12 +5,13 @@ import { useSessions } from '@entities/Auth';
 import { QueryFailure, SkeletonRows } from '@shared/ui';
 
 import { END_SESSION_RESULT, useEndSession } from '../api';
+import { AUTH_SESSIONS_NS } from '../i18n/AuthSessions.namespace.generated';
 import { AuthSessionsRow } from './AuthSessionsRow';
 
 const SKELETON_ROWS = 2;
 
 export function AuthSessionsList() {
-  const { t } = useTranslation('features/Auth/AuthSessions');
+  const { t } = useTranslation(AUTH_SESSIONS_NS);
   const sessions = useSessions();
   const endSession = useEndSession();
   // The ended row takes its button with it: focus moves to the list, not to the page start.

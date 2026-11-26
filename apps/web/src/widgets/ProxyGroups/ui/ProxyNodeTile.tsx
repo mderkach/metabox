@@ -11,8 +11,10 @@ import {
   type ProxyNode,
   type ServerLatency,
 } from '@entities/Proxy';
+import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 
+import { PROXY_GROUPS_NS } from '../i18n/ProxyGroups.namespace.generated';
 import { useProxyMetadataEditor } from '../lib/ProxyMetadata.editor';
 import { ProxyCompactNodeName } from './ProxyCompactNodeName';
 import { toMemberLabel } from './ProxyGroupLabel';
@@ -52,7 +54,7 @@ function ProxyNodeTileProto({
   editable?: boolean;
   onMetadataSaved: (tag: string, label?: string) => void;
 }) {
-  const { t } = useTranslation('widgets/ProxyGroups');
+  const { t } = useTranslation(PROXY_GROUPS_NS);
   const { editing, trigger, editorId, open: openMetadata, close } = useProxyMetadataEditor();
   const [expanded, setExpanded] = useState(false);
   const compact = editable && isLatencyServer(node);
@@ -119,7 +121,7 @@ function ProxyNodeTileProto({
             diagnostic?.status !== undefined ? (
               <span aria-hidden='true'>—</span>
             ) : (
-              <data value={checkedDelay}>{t('delay.value', { ns: 'shared', value: checkedDelay })}</data>
+              <data value={checkedDelay}>{t('delay.value', { ns: SHARED_NS, value: checkedDelay })}</data>
             )}
           </div>
           <ProxyNodeNormReading reading={reading} diagnostic={diagnostic?.status} />

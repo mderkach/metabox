@@ -4,6 +4,8 @@ import type { ParseKeys } from 'i18next';
 import type { RuleSetRow } from '@entities/RuleSet';
 import type { CachedRuleSet } from '@entities/RuleSet';
 
+import type { RULE_SET_TABLE_NS } from '../i18n/RuleSetTable.namespace.generated';
+
 /**
  * Rule set row layout. One set of widths serves the header and the row: if they diverge,
  * labels end up above the wrong columns.
@@ -47,7 +49,7 @@ export const RULE_SET_TABLE_FEATURES = tableFeatures({});
 export type RuleSetTableFeatures = typeof RULE_SET_TABLE_FEATURES;
 
 export interface RuleSetColumnMeta {
-  label: ParseKeys<'widgets/RuleSet/RuleSetTable'>;
+  label: ParseKeys<typeof RULE_SET_TABLE_NS>;
   className: string;
 }
 

@@ -1,9 +1,10 @@
 import type { Locator, Page } from '@playwright/test';
 
+import { SHARED_NS } from '../src/shared/i18n/Shared.namespace.generated.ts';
+import { PROXY_GROUPS_NS } from '../src/widgets/ProxyGroups/i18n/ProxyGroups.namespace.generated.ts';
 import { E2E_TAG, expect, test, translate } from './fixtures/index.ts';
 import type { ProxiesPage } from './pages/ProxiesPage.ts';
 
-const GROUPS = 'widgets/ProxyGroups';
 const GROUP = 'test-selector';
 const PRIMARY = 'subscription/edge';
 const PEER = 'peer';
@@ -64,7 +65,7 @@ async function installProxyMock(
   });
 
   await page.goto('/logs');
-  const link = page.getByRole('link', { name: translate('shared', 'section.proxies'), exact: true });
+  const link = page.getByRole('link', { name: translate(SHARED_NS, 'section.proxies'), exact: true });
   await link.waitFor();
   await page.evaluate(
     async ({ at, computed, delay, group, heldReset, max, peer, primary, unmeasured, rawDelay, noAnswer }) => {
@@ -269,7 +270,7 @@ for (const { width, height, touch } of VIEWPORTS) {
           const edit = proxiesPage.editNorm(PRIMARY);
           const save = proxiesPage.saveNorm(PRIMARY);
           const reset = proxiesPage.resetNorm(PRIMARY);
-          const custom = row.getByText(translate(GROUPS, 'metadata.customNorm'), { exact: true });
+          const custom = row.getByText(translate(PROXY_GROUPS_NS, 'metadata.customNorm'), { exact: true });
           await edit.scrollIntoViewIfNeeded();
           const atRest = await geometry(page, proxiesPage, PRIMARY, edit, width);
 
@@ -337,7 +338,7 @@ for (const { width, height, touch } of VIEWPORTS) {
             const { request } = await putNorm(page, UNMEASURED, async () => unmeasuredReset.press('Enter'));
             expect(request).toEqual({ label: UNMEASURED_LABEL });
             await expect(unmeasuredInput).toHaveValue('');
-            await expect(unmeasuredInput).toHaveAttribute('placeholder', translate(GROUPS, 'metadata.noNorm'));
+            await expect(unmeasuredInput).toHaveAttribute('placeholder', translate(PROXY_GROUPS_NS, 'metadata.noNorm'));
             await expect(unmeasuredEdit).toBeFocused();
             await expect(unmeasuredReset).toBeHidden();
             expect(await geometry(page, proxiesPage, UNMEASURED, unmeasuredEdit, width)).toEqual(beforeReset);
@@ -359,7 +360,7 @@ test(
     const marker = meter.locator('[data-slot="proxy-node-norm-marker"]');
     const currentDelay = proxiesPage
       .normCell(UNMEASURED, 'delay')
-      .getByText(translate('shared', 'delay.value', { value: PRIMARY_DELAY }), { exact: true });
+      .getByText(translate(SHARED_NS, 'delay.value', { value: PRIMARY_DELAY }), { exact: true });
 
     await expect(input).toHaveValue(String(UNMEASURED_MANUAL));
     await expect(currentDelay).toBeVisible();
@@ -369,7 +370,7 @@ test(
       expect(request).toEqual({ label: UNMEASURED_LABEL });
       await expect.poll(mock.refetches).toBeGreaterThan(0);
       await expect(input).toHaveValue('');
-      await expect(input).toHaveAttribute('placeholder', translate(GROUPS, 'metadata.noNorm'));
+      await expect(input).toHaveAttribute('placeholder', translate(PROXY_GROUPS_NS, 'metadata.noNorm'));
       await expect(marker).toHaveCount(0);
       await expect(meter).toHaveAttribute('data-state', 'unknown');
       await expect(currentDelay).toBeVisible();
@@ -398,10 +399,10 @@ test(
     const peerFill = peerMeter.locator('[data-slot="proxy-node-meter-fill"]');
     const aboveUsual = proxiesPage
       .normCell(PRIMARY, 'status')
-      .getByText(translate(GROUPS, 'metadata.aboveNorm'), { exact: true });
+      .getByText(translate(PROXY_GROUPS_NS, 'metadata.aboveNorm'), { exact: true });
     const noAnswer = proxiesPage
       .normCell(PEER, 'status')
-      .getByText(translate('shared', 'delay.timedOut'), { exact: true });
+      .getByText(translate(SHARED_NS, 'delay.timedOut'), { exact: true });
 
     await expect(meter).toBeVisible();
     await expect(meter).toHaveAttribute('data-state', 'fast');

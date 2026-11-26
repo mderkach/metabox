@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@shared/lib/utils';
 import { Button, Switch } from '@shared/ui';
 
+import { CONFIG_NODE_FORM_NS } from '../i18n/ConfigNodeForm.namespace.generated';
 import {
   booleanGroupDetails,
   countFilled,
@@ -19,7 +20,6 @@ import {
 import { errorText, useHasError } from './ConfigNodeForm.error';
 import type { NodeFieldProps } from './ConfigNodeForm.field';
 import { useFieldLabel } from './ConfigNodeForm.labels';
-import { NS } from './ConfigNodeForm.namespace';
 import { ConfigNodeFormFieldRow } from './ConfigNodeFormFieldRow';
 import { ConfigNodeFormGroupCount } from './ConfigNodeFormGroupCount';
 
@@ -30,7 +30,7 @@ import { ConfigNodeFormGroupCount } from './ConfigNodeFormGroupCount';
  * holding only the flag back into the flag. Collapsed details are not mounted.
  */
 export function ConfigNodeFormBooleanGroupField({ field, name, children }: NodeFieldProps) {
-  const { t } = useTranslation(NS);
+  const { t } = useTranslation(CONFIG_NODE_FORM_NS);
   const label = useFieldLabel(name) ?? field.key;
   const { control, getValues } = useFormContext<ConfigNodeFormModel>();
   const id = useId();

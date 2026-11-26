@@ -2,6 +2,7 @@ import { Check, ChevronDown } from 'lucide-react';
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '../i18n';
 import { cn } from '../lib/utils';
 import { Button } from './Button';
 import { Input } from './shadcn/input';
@@ -60,7 +61,7 @@ export function FacetFilter({
   describe: (value: string) => FacetText;
   onSelectedChange: (values: readonly string[]) => void;
 }) {
-  const { t } = useTranslation('shared');
+  const { t } = useTranslation(SHARED_NS);
   const [query, setQuery] = useState('');
   const [current, setCurrent] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);

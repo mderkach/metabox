@@ -5,15 +5,17 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { useSaveOutboundMetadata, type OutboundMetadata } from '@entities/Proxy';
+import { SHARED_NS } from '@shared/i18n';
 import { Button, Input } from '@shared/ui';
 
+import { PROXY_GROUPS_NS } from '../i18n/ProxyGroups.namespace.generated';
 import {
   METADATA_FORM_ERROR,
   ProxyMetadataFormSchema,
   type ProxyMetadataFormModel,
 } from '../model/ProxyMetadata.schema';
 
-const ERROR_KEY: Readonly<Record<string, ParseKeys<'widgets/ProxyGroups'> | undefined>> = {
+const ERROR_KEY: Readonly<Record<string, ParseKeys<typeof PROXY_GROUPS_NS> | undefined>> = {
   [METADATA_FORM_ERROR.LabelTooLong]: 'metadata.labelTooLong',
   [METADATA_FORM_ERROR.ControlChars]: 'metadata.controlChars',
 };
@@ -31,7 +33,7 @@ export function ProxyMetadataForm({
   onClose: () => void;
   onSaved: (tag: string, label?: string) => void;
 }) {
-  const { t } = useTranslation('widgets/ProxyGroups');
+  const { t } = useTranslation(PROXY_GROUPS_NS);
   const save = useSaveOutboundMetadata();
   const labelId = useId();
   const form = useForm<ProxyMetadataFormModel>({
@@ -124,7 +126,7 @@ export function ProxyMetadataForm({
           disabled={save.isPending}
           onClick={onClose}
         >
-          {t('action.cancel', { ns: 'shared' })}
+          {t('action.cancel', { ns: SHARED_NS })}
         </Button>
       </div>
     </form>

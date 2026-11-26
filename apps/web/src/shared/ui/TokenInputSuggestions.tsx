@@ -2,6 +2,7 @@ import { Autocomplete as AutocompletePrimitive } from '@base-ui/react/autocomple
 import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '../i18n';
 import { groupSuggestions, scrollParentOf, type TokenSuggestion, type TokenSuggestionGroup } from './TokenInput.lib';
 import { TokenInputOption } from './TokenInputOption';
 
@@ -44,7 +45,7 @@ export function TokenInputSuggestions({
   anchor: RefObject<HTMLElement | null>;
   children: ReactNode;
 }) {
-  const { t } = useTranslation('shared');
+  const { t } = useTranslation(SHARED_NS);
   const popup = useRef<HTMLDivElement | null>(null);
   const shown = open && items !== undefined && items.length > 0;
   const hasFooter = typed !== '' || highlighted !== null;

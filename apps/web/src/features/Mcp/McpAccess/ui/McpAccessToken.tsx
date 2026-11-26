@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription, AlertTitle, Button, FORM_ACTIONS } from '@shared/ui';
 
+import { MCP_ACCESS_NS } from '../i18n/McpAccess.namespace.generated';
 import { toClaudeCodeCommand } from '../model';
 import { McpAccessCopyField } from './McpAccessCopyField';
 
@@ -18,7 +19,7 @@ export function McpAccessToken({
   announce: (text: string) => void;
   onDone: () => void;
 }) {
-  const { t } = useTranslation('features/Mcp/McpAccess');
+  const { t } = useTranslation(MCP_ACCESS_NS);
 
   return (
     <div className='flex flex-col gap-3'>

@@ -2,17 +2,19 @@ import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
 import { SCHEMA_VERSION, useConfigPath, useDaemonStatus } from '@entities/Daemon';
+import type { StaticPagePath } from '@shared/lib/navigation';
 import { CARD_TITLE, Card, CardContent, CardHeader } from '@shared/ui';
 import { DaemonServiceControl } from '@widgets/Daemon/DaemonService';
 
+import { SETTINGS_NS } from '../i18n/Settings.namespace.generated';
 import { SettingsSystemRow } from './SettingsSystemRow';
 
 /**
  * Versions and the service: what is asked about when something breaks after an update.
  * Interception per device stays on the devices screen, where the devices are.
  */
-export function SettingsSystem() {
-  const { t } = useTranslation('pages/Settings');
+export function SettingsSystem({ devicesTo }: { devicesTo: StaticPagePath }) {
+  const { t } = useTranslation(SETTINGS_NS);
   const status = useDaemonStatus();
   const configPath = useConfigPath();
 
@@ -44,7 +46,7 @@ export function SettingsSystem() {
           <p className='text-sm text-pretty text-muted-foreground'>
             {t('system.devices')}{' '}
             <Link
-              to='/devices'
+              to={devicesTo}
               className='font-medium text-foreground underline underline-offset-3 hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none'
             >
               {t('system.devicesLink')}

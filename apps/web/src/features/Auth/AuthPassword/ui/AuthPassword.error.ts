@@ -2,9 +2,10 @@ import type { ParseKeys } from 'i18next';
 
 import { ApiError, failureText, type ApiFailureCode } from '@shared/api';
 
+import type { AUTH_PASSWORD_NS } from '../i18n/AuthPassword.namespace.generated';
 import { AUTH_PASSWORD_ERROR } from '../model';
 
-type PasswordKey = ParseKeys<'features/Auth/AuthPassword'>;
+type PasswordKey = ParseKeys<typeof AUTH_PASSWORD_NS>;
 
 export const FIELD_ERROR_KEY: Readonly<Record<string, PasswordKey | undefined>> = {
   [AUTH_PASSWORD_ERROR.CurrentRequired]: 'error.currentRequired',

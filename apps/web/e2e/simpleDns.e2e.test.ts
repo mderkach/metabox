@@ -1,3 +1,4 @@
+import { SHARED_NS } from '../src/shared/i18n/Shared.namespace.generated.ts';
 import { E2E_TAG, expect, test, translate } from './fixtures/index.ts';
 
 const RESOLVER = 'office-dns';
@@ -81,7 +82,7 @@ test(
         },
       });
       await applyBar.apply();
-      await expect(applyBar.nodeChanges).toContainText(translate('shared', 'nodeKind.dnsRules'));
+      await expect(applyBar.nodeChanges).toContainText(translate(SHARED_NS, 'nodeKind.dnsRules'));
       await expect(applyBar.nodeChanges).toContainText(RESOLVER);
       await expect(applyBar.confirmPrompt).toBeHidden();
     });
@@ -165,7 +166,7 @@ test(
       dns: { ...config.dns, rules: [{ ...DIRECT_RULE, server: RESOLVER }, catalogDns] },
     });
     await applyBar.apply();
-    await expect(applyBar.nodeChanges).toContainText(translate('shared', 'nodeKind.dnsRules'));
+    await expect(applyBar.nodeChanges).toContainText(translate(SHARED_NS, 'nodeKind.dnsRules'));
     await applyBar.showChangesText();
     await expect(applyBar.diff).toContainText(RESOLVER);
   }

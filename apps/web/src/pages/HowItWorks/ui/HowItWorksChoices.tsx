@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@shared/ui';
 
+import { HOW_IT_WORKS_NS } from '../i18n/HowItWorks.namespace.generated';
 import { WALK_KINDS, type WalkCandidates, type WalkKind } from '../model/HowItWorks.model';
 
 export function HowItWorksChoices({
@@ -15,7 +16,7 @@ export function HowItWorksChoices({
   onSelect: (kind: WalkKind) => void;
   onRefresh: () => void;
 }) {
-  const { t } = useTranslation('pages/HowItWorks');
+  const { t } = useTranslation(HOW_IT_WORKS_NS);
 
   return (
     <div className='flex min-w-0 flex-wrap items-center gap-2'>

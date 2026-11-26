@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { toCheckFailure, useConfigVersions } from '@entities/Config';
+import { SHARED_NS } from '@shared/i18n';
 import {
   Alert,
   AlertDescription,
@@ -27,6 +28,7 @@ import {
 } from '@shared/ui';
 
 import { useRestoreConfigVersion } from '../api/ConfigApply.api';
+import { CONFIG_APPLY_NS } from '../i18n/ConfigApply.namespace.generated';
 import { ConfigApplyCheck } from './ConfigApplyCheck';
 import { ConfigApplyVersionRow } from './ConfigApplyVersionRow';
 
@@ -41,7 +43,7 @@ import { ConfigApplyVersionRow } from './ConfigApplyVersionRow';
  * minute.
  */
 export function ConfigApplyHistory({ showLabel = false }: { showLabel?: boolean }) {
-  const { t } = useTranslation('features/Config/ConfigApply');
+  const { t } = useTranslation(CONFIG_APPLY_NS);
   const [open, setOpen] = useState(false);
   const versions = useConfigVersions();
   const restore = useRestoreConfigVersion();
@@ -63,7 +65,7 @@ export function ConfigApplyHistory({ showLabel = false }: { showLabel?: boolean 
       </DialogTrigger>
 
       <DialogContent showCloseButton={false} className={DIALOG_SIZE.List}>
-        <DialogCloseButton label={t('action.close', { ns: 'shared' })} />
+        <DialogCloseButton label={t('action.close', { ns: SHARED_NS })} />
         <DialogHeader>
           <DialogTitle>{t('history.title')}</DialogTitle>
           <DialogDescription>{t('history.description')}</DialogDescription>
@@ -108,7 +110,7 @@ export function ConfigApplyHistory({ showLabel = false }: { showLabel?: boolean 
 
         <DialogFooter>
           <DialogClose render={<Button variant='outline' size='sm' />}>
-            {t('action.close', { ns: 'shared' })}
+            {t('action.close', { ns: SHARED_NS })}
           </DialogClose>
         </DialogFooter>
       </DialogContent>

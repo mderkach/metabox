@@ -1,18 +1,22 @@
 import type { Locator, Page } from '@playwright/test';
 
+import { CONFIG_APPLY_NS } from '../../src/features/Config/ConfigApply/i18n/ConfigApply.namespace.generated.ts';
+import { CONFIG_NODE_ADD_NS } from '../../src/features/Config/ConfigNodeAdd/i18n/ConfigNodeAdd.namespace.generated.ts';
+import { SECTION_NS } from '../../src/pages/Section/i18n/Section.namespace.generated.ts';
+import { SIMPLE_ROUTES_NS } from '../../src/pages/SimpleRoutes/i18n/SimpleRoutes.namespace.generated.ts';
+import { SHARED_NS } from '../../src/shared/i18n/Shared.namespace.generated.ts';
+import { APP_SIDEBAR_NS } from '../../src/widgets/AppSidebar/i18n/AppSidebar.namespace.generated.ts';
+import { CONFIG_RAW_EDITOR_NS } from '../../src/widgets/Config/ConfigRawEditor/i18n/ConfigRawEditor.namespace.generated.ts';
+import { CONFIG_SECTION_SETTINGS_NS } from '../../src/widgets/Config/ConfigSectionSettings/i18n/ConfigSectionSettings.namespace.generated.ts';
+import { CONFIG_TABS_NS } from '../../src/widgets/Config/ConfigTabs/i18n/ConfigTabs.namespace.generated.ts';
 import { translate } from '../lib/i18n.ts';
 
-const SIMPLE_ROUTES = 'pages/SimpleRoutes';
-const CONFIG_TABS = 'widgets/Config/ConfigTabs';
-const NODE_ADD = 'features/Config/ConfigNodeAdd';
-const CONFIG_APPLY = 'features/Config/ConfigApply';
-
 function subscriptionText(key: string): string {
-  return translate(NODE_ADD, `subscription.${key}`);
+  return translate(CONFIG_NODE_ADD_NS, `subscription.${key}`);
 }
 
 const SECTIONS = ['interception', 'dns', 'outbounds', 'rules'] as const;
-export const SIMPLE_SECTION_HEADINGS = SECTIONS.map((section) => translate(SIMPLE_ROUTES, `sections.${section}`));
+export const SIMPLE_SECTION_HEADINGS = SECTIONS.map((section) => translate(SIMPLE_ROUTES_NS, `sections.${section}`));
 
 /** The Simple Routes sections, the shared add dialog and navigation between the three views. */
 export class SimpleRoutesPage {
@@ -66,48 +70,52 @@ export class SimpleRoutesPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.configNav = page
-      .getByRole('navigation', { name: translate('widgets/AppSidebar', 'nav.label') })
-      .getByRole('link', {
-        name: translate('shared', 'section.config'),
-        exact: true,
-      });
+    this.configNav = page.getByRole('navigation', { name: translate(APP_SIDEBAR_NS, 'nav.label') }).getByRole('link', {
+      name: translate(SHARED_NS, 'section.config'),
+      exact: true,
+    });
     this.sectionHeadings = page.getByRole('heading', {
       name: new RegExp(`^(${SIMPLE_SECTION_HEADINGS.join('|')})$`),
     });
     this.interception = page.getByRole('region', {
-      name: translate(SIMPLE_ROUTES, 'sections.interception'),
+      name: translate(SIMPLE_ROUTES_NS, 'sections.interception'),
       exact: true,
     });
-    this.dns = page.getByRole('region', { name: translate(SIMPLE_ROUTES, 'sections.dns'), exact: true });
-    this.outbounds = page.getByRole('region', { name: translate(SIMPLE_ROUTES, 'sections.outbounds'), exact: true });
-    this.rules = page.getByRole('region', { name: translate(SIMPLE_ROUTES, 'sections.rules'), exact: true });
-    this.starter = page.getByRole('region', { name: translate(SIMPLE_ROUTES, 'starter.title'), exact: true });
+    this.dns = page.getByRole('region', { name: translate(SIMPLE_ROUTES_NS, 'sections.dns'), exact: true });
+    this.outbounds = page.getByRole('region', { name: translate(SIMPLE_ROUTES_NS, 'sections.outbounds'), exact: true });
+    this.rules = page.getByRole('region', { name: translate(SIMPLE_ROUTES_NS, 'sections.rules'), exact: true });
+    this.starter = page.getByRole('region', { name: translate(SIMPLE_ROUTES_NS, 'starter.title'), exact: true });
 
-    const addAction = translate(SIMPLE_ROUTES, 'addServer.action');
-    this.title = page.getByRole('heading', { name: translate('shared', 'section.config'), level: 1 });
+    const addAction = translate(SIMPLE_ROUTES_NS, 'addServer.action');
+    this.title = page.getByRole('heading', { name: translate(SHARED_NS, 'section.config'), level: 1 });
     this.header = page.locator('header').filter({ has: this.title });
     this.configPath = this.header.getByText('/etc/sing-box/config.json', { exact: true });
     this.routingMode = this.header.getByRole('combobox', {
-      name: new RegExp(translate('shared', 'clashMode.routing')),
+      name: new RegExp(translate(SHARED_NS, 'clashMode.routing')),
     });
     this.routingSettings = page.getByRole('button', {
-      name: translate('widgets/Config/ConfigSectionSettings', 'title.route'),
+      name: translate(CONFIG_SECTION_SETTINGS_NS, 'title.route'),
       exact: true,
     });
     this.addFromHeader = this.header.getByRole('button', { name: addAction, exact: true });
     this.addFromOutbounds = this.outbounds.getByRole('button', { name: addAction, exact: true });
     this.addFromStarter = this.starter.getByRole('button', { name: addAction, exact: true });
 
-    this.dialog = page.getByRole('dialog', { name: translate(SIMPLE_ROUTES, 'addServer.title'), exact: true });
-    this.serverLink = this.dialog.getByLabel(translate(NODE_ADD, 'field.link.label'), { exact: true });
-    this.addServer = this.dialog.getByRole('button', { name: translate(NODE_ADD, 'subscription.stage'), exact: true });
-    this.cancel = this.dialog.getByRole('button', { name: translate(SIMPLE_ROUTES, 'addServer.cancel'), exact: true });
-    this.subscription = this.dialog.getByRole('link', {
-      name: translate(SIMPLE_ROUTES, 'addServer.subscription'),
+    this.dialog = page.getByRole('dialog', { name: translate(SIMPLE_ROUTES_NS, 'addServer.title'), exact: true });
+    this.serverLink = this.dialog.getByLabel(translate(CONFIG_NODE_ADD_NS, 'field.link.label'), { exact: true });
+    this.addServer = this.dialog.getByRole('button', {
+      name: translate(CONFIG_NODE_ADD_NS, 'subscription.stage'),
       exact: true,
     });
-    this.addSubscription = page.getByRole('button', { name: translate('pages/Section', 'add.open'), exact: true });
+    this.cancel = this.dialog.getByRole('button', {
+      name: translate(SIMPLE_ROUTES_NS, 'addServer.cancel'),
+      exact: true,
+    });
+    this.subscription = this.dialog.getByRole('link', {
+      name: translate(SIMPLE_ROUTES_NS, 'addServer.subscription'),
+      exact: true,
+    });
+    this.addSubscription = page.getByRole('button', { name: translate(SECTION_NS, 'add.open'), exact: true });
 
     this.subscriptionNotice = this.dialog.getByText(subscriptionText('notice'), { exact: true });
     this.subscriptionTag = this.dialog.getByRole('textbox', { name: subscriptionText('tag'), exact: true });
@@ -137,25 +145,27 @@ export class SimpleRoutesPage {
     });
     this.stageSubscription = this.dialog.getByRole('button', { name: subscriptionText('stage'), exact: true });
 
-    this.views = this.header.getByRole('tablist', { name: translate(CONFIG_TABS, 'views.label'), exact: true });
-    this.simpleView = this.views.getByRole('tab', { name: translate(CONFIG_TABS, 'views.simple'), exact: true });
-    this.editorView = this.views.getByRole('tab', { name: translate(CONFIG_TABS, 'views.editor'), exact: true });
-    this.jsonView = this.views.getByRole('tab', { name: translate(CONFIG_TABS, 'views.json'), exact: true });
+    this.views = this.header.getByRole('tablist', { name: translate(CONFIG_TABS_NS, 'views.label'), exact: true });
+    this.simpleView = this.views.getByRole('tab', { name: translate(CONFIG_TABS_NS, 'views.simple'), exact: true });
+    this.editorView = this.views.getByRole('tab', { name: translate(CONFIG_TABS_NS, 'views.editor'), exact: true });
+    this.jsonView = this.views.getByRole('tab', { name: translate(CONFIG_TABS_NS, 'views.json'), exact: true });
     this.editorOutbounds = page.getByRole('tab', {
-      name: new RegExp(`^${translate(CONFIG_TABS, 'section.outbounds')}`),
+      name: new RegExp(`^${translate(CONFIG_TABS_NS, 'section.outbounds')}`),
     });
     this.configText = page.getByRole('textbox', {
-      name: translate('widgets/Config/ConfigRawEditor', 'editor.label'),
+      name: translate(CONFIG_RAW_EDITOR_NS, 'editor.label'),
       exact: true,
     });
-    this.openRouteHelp = page.getByText(translate(SIMPLE_ROUTES, 'help.title'), { exact: true });
-    this.routeExamples = page.getByRole('link', { name: translate(SIMPLE_ROUTES, 'help.examples'), exact: true });
-    const dnsHelpLabel = translate(SIMPLE_ROUTES, 'help.label', { section: translate(SIMPLE_ROUTES, 'sections.dns') });
+    this.openRouteHelp = page.getByText(translate(SIMPLE_ROUTES_NS, 'help.title'), { exact: true });
+    this.routeExamples = page.getByRole('link', { name: translate(SIMPLE_ROUTES_NS, 'help.examples'), exact: true });
+    const dnsHelpLabel = translate(SIMPLE_ROUTES_NS, 'help.label', {
+      section: translate(SIMPLE_ROUTES_NS, 'sections.dns'),
+    });
     this.dnsHelpButton = this.dns.getByRole('button', { name: dnsHelpLabel });
     this.dnsHelp = page.getByRole('dialog', { name: dnsHelpLabel });
-    this.openHistory = page.getByRole('button', { name: translate(CONFIG_APPLY, 'history.open'), exact: true });
-    this.history = page.getByRole('dialog', { name: translate(CONFIG_APPLY, 'history.title'), exact: true });
-    this.closeHistory = this.history.getByLabel(translate('shared', 'action.close'), { exact: true });
+    this.openHistory = page.getByRole('button', { name: translate(CONFIG_APPLY_NS, 'history.open'), exact: true });
+    this.history = page.getByRole('dialog', { name: translate(CONFIG_APPLY_NS, 'history.title'), exact: true });
+    this.closeHistory = this.history.getByLabel(translate(SHARED_NS, 'action.close'), { exact: true });
   }
 
   outboundTile(tag: string) {

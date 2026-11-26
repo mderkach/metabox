@@ -6,8 +6,10 @@ import { useTranslation } from 'react-i18next';
 import type { ConnectionRow as ConnectionRowModel } from '@entities/Connection';
 import { deviceLabel, useDeviceIndex } from '@entities/Device';
 import { ConnectionCloseConfirm, useCloseConnection } from '@features/Connection/ConnectionClose';
+import { SHARED_NS } from '@shared/i18n';
 import { useNarrowScreen } from '@shared/lib/media';
 
+import { CONNECTION_TABLE_NS } from '../i18n/ConnectionTable.namespace.generated';
 import { DENSITY_ROW_ESTIMATE, useNow, type ConnectionView } from '../lib';
 import { ConnectionCard } from './ConnectionCard';
 import {
@@ -93,7 +95,7 @@ function ConnectionTableBodyProto({
   /** The runtime closed the row's connection: the screen announces it with its live region. */
   onClosed?: (() => void) | null;
 }) {
-  const { t } = useTranslation('widgets/ConnectionTable');
+  const { t } = useTranslation(CONNECTION_TABLE_NS);
   const scrollRef = useRef<HTMLDivElement>(null);
   const close = useCloseConnection();
   const now = useNow();
@@ -179,7 +181,7 @@ function ConnectionTableBodyProto({
           ref={scrollRef}
           data-virtual-viewport=''
           role={narrow ? 'list' : 'table'}
-          aria-label={t('section.connections', { ns: 'shared' })}
+          aria-label={t('section.connections', { ns: SHARED_NS })}
           aria-rowcount={narrow ? undefined : visible.length + HEADER_ROWS}
           className='min-h-0 grow overflow-auto'
         >
@@ -245,8 +247,8 @@ function ConnectionTableBodyProto({
       <div className='flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-t border-border px-3.5 py-2 text-xs text-muted-foreground'>
         <p role='status'>
           {visible.length === total
-            ? t('count.connection', { ns: 'shared', count: total })
-            : t('list.shown', { ns: 'shared', shown: visible.length, total })}
+            ? t('count.connection', { ns: SHARED_NS, count: total })
+            : t('list.shown', { ns: SHARED_NS, shown: visible.length, total })}
         </p>
         {overflow}
         <span className='grow' />

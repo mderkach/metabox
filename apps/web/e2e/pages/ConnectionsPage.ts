@@ -1,9 +1,8 @@
 import type { Locator, Page } from '@playwright/test';
 
+import { CONNECTIONS_NS } from '../../src/pages/Connections/i18n/Connections.namespace.generated.ts';
+import { CONNECTION_TABLE_NS } from '../../src/widgets/ConnectionTable/i18n/ConnectionTable.namespace.generated.ts';
 import { translate } from '../lib/i18n.ts';
-
-const CONNECTIONS = 'pages/Connections';
-const CONNECTION_TABLE = 'widgets/ConnectionTable';
 
 /** The connections screen: its tabs, the search, the sortable column headers and the row actions. */
 export class ConnectionsPage {
@@ -14,9 +13,9 @@ export class ConnectionsPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.activeTab = page.getByRole('tab', { name: translate(CONNECTIONS, 'tab.active') });
-    this.closedTab = page.getByRole('tab', { name: translate(CONNECTIONS, 'tab.closed') });
-    this.search = page.getByRole('textbox', { name: translate(CONNECTIONS, 'search.label') });
+    this.activeTab = page.getByRole('tab', { name: translate(CONNECTIONS_NS, 'tab.active') });
+    this.closedTab = page.getByRole('tab', { name: translate(CONNECTIONS_NS, 'tab.closed') });
+    this.search = page.getByRole('textbox', { name: translate(CONNECTIONS_NS, 'search.label') });
   }
 
   async goto() {
@@ -27,11 +26,11 @@ export class ConnectionsPage {
   sortButton(column: 'column.volume' | 'column.host'): Locator {
     return this.page
       .getByRole('columnheader')
-      .getByRole('button', { name: translate(CONNECTION_TABLE, column), exact: true });
+      .getByRole('button', { name: translate(CONNECTION_TABLE_NS, column), exact: true });
   }
 
   /** A connection is found by its address through the button that explains its route. */
   explainButton(host: string): Locator {
-    return this.page.getByRole('button', { name: translate(CONNECTION_TABLE, 'row.explain', { host }) });
+    return this.page.getByRole('button', { name: translate(CONNECTION_TABLE_NS, 'row.explain', { host }) });
   }
 }

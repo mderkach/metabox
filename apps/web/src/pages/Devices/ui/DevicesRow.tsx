@@ -8,9 +8,11 @@ import type { DataplaneModel, RouteSource } from '@entities/Dataplane';
 import { isNameSource, type Device, type NameSource } from '@entities/Device';
 import { DeviceRenameForm } from '@features/Device/DeviceRename';
 import { DeviceRouteSwitch } from '@features/Device/DeviceRoute';
+import type { PageLink } from '@shared/lib/navigation';
 import { cn } from '@shared/lib/utils';
 import { Button, buttonVariants } from '@shared/ui';
 
+import { DEVICES_NS } from '../i18n/Devices.namespace.generated';
 import { DEVICES_COLUMN } from './DevicesColumns';
 import { DevicesLease } from './DevicesLease';
 
@@ -18,7 +20,7 @@ import { DevicesLease } from './DevicesLease';
  * The table must cover the daemon's set: a new source is a compile error
  * here. `none` needs no explanation: there is no name, and the row is labelled by address.
  */
-const NAME_SOURCE_KEY: Readonly<Record<NameSource, ParseKeys<'pages/Devices'> | null>> = {
+const NAME_SOURCE_KEY: Readonly<Record<NameSource, ParseKeys<typeof DEVICES_NS> | null>> = {
   custom: 'nameSource.custom',
   static: 'nameSource.static',
   dhcp: 'nameSource.dhcp',
@@ -31,6 +33,7 @@ const NAME_SOURCE_KEY: Readonly<Record<NameSource, ParseKeys<'pages/Devices'> | 
  * one field is edited, and there is no reason to pull the eye away from the row.
  */
 function DevicesRowProto({
+  connectionLink,
   device,
   rowIndex,
   editing,
@@ -41,6 +44,7 @@ function DevicesRowProto({
   onRoute,
   now,
 }: {
+  connectionLink: (source: string) => PageLink;
   device: Device;
   rowIndex: number;
   editing: boolean;
@@ -54,7 +58,7 @@ function DevicesRowProto({
   /** Moment of the list snapshot in milliseconds: the remaining lease time is counted from it. */
   now: number;
 }) {
-  const { t } = useTranslation('pages/Devices');
+  const { t } = useTranslation(DEVICES_NS);
   const sourceId = useId();
   const sourceKey = isNameSource(device.nameSource) ? NAME_SOURCE_KEY[device.nameSource] : null;
   const sourceText = sourceKey === null ? undefined : t(sourceKey);
@@ -134,8 +138,7 @@ function DevicesRowProto({
       <span role='cell' className={DEVICES_COLUMN.RowActions}>
         {device.ip !== '' && (
           <Link
-            to='/connections'
-            search={{ source: device.ip }}
+            {...connectionLink(device.ip)}
             aria-label={t('row.connectionsOf', { device: device.label })}
             // Styled as a button but stays a link: `Button` with `render` puts
             // `role="button"` on top of `<a href>`.

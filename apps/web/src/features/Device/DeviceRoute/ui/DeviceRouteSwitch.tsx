@@ -11,6 +11,7 @@ import {
 } from '@entities/Dataplane';
 import { ConfirmDialog, Switch } from '@shared/ui';
 
+import { DEVICE_ROUTE_NS } from '../i18n/DeviceRoute.namespace.generated';
 import { DeviceRouteReason } from './DeviceRouteReason';
 
 /**
@@ -33,7 +34,7 @@ export function DeviceRouteSwitch({
   locked: boolean;
   onRoute: (source: RouteSource, routed: boolean) => void;
 }) {
-  const { t } = useTranslation('features/Device/DeviceRoute');
+  const { t } = useTranslation(DEVICE_ROUTE_NS);
   const [target, setTarget] = useState<boolean | null>(null);
   const noteId = useId();
   if (model === null) return null;

@@ -1,8 +1,11 @@
+import { CONFIG_NODE_ADD_NS } from '../src/features/Config/ConfigNodeAdd/i18n/ConfigNodeAdd.namespace.generated.ts';
+import { CONFIG_NODE_FORM_NS } from '../src/features/Config/ConfigNodeForm/i18n/ConfigNodeForm.namespace.generated.ts';
+import { PROXIES_NS } from '../src/pages/Proxies/i18n/Proxies.namespace.generated.ts';
+import { SECTION_NS } from '../src/pages/Section/i18n/Section.namespace.generated.ts';
+import { SHARED_NS } from '../src/shared/i18n/Shared.namespace.generated.ts';
+import { PROXY_GROUPS_NS } from '../src/widgets/ProxyGroups/i18n/ProxyGroups.namespace.generated.ts';
 import { E2E_TAG, expect, test, translate } from './fixtures/index.ts';
 
-const ADD = 'features/Config/ConfigNodeAdd';
-const FORM = 'features/Config/ConfigNodeForm';
-const PROXIES = 'pages/Proxies';
 const TAG = 'reality-check';
 const UUID = '01234567-89ab-4cde-8123-456789abcdef';
 const PHONE_VIEWPORT = { width: 375, height: 812 };
@@ -33,9 +36,9 @@ test(
   async ({ page, sectionPage, applyBar }) => {
     await page.setViewportSize(PHONE_VIEWPORT);
     await sectionPage.goto('outbounds');
-    await page.getByRole('button', { name: translate('pages/Section', 'add.open') }).click();
+    await page.getByRole('button', { name: translate(SECTION_NS, 'add.open') }).click();
 
-    const field = page.getByRole('textbox', { name: translate(ADD, 'field.link.label') });
+    const field = page.getByRole('textbox', { name: translate(CONFIG_NODE_ADD_NS, 'field.link.label') });
     const base = `vless://${UUID}@proxy.example:443?security=reality&sni=example.com&pbk=${PUBLIC_KEY}`;
     await field.fill(`${base}&${OMITTED}=hidden&spx=%2Fsecret#${TAG}`);
     const warning = page.getByRole('status').filter({ hasText: OMITTED });
@@ -46,11 +49,13 @@ test(
     await field.fill(`${base}&support-x25519mlkem768=true#${TAG}`);
     await expect(warning).toBeHidden();
     await field.press('Tab');
-    const add = page.getByRole('button', { name: translate(ADD, 'submitLink') });
+    const add = page.getByRole('button', { name: translate(CONFIG_NODE_ADD_NS, 'submitLink') });
     await expect(add).toBeFocused();
     await add.press('Enter');
 
-    await expect(page.getByRole('switch', { name: translate(FORM, 'label.realityHybridKeyShare') })).toBeChecked();
+    await expect(
+      page.getByRole('switch', { name: translate(CONFIG_NODE_FORM_NS, 'label.realityHybridKeyShare') })
+    ).toBeChecked();
     await sectionPage.closePanel.click();
     await expect(applyBar.dirty).toBeVisible();
   }
@@ -62,7 +67,7 @@ test(
   async ({ page, applyBar }) => {
     await page.setViewportSize(PHONE_VIEWPORT);
     await page.goto('/logs');
-    const proxiesLink = page.getByRole('link', { name: translate('shared', 'section.proxies') });
+    const proxiesLink = page.getByRole('link', { name: translate(SHARED_NS, 'section.proxies') });
     await proxiesLink.waitFor();
     await page.evaluate(
       async ({ outbound, radix, hashLength, probeErrorCheck }) => {
@@ -142,13 +147,13 @@ test(
     );
     await proxiesLink.click();
 
-    const check = page.getByRole('button', { name: translate('widgets/ProxyGroups', 'empty.testOutbounds') });
-    const diagnosis = page.getByRole('button', { name: translate(PROXIES, 'recovery.open', { tag: TAG }) });
-    const stage = page.getByRole('button', { name: translate(PROXIES, 'recovery.stage') });
-    const retry = page.getByRole('button', { name: translate(PROXIES, 'recovery.retry') });
-    const restore = page.getByRole('button', { name: translate(PROXIES, 'recovery.restore') });
+    const check = page.getByRole('button', { name: translate(PROXY_GROUPS_NS, 'empty.testOutbounds') });
+    const diagnosis = page.getByRole('button', { name: translate(PROXIES_NS, 'recovery.open', { tag: TAG }) });
+    const stage = page.getByRole('button', { name: translate(PROXIES_NS, 'recovery.stage') });
+    const retry = page.getByRole('button', { name: translate(PROXIES_NS, 'recovery.retry') });
+    const restore = page.getByRole('button', { name: translate(PROXIES_NS, 'recovery.restore') });
     const node = page.getByRole('listitem').filter({
-      has: page.getByRole('button', { name: translate('widgets/ProxyGroups', 'metadata.editLabel', { tag: TAG }) }),
+      has: page.getByRole('button', { name: translate(PROXY_GROUPS_NS, 'metadata.editLabel', { tag: TAG }) }),
     });
 
     await test.step('opens the server diagnosis and puts just the setting in the draft', async () => {
@@ -186,18 +191,18 @@ test(
         ],
       });
       await applyBar.keep();
-      await expect(page.getByText(translate(PROXIES, 'recovery.states.ready'))).toBeVisible();
+      await expect(page.getByText(translate(PROXIES_NS, 'recovery.states.ready'))).toBeVisible();
     });
 
     await test.step('separates a test failure from a server that did not answer', async () => {
       await retry.click();
-      await expect(page.getByText(translate(PROXIES, 'recovery.states.probe-error'))).toBeVisible();
+      await expect(page.getByText(translate(PROXIES_NS, 'recovery.states.probe-error'))).toBeVisible();
       await expect(restore).toBeHidden();
 
       await retry.click();
-      await expect(page.getByText(translate(PROXIES, 'recovery.states.no-response'))).toBeVisible();
+      await expect(page.getByText(translate(PROXIES_NS, 'recovery.states.no-response'))).toBeVisible();
       await expect(restore).toBeVisible();
-      const status = node.getByText(translate(PROXIES, 'recovery.noResponse'), { exact: true });
+      const status = node.getByText(translate(PROXIES_NS, 'recovery.noResponse'), { exact: true });
       await expect(status).toBeVisible();
       const statusBox = await status.boundingBox();
       const controlBox = await diagnosis.boundingBox();

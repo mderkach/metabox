@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@shared/ui';
 
-import { NS } from './ConfigNodeForm.namespace';
+import { CONFIG_NODE_FORM_NS } from '../i18n/ConfigNodeForm.namespace.generated';
 
 export function ConfigNodeFormBuildOption({ tag, children }: { tag: string | null; children: ReactNode }) {
-  const { t } = useTranslation(NS);
+  const { t } = useTranslation(CONFIG_NODE_FORM_NS);
 
   if (tag === null) return <>{children}</>;
 

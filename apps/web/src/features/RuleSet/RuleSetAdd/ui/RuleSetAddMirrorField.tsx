@@ -5,11 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { type RuleSetList } from '@entities/RuleSet';
 import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
+import { RULE_SET_ADD_NS } from '../i18n/RuleSetAdd.namespace.generated';
 import { composeRuleSetURL, type RuleSetAddModel } from '../model/RuleSetAdd.schema';
 
 /** Provider mirror: rebuilds the address without touching the rest of the form. */
 export function RuleSetAddMirrorField({ list }: { list: RuleSetList }) {
-  const { t } = useTranslation('features/RuleSet/RuleSetAdd');
+  const { t } = useTranslation(RULE_SET_ADD_NS);
   const { control, setValue, getValues } = useFormContext<RuleSetAddModel>();
   const id = useId();
 

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { selectConfigCurrent, ConfigDocumentState, ConfigDocumentStore, findValue } from '@entities/Config';
+import { SHARED_NS } from '@shared/i18n';
 import { failureLine, parseJsonc } from '@shared/lib/jsonc';
 import { JsonTextarea } from '@shared/ui';
 
@@ -27,7 +28,7 @@ export function ConfigNodeRawEditor({
   /** Accessible field name: the owner screen names the node. */
   label: string;
 }) {
-  const { t } = useTranslation('shared');
+  const { t } = useTranslation(SHARED_NS);
   const edit = ConfigDocumentState.use.edit();
   const [text, setText] = useState(() => (node === undefined ? '{}' : JSON.stringify(node, null, JSON_INDENT)));
   const [failure, setFailure] = useState<{ line: number; reason: string } | null>(null);

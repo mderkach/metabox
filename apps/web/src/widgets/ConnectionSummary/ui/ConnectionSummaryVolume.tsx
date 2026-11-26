@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { ConnectionTotals } from '@entities/Connection';
 import { formatBytes } from '@shared/lib/format';
 
+import { CONNECTION_SUMMARY_NS } from '../i18n/ConnectionSummary.namespace.generated';
 import { ConnectionSummaryPanel } from './ConnectionSummaryPanel';
 import { ConnectionSummarySplit, type SplitSlice } from './ConnectionSummarySplit';
 
@@ -19,7 +20,7 @@ export function ConnectionSummaryVolume({
   /** Replaces the card body when the page knows the data is missing or still loading. */
   placeholder?: ReactNode;
 }) {
-  const { t } = useTranslation('widgets/ConnectionSummary');
+  const { t } = useTranslation(CONNECTION_SUMMARY_NS);
   const slices: SplitSlice[] = [
     {
       key: 'download',

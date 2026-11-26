@@ -4,16 +4,16 @@ import { useTranslation } from 'react-i18next';
 
 import { ToggleGroup, ToggleGroupItem } from '@shared/ui';
 
+import { CONFIG_NODE_FORM_NS } from '../i18n/ConfigNodeForm.namespace.generated';
 import { packList, unpackList, type ConfigNodeFormModel } from '../model';
 import { errorText } from './ConfigNodeForm.error';
 import type { NodeFieldProps } from './ConfigNodeForm.field';
 import { useFieldLabel } from './ConfigNodeForm.labels';
-import { NS } from './ConfigNodeForm.namespace';
 import { ConfigNodeFormFieldName } from './ConfigNodeFormFieldName';
 
 /** Set of enum values: each is turned on by its own button. */
 export function ConfigNodeFormEnumListField({ field, name }: NodeFieldProps) {
-  const { t } = useTranslation(NS);
+  const { t } = useTranslation(CONFIG_NODE_FORM_NS);
   const label = useFieldLabel(name);
   const { control } = useFormContext<ConfigNodeFormModel>();
   const labelId = useId();

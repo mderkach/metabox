@@ -1,4 +1,3 @@
-import { getRouteApi } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -31,14 +30,13 @@ import {
   SkeletonRows,
 } from '@shared/ui';
 import { RuleSetPanel, RuleSetPanelSheet } from '@widgets/RuleSet/RuleSetPanel';
-import { RuleSetTable } from '@widgets/RuleSet/RuleSetTable';
+import { RuleSetTable, type RuleSetLinks } from '@widgets/RuleSet/RuleSetTable';
 
+import { RULE_SETS_NS } from '../i18n/RuleSets.namespace.generated';
 import { RULE_SET_FORM, useRuleSetEditor, useRuleSetFilter, useRuleSetPanel } from '../lib/RuleSets.lib';
 import { RuleSetsEmptyState } from './RuleSetsEmptyState';
 import { RuleSetsPanelForm } from './RuleSetsPanelForm';
 import { RuleSetsSearch } from './RuleSetsSearch';
-
-const route = getRouteApi('/config/rule-set');
 
 /**
  * Rule sets: what is attached and what to add to it.
@@ -48,10 +46,9 @@ const route = getRouteApi('/config/rule-set');
  * So an empty place shows the form at once, not a button that opens the form.
  * When rule sets exist, forms open in the panel beside the list.
  */
-export function RuleSetsPage() {
-  const { t } = useTranslation('pages/RuleSets');
+export function RuleSetsPage({ openedTag, ruleSetLinks }: { openedTag?: string; ruleSetLinks: RuleSetLinks }) {
+  const { t } = useTranslation(RULE_SETS_NS);
   const editor = useRuleSetEditor();
-  const { set: openedTag } = route.useSearch();
   const { appliedTags } = editor;
   const cached = useCachedRuleSets(
     editor.sets.some((set) => set.type === RULE_SET_TYPE.Remote && appliedTags.has(set.tag))
@@ -151,6 +148,7 @@ export function RuleSetsPage() {
         <SidePanelLayout.Root open={panel.form !== null && !asSheet} className='items-start'>
           <SidePanelLayout.Main>
             <RuleSetTable
+              links={ruleSetLinks}
               key={openedTag}
               sets={filter.sets}
               total={editor.sets.length}

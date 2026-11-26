@@ -1,6 +1,8 @@
 import i18next from 'i18next';
 import type { z } from 'zod';
 
+import { SHARED_NS } from '../i18n';
+
 export interface UnknownField {
   /** Node path as an edit addresses it: `route.rules.0`. Empty means the root. */
   path: string;
@@ -61,12 +63,12 @@ export function describeIssues(issues: readonly z.core.$ZodIssue[]): string[] {
       const fields = item.fields.join(', ');
 
       return item.path === ''
-        ? i18next.t('schema.unknownFields', { ns: 'shared', fields })
-        : i18next.t('schema.unknownFieldsAt', { ns: 'shared', path: item.path, fields });
+        ? i18next.t('schema.unknownFields', { ns: SHARED_NS, fields })
+        : i18next.t('schema.unknownFieldsAt', { ns: SHARED_NS, path: item.path, fields });
     });
   }
 
   return issues.map((issue) =>
-    i18next.t('schema.issue', { ns: 'shared', path: issue.path.join('.'), message: issue.message })
+    i18next.t('schema.issue', { ns: SHARED_NS, path: issue.path.join('.'), message: issue.message })
   );
 }

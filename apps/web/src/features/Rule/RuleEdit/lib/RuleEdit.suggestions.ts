@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { DeviceIndex } from '@entities/Device';
 import type { TokenSuggestion } from '@shared/ui';
 
+import { RULE_EDIT_NS } from '../i18n/RuleEdit.namespace.generated';
 import { COMMON_PORTS, sourceSuggestions, toHostCidr } from '../model/RuleEdit.model';
 import { RULE_CONDITION, type RuleCondition } from '../model/RuleEdit.schema';
 
@@ -15,7 +16,7 @@ export function useConditionSuggestions(
   condition: RuleCondition,
   devices: DeviceIndex
 ): ((chips: readonly string[]) => TokenSuggestion[]) | undefined {
-  const { t } = useTranslation('features/Rule/RuleEdit');
+  const { t } = useTranslation(RULE_EDIT_NS);
 
   if (condition === RULE_CONDITION.Port) {
     return () => COMMON_PORTS.map((port) => ({ value: port, hint: t(`suggestion.port.${port}`) }));

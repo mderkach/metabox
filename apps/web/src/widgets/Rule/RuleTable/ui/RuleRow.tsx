@@ -3,10 +3,12 @@ import { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isNamedRuleAction, RULE_TARGET, type RuleRow as RuleRowModel } from '@entities/Rule';
+import { SHARED_NS } from '@shared/i18n';
 import { ROW_FOCUS } from '@shared/lib/rowFocus';
 import { cn } from '@shared/lib/utils';
 import { Badge, Tooltip, TooltipContent, TooltipTrigger } from '@shared/ui';
 
+import { RULE_TABLE_NS } from '../i18n/RuleTable.namespace.generated';
 import { isTruncated } from '../lib/RuleTable.truncation';
 import { type RuleHitCell } from '../model';
 import { RULE_COLUMN } from './RuleColumns';
@@ -46,10 +48,10 @@ function RuleRowProto({
   outboundTypes: ReadonlyMap<string, string>;
   onSelect: (id: string) => void;
 }) {
-  const { t, i18n } = useTranslation('widgets/Rule/RuleTable');
+  const { t, i18n } = useTranslation(RULE_TABLE_NS);
   const actionName =
     rule.targetKind === RULE_TARGET.Action && isNamedRuleAction(rule.target)
-      ? t(`ruleAction.${rule.target}`, { ns: 'shared' })
+      ? t(`ruleAction.${rule.target}`, { ns: SHARED_NS })
       : null;
   const label = t('row.label', { title, index: rule.index });
   const targetRef = useRef<HTMLSpanElement>(null);
@@ -118,7 +120,7 @@ function RuleRowProto({
 
         {!rule.recognized && (
           <Badge variant='outline' className='shrink-0'>
-            {t('rule.uncovered', { ns: 'shared' })}
+            {t('rule.uncovered', { ns: SHARED_NS })}
           </Badge>
         )}
 

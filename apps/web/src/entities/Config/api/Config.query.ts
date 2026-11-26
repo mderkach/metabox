@@ -13,6 +13,7 @@ import {
 import { CACHE_TIME, POLL_INTERVAL, decodeResponse } from '@shared/api';
 import { RuleSetFilesSchema } from '@shared/api/daemon.generated';
 import { ConfigSchema, type Config } from '@shared/api/generated';
+import { SHARED_NS } from '@shared/i18n';
 import { jsonPathLocator, lineOfOffset, parseJsonc } from '@shared/lib/jsonc';
 import { type UnknownField, toUnknownFields } from '@shared/lib/schemaIssues';
 
@@ -77,7 +78,7 @@ export function parseConfig(text: string): ParsedConfig {
       config: null,
       issues: [
         {
-          text: i18next.t('jsonc.fileUnparsed', { ns: 'shared', reason: failure.text }),
+          text: i18next.t('jsonc.fileUnparsed', { ns: SHARED_NS, reason: failure.text }),
           offset: failure.offset,
         },
       ],
@@ -113,9 +114,9 @@ export function parseConfig(text: string): ParsedConfig {
       return {
         text:
           offset === null
-            ? i18next.t('schema.issue', { ns: 'shared', path, message: issue.message })
+            ? i18next.t('schema.issue', { ns: SHARED_NS, path, message: issue.message })
             : i18next.t('schema.issueAtLine', {
-                ns: 'shared',
+                ns: SHARED_NS,
                 line: lineOfOffset(text, offset),
                 path,
                 message: issue.message,

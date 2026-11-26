@@ -1,8 +1,10 @@
 import { useTranslation } from 'react-i18next';
 
 import { LATENCY_LEVEL, toDelayLabel, toLatencyReading, toServerDelayLabel, type ServerLatency } from '@entities/Proxy';
+import { SHARED_NS } from '@shared/i18n';
 import { Button } from '@shared/ui';
 
+import { PROXY_LATENCY_NS } from '../i18n/ProxyLatency.namespace.generated';
 import { ProxyLatencyMeter } from './ProxyLatencyMeter';
 
 export function ProxyLatencyRow({
@@ -28,7 +30,7 @@ export function ProxyLatencyRow({
   busy: boolean;
   onTest: () => void;
 }) {
-  const { t, i18n } = useTranslation('widgets/ProxyLatency');
+  const { t, i18n } = useTranslation(PROXY_LATENCY_NS);
   const recent = latency?.recent ?? [];
   const { usual, level, meter } = toLatencyReading(latency, manualNorm, legacyNorm);
 
@@ -50,7 +52,7 @@ export function ProxyLatencyRow({
           if (!busy) onTest();
         }}
       >
-        {testing ? t('delay.testing', { ns: 'shared' }) : t('delay.test', { ns: 'shared' })}
+        {testing ? t('delay.testing', { ns: SHARED_NS }) : t('delay.test', { ns: SHARED_NS })}
       </Button>
       <p className='col-span-2 flex flex-wrap gap-x-2 gap-y-1 text-muted-foreground tabular-nums'>
         <span>{toServerDelayLabel(t, latency, available)}</span>
@@ -80,7 +82,7 @@ export function ProxyLatencyRow({
                 </time>
                 <span>
                   {point.delayMS === null
-                    ? t('delay.timedOut', { ns: 'shared' })
+                    ? t('delay.timedOut', { ns: SHARED_NS })
                     : toDelayLabel(t, { delay: point.delayMS })}
                 </span>
               </li>

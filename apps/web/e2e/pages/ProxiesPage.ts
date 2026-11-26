@@ -1,8 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 
+import { PROXY_GROUPS_NS } from '../../src/widgets/ProxyGroups/i18n/ProxyGroups.namespace.generated.ts';
 import { translate } from '../lib/i18n.ts';
-
-const PROXY_GROUPS = 'widgets/ProxyGroups';
 
 /** The proxies screen: group cards and the manual choice offered over an automatic group. */
 export class ProxiesPage {
@@ -11,7 +10,7 @@ export class ProxiesPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.manualChoiceAdded = page.getByRole('status').filter({ hasText: translate(PROXY_GROUPS, 'auto.added') });
+    this.manualChoiceAdded = page.getByRole('status').filter({ hasText: translate(PROXY_GROUPS_NS, 'auto.added') });
   }
 
   async goto() {
@@ -27,24 +26,24 @@ export class ProxiesPage {
   }
 
   testGroup(tag: string): Locator {
-    return this.group(tag).getByRole('button', { name: translate(PROXY_GROUPS, 'card.testGroup', { group: tag }) });
+    return this.group(tag).getByRole('button', { name: translate(PROXY_GROUPS_NS, 'card.testGroup', { group: tag }) });
   }
 
   editGroupLabel(tag: string): Locator {
-    return this.group(tag).getByRole('button', { name: translate(PROXY_GROUPS, 'metadata.editLabel', { tag }) });
+    return this.group(tag).getByRole('button', { name: translate(PROXY_GROUPS_NS, 'metadata.editLabel', { tag }) });
   }
 
   groupLabelField(tag: string): Locator {
-    return this.group(tag).getByRole('textbox', { name: translate(PROXY_GROUPS, 'metadata.label'), exact: true });
+    return this.group(tag).getByRole('textbox', { name: translate(PROXY_GROUPS_NS, 'metadata.label'), exact: true });
   }
 
   normHeader(group: string): Locator {
-    return this.group(group).getByText(translate(PROXY_GROUPS, 'metadata.autoDefault'), { exact: true });
+    return this.group(group).getByText(translate(PROXY_GROUPS_NS, 'metadata.autoDefault'), { exact: true });
   }
 
   normField(tag: string): Locator {
     return this.page.getByRole('textbox', {
-      name: translate(PROXY_GROUPS, 'metadata.normField', { tag }),
+      name: translate(PROXY_GROUPS_NS, 'metadata.normField', { tag }),
       exact: true,
     });
   }
@@ -70,10 +69,10 @@ export class ProxiesPage {
   }
 
   addManualChoiceButton(group: string): Locator {
-    return this.page.getByRole('button', { name: translate(PROXY_GROUPS, 'auto.actionLabel', { group }) });
+    return this.page.getByRole('button', { name: translate(PROXY_GROUPS_NS, 'auto.actionLabel', { group }) });
   }
 
   private normButton(tag: string, key: string): Locator {
-    return this.normRow(tag).getByRole('button', { name: translate(PROXY_GROUPS, key, { tag }), exact: true });
+    return this.normRow(tag).getByRole('button', { name: translate(PROXY_GROUPS_NS, key, { tag }), exact: true });
   }
 }

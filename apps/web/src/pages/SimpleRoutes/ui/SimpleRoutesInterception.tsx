@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { ACL_MODE, useDataplane } from '@entities/Dataplane';
 import { Card, CardContent } from '@shared/ui';
 
+import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
 import { SimpleRoutesSection } from './SimpleRoutesSection';
 
 export function SimpleRoutesInterception({ inbounds }: { inbounds: number }) {
-  const { t } = useTranslation('pages/SimpleRoutes');
+  const { t } = useTranslation(SIMPLE_ROUTES_NS);
   const dataplane = useDataplane();
   const model = dataplane.data?.model;
 

@@ -3,13 +3,15 @@ import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription, AlertTitle } from '@shared/ui';
 
+import { CONFIG_APPLY_NS } from '../i18n/ConfigApply.namespace.generated';
+
 /**
  * The `experimental.clash_api` section is appended by the daemon: without it
  * there is nothing to read the runtime with, and the user is shown this as
  * someone else's edit in their file.
  */
 export function ConfigApplyClashApiAdded() {
-  const { t } = useTranslation('features/Config/ConfigApply');
+  const { t } = useTranslation(CONFIG_APPLY_NS);
   return (
     <Alert>
       <Info />

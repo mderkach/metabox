@@ -64,7 +64,7 @@ The panel SHALL work in dark and light themes, the theme is switched from the in
 
 ### Requirement: AC-42 The panel frame stays usable from 400 px
 
-The panel frame SHALL stay usable at widths from 400 px: on a narrow screen navigation moves to a bottom bar with labels, and the panel root opens the overview, tables with fixed columns scroll horizontally together with the header, there is no horizontal overflow of the page itself.
+The panel frame SHALL stay usable at widths from 400 px. Opening the panel root SHALL show Overview at every viewport width. On a narrow screen navigation moves to a bottom bar with labels, tables with fixed columns scroll horizontally together with the header, and the page itself has no horizontal overflow.
 
 #### Scenario: Navigation moves to a bottom bar
 
@@ -83,6 +83,12 @@ The panel frame SHALL stay usable at widths from 400 px: on a narrow screen navi
 - **GIVEN** a phone screen
 - **WHEN** the panel root opens
 - **THEN** the overview is shown
+
+#### Scenario: The root opens the overview on desktop
+
+- **GIVEN** a desktop screen
+- **WHEN** the panel root opens
+- **THEN** the panel navigates to `/overview` and shows Overview
 
 #### Scenario: No horizontal overflow of the page
 

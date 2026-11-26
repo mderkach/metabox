@@ -3,12 +3,13 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, CARD_TITLE } from '@shared/ui';
 
+import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
 import { useSimpleDnsDraft } from '../lib/SimpleRoutes.dnsDraft';
 import { SimpleRoutesDnsAssignment } from './SimpleRoutesDnsAssignment';
 import { SimpleRoutesDnsServerForm } from './SimpleRoutesDnsServerForm';
 
 export function SimpleRoutesDnsSettings({ text }: { text: string }) {
-  const { t } = useTranslation('pages/SimpleRoutes');
+  const { t } = useTranslation(SIMPLE_ROUTES_NS);
   const { model, addServer, assign, stale } = useSimpleDnsDraft(text);
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState<{ tag: string; text: string } | null>(null);

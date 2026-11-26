@@ -2,13 +2,14 @@ import { useTranslation } from 'react-i18next';
 
 import { toActionText } from '@entities/Connection';
 import { isNamedRuleAction } from '@entities/Rule';
+import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 
 import { toActionTone } from './ConnectionAction';
 import type { ConnectionCellProps } from './ConnectionColumns';
 
 export function ConnectionActionCell({ connection }: ConnectionCellProps) {
-  const { t } = useTranslation('shared');
+  const { t } = useTranslation(SHARED_NS);
   const action = toActionText(
     connection.action,
     (outbound) => t('route.via', { outbound }),

@@ -1,11 +1,13 @@
 import { useTranslation } from 'react-i18next';
 
+import { CONNECTIONS_NS } from '../i18n/Connections.namespace.generated';
+
 /**
  * Pause and a dropped stream change the meaning of the screen: rows and speeds
  * stand although traffic flows. A live stream needs no label.
  */
 export function ConnectionsStreamStatus({ paused, stale }: { paused: boolean; stale: boolean }) {
-  const { t } = useTranslation('pages/Connections');
+  const { t } = useTranslation(CONNECTIONS_NS);
 
   if (paused) {
     return <p className='text-xs text-muted-foreground'>{t('stream.paused')}</p>;
