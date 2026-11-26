@@ -2,8 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMemo, type ComponentProps } from 'react';
 import { FormProvider, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 
+import { strings } from '@entities/Config';
 import { useRuleSetCatalog } from '@entities/RuleSet';
+import { cn } from '@shared/lib/utils';
 import {
   Button,
   DialogClose,
@@ -20,11 +23,14 @@ import { getCatalogResolvers, planCatalogService } from '../model/RuleCatalogAdd
 import { RuleCatalogAddPreview } from './RuleCatalogAddPreview';
 import { RuleCatalogAddSearch } from './RuleCatalogAddSearch';
 import { RuleCatalogAddSelect } from './RuleCatalogAddSelect';
+import { RuleCatalogAddSubscriptionRuntime } from './RuleCatalogAddSubscriptionRuntime';
 
 interface RuleCatalogAddDialogProps {
   text: string;
-  outbounds: readonly { tag?: string; type: string }[];
+  outbounds: readonly { tag?: string; type: string; providers?: unknown; use_all_providers?: boolean }[];
   stagedTags: ReadonlySet<string>;
+  appliedProviderTags?: ReadonlySet<string>;
+  hasStagedSubscriptions?: boolean;
   initialOutbound?: string;
   initialService?: string;
   finalFocus: ComponentProps<typeof DialogContent>['finalFocus'];
@@ -35,12 +41,14 @@ export function RuleCatalogAddDialog({
   text,
   outbounds,
   stagedTags,
+  appliedProviderTags,
+  hasStagedSubscriptions = false,
   initialOutbound,
   initialService,
   finalFocus,
   onAdded,
 }: RuleCatalogAddDialogProps) {
-  const { t } = useTranslation('features/Rule/RuleCatalogAdd');
+  const { t } = useTranslation(['features/Rule/RuleCatalogAdd', 'shared']);
   const catalog = useRuleSetCatalog();
   const { coreVersion, stage, stale } = useRuleCatalogDraft(text);
   const outboundItems = useMemo(() => {
@@ -67,6 +75,13 @@ export function RuleCatalogAddDialog({
   });
   const choices = useMemo(() => searchCatalog(catalog.data, search), [catalog.data, search]);
   const selected = choices.find((choice) => choice.id === service) ?? choices.at(0);
+  const selectedExit = outbounds.find(({ tag }) => tag === outbound);
+  const providerRefs = strings(selectedExit?.providers);
+  const usesAllProviders = selectedExit?.use_all_providers === true;
+  const subscriptionGroup =
+    (selectedExit?.type === 'selector' || selectedExit?.type === 'urltest') &&
+    (usesAllProviders || providerRefs.length > 0);
+  const showSubscriptionStatus = outbound === '' || subscriptionGroup;
   const resolvers = useMemo(() => getCatalogResolvers(text, outbound), [text, outbound]);
   const plan = useMemo(
     () =>
@@ -82,11 +97,15 @@ export function RuleCatalogAddDialog({
         : undefined,
     [text, coreVersion, selected, outbound, resolver]
   );
+  const showResolver = outbound !== '' && !(plan?.ok === false && plan.reason === 'exit');
 
   const submit = form.handleSubmit(() => {
     if (selected === undefined || plan?.ok !== true) return;
     if (stage({ list: selected.list, category: selected.category, outbound, resolver }, plan.text)) {
       onAdded();
+      if (initialOutbound !== undefined && outbound !== initialOutbound && plan.text !== text) {
+        toast.success(t('toast.rule.stagedOutsideFilter', { ns: 'shared', outbound }));
+      }
     } else {
       form.setError('root', { type: 'stale' });
     }
@@ -114,28 +133,47 @@ export function RuleCatalogAddDialog({
           ) : (
             <RuleCatalogAddSearch choices={choices} selected={selected} pending={catalog.isPending} />
           )}
-          <div className='grid min-w-0 gap-3 sm:grid-cols-2'>
+          <div className={cn('grid min-w-0 gap-3', showResolver && 'sm:grid-cols-2')}>
             <RuleCatalogAddSelect
               name='outbound'
               label={t('outbound')}
               placeholder={outboundItems.length ? t('selectOutbound') : t('noOutbounds')}
               items={outboundItems}
+              hint={selectedExit && t(stagedTags.has(outbound) ? 'stagedStatus' : 'appliedStatus')}
             />
-            <div className='flex flex-col gap-1.5'>
-              <span className='text-sm font-medium'>{t('scope')}</span>
-              <span className='flex min-h-8 items-center text-sm'>{t('allDevices')}</span>
-            </div>
+            {showResolver && (
+              <RuleCatalogAddSelect
+                name='resolver'
+                label={t('resolver')}
+                placeholder={resolvers.length ? t('selectResolver') : t('noneCompatible')}
+                inherited={plan?.ok === true ? plan.resolver : undefined}
+                items={resolvers.map((tag) => ({ value: tag, label: tag }))}
+              />
+            )}
           </div>
-          {outbound && (
-            <RuleCatalogAddSelect
-              name='resolver'
-              label={t('resolver')}
-              placeholder={resolvers.length ? t('selectResolver') : t('noneCompatible')}
-              inherited={plan?.ok === true ? plan.resolver : undefined}
-              items={resolvers.map((tag) => ({ value: tag, label: tag }))}
+          {outboundItems.length === 0 && !hasStagedSubscriptions && (
+            <p className='text-sm text-muted-foreground'>{t('configureOutbound')}</p>
+          )}
+          {showSubscriptionStatus && hasStagedSubscriptions && (
+            <p className='text-sm text-muted-foreground'>{t('subscriptionPending')}</p>
+          )}
+          {subscriptionGroup && stagedTags.has(outbound) && !hasStagedSubscriptions && (
+            <p className='text-sm text-muted-foreground'>{t('subscriptionGroupPending')}</p>
+          )}
+          {showSubscriptionStatus && appliedProviderTags !== undefined && appliedProviderTags.size > 0 && (
+            <RuleCatalogAddSubscriptionRuntime
+              providerTags={appliedProviderTags}
+              group={subscriptionGroup && !stagedTags.has(outbound) ? outbound : undefined}
             />
           )}
-          {plan && <RuleCatalogAddPreview plan={plan} outbound={outbound} hasResolvers={resolvers.length > 0} />}
+          {plan && (
+            <RuleCatalogAddPreview
+              plan={plan}
+              outbound={outbound}
+              hasResolvers={resolvers.length > 0}
+              subscriptionGroup={subscriptionGroup}
+            />
+          )}
           {(stale || form.formState.errors.root) && (
             <p role='alert' className='text-sm text-destructive'>
               {t(stale ? 'changedOnDevice' : 'stale')}

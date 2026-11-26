@@ -1,5 +1,6 @@
 import {
   CONFIG_SECTION,
+  hasDomainDnsIngress,
   hasRuleSetCache,
   readNodeTags,
   readRuleNames,
@@ -12,7 +13,20 @@ import {
 } from '@entities/Config';
 import { toRuleRowsFromNodes } from '@entities/Rule';
 import { collectRuleSetUsage, RULE_SET_TYPE } from '@entities/RuleSet';
+import { isRecord } from '@shared/lib/isRecord';
 import { hasDuplicateJsoncKeys } from '@shared/lib/jsonc';
+
+export const SIMPLE_SERVICE_SUGGESTIONS_ID = 'service-suggestions';
+
+function readTags(text: string | null, section: typeof CONFIG_SECTION.Outbounds | typeof CONFIG_SECTION.Providers) {
+  return new Set(
+    text === null
+      ? []
+      : readSectionNodes(text, section).flatMap((node) =>
+          isRecord(node) && typeof node.tag === 'string' && node.tag !== '' ? [node.tag] : []
+        )
+  );
+}
 
 export function toSimpleRoutes(config: ConfigDocument, text: string, appliedText: string | null) {
   const ruleNodes = readRules(text);
@@ -48,16 +62,13 @@ export function toSimpleRoutes(config: ConfigDocument, text: string, appliedText
     return { node, key: `node:${String(occurrence)}:${identity}` };
   });
   const providers = config.providers?.length ?? 0;
-  const appliedTags = new Set(
-    appliedText === null
-      ? []
-      : readSectionNodes(appliedText, CONFIG_SECTION.Outbounds).map((node): unknown =>
-          typeof node === 'object' && node !== null ? Reflect.get(node, 'tag') : undefined
-        )
-  );
+  const appliedTags = readTags(appliedText, CONFIG_SECTION.Outbounds);
+  const providerTags = [...readTags(text, CONFIG_SECTION.Providers)];
+  const appliedProviderTags = readTags(appliedText, CONFIG_SECTION.Providers);
 
   return {
     rules,
+    suggestServices: ruleNodes.length === 0 || (ruleNodes.length === 1 && hasDomainDnsIngress(config)),
     ruleKeys,
     ruleNodes,
     usage,
@@ -72,6 +83,8 @@ export function toSimpleRoutes(config: ConfigDocument, text: string, appliedText
     outbounds,
     outboundEntries,
     providers,
+    appliedProviderTags: new Set(providerTags.filter((tag) => appliedProviderTags.has(tag))),
+    hasStagedSubscriptions: providerTags.some((tag) => !appliedProviderTags.has(tag)),
     takenTags: [...readNodeTags(text), ...readSubscriptionTagReservations(text, CONFIG_SECTION.Outbounds)],
     stagedTags: new Set(
       appliedText === null

@@ -32,7 +32,7 @@ export function ConfigLayout() {
                 <ConfigApplyHistory showLabel />
                 <div className='contents xl:block xl:w-48 max-sm:[&>button]:min-h-11 xl:[&>button]:w-full'>
                   {simple && document.config !== null && document.text !== null && (
-                    <ConfigNodeAddDialogTrigger label={t('addServer.action', { ns: 'pages/SimpleRoutes' })} />
+                    <ConfigNodeAddDialogTrigger detached label={t('addServer.action', { ns: 'pages/SimpleRoutes' })} />
                   )}
                 </div>
               </div>

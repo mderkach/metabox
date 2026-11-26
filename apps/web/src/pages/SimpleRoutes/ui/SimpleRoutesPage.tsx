@@ -1,5 +1,5 @@
 import { useSearch } from '@tanstack/react-router';
-import { use, useId, useMemo, useRef, useState } from 'react';
+import { use, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useConfigDocument } from '@entities/Config';
@@ -31,7 +31,7 @@ export function SimpleRoutesPage() {
   const { t } = useTranslation('pages/SimpleRoutes');
   const { outbound } = useSearch({ from: '/config/simple' });
   const document = useConfigDocument();
-  const addHandle = use(ConfigNodeAddDialogContext);
+  const addDialog = use(ConfigNodeAddDialogContext);
   const starterId = useId();
   const starterTrigger = useRef<HTMLButtonElement>(null);
   const outboundsTrigger = useRef<HTMLButtonElement>(null);
@@ -41,6 +41,19 @@ export function SimpleRoutesPage() {
   const model = useMemo(
     () => (config === null || text === null ? null : toSimpleRoutes(config, text, appliedText)),
     [config, text, appliedText]
+  );
+  const canMountAddDialog = model !== null;
+  const setDialogReady = addDialog?.setReady;
+
+  useEffect(
+    function registerAddDialog() {
+      if (!canMountAddDialog || !setDialogReady) return;
+      setDialogReady(true);
+      return function unregisterAddDialog() {
+        setDialogReady(false);
+      };
+    },
+    [canMountAddDialog, setDialogReady]
   );
 
   function closeAddDialog() {
@@ -71,7 +84,7 @@ export function SimpleRoutesPage() {
           <>
             <SimpleRoutesHelp />
             <Dialog
-              handle={addHandle}
+              handle={addDialog?.handle}
               open={open}
               onOpenChange={(next, details) => {
                 if (next) opener.current = details.trigger;
@@ -102,6 +115,8 @@ export function SimpleRoutesPage() {
                 outboundEntries={model.outboundEntries}
                 providers={model.providers}
                 stagedTags={model.stagedTags}
+                hasStagedSubscriptions={model.hasStagedSubscriptions}
+                suggestServices={model.suggestServices}
                 outbound={outbound}
                 addTriggerRef={outboundsTrigger}
               />

@@ -20,7 +20,7 @@ import {
 import { isRecord } from '@shared/lib/isRecord';
 import { hasDuplicateJsoncKeys } from '@shared/lib/jsonc';
 
-import { simpleAddress } from './SimpleRoutes.conditions';
+import { simpleAddress, simpleTerminalConditions } from './SimpleRoutes.conditions';
 
 export const DnsServerSchema = z.object({
   tag: z.string().trim().min(1, 'tag'),
@@ -97,7 +97,19 @@ function routeDomains(config: ConfigDocument) {
   const seen = new Set<string>();
   for (const node of (config.route?.rules ?? []).slice(1)) {
     const rule = exactRule(node, 'outbound');
-    if (!rule || rule.domains.some((domain) => seen.has(domain))) return null;
+    if (!rule) {
+      const match = simpleTerminalConditions(node);
+      if (
+        match?.key === 'rule_set' &&
+        !match.sources &&
+        match.entries?.every((tag) => config.route?.rule_set?.filter((set) => set.tag === tag).length === 1) === true
+      ) {
+        // Earlier terminal matches remain effective. Names behind this set may be shadowed.
+        break;
+      }
+      return null;
+    }
+    if (rule.domains.some((domain) => seen.has(domain))) return null;
     for (const domain of rule.domains) seen.add(domain);
     const existing = byExit.get(rule.target) ?? [];
     byExit.set(rule.target, existing.concat(rule.domains));

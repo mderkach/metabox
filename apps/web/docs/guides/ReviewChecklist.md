@@ -103,6 +103,7 @@ Only what a human checks. Layer boundaries, file and folder naming, `any`, unsaf
 
 - [ ] A new screen, block or redesign follows a brief the repository owner approved ([`AGENTS.md`](../../AGENTS.md))
 - [ ] A new or changed form, component or interaction was critiqued by someone who did not write it, and the findings are in the PR
+- [ ] For a prototype-based change, compare equivalent starting data and user actions at the target widths. Check what each control can do with a pointer and with the keyboard. Record differences in capability and show fixed values as explanatory text or in the preview, apart from editable fields.
 - [ ] A detector exception has a reason in `.impeccable/config.json`
 - [ ] Grid and flex layouts allocate the available space, containers own gutters and limits, and spacing uses the relative token scale ([responsive layout](./Architecture&Style.md#responsive-layout))
 - [ ] At narrow, intermediate and wide widths and at 200% text resize, controls stay reachable and text wraps without clipping. Check nested overflow as well as the document, with long names and translations.

@@ -11,12 +11,14 @@ export function RuleCatalogAddSelect({
   placeholder,
   items,
   inherited,
+  hint,
 }: {
   name: 'outbound' | 'resolver';
   label: string;
   placeholder: string;
   items: { value: string; label: string }[];
   inherited?: string;
+  hint?: string;
 }) {
   const { control, setValue } = useFormContext<RuleCatalogForm>();
   const id = useId();
@@ -37,8 +39,16 @@ export function RuleCatalogAddSelect({
               if (name === 'outbound') setValue('resolver', '');
             }}
           >
-            <SelectTrigger ref={field.ref} onBlur={field.onBlur} id={id} className='w-full min-w-0'>
-              <SelectValue placeholder={placeholder} className='min-w-0 truncate' />
+            <SelectTrigger
+              ref={field.ref}
+              onBlur={field.onBlur}
+              id={id}
+              aria-describedby={hint !== undefined ? `${id}-hint` : undefined}
+              className='w-full min-w-0'
+            >
+              <SelectValue placeholder={placeholder} className='min-w-0 truncate'>
+                {hint !== undefined ? field.value : undefined}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {items.map((item) => (
@@ -50,6 +60,11 @@ export function RuleCatalogAddSelect({
           </Select>
         )}
       />
+      {hint !== undefined && (
+        <p id={`${id}-hint`} className='text-xs text-muted-foreground'>
+          {hint}
+        </p>
+      )}
     </div>
   );
 }

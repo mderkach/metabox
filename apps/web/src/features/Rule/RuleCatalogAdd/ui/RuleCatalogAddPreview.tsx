@@ -6,15 +6,18 @@ export function RuleCatalogAddPreview({
   plan,
   outbound,
   hasResolvers,
+  subscriptionGroup,
 }: {
   plan: ReturnType<typeof planCatalogService>;
   outbound: string;
   hasResolvers: boolean;
+  subscriptionGroup: boolean;
 }) {
   const { t } = useTranslation('features/Rule/RuleCatalogAdd');
   if (!plan.ok) {
     let message = t(`blocker.${plan.reason}`, { detail: plan.detail || t('unknown') });
     if (plan.reason === 'resolver' && hasResolvers) message = t('chooseResolver');
+    if (plan.reason === 'exit' && subscriptionGroup) message = t('blocker.subscriptionExit', { detail: plan.detail });
     if (plan.reason === 'draft' && plan.detail) message = t('unsupportedSetting', { detail: plan.detail });
 
     return (
@@ -41,6 +44,7 @@ export function RuleCatalogAddPreview({
           <span className='font-mono'>{plan.resolver}</span> · {plan.dns.reused ? t('reused') : t('added')}
         </dd>
       </dl>
+      <p className='mt-2 text-sm text-muted-foreground'>{t('allDevices')}</p>
     </section>
   );
 }

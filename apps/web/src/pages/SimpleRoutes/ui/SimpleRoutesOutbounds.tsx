@@ -1,21 +1,26 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowDown, ArrowRight, Check } from 'lucide-react';
 import type { Ref } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@shared/lib/utils';
 import { Badge, Button, Card, CardContent } from '@shared/ui';
 
-import type { toSimpleRoutes } from '../model/SimpleRoutes.model';
+import { SIMPLE_SERVICE_SUGGESTIONS_ID, type toSimpleRoutes } from '../model/SimpleRoutes.model';
 import { SimpleRoutesAddTrigger } from './SimpleRoutesAddTrigger';
 import { SimpleRoutesSection } from './SimpleRoutesSection';
 
-type OutboundSummary = Pick<ReturnType<typeof toSimpleRoutes>, 'outboundEntries' | 'providers' | 'stagedTags'>;
+type OutboundSummary = Pick<
+  ReturnType<typeof toSimpleRoutes>,
+  'outboundEntries' | 'providers' | 'stagedTags' | 'hasStagedSubscriptions' | 'suggestServices'
+>;
 
 export function SimpleRoutesOutbounds({
   outboundEntries,
   providers,
   stagedTags,
+  hasStagedSubscriptions,
+  suggestServices,
   outbound,
   addTriggerRef,
 }: OutboundSummary & { outbound?: string; addTriggerRef: Ref<HTMLButtonElement> }) {
@@ -58,7 +63,12 @@ export function SimpleRoutesOutbounds({
                     <span className={cn('font-semibold', hasTag && 'font-mono')}>
                       {hasTag ? tag : t('outbounds.untagged')}
                     </span>
-                    {hasTag && stagedTags.has(tag) && <Badge variant='secondary'>{t('outbounds.staged')}</Badge>}
+                    {hasTag &&
+                      (stagedTags.has(tag) ? (
+                        <Badge variant='secondary'>{t('outbounds.staged')}</Badge>
+                      ) : (
+                        <span className='text-xs font-normal text-muted-foreground'>{t('outbounds.applied')}</span>
+                      ))}
                     {hasTag && <Check aria-hidden className={cn('size-3.5', !selected && 'invisible')} />}
                   </span>
                   <span className='text-xs font-normal text-muted-foreground'>{labelForType(type)}</span>
@@ -69,16 +79,30 @@ export function SimpleRoutesOutbounds({
         </ul>
       )}
       {providers > 0 && (
-        <p className='text-sm text-muted-foreground'>{t('outbounds.providers', { count: providers })}</p>
+        <p className='text-sm text-muted-foreground'>
+          {t('outbounds.providers', { count: providers })}
+          {hasStagedSubscriptions && <> · {t('outbounds.subscriptionPending')}</>}
+        </p>
       )}
       {(outboundEntries.length > 0 || providers > 0) && (
-        <Link
-          to='/proxies'
-          className='inline-flex w-fit items-center gap-1 text-sm text-primary underline underline-offset-4'
-        >
-          {t('outbounds.inventory')}
-          <ArrowRight aria-hidden='true' className='size-4 shrink-0' />
-        </Link>
+        <div className='flex flex-wrap items-center gap-x-4 gap-y-2'>
+          {suggestServices && (
+            <a
+              href={`#${SIMPLE_SERVICE_SUGGESTIONS_ID}`}
+              className='inline-flex w-fit items-center gap-1 text-sm text-primary underline underline-offset-4'
+            >
+              {t('outbounds.serviceSuggestions')}
+              <ArrowDown aria-hidden='true' className='size-4 shrink-0' />
+            </a>
+          )}
+          <Link
+            to='/proxies'
+            className='inline-flex w-fit items-center gap-1 text-sm text-primary underline underline-offset-4'
+          >
+            {t('outbounds.inventory')}
+            <ArrowRight aria-hidden='true' className='size-4 shrink-0' />
+          </Link>
+        </div>
       )}
     </SimpleRoutesSection>
   );

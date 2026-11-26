@@ -58,6 +58,8 @@ export function SimpleRoutesRules({
           initialOutbound={outbound}
           initialService={initialService}
           stagedTags={model.stagedTags}
+          appliedProviderTags={model.appliedProviderTags}
+          hasStagedSubscriptions={model.hasStagedSubscriptions}
           onAdded={() => {
             setOpen(false);
           }}

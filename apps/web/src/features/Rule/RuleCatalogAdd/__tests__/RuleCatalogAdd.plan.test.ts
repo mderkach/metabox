@@ -128,6 +128,27 @@ describe('catalog route and DNS preview', () => {
     expect(findValue(result.text, ['dns', 'rules'])).toEqual([DNS_RULE]);
   });
 
+  it('keeps checking for conflicts after exact rules with the selected target', () => {
+    const exactRoute = { domain: 'video.test', outbound: 'direct' };
+    const exactDns = { domain: ['video.test'], server: 'local' };
+    const withRoute = setValue(TEXT, ['route', 'rules'], [HIJACK, exactRoute]);
+    const withBoth = setValue(withRoute, ['dns', 'rules'], [exactDns]);
+    expect(preview(withBoth, { resolver: '' })).toMatchObject({ ok: false, reason: 'resolver' });
+    expect(preview(withBoth, { resolver: 'explicit-direct' })).toEqual({
+      ok: false,
+      reason: 'dnsConflict',
+      detail: '1',
+    });
+    expect(
+      preview(setValue(withBoth, ['route', 'rules'], [HIJACK, exactRoute, { ...exactRoute, outbound: 'relay' }]))
+    ).toEqual({ ok: false, reason: 'routeConflict', detail: '3' });
+    expect(preview(setValue(withBoth, ['dns', 'rules'], [exactDns, { ...exactDns, rewrite_ttl: 60 }]))).toEqual({
+      ok: false,
+      reason: 'dnsConflict',
+      detail: '2',
+    });
+  });
+
   it('does not infer an assignment from finals or a singleton, or use a different detour', () => {
     const text = setValue(TEXT, ['dns', 'servers'], [SERVERS[0]]);
     expect(preview(text, { resolver: '' })).toMatchObject({ ok: false, reason: 'resolver' });

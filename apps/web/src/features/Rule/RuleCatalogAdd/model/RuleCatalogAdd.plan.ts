@@ -83,15 +83,23 @@ function positionFor(
     const position = index + 1;
     if (
       isRecord(rule) &&
-      onlyKeys(rule, 'type', 'action', 'rule_set', field) &&
       (rule.type === undefined || rule.type === 'default') &&
       (rule.action === undefined || rule.action === 'route') &&
-      rule[field] === target &&
-      strings(rule.rule_set).length > 0
+      rule[field] === target
     ) {
-      if (strings(rule.rule_set).includes(setTag)) return { position, reused: true };
-      // Opaque sets may overlap, but this terminal rule already has the requested outcome.
-      continue;
+      const sets = strings(rule.rule_set);
+      if (sets.length > 0 && onlyKeys(rule, 'type', 'action', 'rule_set', field)) {
+        if (sets.includes(setTag)) return { position, reused: true };
+        continue;
+      }
+      const domains = strings(rule.domain);
+      // Any overlap already has the requested outcome, but the exact names may cover only part of the service.
+      if (
+        domains.length > 0 &&
+        domains.every((domain) => domain !== '') &&
+        onlyKeys(rule, 'type', 'action', 'domain', field)
+      )
+        continue;
     }
     return blocked(kind === 'route' ? 'routeConflict' : 'dnsConflict', String(position));
   }

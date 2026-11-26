@@ -6,6 +6,7 @@
       }
     },
     "rule": {
+      "stagedOutsideFilter": "Service added to the draft for {{outbound}}. The current filter hides it.",
       "reorder": {
         "failed": "Could not move the rule without changing its comments. The config was left unchanged."
       },
