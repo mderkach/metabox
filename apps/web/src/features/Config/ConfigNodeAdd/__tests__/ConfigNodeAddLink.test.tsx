@@ -99,3 +99,71 @@ describe('ConfigNodeAddLink', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('«Подписки»');
   });
 });
+
+it('reviews a recognized server, preserves ambiguous input and keeps credentials out of feedback', async () => {
+  const server = {
+    type: 'trojan',
+    tag: 'existing',
+    server: 'edge.example',
+    server_port: 443,
+    password: 'test-password',
+    tls: { enabled: true, server_name: 'edge.example' },
+    detour: 'existing-detour',
+  };
+  const state = ConfigDocumentStore.getState();
+  state.load(JSON.stringify({ outbounds: [server] }));
+  const user = userEvent.setup();
+  const { container, unmount } = renderWithQuery(
+    <ConfigNodeAddLink
+      section='outbounds'
+      takenTags={[]}
+      subscriptionFallback={<a href='/config/providers'>Подписки</a>}
+    />
+  );
+
+  try {
+    const input = screen.getByLabelText('Вставить ссылку', { selector: 'input' });
+    const link = 'trojan://test-password@edge.example:443#Imported';
+    await user.click(input);
+    await user.paste(`${link}\nss://other-link`);
+    const stage = screen.getByRole('button', { name: 'Добавить в черновик' });
+    await user.click(stage);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Вставьте одну ссылку на сервер или подписку.');
+    expect(input).toHaveFocus();
+    expect(ConfigDocumentStore.getState().draft).toBeNull();
+
+    await user.clear(input);
+    await user.paste(link);
+    const name = screen.getByRole('textbox', { name: 'Имя сервера' });
+    expect(name).toHaveValue('Imported');
+    expect(container).toHaveTextContent('edge.example:443');
+    expect(input).toHaveAttribute('type', 'password');
+    expect(container).not.toHaveTextContent(/test-password|other-link/);
+
+    await user.clear(name);
+    await user.type(name, 'Confirmed');
+    await user.click(stage);
+    const separate = screen.getByRole('checkbox', { name: 'Добавить как отдельный сервер' });
+    expect(separate).toHaveFocus();
+    expect(input).toHaveValue(link);
+    expect(name).toHaveValue('Confirmed');
+    expect(ConfigDocumentStore.getState().draft).toBeNull();
+
+    await user.click(separate);
+    await user.click(stage);
+    expect(readSectionNodes(ConfigDocumentStore.getState().draft ?? '', 'outbounds')).toEqual([
+      server,
+      {
+        type: 'trojan',
+        tag: 'Confirmed',
+        server: 'edge.example',
+        server_port: 443,
+        password: 'test-password',
+        tls: server.tls,
+      },
+    ]);
+  } finally {
+    unmount();
+    state.reset();
+  }
+});

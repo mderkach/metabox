@@ -611,3 +611,179 @@ for (const { theme, config } of EMPTY_CONFIGS) {
     }
   );
 }
+
+const SERVER_GROUP = 'manual-proxies';
+const APPLIED_SERVER = {
+  type: 'vless',
+  tag: 'existing-server',
+  server: 'server.example.invalid',
+  server_port: 443,
+  uuid: UUID,
+};
+const SERVER_WITH_GROUP = {
+  outbounds: [
+    APPLIED_SERVER,
+    { type: 'selector', tag: SERVER_GROUP, outbounds: [APPLIED_SERVER.tag] },
+    { type: 'direct', tag: DIRECT },
+  ],
+};
+
+test(
+  'Simple rejects applied and staged server duplicates and previews a different server and its group',
+  { tag: E2E_TAG.Mock },
+  async ({ page, simpleRoutesPage: routes, applyBar }) => {
+    await page.setViewportSize(DESKTOP);
+    await routes.openWithConfig(SERVER_WITH_GROUP);
+    await routes.addFromHeader.press('Enter');
+    await expect(routes.serverLink).toBeFocused();
+
+    const duplicate = routes.dialog.getByText(translate(NODE_ADD, 'server.duplicate'), { exact: true });
+    const omitted = translate(NODE_ADD, 'field.link.omittedParams', { names: 'spx' });
+    await routes.serverLink.fill(LINK.replace('#', '?spx=private-omitted-value#'));
+    await expect(duplicate).toBeVisible();
+    await expect(routes.dialog.getByText(omitted, { exact: true })).toBeHidden();
+    await expect(routes.addServer).toBeDisabled();
+    await expect(applyBar.dirty).toBeHidden();
+    await expect(routes.dialog).not.toContainText(UUID);
+
+    await routes.serverLink.fill('vless://fake-credential@server.example.invalid');
+    await routes.addServer.click();
+    await expect(routes.dialog.getByRole('alert')).toContainText(translate(NODE_ADD, 'error.link.server'));
+    await expect(routes.serverLink).toBeFocused();
+    await routes.serverLink.fill('example://unused');
+    await routes.addServer.click();
+    await expect(routes.dialog.getByRole('alert')).toContainText(translate(NODE_ADD, 'error.link.scheme'));
+
+    const different = LINK.replace(':443#', ':8443?spx=private-omitted-value#');
+    await routes.serverLink.fill(different);
+    await expect(routes.dialog).toContainText('server.example.invalid:8443');
+    await expect(routes.dialog).toContainText(omitted);
+    await expect(routes.subscriptionGroup).toHaveAccessibleDescription(translate(NODE_ADD, 'server.groupHint'));
+    await expect(routes.dialog).not.toContainText(/private-omitted-value|fake-credential|01234567-89ab/);
+    await expect(duplicate).toBeHidden();
+
+    await routes.subscriptionGroup.press('Enter');
+    const group = page.getByRole('option', { name: SERVER_GROUP, exact: true });
+    await expect(page.getByRole('option', { name: DIRECT, exact: true })).toBeHidden();
+    await group.click();
+    await routes.addServer.click();
+    await expect(routes.dialog).toBeHidden();
+    await expect(routes.addFromHeader).toBeFocused();
+
+    await routes.addFromOutbounds.click();
+    await routes.serverLink.fill(different.replace(SERVER, 'renamed-server'));
+    await expect(duplicate).toBeVisible();
+    await expect(routes.addServer).toBeDisabled();
+    await page.keyboard.press('Escape');
+    await expect(routes.addFromOutbounds).toBeFocused();
+
+    await applyBar.apply();
+    await expect(applyBar.nodeChanges).toContainText(SERVER);
+    await expect(applyBar.nodeChanges).toContainText(SERVER_GROUP);
+    await applyBar.showChangesText();
+    await expect(applyBar.diff).toContainText('8443');
+    await expect(applyBar.diff).toContainText('••••••');
+    await expect(applyBar.diff).not.toContainText(UUID);
+    await expect(applyBar.diff).not.toContainText('private-omitted-value');
+  }
+);
+
+test(
+  'at 375px Simple can cancel server settings and add the first server with a new group',
+  { tag: E2E_TAG.Mock },
+  async ({ page, simpleRoutesPage: routes, applyBar }) => {
+    await page.setViewportSize(PHONE);
+    await page.addInitScript(saveTheme, 'dark');
+    await routes.openWithConfig({});
+
+    await routes.addFromStarter.click();
+    await expect(routes.serverLink).toBeFocused();
+    await routes.serverLink.fill(LINK);
+    const name = routes.dialog.getByRole('textbox', { name: translate(NODE_ADD, 'server.tag'), exact: true });
+    await expect(name).toHaveValue(SERVER);
+    await routes.subscriptionGroup.click();
+    await page.getByRole('option', { name: translate(NODE_ADD, 'subscription.newGroup'), exact: true }).click();
+    const groupName = routes.dialog.getByRole('textbox', {
+      name: translate(NODE_ADD, 'subscription.groupName'),
+      exact: true,
+    });
+    await groupName.fill(SERVER_GROUP);
+    await expect(groupName).toBeInViewport();
+    await expect(routes.addServer).toBeInViewport();
+    expect(
+      await routes.dialog.evaluate(
+        (element: { scrollWidth: number; clientWidth: number }) => element.scrollWidth - element.clientWidth
+      )
+    ).toBeLessThanOrEqual(0);
+
+    await routes.cancel.click();
+    await expect(routes.addFromStarter).toBeFocused();
+    await expect(applyBar.dirty).toBeHidden();
+
+    await routes.addFromStarter.press('Enter');
+    await expect(routes.serverLink).toBeFocused();
+    await expect(routes.serverLink).toHaveValue('');
+    await routes.serverLink.fill(LINK);
+    await expect(groupName).toBeHidden();
+    await routes.subscriptionGroup.click();
+    await page.getByRole('option', { name: translate(NODE_ADD, 'subscription.newGroup'), exact: true }).click();
+    await groupName.fill(SERVER_GROUP);
+    await routes.addServer.click();
+    await expect(routes.addFromOutbounds).toBeFocused();
+    await expect(routes.outbounds).toContainText(SERVER);
+    await expect(routes.outbounds).toContainText(SERVER_GROUP);
+    await expect(applyBar.dirty).toBeVisible();
+  }
+);
+
+test(
+  'at 529px Simple keeps ambiguous links out of the draft and requires a separate-server decision by keyboard',
+  { tag: E2E_TAG.Mock },
+  async ({ page, simpleRoutesPage: routes, applyBar }) => {
+    await page.setViewportSize(NARROW);
+    await page.addInitScript(saveTheme, 'light');
+    await routes.openWithConfig({
+      outbounds: [
+        { ...APPLIED_SERVER, detour: DIRECT },
+        { type: 'direct', tag: DIRECT },
+      ],
+    });
+    await routes.addFromHeader.press('Enter');
+    await expect(routes.serverLink).toBeFocused();
+
+    await test.step('multiple links stay in the form without previewing a server', async () => {
+      await routes.serverLink.fill(`${LINK} https://user:private@subscription.example.invalid/token`);
+      await routes.serverLink.press('Enter');
+      await expect(routes.dialog.getByRole('alert')).toHaveText(translate(NODE_ADD, 'server.multipleLinks'));
+      await expect(routes.serverLink).toBeFocused();
+      await expect(routes.dialog).not.toContainText(/private|01234567-89ab/);
+      await expect(applyBar.dirty).toBeHidden();
+    });
+
+    await test.step('a possible duplicate requires an explicit choice', async () => {
+      await routes.serverLink.fill(LINK);
+      const separate = routes.dialog.getByRole('checkbox', { name: translate(NODE_ADD, 'server.addSeparate') });
+      await expect(separate).toHaveAccessibleDescription(translate(NODE_ADD, 'server.possibleDuplicate'));
+      await expect
+        .poll(async () => {
+          const cancelBounds = await routes.cancel.boundingBox();
+          const addBounds = await routes.addServer.boundingBox();
+          if (cancelBounds === null || addBounds === null) return false;
+
+          return Math.abs(cancelBounds.width - addBounds.width) <= 1 && cancelBounds.y < addBounds.y;
+        })
+        .toBe(true);
+      await routes.serverLink.press('Enter');
+      await expect(separate).toBeFocused();
+      await expect(applyBar.dirty).toBeHidden();
+      await page.keyboard.press('Space');
+      await expect(separate).toBeChecked();
+      await routes.addServer.press('Enter');
+      await expect(routes.dialog).toBeHidden();
+      await expect(routes.addFromHeader).toBeFocused();
+      await expect(applyBar.dirty).toBeVisible();
+      await expect(routes.outbounds).toContainText(APPLIED_SERVER.tag);
+      await expect(routes.outbounds).toContainText(SERVER);
+    });
+  }
+);

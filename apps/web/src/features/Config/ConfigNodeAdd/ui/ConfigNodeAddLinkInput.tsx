@@ -6,11 +6,16 @@ import { useTranslation } from 'react-i18next';
 import { Field, FieldError, FieldLabel, Input } from '@shared/ui';
 
 import { NODE_ADD_ERROR, type ConnectionLinkModel } from '../model/ConfigNodeAdd.schema';
+import { SERVER_ERROR } from '../model/ConfigNodeAdd.server';
 import { SUBSCRIPTION_ERROR } from '../model/ConfigNodeAdd.subscription';
 
 const NS = 'features/Config/ConfigNodeAdd';
 
 const INPUT_ERRORS: Readonly<Record<string, ParseKeys<typeof NS> | undefined>> = {
+  [SERVER_ERROR.TagRequired]: 'server.tagRequired',
+  [SERVER_ERROR.TagTaken]: 'server.tagTaken',
+  [SERVER_ERROR.GroupRequired]: 'subscription.groupNameRequired',
+  [SERVER_ERROR.GroupTaken]: 'subscription.groupTaken',
   [SUBSCRIPTION_ERROR.TagRequired]: 'subscription.tagRequired',
   [SUBSCRIPTION_ERROR.TagTaken]: 'subscription.tagTaken',
   [NODE_ADD_ERROR.TagRequired]: 'subscription.groupNameRequired',
@@ -19,18 +24,20 @@ const INPUT_ERRORS: Readonly<Record<string, ParseKeys<typeof NS> | undefined>> =
   [SUBSCRIPTION_ERROR.Agent]: 'subscription.agentError',
 };
 
-export function ConfigNodeAddSubscriptionInput({
+export function ConfigNodeAddLinkInput({
   name,
   label,
   inputMode,
   onChange,
   max,
+  suggestedValue,
 }: {
-  name: 'tag' | 'groupName' | 'intervalValue' | 'agentValue';
+  name: 'tag' | 'groupName' | 'intervalValue' | 'agentValue' | 'serverTag' | 'serverGroupName';
   label: string;
   inputMode?: 'numeric';
   onChange?: () => void;
   max?: number;
+  suggestedValue?: string;
 }) {
   const { t } = useTranslation(NS);
   const { control, trigger } = useFormContext<ConnectionLinkModel>();
@@ -49,6 +56,7 @@ export function ConfigNodeAddSubscriptionInput({
             <FieldLabel htmlFor={id}>{label}</FieldLabel>
             <Input
               {...field}
+              value={field.value ?? suggestedValue ?? ''}
               id={id}
               className='w-full font-mono'
               type={inputMode === 'numeric' ? 'number' : undefined}
@@ -61,7 +69,7 @@ export function ConfigNodeAddSubscriptionInput({
               aria-describedby={key === undefined ? undefined : errorId}
               onBlur={() => {
                 field.onBlur();
-                if (name === 'tag' && field.value.trim() !== '') void trigger('tag');
+                if (name === 'tag' && field.value?.trim() !== '') void trigger('tag');
               }}
               onChange={(event) => {
                 field.onChange(event);

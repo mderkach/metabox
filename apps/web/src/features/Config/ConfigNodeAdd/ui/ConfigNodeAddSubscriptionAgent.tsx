@@ -6,8 +6,8 @@ import { Button, Popover, PopoverContent, PopoverTrigger } from '@shared/ui';
 
 import type { ConnectionLinkModel } from '../model/ConfigNodeAdd.schema';
 import { SUBSCRIPTION_AGENTS, SUBSCRIPTION_AGENT_PROFILES } from '../model/ConfigNodeAdd.subscription';
-import { ConfigNodeAddSubscriptionInput } from './ConfigNodeAddSubscriptionInput';
-import { ConfigNodeAddSubscriptionSelect } from './ConfigNodeAddSubscriptionSelect';
+import { ConfigNodeAddLinkInput } from './ConfigNodeAddLinkInput';
+import { ConfigNodeAddLinkSelect } from './ConfigNodeAddLinkSelect';
 
 export function ConfigNodeAddSubscriptionAgent() {
   const { t } = useTranslation('features/Config/ConfigNodeAdd');
@@ -16,7 +16,7 @@ export function ConfigNodeAddSubscriptionAgent() {
 
   return (
     <div className='flex flex-col gap-2'>
-      <ConfigNodeAddSubscriptionSelect
+      <ConfigNodeAddLinkSelect
         name='agent'
         label={t('subscription.agent')}
         help={
@@ -43,7 +43,7 @@ export function ConfigNodeAddSubscriptionAgent() {
       />
       {agent !== 'defaultAgent' && (
         <div className='motion-safe:animate-in motion-safe:fade-in'>
-          <ConfigNodeAddSubscriptionInput
+          <ConfigNodeAddLinkInput
             name='agentValue'
             label={t('subscription.agentValue')}
             onChange={() => {

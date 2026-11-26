@@ -15,6 +15,20 @@
       "omittedParams": "These parameters will be skipped when you add the server: {{names}}"
     }
   },
+  "server": {
+    "recognized": "{{protocol}} server",
+    "fingerprint": "Fingerprint {{value}}",
+    "tlsName": "SNI {{value}}",
+    "groupHint": "Optional. A group combines servers. Configure routing rules for it separately.",
+    "tag": "Server name",
+    "tagRequired": "Enter a server name.",
+    "tagTaken": "This name is already in use. Choose a different server name.",
+    "duplicate": "A server with these settings is already in the configuration or draft. Paste a different link or cancel.",
+    "possibleDuplicate": "A server in the configuration or draft matches the link and has additional settings. Cancel to keep it, or confirm that you want a separate server.",
+    "addSeparate": "Add as a separate server",
+    "multipleLinks": "Paste one server or subscription link at a time.",
+    "writeFailed": "The server could not be added to this draft."
+  },
   "subscription": {
     "linkPlaceholder": "vless://… or https://…",
     "linkHint": "Paste a server link or an HTTPS subscription address.",

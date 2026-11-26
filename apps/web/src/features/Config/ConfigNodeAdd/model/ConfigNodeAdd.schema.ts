@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { parseShareLink } from './ConfigNodeAdd.link';
+import { parseServerImport, SERVER_ERROR, SERVER_GROUP } from './ConfigNodeAdd.server';
 import {
   MAX_INTERVAL,
   SUBSCRIPTION_AGENT_PROFILES,
@@ -66,24 +67,34 @@ export type NodeLinkModel = z.infer<typeof NodeLinkSchema>;
 export const NODE_LINK_DEFAULTS: NodeLinkModel = { link: '' };
 
 /** A link that does not parse fails with the parser code (`NODE_LINK_ERROR`). */
-function refineNodeLink(data: NodeLinkModel, ctx: z.RefinementCtx) {
+function refineNodeLink(data: NodeLinkModel, ctx: z.RefinementCtx, allowSubscriptions = false) {
   if (data.link.trim() === '') {
     ctx.addIssue({ code: 'custom', path: ['link'], message: NODE_ADD_ERROR.LinkRequired });
 
     return;
   }
 
-  const { error } = parseShareLink(data.link);
+  const { error } = allowSubscriptions ? parseServerImport(data.link) : parseShareLink(data.link);
+  const message =
+    allowSubscriptions && error !== SERVER_ERROR.MultipleLinks && /^https:/i.test(data.link.trim())
+      ? SUBSCRIPTION_ERROR.InvalidLink
+      : error;
 
-  if (error !== null) {
-    ctx.addIssue({ code: 'custom', path: ['link'], message: error });
+  if (message !== null) {
+    ctx.addIssue({ code: 'custom', path: ['link'], message });
   }
 }
 
-export const NodeLinkFormSchema = NodeLinkSchema.superRefine(refineNodeLink);
+export const NodeLinkFormSchema = NodeLinkSchema.superRefine((data, ctx) => {
+  refineNodeLink(data, ctx);
+});
 
 const ConnectionLinkSchema = NodeLinkSchema.extend({
   tag: z.string(),
+  serverTag: z.string().nullable(),
+  serverGroup: z.string(),
+  serverGroupName: z.string(),
+  serverSeparate: z.boolean(),
   group: z.string(),
   groupName: z.string(),
   interval: z.enum(SUBSCRIPTION_INTERVALS),
@@ -98,6 +109,10 @@ export type ConnectionLinkModel = z.infer<typeof ConnectionLinkSchema>;
 export const CONNECTION_LINK_DEFAULTS: ConnectionLinkModel = {
   ...NODE_LINK_DEFAULTS,
   tag: '',
+  serverTag: null,
+  serverGroup: SERVER_GROUP.None,
+  serverGroupName: '',
+  serverSeparate: false,
   group: SUBSCRIPTION_GROUP.None,
   groupName: '',
   interval: '5m',
@@ -110,11 +125,7 @@ export const CONNECTION_LINK_DEFAULTS: ConnectionLinkModel = {
 export function makeConnectionLinkSchema(allowSubscriptions: boolean, reservedTags: ReadonlySet<string>) {
   return ConnectionLinkSchema.superRefine((data, ctx) => {
     if (!allowSubscriptions || subscriptionUrl(data.link) === null) {
-      if (allowSubscriptions && /^https:/i.test(data.link.trim())) {
-        ctx.addIssue({ code: 'custom', path: ['link'], message: SUBSCRIPTION_ERROR.InvalidLink });
-      } else {
-        refineNodeLink(data, ctx);
-      }
+      refineNodeLink(data, ctx, allowSubscriptions);
       return;
     }
 
