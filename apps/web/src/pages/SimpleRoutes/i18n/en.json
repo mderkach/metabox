@@ -94,12 +94,16 @@
     "latency": "Group · picks by latency",
     "direct": "Direct",
     "staged": "Added to draft",
+    "applied": "In applied config",
     "providers_one": "{{count}} configured subscription",
     "providers_other": "{{count}} configured subscriptions",
-    "inventory": "Groups, servers and subscriptions"
+    "subscriptionPending": "Apply to load servers from the new subscription",
+    "inventory": "Groups, servers and subscriptions",
+    "serviceSuggestions": "Go to service suggestions"
   },
   "rules": {
     "empty": "No routing rules in the config",
+    "suggestions": "Choose a service to set up its route.",
     "noMatches": "No rules for this outbound",
     "filtered": "Outbound · {{outbound}}",
     "clear": "Show all rules",
@@ -110,7 +114,8 @@
     "description": "Open JSON to review or correct the configuration."
   },
   "catalog": {
-    "action": "Add service"
+    "action": "Add service",
+    "findAnother": "Find another…"
   },
   "custom": {
     "add": "Add site or address",

@@ -690,6 +690,23 @@ The Chromium mock scenarios cover a populated desktop configuration and an empty
 | AC-115 | e2e  | `apps/web/e2e/simpleRoutes.e2e.test.ts` | `Simple help and version history preserve the draft (keyboard)` |
 | AC-115 | e2e  | `apps/web/e2e/simpleRoutes.e2e.test.ts` | `Simple help and version history preserve the draft (touch)`    |
 
+### First connection and suggested services in Simple Routes
+
+The mock stand starts with an empty configuration. The catalog uses the same service search from the suggested buttons, “Find another…” and the Rules action. Tests cover the first server, cancellation, filter and focus return, and the shared draft across Simple, Editor and JSON. The pairing case checks the exact routing and DNS entries in JSON and verifies that the Apply review shows both edits.
+
+The phone scenario follows the in-page link from Outbounds to the suggestions by keyboard. The catalog selects its initial search text so it can be replaced by typing. The desktop and phone pairing cases check that device scope appears in the preview and that the outbound and resolver are the available selectors.
+
+The subscription fixtures promote config and publish the synthetic runtime member only after Apply confirmation. The ungrouped subscription publishes a named member without adding a config outbound. The grouped case configures a selector and confirms its reported runtime membership. The catalog still blocks pairing for that group. An applied tag or a loaded member does not establish a verified DNS path.
+
+Independent Impeccable assessments checked the mock stand at 1280 px and 375 px. The browser assessment also covered 529 px, both themes, keyboard focus and touch targets. The review led to visible recovery guidance for a missing or unsupported exit, subscription information scoped to the relevant exit, and confirmation when a staged service is hidden by the current filter.
+
+| ID     | Kind | File                                     | Check                                                                                                |
+| ------ | ---- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| AC-115 | e2e  | `apps/web/e2e/simpleCatalog.e2e.test.ts` | `the empty configuration opens the same catalog from a suggested service and Escape restores focus`  |
+| AC-115 | e2e  | `apps/web/e2e/simpleCatalog.e2e.test.ts` | `the first server keeps service suggestions, the outbound filter and the draft through confirmation` |
+| AC-115 | e2e  | `apps/web/e2e/simpleCatalog.e2e.test.ts` | `distinguishes the draft from runtime servers after confirmed Apply`                                 |
+| AC-116 | e2e  | `apps/web/e2e/simpleCatalog.e2e.test.ts` | `distinguishes the draft from runtime servers after confirmed Apply`                                 |
+
 ### Catalog route and DNS mapping
 
 The measurements below were recorded on the [pinned fork release](../sing-box-extended.sha256) using a local, loopback-only container and synthetic domain sets. They apply to the [catalog configurations listed in the design](../openspec/changes/routes-simple/design.md#catalog-route-and-dns-mapping).

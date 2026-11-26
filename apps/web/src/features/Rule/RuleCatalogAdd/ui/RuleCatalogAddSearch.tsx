@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, useRef } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
@@ -20,6 +20,7 @@ export function RuleCatalogAddSearch({
   const { t } = useTranslation('features/Rule/RuleCatalogAdd');
   const { control, setValue } = useFormContext<RuleCatalogForm>();
   const id = useId();
+  const firstFocus = useRef(true);
 
   return (
     <>
@@ -35,6 +36,10 @@ export function RuleCatalogAddSearch({
               type='search'
               autoComplete='off'
               spellCheck={false}
+              onFocus={(event) => {
+                if (firstFocus.current) event.currentTarget.select();
+                firstFocus.current = false;
+              }}
               onChange={(event) => {
                 field.onChange(event);
                 setValue('service', '');

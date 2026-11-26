@@ -329,7 +329,10 @@ for (const { theme, config } of EMPTY_CONFIGS) {
         await expect(routes.dns).toContainText(translate(SIMPLE_ROUTES, 'dns.servers', { count: 0 }));
         await expect(routes.dns).toContainText(translate(SIMPLE_ROUTES, 'dns.finalUnknown'));
         await expect(routes.outbounds).toContainText(translate(SIMPLE_ROUTES, 'outbounds.empty'));
-        await expect(routes.rules).toContainText(translate(SIMPLE_ROUTES, 'rules.empty'));
+        await expect(routes.rules).toContainText(translate(SIMPLE_ROUTES, 'rules.suggestions'));
+        await expect(
+          routes.rules.getByRole('button', { name: translate(SIMPLE_ROUTES, 'catalog.findAnother') })
+        ).toBeVisible();
         await expect(page.locator('html')).toHaveCSS('color-scheme', theme);
         expect(await page.evaluate<number>('document.documentElement.scrollWidth')).toBeLessThanOrEqual(PHONE.width);
       });

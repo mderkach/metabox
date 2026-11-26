@@ -102,6 +102,8 @@ export function SimpleRoutesPage() {
                 outboundEntries={model.outboundEntries}
                 providers={model.providers}
                 stagedTags={model.stagedTags}
+                hasStagedSubscriptions={model.hasStagedSubscriptions}
+                suggestServices={model.suggestServices}
                 outbound={outbound}
                 addTriggerRef={outboundsTrigger}
               />

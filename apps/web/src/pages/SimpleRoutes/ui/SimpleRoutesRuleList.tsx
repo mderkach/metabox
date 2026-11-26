@@ -211,18 +211,22 @@ export function SimpleRoutesRuleList({
           </Card>
         );
       })}
-      {shown.length === 0 && (
+      {model.suggestServices ? (
         <Card size='sm'>
           <CardContent>
-            {model.empty && outbound === undefined ? (
-              <SimpleRoutesServiceSuggestions />
-            ) : (
+            <SimpleRoutesServiceSuggestions />
+          </CardContent>
+        </Card>
+      ) : (
+        shown.length === 0 && (
+          <Card size='sm'>
+            <CardContent>
               <p className='text-sm text-muted-foreground'>
                 {t(outbound === undefined ? 'rules.empty' : 'rules.noMatches')}
               </p>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )
       )}
       <div>
         <SimpleRoutesCustomAction text={text} initialOutbound={outbound} />
