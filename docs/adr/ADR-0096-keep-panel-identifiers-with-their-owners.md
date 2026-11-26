@@ -26,6 +26,8 @@ Choose option 3. Each page exports its registration path and a lazy loader throu
 
 The locale generator emits a string constant beside each source-language dictionary. A component uses its owner's named constant. The initial shell and route loaders use public exports to preload the same namespace. The i18next resource types and fingerprinted dictionary URLs are derived infrastructure.
 
+Vite serves individual modules in development. For a namespace-only import in an application preloader, the dev server follows the owner's named public re-export directly to the generated module. This keeps the unrelated UI behind that entry out of the startup request graph. Mixed runtime imports still evaluate the public entry normally.
+
 ## Consequences
 
 A route edit is discoverable at its page, and a dictionary move changes its generated value. Components shared between screens receive navigation inputs through composition. Generation and freshness checks cover multiple small files. The build must keep UI code and dictionary contents out of initial assets when a caller only needs a name.

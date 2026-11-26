@@ -11,6 +11,7 @@ import { configDefaults, defineConfig, type Plugin } from 'vitest/config';
 
 import { daemonOriginFor } from './tools/daemonOrigin.ts';
 import { metaboxI18n } from './tools/i18nPlugin.ts';
+import { metaboxLocalePreloads } from './tools/i18nPreload.ts';
 
 const BUDGET_TESTS = 'src/**/*.budget.test.{ts,tsx}';
 const BROWSER_TESTS = 'src/**/*.browser.test.{ts,tsx}';
@@ -215,6 +216,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     metaboxI18n(import.meta.dirname),
+    metaboxLocalePreloads(import.meta.dirname),
     metaboxCompress(),
     metaboxMocks(),
     metaboxProductionReact(),

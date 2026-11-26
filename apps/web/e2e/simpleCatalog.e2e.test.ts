@@ -307,6 +307,7 @@ test(
     await page.setViewportSize(DESKTOP);
     await page.addInitScript({ content: "localStorage.setItem('theme', 'light')" });
     await openEmptyApplyStand(page);
+    await routes.starter.waitFor();
     const suggestion = routes.rules.getByRole('button', { name: 'YouTube', exact: true });
     const findAnother = routes.rules.getByRole('button', { name: translate(SIMPLE_ROUTES_NS, 'catalog.findAnother') });
     const tile = routes.outboundTile(FIRST_SERVER);

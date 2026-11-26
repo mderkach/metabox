@@ -179,6 +179,7 @@ for (const viewport of [NARROW, DESKTOP]) {
     async ({ page, simpleRoutesPage: routes, applyBar }) => {
       await page.setViewportSize(viewport);
       await routes.goto(DIRECT);
+      await routes.outboundTile(DIRECT).waitFor();
       await expect(routes.routingMode).toContainText(translate(SHARED_NS, 'clashMode.rule'));
       await routes.routingMode.click();
       await page.getByRole('option', { name: translate(SHARED_NS, 'clashMode.direct'), exact: true }).click();

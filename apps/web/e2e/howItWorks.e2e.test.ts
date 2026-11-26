@@ -94,6 +94,8 @@ for (const viewport of [desktop, ...phones]) {
 test('opens the verified applied rule from the walk', { tag: E2E_TAG.Mock }, async ({ page }) => {
   await page.setViewportSize(desktop);
   await page.goto('/how-it-works');
+  const choices = page.getByRole('group', { name: translate(HOW_IT_WORKS_NS, 'connections') });
+  await choices.getByRole('button', { pressed: true }).waitFor();
 
   const walk = page.getByRole('list', { name: translate(HOW_IT_WORKS_NS, 'walk') });
   const rule = walk.getByRole('button', { name: /^Rule Media sites/ });
