@@ -682,6 +682,7 @@ The Chromium mock scenarios cover a populated desktop configuration and an empty
 | AC-116 | e2e    | `apps/web/e2e/simpleRoutes.e2e.test.ts`             | `Simple, Editor and JSON share the server draft and its Apply flow`               |
 | AC-115 | e2e    | `apps/web/e2e/simpleRoutes.e2e.test.ts`             | `the empty Simple view opens the same focused server dialog from both actions in` |
 | AC-115 | e2e    | `apps/web/e2e/simpleRoutes.e2e.test.ts`             | `Routes keeps common controls across Simple, Editor and JSON at`                  |
+| AC-119 | e2e    | `apps/web/e2e/simpleRoutes.e2e.test.ts`             | `the Routes header import waits for its dialog to mount`                          |
 
 ### Contextual help and version history in Simple Routes
 

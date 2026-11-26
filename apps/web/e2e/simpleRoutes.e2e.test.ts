@@ -616,6 +616,7 @@ for (const { theme, config } of EMPTY_CONFIGS) {
 }
 
 const SERVER_GROUP = 'manual-proxies';
+const SIMPLE_ROUTE_MODULE = '/src/pages/SimpleRoutes/index.ts';
 const APPLIED_SERVER = {
   type: 'vless',
   tag: 'existing-server',
@@ -630,6 +631,37 @@ const SERVER_WITH_GROUP = {
     { type: 'direct', tag: DIRECT },
   ],
 };
+
+test(
+  'the Routes header import waits for its dialog to mount',
+  { tag: E2E_TAG.Mock },
+  async ({ page, simpleRoutesPage: routes }) => {
+    let release: () => void = () => undefined;
+    const moduleGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.context().route(
+      (url) => url.pathname === SIMPLE_ROUTE_MODULE,
+      async (route) => {
+        await moduleGate;
+        await route.continue();
+      }
+    );
+    try {
+      await routes.openWithConfig(SERVER_WITH_GROUP);
+      await expect(routes.simpleView).toHaveAttribute('aria-selected', 'true');
+      await expect(routes.outbounds).toBeHidden();
+      await expect(routes.addFromHeader).toBeHidden();
+    } finally {
+      release();
+    }
+
+    await routes.addFromHeader.press('Enter');
+    await expect(routes.serverLink).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(routes.addFromHeader).toBeFocused();
+  }
+);
 
 test(
   'Simple rejects applied and staged server duplicates and previews a different server and its group',
