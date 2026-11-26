@@ -74,6 +74,12 @@ A separate receiver check on sing-box-extended `1.14.3-extended-2.7.3` verified 
 
 Appending to a nonempty inventory preserves its first entry. In an empty inventory the first configured server would become the default. Simple must explain when an inventory-only addition cannot preserve the default. Adding a second resolver also requires preserving bootstrap for hostname dialers that can implicitly use a sole resolver. Opaque rule order, overlapping matches or mixed conditions require separate evidence. Catalog sets stay in the service-specific workflow: their tags alone cannot establish disjoint membership across exits. A finding about DNS and traffic taking different paths depends on the revision-scoped diagnostic in [#392](https://github.com/mderkach/metabox/issues/392).
 
+## Server import comparison
+
+Simple compares the protocol and every resulting server field in the configuration and draft, excluding the tag. The comparison includes the address, port, credentials, TLS and transport, and any protocol-specific settings such as the Shadowsocks method, VMess security settings or Hysteria 2 obfuscation. JSON object key order has no effect. An exact match is a duplicate regardless of the name in the link. A match with extra settings on the configured server needs an explicit choice to add it separately. Differing mapped values do not establish a duplicate. The comparison uses manually configured outbounds and makes no claim about servers inside subscriptions.
+
+Simple can append the server to an existing selector or latency-test group with an editable member list, create a manual-choice group, or leave the server ungrouped. Adding the server and updating its chosen group use one draft write.
+
 ## Risks / Trade-offs
 
 - A simple control may hide a more complex imported configuration. Keep unsupported items visible as such and verify that edits to supported fields preserve the rest of the document.

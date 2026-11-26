@@ -5,8 +5,8 @@ import { FieldLegend, FieldSet, Label } from '@shared/ui';
 
 import type { ConnectionLinkModel } from '../model/ConfigNodeAdd.schema';
 import { MAX_INTERVAL, SUBSCRIPTION_INTERVALS, SUBSCRIPTION_INTERVAL_UNITS } from '../model/ConfigNodeAdd.subscription';
-import { ConfigNodeAddSubscriptionInput } from './ConfigNodeAddSubscriptionInput';
-import { ConfigNodeAddSubscriptionSelect } from './ConfigNodeAddSubscriptionSelect';
+import { ConfigNodeAddLinkInput } from './ConfigNodeAddLinkInput';
+import { ConfigNodeAddLinkSelect } from './ConfigNodeAddLinkSelect';
 
 const UNIT_LABEL = { m: 'minutes', h: 'hours', d: 'days' } as const;
 const INTERVAL_LABEL = {
@@ -53,13 +53,13 @@ export function ConfigNodeAddSubscriptionInterval() {
       />
       {interval === 'custom' && (
         <div className='grid min-w-0 grid-cols-2 items-start gap-2 motion-safe:animate-in motion-safe:fade-in'>
-          <ConfigNodeAddSubscriptionInput
+          <ConfigNodeAddLinkInput
             name='intervalValue'
             label={t('subscription.intervalValue')}
             inputMode='numeric'
             max={MAX_INTERVAL[unit]}
           />
-          <ConfigNodeAddSubscriptionSelect
+          <ConfigNodeAddLinkSelect
             name='intervalUnit'
             label={t('subscription.intervalUnit')}
             items={SUBSCRIPTION_INTERVAL_UNITS.map((value) => ({

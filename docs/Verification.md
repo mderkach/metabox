@@ -813,6 +813,23 @@ An independent Impeccable review on the mock stand at 1280 × 800 and 375 × 812
 | AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/Proxies.recoveryState.test.tsx`                     | `ignores a delayed $label retest once a newer probe has started for that same node`                            |
 | AC-11  | e2e    | `apps/web/e2e/realityRecovery.e2e.test.ts`                                                | `applies and restores a REALITY setting after distinct retest failures`                                        |
 
+### Server import in Simple Routes
+
+| ID     | Kind   | File                                                                                | Check                                                                                                        |
+| ------ | ------ | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| AC-119 | e2e    | `apps/web/e2e/simpleRoutes.e2e.test.ts`                                             | `Simple rejects applied and staged server duplicates and previews a different server and its group`          |
+| AC-119 | e2e    | `apps/web/e2e/simpleRoutes.e2e.test.ts`                                             | `at 375px Simple can cancel server settings and add the first server with a new group`                       |
+| AC-119 | e2e    | `apps/web/e2e/simpleRoutes.e2e.test.ts`                                             | `at 529px Simple keeps ambiguous links out of the draft and requires a separate-server decision by keyboard` |
+| AC-119 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAddLink.test.tsx`   | `reviews a recognized server, preserves ambiguous input and keeps credentials out of feedback`               |
+| AC-119 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.server.test.ts` | `compares the mapped settings of supported server links`                                                     |
+| AC-119 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.server.test.ts` | `stages only after an explicit decision when the existing server has extra settings`                         |
+| AC-119 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.server.test.ts` | `lists only editable groups and stages the server and its membership together`                               |
+| AC-119 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.server.test.ts` | `creates a new manual group without reusing server or configuration tags`                                    |
+| AC-119 | vitest | `apps/web/src/entities/Config/__tests__/Config.subscriptionUrls.test.ts`            | `masks server credentials in the Apply text while leaving the endpoint and group settings visible`           |
+| AC-119 | vitest | `apps/web/src/features/Config/ConfigNodeAdd/__tests__/ConfigNodeAdd.server.test.ts` | `preserves a draft with an invalid outbound layout`                                                          |
+
+Two independent Impeccable assessments used Chromium at 1280 px and 375 px on the mock stand. The design review led to a clearer server summary, an omission notice beside the draft action, and an explanation of optional grouping. The follow-up verified those changes and the narrow layout. The detector found no issues in the import dialog. The mock browser matrix also covered 529 px, both themes at all three widths, and keyboard focus return from the header, Outbounds, and the empty state. Synthetic links were used throughout.
+
 ### Subscription import in Simple Routes
 
 | ID     | Kind    | File                                                                                      | Check                                                                                              |

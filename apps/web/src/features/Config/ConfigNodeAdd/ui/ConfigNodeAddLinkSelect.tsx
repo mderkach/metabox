@@ -15,16 +15,18 @@ import {
 
 import type { ConnectionLinkModel } from '../model/ConfigNodeAdd.schema';
 
-export function ConfigNodeAddSubscriptionSelect({
+export function ConfigNodeAddLinkSelect({
   name,
   label,
   help,
+  description,
   items,
   onChange,
 }: {
-  name: 'group' | 'intervalUnit' | 'agent';
+  name: 'group' | 'intervalUnit' | 'agent' | 'serverGroup';
   label: string;
   help?: ReactNode;
+  description?: string;
   items: { value: string; label: string }[];
   onChange?: (value: string) => void;
 }) {
@@ -32,6 +34,7 @@ export function ConfigNodeAddSubscriptionSelect({
   const { control } = useFormContext<ConnectionLinkModel>();
   const id = useId();
   const errorId = useId();
+  const descriptionId = useId();
 
   return (
     <Controller
@@ -57,7 +60,10 @@ export function ConfigNodeAddSubscriptionSelect({
               id={id}
               className='w-full min-w-0'
               aria-invalid={fieldState.invalid}
-              aria-describedby={fieldState.invalid ? errorId : undefined}
+              aria-describedby={
+                [description !== undefined && descriptionId, fieldState.invalid && errorId].filter(Boolean).join(' ') ||
+                undefined
+              }
               onBlur={field.onBlur}
             >
               <SelectValue />
@@ -70,6 +76,11 @@ export function ConfigNodeAddSubscriptionSelect({
               ))}
             </SelectContent>
           </Select>
+          {description !== undefined && (
+            <p id={descriptionId} className='text-xs text-pretty text-muted-foreground'>
+              {description}
+            </p>
+          )}
           {fieldState.invalid && <FieldError id={errorId}>{t('subscription.groupUnavailable')}</FieldError>}
         </Field>
       )}

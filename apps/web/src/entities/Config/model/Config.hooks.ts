@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { diffLines, type DiffLine } from '@shared/lib/diff';
 import { useStore } from '@shared/lib/state';
 
+import { maskConfigPreviewLines } from './Config.preview';
 import {
   selectConfigCurrent,
   selectConfigDirty,
@@ -11,7 +12,6 @@ import {
   type ListChanges,
 } from './Config.selectors';
 import { ConfigDocumentStore } from './Config.store';
-import { maskSubscriptionUrlLines } from './Config.subscriptionUrls';
 
 export function useConfigCurrent(): string | null {
   return useStore(ConfigDocumentStore, selectConfigCurrent);
@@ -34,7 +34,7 @@ export function useListChanges(): ListChanges {
   return useMemo(() => selectListChanges({ listsDraft, appliedLists }), [listsDraft, appliedLists]);
 }
 
-export function useConfigDiff({ maskSubscriptionUrls = false } = {}): DiffLine[] {
+export function useConfigDiff({ maskCredentials = false } = {}): DiffLine[] {
   const { applied, draft } = useStore(ConfigDocumentStore, (state) => ({
     applied: state.applied,
     draft: state.draft,
@@ -44,14 +44,14 @@ export function useConfigDiff({ maskSubscriptionUrls = false } = {}): DiffLine[]
     if (applied === null || draft === null) return [];
 
     const lines = diffLines(applied, draft);
-    if (!maskSubscriptionUrls) return lines;
+    if (!maskCredentials) return lines;
 
-    const appliedUrls = maskSubscriptionUrlLines(applied);
-    const draftUrls = maskSubscriptionUrlLines(draft);
+    const appliedMasked = maskConfigPreviewLines(applied);
+    const draftMasked = maskConfigPreviewLines(draft);
 
     return lines.map((line) => {
-      const masked = line.after === null ? appliedUrls.get(line.before ?? 0) : draftUrls.get(line.after);
+      const masked = line.after === null ? appliedMasked.get(line.before ?? 0) : draftMasked.get(line.after);
       return masked === undefined ? line : { ...line, text: masked };
     });
-  }, [applied, draft, maskSubscriptionUrls]);
+  }, [applied, draft, maskCredentials]);
 }

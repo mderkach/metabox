@@ -17,12 +17,14 @@ import {
   makeConnectionLinkSchema,
   type ConnectionLinkModel,
 } from '../model/ConfigNodeAdd.schema';
+import { parseServerImport, SERVER_ERROR, serverImportMatch, stageServerImport } from '../model/ConfigNodeAdd.server';
 import {
   stageSubscription,
   SUBSCRIPTION_ERROR,
   subscriptionTags,
   subscriptionUrl,
 } from '../model/ConfigNodeAdd.subscription';
+import { ConfigNodeAddServerFields } from './ConfigNodeAddServerFields';
 import { ConfigNodeAddSubscriptionFields } from './ConfigNodeAddSubscriptionFields';
 
 const NS = 'features/Config/ConfigNodeAdd';
@@ -36,7 +38,16 @@ const LINK_ERROR_KEY: Readonly<Record<string, ParseKeys<typeof NS> | undefined>>
   [NODE_LINK_ERROR.Server]: 'error.link.server',
   [NODE_LINK_ERROR.Credential]: 'error.link.credential',
   [NODE_LINK_ERROR.Transport]: 'error.link.transport',
+  [SERVER_ERROR.MultipleLinks]: 'server.multipleLinks',
   [SUBSCRIPTION_ERROR.InvalidLink]: 'subscription.invalidLink',
+};
+
+const ROOT_ERROR_KEY: Readonly<Record<string, ParseKeys<typeof NS> | undefined>> = {
+  [SUBSCRIPTION_ERROR.Stale]: 'subscription.stale',
+  [SUBSCRIPTION_ERROR.Write]: 'subscription.writeFailed',
+  [SERVER_ERROR.Stale]: 'subscription.stale',
+  [SERVER_ERROR.Write]: 'server.writeFailed',
+  [SERVER_ERROR.Duplicate]: 'server.duplicate',
 };
 
 export function ConfigNodeAddLink({
@@ -77,8 +88,23 @@ export function ConfigNodeAddLink({
   });
   const input = useWatch({ control: form.control, name: 'link' });
   const isSubscription = allowSubscriptions && subscriptionUrl(input) !== null;
+  const parseLink = allowSubscriptions ? parseServerImport : parseShareLink;
+  const { link } = parseLink(input);
+  const serverMatch =
+    allowSubscriptions && link !== null && current !== null && applied !== null
+      ? serverImportMatch(link, current, applied)
+      : null;
   const rootError = form.formState.errors.root?.message;
+  const isDuplicate = serverMatch === SERVER_ERROR.Duplicate;
+  const showHint = !allowSubscriptions || link === null;
+  const omittedParams = isDuplicate ? [] : (link?.omittedParams ?? []);
+  const rootErrorKey = rootError === undefined ? undefined : ROOT_ERROR_KEY[rootError];
   const LinkInput = allowSubscriptions ? Input : Textarea;
+
+  function finish(tag: string) {
+    form.reset(CONNECTION_LINK_DEFAULTS);
+    onAdded?.(tag);
+  }
 
   const onSubmit = form.handleSubmit((data) => {
     if (allowSubscriptions && subscriptionUrl(data.link) !== null) {
@@ -88,26 +114,31 @@ export function ConfigNodeAddLink({
         return;
       }
 
-      form.reset(CONNECTION_LINK_DEFAULTS);
-      onAdded?.(data.tag.trim());
+      finish(data.tag.trim());
       return;
     }
 
-    const { link } = parseShareLink(data.link);
+    const { link } = parseLink(data.link);
+    if (link === null) return;
 
-    if (link === null) {
+    if (allowSubscriptions) {
+      const { tag, failure } = stageServerImport(link, data);
+      if (failure !== undefined) {
+        form.setError(failure.field, { message: failure.message }, { shouldFocus: failure.field !== 'root' });
+        return;
+      }
+
+      finish(tag);
       return;
     }
 
     const tag = shareLinkTag(link, takenTags);
-
     if (!insertNode(shareLinkNode(link, tag))) {
       showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
-
       return;
     }
-    form.reset(CONNECTION_LINK_DEFAULTS);
-    onAdded?.(tag);
+
+    finish(tag);
   });
 
   return (
@@ -126,10 +157,17 @@ export function ConfigNodeAddLink({
             const message = fieldState.error?.message;
             const key = message === undefined ? undefined : LINK_ERROR_KEY[message];
             const error = key === undefined ? (message ?? null) : t(key);
-            const omittedParams = parseShareLink(field.value).link?.omittedParams ?? [];
-            const describedBy = [hintId, omittedParams.length > 0 && omissionId, error !== null && errorId]
+            const describedBy = [showHint && hintId, omittedParams.length > 0 && omissionId, error !== null && errorId]
               .filter(Boolean)
               .join(' ');
+
+            function changeLink(value: string) {
+              field.onChange(value);
+              if (allowSubscriptions) {
+                form.resetField('serverSeparate');
+                form.clearErrors('root');
+              }
+            }
 
             return (
               <div className='flex flex-col gap-1.5'>
@@ -146,9 +184,24 @@ export function ConfigNodeAddLink({
                   aria-invalid={fieldState.invalid}
                   aria-describedby={describedBy}
                   onBlur={field.onBlur}
-                  onChange={field.onChange}
+                  onChange={(event) => {
+                    changeLink(event.target.value);
+                  }}
+                  onPaste={(event) => {
+                    if (!allowSubscriptions) return;
+                    const pasted = event.clipboardData.getData('text').trim();
+                    if (!/[\r\n]/.test(pasted)) return;
+
+                    event.preventDefault();
+                    const input = event.currentTarget;
+                    changeLink(
+                      field.value.slice(0, input.selectionStart ?? 0) +
+                        pasted.replace(/[\r\n]+/g, ' ') +
+                        field.value.slice(input.selectionEnd ?? field.value.length)
+                    );
+                  }}
                 />
-                <div>
+                {showHint && (
                   <p
                     id={hintId}
                     role={allowSubscriptions ? 'status' : undefined}
@@ -158,14 +211,7 @@ export function ConfigNodeAddLink({
                       ? t('subscription.notice')
                       : t(allowSubscriptions ? 'subscription.linkHint' : 'field.link.hint')}
                   </p>
-                  <p id={omissionId} role='status' className='text-xs wrap-anywhere text-signal-warn'>
-                    {omittedParams.length > 0 && (
-                      <span className='mt-1.5 block'>
-                        {t('field.link.omittedParams', { names: omittedParams.join(', ') })}
-                      </span>
-                    )}
-                  </p>
-                </div>
+                )}
                 {error !== null && (
                   <p id={errorId} role='alert' className='text-xs text-pretty text-destructive'>
                     {error}
@@ -177,15 +223,30 @@ export function ConfigNodeAddLink({
         />
 
         {isSubscription && <ConfigNodeAddSubscriptionFields />}
-        {isSubscription && rootError !== undefined && (
+        {allowSubscriptions && link !== null && current !== null && applied !== null && (
+          <ConfigNodeAddServerFields link={link} current={current} applied={applied} match={serverMatch} />
+        )}
+        <p
+          id={omissionId}
+          role='status'
+          className={cn(
+            'text-xs wrap-anywhere text-signal-warn',
+            omittedParams.length === 0 ? 'sr-only' : allowSubscriptions && 'rounded-md bg-signal-warn/10 px-2 py-1.5'
+          )}
+        >
+          {omittedParams.length > 0 && t('field.link.omittedParams', { names: omittedParams.join(', ') })}
+        </p>
+        {rootErrorKey !== undefined && (rootError !== SERVER_ERROR.Duplicate || !isDuplicate) && (
           <p role='alert' className='text-sm text-destructive'>
-            {t(rootError === SUBSCRIPTION_ERROR.Stale ? 'subscription.stale' : 'subscription.writeFailed')}
+            {t(rootErrorKey)}
           </p>
         )}
         {allowSubscriptions && /^http:\/\//i.test(input.trim()) && subscriptionFallback}
         <div className={cn(cancel !== undefined && 'grid gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end')}>
           {cancel}
-          <Button type='submit'>{t(allowSubscriptions ? 'subscription.stage' : 'submitLink')}</Button>
+          <Button type='submit' variant={isDuplicate ? 'outline' : 'default'} disabled={isDuplicate}>
+            {t(allowSubscriptions ? 'subscription.stage' : 'submitLink')}
+          </Button>
         </div>
       </form>
     </FormProvider>

@@ -6,10 +6,10 @@ import { FieldGroup } from '@shared/ui';
 
 import type { ConnectionLinkModel } from '../model/ConfigNodeAdd.schema';
 import { SUBSCRIPTION_GROUP, subscriptionGroups } from '../model/ConfigNodeAdd.subscription';
+import { ConfigNodeAddLinkInput } from './ConfigNodeAddLinkInput';
+import { ConfigNodeAddLinkSelect } from './ConfigNodeAddLinkSelect';
 import { ConfigNodeAddSubscriptionAgent } from './ConfigNodeAddSubscriptionAgent';
-import { ConfigNodeAddSubscriptionInput } from './ConfigNodeAddSubscriptionInput';
 import { ConfigNodeAddSubscriptionInterval } from './ConfigNodeAddSubscriptionInterval';
-import { ConfigNodeAddSubscriptionSelect } from './ConfigNodeAddSubscriptionSelect';
 
 export function ConfigNodeAddSubscriptionFields() {
   const { t } = useTranslation('features/Config/ConfigNodeAdd');
@@ -19,8 +19,8 @@ export function ConfigNodeAddSubscriptionFields() {
 
   return (
     <FieldGroup className='min-w-0 gap-3 motion-safe:animate-in motion-safe:fade-in'>
-      <ConfigNodeAddSubscriptionInput name='tag' label={t('subscription.tag')} />
-      <ConfigNodeAddSubscriptionSelect
+      <ConfigNodeAddLinkInput name='tag' label={t('subscription.tag')} />
+      <ConfigNodeAddLinkSelect
         name='group'
         label={t('subscription.group')}
         items={[
@@ -34,7 +34,7 @@ export function ConfigNodeAddSubscriptionFields() {
       </p>
       {group === SUBSCRIPTION_GROUP.New && (
         <div className='motion-safe:animate-in motion-safe:fade-in'>
-          <ConfigNodeAddSubscriptionInput name='groupName' label={t('subscription.groupName')} />
+          <ConfigNodeAddLinkInput name='groupName' label={t('subscription.groupName')} />
         </div>
       )}
       <ConfigNodeAddSubscriptionInterval />
