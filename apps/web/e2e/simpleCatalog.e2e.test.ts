@@ -25,6 +25,7 @@ const PROVIDER = 'synthetic-provider';
 const GROUP = 'subscription-group';
 const CHILD = `${PROVIDER}/node-a`;
 const SET_URL = 'https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-youtube.srs';
+const EXACT_SITE = 'youtube.com';
 const HIJACK = { inbound: ['queries'], action: 'hijack-dns' };
 const CONFIG = {
   inbounds: [
@@ -166,6 +167,43 @@ test(
       await expect(applyBar.nodeChanges).toContainText(SET_TAG);
       await expect(applyBar.confirmPrompt).toBeHidden();
     });
+  }
+);
+
+test(
+  'the catalog stages a pair after exact rules with the same outcome',
+  { tag: E2E_TAG.Mock },
+  async ({ page, simpleCatalog: catalog, simpleRoutesPage: routes, applyBar }) => {
+    await page.setViewportSize(DESKTOP);
+    const exactRoute = { domain: [EXACT_SITE], action: 'route', outbound: EXIT };
+    const exactDns = { domain: EXACT_SITE, action: 'route', server: RESOLVER };
+    const config = { ...CONFIG, route: { rules: [HIJACK, exactRoute] }, dns: { ...CONFIG.dns, rules: [exactDns] } };
+    await routes.openWithConfig(config, CORE_VERSION);
+    await catalog.trigger.press('Enter');
+    await catalog.search.fill(CATEGORY);
+    await catalog.service(CATEGORY, 'v2fly').click();
+    await catalog.select(catalog.outbound, EXIT);
+    await catalog.select(catalog.resolver, RESOLVER);
+    await expect(catalog.submit).toBeEnabled();
+    await expect(catalog.dialog).toContainText(
+      translate(CATALOG, 'routeRow', { position: config.route.rules.length + 1 })
+    );
+    await expect(catalog.dialog).toContainText(translate(CATALOG, 'dnsRow', { position: config.dns.rules.length + 1 }));
+    await catalog.submit.press('Enter');
+    await expect(catalog.trigger).toBeFocused();
+    await routes.jsonView.click();
+    const staged: unknown = JSON.parse(await routes.configText.inputValue());
+    expect(staged).toEqual({
+      ...config,
+      route: {
+        rules: [HIJACK, exactRoute, { action: 'route', rule_set: [SET_TAG], outbound: EXIT }],
+        rule_set: [{ type: 'remote', tag: SET_TAG, format: 'binary', url: SET_URL }],
+      },
+      dns: { ...config.dns, rules: [exactDns, { action: 'route', rule_set: [SET_TAG], server: RESOLVER }] },
+    });
+    await applyBar.apply();
+    await expect(applyBar.ruleChanges).toContainText(SET_TAG);
+    await expect(applyBar.nodeChanges).toContainText(translate('shared', 'nodeKind.dnsRules'));
   }
 );
 

@@ -741,6 +741,7 @@ An independent Impeccable review used the expanded v11 DNS section and the Chrom
 | AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.dns.test.ts`         | `updates an imported rule in place and adds only missing names for the same exit`                          |
 | AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutesDnsSettings.test.tsx` | `preserves a concurrent draft edit when the DNS server form is submitted`                                  |
 | AC-117 | e2e    | `apps/web/e2e/simpleDns.e2e.test.ts`                                         | `adding a resolver only changes inventory until reassignment in the shared DNS draft`                      |
+| AC-117 | e2e    | `apps/web/e2e/simpleDns.e2e.test.ts`                                         | `an exact DNS assignment stays editable ahead of a later catalog pair`                                     |
 | AC-117 | e2e    | `apps/web/e2e/simpleDns.e2e.test.ts`                                         | `the 375px DNS assignment distinguishes the proxy group from a specific exit without an eligible resolver` |
 
 ### Adding a catalog service in Simple
@@ -756,6 +757,7 @@ An independent Impeccable review compared the populated form and preview with v1
 | AC-116 | vitest | `apps/web/src/features/Rule/RuleCatalogAdd/__tests__/RuleCatalogAddDialog.test.tsx` | `retains a concurrent draft edit when the reviewed catalog pair is submitted`                                  |
 | AC-116 | vitest | `apps/web/src/features/Rule/RuleCatalogAdd/__tests__/RuleCatalogAddDialog.test.tsx` | `blocks an unknown core variant even if it reports the tested version number`                                  |
 | AC-116 | e2e    | `apps/web/e2e/simpleCatalog.e2e.test.ts`                                            | `the desktop catalog previews and stages one source-qualified route and DNS pair before Apply`                 |
+| AC-116 | e2e    | `apps/web/e2e/simpleCatalog.e2e.test.ts`                                            | `the catalog stages a pair after exact rules with the same outcome`                                            |
 | AC-116 | e2e    | `apps/web/e2e/simpleCatalog.e2e.test.ts`                                            | `the 375px catalog reuses an existing DNS rule, shows only the route diff and keeps a repeated pair unchanged` |
 | AC-116 | e2e    | `apps/web/e2e/simpleCatalog.e2e.test.ts`                                            | `an imported DNS conflict identifies the blocked rule and leaves the pre-existing draft byte-for-byte intact`  |
 | AC-116 | e2e    | `apps/web/e2e/simpleCatalog.e2e.test.ts`                                            | `the empty configuration opens the same catalog from a suggested service and Escape restores focus`            |
@@ -773,7 +775,7 @@ An independent Impeccable review compared the populated form and preview with v1
 | AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.order.test.ts`        | `checks every crossed rule even when the source and drop target are disjoint`                                 |
 | AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                    | `an outbound deep link retains rule positions and reveals actual route and DNS references in the service row` |
 | AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                    | `pointer and keyboard reorder the shared draft while preserving an imported rule and its JSONC comment`       |
-| AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                    | `a device exception precedes its general rule and a new custom domain uses the previewed position`            |
+| AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                    | `a device exception and a custom domain preserve the verified leading DNS hijack`                             |
 | AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                    | `an unknown overlap blocks staging and preserves the imported JSONC byte for byte`                            |
 
 An independent Impeccable review on the mock stand at 1280 × 800 and 375 × 812 checked both list views, the service disclosure, keyboard reordering, the custom form and device exceptions. The review led to aligned outbound columns, a separate device action on narrow screens, a refusal message in the affected row, and a preview that gives the general rule's old and new positions. The follow-up confirmed these changes, focus return and a layout that fits both viewport widths.

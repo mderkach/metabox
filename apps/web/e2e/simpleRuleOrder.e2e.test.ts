@@ -17,6 +17,11 @@ const PHONE = { width: 375, height: 812 };
 const DESKTOP = { width: 1280, height: 800 };
 const INDENT = 2;
 const POSITION = { first: 1, second: 2, third: 3, fourth: 4 } as const;
+const DNS_HIJACK = { action: 'hijack-dns', inbound: ['dns-in'] };
+const INBOUNDS = [
+  { type: 'socks', tag: 'socks-in', listen_port: 1080 },
+  { type: 'direct', tag: 'dns-in', listen_port: 1053, network: 'udp' },
+];
 const NEWS_RULE = { action: 'route', domain: [NEWS], outbound: DIRECT };
 const MUSIC_RULE = { action: 'route', domain: [MUSIC], outbound: MEDIA };
 const SERVICE = { action: 'route', rule_set: [SET_TAG], outbound: MEDIA };
@@ -143,10 +148,10 @@ test.describe('phone', () => {
   test.use({ viewport: PHONE, hasTouch: true });
 
   test(
-    'a device exception precedes its general rule and a new custom domain uses the previewed position',
+    'a device exception and a custom domain preserve the verified leading DNS hijack',
     { tag: E2E_TAG.Mock },
     async ({ page, simpleRuleControls: controls, simpleRoutesPage: routes, applyBar }, testInfo) => {
-      const config = { outbounds: CONFIG.outbounds, route: { rules: [MUSIC_RULE] } };
+      const config = { inbounds: INBOUNDS, outbounds: CONFIG.outbounds, route: { rules: [DNS_HIJACK, MUSIC_RULE] } };
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await routes.openWithConfig(config);
 
@@ -155,10 +160,10 @@ test.describe('phone', () => {
         await controls.select(controls.device, /192\.168\.1\.60/);
         await controls.select(controls.outbound, DIRECT);
         await expect(controls.form).toContainText(
-          translate(SIMPLE, 'custom.preview', { position: POSITION.first, scope: DEVICE_LABEL, outbound: DIRECT })
+          translate(SIMPLE, 'custom.preview', { position: POSITION.second, scope: DEVICE_LABEL, outbound: DIRECT })
         );
         await expect(controls.form).toContainText(
-          translate(SIMPLE, 'custom.before', { position: POSITION.first, next: POSITION.second })
+          translate(SIMPLE, 'custom.before', { position: POSITION.second, next: POSITION.third })
         );
         await expect(applyBar.dirty).toBeHidden();
         await page.screenshot({ path: testInfo.outputPath('device-exception-phone.png') });
@@ -168,7 +173,7 @@ test.describe('phone', () => {
         const staged: unknown = parse(await routes.configText.inputValue());
         expect(staged).toEqual({
           ...config,
-          route: { rules: [{ ...MUSIC_RULE, outbound: DIRECT, source_ip_cidr: [DEVICE] }, MUSIC_RULE] },
+          route: { rules: [DNS_HIJACK, { ...MUSIC_RULE, outbound: DIRECT, source_ip_cidr: [DEVICE] }, MUSIC_RULE] },
         });
       });
 
@@ -179,7 +184,7 @@ test.describe('phone', () => {
         await controls.select(controls.outbound, MEDIA);
         await expect(controls.form).toContainText(
           translate(SIMPLE, 'custom.preview', {
-            position: POSITION.third,
+            position: POSITION.fourth,
             scope: translate(SIMPLE, 'custom.all'),
             outbound: MEDIA,
           })
@@ -193,6 +198,7 @@ test.describe('phone', () => {
           ...config,
           route: {
             rules: [
+              DNS_HIJACK,
               { ...MUSIC_RULE, outbound: DIRECT, source_ip_cidr: [DEVICE] },
               MUSIC_RULE,
               { action: 'route', domain: [SITE], outbound: MEDIA },

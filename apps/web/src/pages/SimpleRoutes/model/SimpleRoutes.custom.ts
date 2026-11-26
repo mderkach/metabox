@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import {
+  hasDomainDnsIngress,
   insertValue,
   isNodeRecognized,
   NODE_REGISTRY,
@@ -87,7 +88,7 @@ export function planCustomRule(text: string, form: CustomRuleForm, ruleIndex?: n
   let index = rules.length;
   for (let i = 0; i < rules.length; i++) {
     const previous = rules[i];
-    if (isServiceStep(previous)) continue;
+    if (isServiceStep(previous) || (i === 0 && hasDomainDnsIngress(parsed.config))) continue;
     const relation = simpleRuleRelation(previous, node);
     if (relation === 'disjoint') continue;
     const reverse = simpleRuleRelation(node, previous);

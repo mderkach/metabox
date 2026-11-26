@@ -136,6 +136,30 @@ describe('explicit path assignments for exact destination names', () => {
     expect(findValue(result.text, ['dns', 'disable_cache'])).toBe(true);
   });
 
+  it('keeps the proven exact domains before a catalog pair and leaves its rules intact', () => {
+    const set = { type: 'remote', tag: 'video', url: 'https://catalog.test/video.srs' };
+    const catalogRoute = { rule_set: [set.tag], outbound: 'direct' };
+    const catalogDns = { rule_set: [set.tag], server: 'local' };
+    const exactDns = { domain: 'direct.test', server: 'local' };
+    const withSet = setValue(TEXT, ['route', 'rule_set'], [set]);
+    const routes = [...ROUTES, catalogRoute, { domain: 'later.test', outbound: 'direct' }];
+    const withRoutes = setValue(withSet, ['route', 'rules'], routes);
+    const withResolver = setValue(withRoutes, ['dns', 'servers'], [...SERVERS, { ...SERVERS[0], tag: 'second' }]);
+    const text = setValue(withResolver, ['dns', 'rules'], [exactDns, catalogDns]);
+
+    expect(readSimpleDns(text, VERSION).paths.find(({ tag }) => tag === 'direct')).toMatchObject({
+      current: 'local',
+      domains: ['direct.test'],
+      reason: null,
+    });
+    const result = planDnsAssignment(text, VERSION, 'direct', 'second');
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.text).toBe(setValue(text, ['dns', 'rules', 0, 'server'], 'second'));
+
+    const shadowed = setValue(text, ['dns', 'rules'], [catalogDns, exactDns]);
+    expect(planDnsAssignment(shadowed, VERSION, 'direct', 'second')).toEqual({ ok: false, reason: 'conflict' });
+  });
+
   it('refuses overlapping, opaque or shared imported conditions without returning partial edits', () => {
     for (const rules of [
       [{ ...GROUP_DNS, domain: ['alpha.test', 'relay.test'] }],

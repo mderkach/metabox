@@ -6,6 +6,7 @@ const DOMAIN = 'office.example';
 const DIRECT = 'wan';
 const PROXY = 'proxy';
 const NODE = 'relay';
+const CATALOG_SET = 'geosite-youtube';
 const DIRECT_RULE = { action: 'route', domain: [DOMAIN], server: 'old-dns' };
 const CONFIG = {
   log: { level: 'warn' },
@@ -133,3 +134,39 @@ test.describe('touch DNS settings', () => {
     }
   );
 });
+
+test(
+  'an exact DNS assignment stays editable ahead of a later catalog pair',
+  { tag: E2E_TAG.Mock },
+  async ({ simpleDns: dns, simpleRoutesPage: routes, applyBar }) => {
+    const catalogDns = { action: 'route', rule_set: [CATALOG_SET], server: DIRECT_RULE.server };
+    const config = {
+      ...CONFIG,
+      route: {
+        ...CONFIG.route,
+        rules: [...CONFIG.route.rules, { action: 'route', rule_set: [CATALOG_SET], outbound: DIRECT }],
+        rule_set: [{ type: 'remote', tag: CATALOG_SET, url: 'https://catalog.example.invalid/youtube.srs' }],
+      },
+      dns: {
+        ...CONFIG.dns,
+        servers: [...CONFIG.dns.servers, { type: 'tcp', tag: RESOLVER, server: ADDRESS }],
+        rules: [DIRECT_RULE, catalogDns],
+      },
+    };
+    await routes.openWithConfig(config);
+    await dns.settings.click();
+    await expect(dns.assignment(DOMAIN)).toContainText(DIRECT_RULE.server);
+    await dns.select(dns.assignment(DOMAIN), RESOLVER);
+    await expect(dns.assignment(DOMAIN)).toContainText(RESOLVER);
+    await routes.jsonView.click();
+    const staged: unknown = JSON.parse(await routes.configText.inputValue());
+    expect(staged).toEqual({
+      ...config,
+      dns: { ...config.dns, rules: [{ ...DIRECT_RULE, server: RESOLVER }, catalogDns] },
+    });
+    await applyBar.apply();
+    await expect(applyBar.nodeChanges).toContainText(translate('shared', 'nodeKind.dnsRules'));
+    await applyBar.showChangesText();
+    await expect(applyBar.diff).toContainText(RESOLVER);
+  }
+);
