@@ -12,6 +12,7 @@ const NODE_ADD = 'features/Config/ConfigNodeAdd';
 const STAND_COUNTS = { inbounds: 3, dnsResolvers: 11, dnsRules: 12 };
 const DESKTOP = { width: 1280, height: 600 };
 const PHONE = { width: 375, height: 812 };
+const NARROW = { width: 529, height: 1170 };
 const MOCK_VERSION_COUNT = 2;
 const HALF = 0.5;
 
@@ -56,6 +57,7 @@ test(
       await expect(routes.configPath).toBeHidden();
       await expect(routes.views).toBeVisible();
       await expect(routes.openHistory).toBeVisible();
+      await expect(routes.routingMode).toBeVisible();
       const bounds = await Promise.all(
         [routes.title, routes.views, routes.openHistory, routes.addFromHeader].map(async (locator) =>
           locator.boundingBox()
@@ -71,6 +73,22 @@ test(
       await page.keyboard.press('Escape');
       await expect(routes.dialog).toBeHidden();
       await expect(routes.addFromHeader).toBeFocused();
+      await expect(applyBar.dirty).toBeHidden();
+    });
+
+    await test.step('an outbound tile toggles the same rule filter as the incoming link', async () => {
+      const tile = routes.outboundTile(DIRECT);
+      await expect(tile).toHaveAttribute('aria-pressed', 'true');
+      await tile.press('Enter');
+      await expect(page).toHaveURL('/config/simple');
+      await expect(tile).toHaveAttribute('aria-pressed', 'false');
+      await expect(routes.rules).toContainText(OTHER_RULE);
+
+      await tile.press('Enter');
+      await expect(page).toHaveURL('/config/simple?outbound=direct');
+      await expect(tile).toBeFocused();
+      await expect(routes.rules).toContainText(DIRECT_RULE);
+      await expect(routes.rules).not.toContainText(OTHER_RULE);
       await expect(applyBar.dirty).toBeHidden();
     });
 
@@ -150,6 +168,50 @@ test(
     });
   }
 );
+
+for (const viewport of [NARROW, DESKTOP]) {
+  test(
+    `Routes keeps common controls across Simple, Editor and JSON at ${String(viewport.width)}px`,
+    { tag: E2E_TAG.Mock },
+    async ({ page, simpleRoutesPage: routes, applyBar }) => {
+      await page.setViewportSize(viewport);
+      await routes.goto(DIRECT);
+      await expect(routes.routingMode).toContainText(translate('shared', 'clashMode.rule'));
+      await routes.routingMode.click();
+      await page.getByRole('option', { name: translate('shared', 'clashMode.direct'), exact: true }).click();
+      await expect(routes.routingMode).toContainText(translate('shared', 'clashMode.direct'));
+      await expect(applyBar.dirty).toBeHidden();
+      await routes.addFromHeader.click();
+      await routes.stageServer(LINK);
+      await expect(applyBar.dirty).toBeVisible();
+
+      const commonControls = [routes.views, routes.routingMode, routes.openHistory];
+      const bounds = await Promise.all(commonControls.map(async (control) => control.boundingBox()));
+      if (viewport === NARROW) {
+        const tabs = [routes.simpleView, routes.editorView, routes.jsonView];
+        const tabWidths = await Promise.all(tabs.map(async (tab) => (await tab.boundingBox())?.width ?? 0));
+        expect(Math.max(...tabWidths) - Math.min(...tabWidths)).toBeLessThanOrEqual(1);
+        const tile = await routes.outboundTile(DIRECT).boundingBox();
+        expect(tile?.width).toBe(bounds[0]?.width);
+        expect(tile?.x).toBe(bounds[0]?.x);
+      }
+
+      await routes.editorView.click();
+      await expect(page).toHaveURL('/config');
+      await expect(routes.routingSettings).toHaveAttribute('aria-expanded', 'false');
+      await routes.routingSettings.press('Enter');
+      await expect(routes.routingSettings).toHaveAttribute('aria-expanded', 'true');
+      await expect(routes.routingMode).toContainText(translate('shared', 'clashMode.direct'));
+      expect(await Promise.all(commonControls.map(async (control) => control.boundingBox()))).toEqual(bounds);
+
+      await routes.jsonView.click();
+      await expect(page).toHaveURL('/config/raw');
+      await expect(routes.configPath).toBeVisible();
+      await expect(routes.routingMode).toContainText(translate('shared', 'clashMode.direct'));
+      expect(await Promise.all(commonControls.map(async (control) => control.boundingBox()))).toEqual(bounds);
+    }
+  );
+}
 
 const HELP_SCENARIOS = [
   { touch: false, title: 'Simple help and version history preserve the draft (keyboard)' },
@@ -464,6 +526,14 @@ for (const { theme, config } of EMPTY_CONFIGS) {
         await expect(routes.addFromHeader).toBeVisible();
         await expect(routes.openHistory).toBeVisible();
         await expect(routes.configPath).toBeHidden();
+        const history = await routes.openHistory.boundingBox();
+        const add = await routes.addFromHeader.boundingBox();
+        expect(history).not.toBeNull();
+        expect(add).not.toBeNull();
+        expect(add?.width).toBe(history?.width);
+        expect(add?.x).toBe(history?.x);
+        expect(add?.y).toBeGreaterThan((history?.y ?? 0) + (history?.height ?? 0));
+        expect((PHONE.width - (add?.width ?? 0)) * HALF).toBe(add?.x);
         expect(
           await routes.header.evaluate(
             (element: { scrollWidth: number; clientWidth: number }) => element.scrollWidth - element.clientWidth
@@ -476,6 +546,25 @@ for (const { theme, config } of EMPTY_CONFIGS) {
         await expect(routes.serverLink).toBeFocused();
         await routes.serverLink.fill(SUBSCRIPTION_URL);
         await expect(routes.subscriptionNotice).toBeVisible();
+        await expect
+          .poll(async () => {
+            const [input, cancel, submit] = await Promise.all([
+              routes.serverLink.boundingBox(),
+              routes.cancel.boundingBox(),
+              routes.stageSubscription.boundingBox(),
+            ]);
+
+            return (
+              input !== null &&
+              cancel !== null &&
+              submit !== null &&
+              Math.abs(cancel.width - input.width) <= 1 &&
+              Math.abs(submit.width - input.width) <= 1 &&
+              Math.abs(submit.x - cancel.x) <= 1 &&
+              submit.y > cancel.y + cancel.height
+            );
+          })
+          .toBe(true);
         await routes.setSubscriptionInterval(MOBILE_INTERVAL_HOURS, 'hours');
         await routes.selectSubscriptionAgent('chrome');
         await expect(routes.subscriptionAgentValue).toHaveValue(/Chrome\//);

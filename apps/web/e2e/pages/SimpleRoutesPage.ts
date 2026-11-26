@@ -27,6 +27,8 @@ export class SimpleRoutesPage {
   readonly title: Locator;
   readonly views: Locator;
   readonly configPath: Locator;
+  readonly routingMode: Locator;
+  readonly routingSettings: Locator;
   readonly addFromHeader: Locator;
   readonly addFromOutbounds: Locator;
   readonly addFromStarter: Locator;
@@ -86,6 +88,13 @@ export class SimpleRoutesPage {
     this.title = page.getByRole('heading', { name: translate('shared', 'section.config'), level: 1 });
     this.header = page.locator('header').filter({ has: this.title });
     this.configPath = this.header.getByText('/etc/sing-box/config.json', { exact: true });
+    this.routingMode = this.header.getByRole('combobox', {
+      name: new RegExp(translate('shared', 'clashMode.routing')),
+    });
+    this.routingSettings = page.getByRole('button', {
+      name: translate('widgets/Config/ConfigSectionSettings', 'title.route'),
+      exact: true,
+    });
     this.addFromHeader = this.header.getByRole('button', { name: addAction, exact: true });
     this.addFromOutbounds = this.outbounds.getByRole('button', { name: addAction, exact: true });
     this.addFromStarter = this.starter.getByRole('button', { name: addAction, exact: true });
@@ -147,6 +156,10 @@ export class SimpleRoutesPage {
     this.openHistory = page.getByRole('button', { name: translate(CONFIG_APPLY, 'history.open'), exact: true });
     this.history = page.getByRole('dialog', { name: translate(CONFIG_APPLY, 'history.title'), exact: true });
     this.closeHistory = this.history.getByLabel(translate('shared', 'action.close'), { exact: true });
+  }
+
+  outboundTile(tag: string) {
+    return this.outbounds.getByRole('button').filter({ has: this.page.getByText(tag, { exact: true }) });
   }
 
   async goto(outbound: string) {

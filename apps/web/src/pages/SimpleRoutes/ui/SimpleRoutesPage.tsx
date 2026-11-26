@@ -99,9 +99,10 @@ export function SimpleRoutesPage() {
                 <SimpleRoutesDns text={text} servers={model.dnsServers} rules={model.dnsRules} final={model.dnsFinal} />
               )}
               <SimpleRoutesOutbounds
-                outbounds={model.outbounds}
+                outboundEntries={model.outboundEntries}
                 providers={model.providers}
                 stagedTags={model.stagedTags}
+                outbound={outbound}
                 addTriggerRef={outboundsTrigger}
               />
               <SimpleRoutesAddDialog

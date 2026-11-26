@@ -304,6 +304,7 @@
   },
   "clashMode": {
     "label": "Clash API mode",
+    "routing": "Routing mode",
     "rule": "by rules",
     "global": "globally",
     "direct": "direct",

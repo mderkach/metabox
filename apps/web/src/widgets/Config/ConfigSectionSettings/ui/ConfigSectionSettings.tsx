@@ -39,15 +39,15 @@ export function ConfigSectionSettings({ section }: { section: ListSettingsSectio
   }
 
   return (
-    <section aria-labelledby={headingId} className={cn('flex flex-col gap-2 p-4', SURFACE)}>
+    <section aria-labelledby={headingId} className={SURFACE}>
       <header className='flex flex-wrap items-center gap-2'>
-        <h2 id={headingId} className='text-sm'>
+        <h2 id={headingId} className='min-w-0 grow text-sm'>
           <Button
             variant='ghost'
             size='sm'
             aria-expanded={open}
             aria-controls={bodyId}
-            className='-ml-2'
+            className='h-auto min-h-11 w-full justify-start px-3 text-left whitespace-normal'
             onClick={() => {
               setOpen(!open);
             }}
@@ -56,10 +56,14 @@ export function ConfigSectionSettings({ section }: { section: ListSettingsSectio
             {t(`title.${section}`)}
           </Button>
         </h2>
-        {!recognized && <Badge variant='outline'>{t('rule.uncovered', { ns: 'shared' })}</Badge>}
+        {!recognized && (
+          <Badge variant='outline' className='mr-3'>
+            {t('rule.uncovered', { ns: 'shared' })}
+          </Badge>
+        )}
       </header>
 
-      <div id={bodyId} hidden={!open} className='flex max-h-[60vh] flex-col gap-3 overflow-y-auto'>
+      <div id={bodyId} hidden={!open} className='flex max-h-[60vh] flex-col gap-3 overflow-y-auto px-3 pb-3'>
         <p className='max-w-help-text text-xs text-pretty text-muted-foreground'>
           {t(recognized ? 'hint' : 'uncovered', { section })}
         </p>

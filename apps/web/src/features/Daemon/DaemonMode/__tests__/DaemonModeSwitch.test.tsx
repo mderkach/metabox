@@ -34,6 +34,23 @@ describe('DaemonModeSwitch', () => {
     expect(await screen.findByRole('combobox', { name: 'Режим Clash API: Proxy' })).toBeInTheDocument();
   });
 
+  it('omits the header switch when the runtime offers only one mode', async () => {
+    server.use(
+      http.get(DAEMON_ENDPOINT.clashConfigs(), () =>
+        HttpResponse.json({ ...CLASH_CONFIGS_FIXTURE, 'mode-list': ['Rule'] })
+      )
+    );
+    renderWithQuery(
+      <>
+        <DaemonModeSwitch inHeader />
+        <DaemonModeSwitch />
+      </>
+    );
+
+    expect(await screen.findByRole('combobox', { name: 'Режим Clash API: по правилам' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /Режим маршрутизации/ })).not.toBeInTheDocument();
+  });
+
   it('instead of a choice names the reason when the mode is not read', async () => {
     server.use(
       http.get(DAEMON_ENDPOINT.clashConfigs(), () =>
