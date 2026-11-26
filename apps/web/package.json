@@ -68,7 +68,7 @@
     "eslint-plugin-testing-library": "7.16.2",
     "impeccable": "4.10.0",
     "jsdom": "31.0.1",
-    "msw": "2.15.0",
+    "msw": "3.0.7",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
