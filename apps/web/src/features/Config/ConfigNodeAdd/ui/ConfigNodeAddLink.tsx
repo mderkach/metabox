@@ -9,6 +9,7 @@ import { showQueryError } from '@shared/api';
 import { cn } from '@shared/lib/utils';
 import { Button, Input, Label, Textarea } from '@shared/ui';
 
+import { CONFIG_NODE_ADD_NS } from '../i18n/ConfigNodeAdd.namespace.generated';
 import { useNodeInsert } from '../model/ConfigNodeAdd.insert';
 import { NODE_LINK_ERROR, parseShareLink, shareLinkNode, shareLinkTag } from '../model/ConfigNodeAdd.link';
 import {
@@ -27,10 +28,8 @@ import {
 import { ConfigNodeAddServerFields } from './ConfigNodeAddServerFields';
 import { ConfigNodeAddSubscriptionFields } from './ConfigNodeAddSubscriptionFields';
 
-const NS = 'features/Config/ConfigNodeAdd';
-
 /** Failure code into text; an unknown code is named as itself. */
-const LINK_ERROR_KEY: Readonly<Record<string, ParseKeys<typeof NS> | undefined>> = {
+const LINK_ERROR_KEY: Readonly<Record<string, ParseKeys<typeof CONFIG_NODE_ADD_NS> | undefined>> = {
   [NODE_ADD_ERROR.LinkRequired]: 'error.linkRequired',
   [NODE_LINK_ERROR.Scheme]: 'error.link.scheme',
   [NODE_LINK_ERROR.Subscription]: 'error.link.subscription',
@@ -42,7 +41,7 @@ const LINK_ERROR_KEY: Readonly<Record<string, ParseKeys<typeof NS> | undefined>>
   [SUBSCRIPTION_ERROR.InvalidLink]: 'subscription.invalidLink',
 };
 
-const ROOT_ERROR_KEY: Readonly<Record<string, ParseKeys<typeof NS> | undefined>> = {
+const ROOT_ERROR_KEY: Readonly<Record<string, ParseKeys<typeof CONFIG_NODE_ADD_NS> | undefined>> = {
   [SUBSCRIPTION_ERROR.Stale]: 'subscription.stale',
   [SUBSCRIPTION_ERROR.Write]: 'subscription.writeFailed',
   [SERVER_ERROR.Stale]: 'subscription.stale',
@@ -63,7 +62,7 @@ export function ConfigNodeAddLink({
   cancel?: ReactNode;
   subscriptionFallback?: ReactNode;
 }) {
-  const { t } = useTranslation(NS);
+  const { t } = useTranslation(CONFIG_NODE_ADD_NS);
   const insertNode = useNodeInsert(section);
   const id = useId();
   const hintId = useId();

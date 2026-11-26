@@ -3,11 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { SCHEMA_VERSION, useConfigPath, useDaemonStatus, useTrafficHistory } from '@entities/Daemon';
 import { DaemonRestart } from '@features/Daemon/DaemonControl';
 import { DaemonModeSwitch } from '@features/Daemon/DaemonMode';
+import { SHARED_NS } from '@shared/i18n';
 import { formatBytes } from '@shared/lib/format';
 import { cn } from '@shared/lib/utils';
 import { CARD_TITLE, Card, CardContent, CardHeader } from '@shared/ui';
 import { DaemonService } from '@widgets/Daemon/DaemonService';
 
+import { OVERVIEW_NS } from '../i18n/Overview.namespace.generated';
 import { useDaemonMark, type OverviewRuntime } from '../lib';
 import { OverviewProcessRow } from './OverviewProcessRow';
 import { OverviewSection } from './OverviewSection';
@@ -21,7 +23,7 @@ import { OverviewTrend } from './OverviewTrend';
  * only for debugging.
  */
 export function OverviewProcess({ runtime, collapsible }: { runtime: OverviewRuntime; collapsible: boolean }) {
-  const { t } = useTranslation('pages/Overview');
+  const { t } = useTranslation(OVERVIEW_NS);
   const status = useDaemonStatus();
   const daemon = useDaemonMark(status.isSuccess);
   const configPath = useConfigPath();
@@ -67,14 +69,14 @@ export function OverviewProcess({ runtime, collapsible }: { runtime: OverviewRun
           <CardContent>
             <dl>
               <OverviewProcessRow
-                label={t('daemon.name', { ns: 'shared' })}
+                label={t('daemon.name', { ns: SHARED_NS })}
                 value={status.isPending ? null : (status.data?.version ?? '—')}
                 mono
               />
               <OverviewProcessRow label={t('process.schema')} value={SCHEMA_VERSION} mono />
               <OverviewProcessRow label={t('process.config')} value={configPath} mono />
               <div className='flex items-center justify-between gap-4 border-t border-border py-1 text-sm'>
-                <dt className='text-muted-foreground'>{t('clashMode.label', { ns: 'shared' })}</dt>
+                <dt className='text-muted-foreground'>{t('clashMode.label', { ns: SHARED_NS })}</dt>
                 <dd className='min-w-0'>
                   <DaemonModeSwitch />
                 </dd>
@@ -83,7 +85,7 @@ export function OverviewProcess({ runtime, collapsible }: { runtime: OverviewRun
                 <OverviewProcessRow
                   label={t('process.memory')}
                   value={`${formatBytes(system.daemon.rss)} · ${t('count.goroutine', {
-                    ns: 'shared',
+                    ns: SHARED_NS,
                     count: system.daemon.goroutines,
                   })}`}
                 />

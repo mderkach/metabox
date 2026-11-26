@@ -2,10 +2,12 @@ import { Link, useRouterState } from '@tanstack/react-router';
 import { CircleHelp, PanelLeftClose } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 
+import { APP_SIDEBAR_NS } from '../i18n/AppSidebar.namespace.generated';
 import { pickActiveNav, useSidebarCollapsed } from '../lib/AppSidebar.lib';
-import { HELP_NAV_ITEM, NAV_TARGETS, SIDEBAR_SECTIONS } from '../model';
+import type { SidebarNavigation } from '../model';
 import { AppSidebarControls } from './AppSidebarControls';
 import { AppSidebarLogo } from './AppSidebarLogo';
 
@@ -19,13 +21,13 @@ const TOGGLE_CLASS =
 const ACTIVE_CLASS =
   'bg-sidebar-accent font-medium text-sidebar-accent-foreground before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full before:bg-primary';
 
-export function AppSidebar() {
-  const { t } = useTranslation('widgets/AppSidebar');
+export function AppSidebar({ navigation }: { navigation: SidebarNavigation }) {
+  const { t } = useTranslation(APP_SIDEBAR_NS);
   const sidebar = useSidebarCollapsed();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const active = pickActiveNav(pathname, NAV_TARGETS);
+  const active = pickActiveNav(pathname, navigation.targets);
 
-  const isHelpActive = active === HELP_NAV_ITEM.to;
+  const isHelpActive = active === navigation.help.to;
 
   return (
     <aside
@@ -62,12 +64,12 @@ export function AppSidebar() {
 
       <nav aria-label={t('nav.label')} className='p-2.5'>
         <ul className='flex flex-col gap-0.5'>
-          {SIDEBAR_SECTIONS.map((item) => (
+          {navigation.sections.map((item) => (
             <li key={item.key}>
               {item.to !== undefined ? (
                 <Link
                   to={item.to}
-                  title={t(item.key, { ns: 'shared' })}
+                  title={t(item.key, { ns: SHARED_NS })}
                   // The link marks itself current by address prefix; an exact
                   // match leaves that to it, and nested paths are decided by `active`.
                   activeOptions={{ exact: true }}
@@ -81,20 +83,20 @@ export function AppSidebar() {
                   )}
                 >
                   <item.icon className='size-4 shrink-0' />
-                  {!sidebar.collapsed && t(item.key, { ns: 'shared' })}
+                  {!sidebar.collapsed && t(item.key, { ns: SHARED_NS })}
                 </Link>
               ) : (
                 <span
                   aria-disabled='true'
-                  title={t('nav.unavailable', { section: t(item.key, { ns: 'shared' }) })}
+                  title={t('nav.unavailable', { section: t(item.key, { ns: SHARED_NS }) })}
                   className={cn(ITEM_CLASS, sidebar.collapsed && 'justify-center px-0', 'text-muted-foreground')}
                 >
                   <item.icon className='size-4 shrink-0' />
                   {!sidebar.collapsed && (
                     <>
-                      <span className='grow truncate'>{t(item.key, { ns: 'shared' })}</span>
+                      <span className='grow truncate'>{t(item.key, { ns: SHARED_NS })}</span>
                       <span className='shrink-0 rounded-sm bg-muted px-1 text-xs tracking-wide text-muted-foreground uppercase'>
-                        {t('soon', { ns: 'shared' })}
+                        {t('soon', { ns: SHARED_NS })}
                       </span>
                     </>
                   )}
@@ -112,7 +114,7 @@ export function AppSidebar() {
         )}
       >
         <Link
-          to={HELP_NAV_ITEM.to}
+          to={navigation.help.to}
           title={t('nav.help')}
           aria-label={sidebar.collapsed ? t('nav.help') : undefined}
           activeOptions={{ exact: true }}

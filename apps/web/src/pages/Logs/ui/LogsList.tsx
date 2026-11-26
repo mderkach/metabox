@@ -6,6 +6,7 @@ import type { LogEntry } from '@entities/Log';
 import { cn } from '@shared/lib/utils';
 import { TABLE_HEADER } from '@shared/ui';
 
+import { LOGS_NS } from '../i18n/Logs.namespace.generated';
 import { LOGS_COLUMN } from './LogsColumns';
 import { LogsRow } from './LogsRow';
 
@@ -22,7 +23,7 @@ const OVERSCAN = 20;
  * stream rows scroll the list to themselves until the user turns following off.
  */
 export function LogsList({ entries, follow }: { entries: readonly LogEntry[]; follow: boolean }) {
-  const { t } = useTranslation('pages/Logs');
+  const { t } = useTranslation(LOGS_NS);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({

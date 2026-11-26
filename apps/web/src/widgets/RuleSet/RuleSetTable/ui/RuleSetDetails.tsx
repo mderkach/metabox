@@ -5,6 +5,8 @@ import { RULE_SET_TYPE, type RuleSetRow, type useCachedRuleSets } from '@entitie
 import type { CachedRuleSet } from '@entities/RuleSet';
 import { Button, SkeletonRows } from '@shared/ui';
 
+import { RULE_SET_TABLE_NS } from '../i18n/RuleSetTable.namespace.generated';
+import type { RuleSetLinks } from '../model/RuleSetTable.links';
 import { RuleSetReferenceLinks } from './RuleSetReferenceLinks';
 import { RuleSetSizeCell } from './RuleSetSizeCell';
 import { RuleSetSourceDetails } from './RuleSetSourceDetails';
@@ -26,16 +28,18 @@ function cacheStateMessage(state: string | undefined) {
 
 export function RuleSetDetails({
   set,
+  links,
   cached,
   cache,
   draftOnly,
 }: {
+  links: RuleSetLinks;
   set: RuleSetRow;
   cached: CachedRuleSet | undefined;
   cache?: ReturnType<typeof useCachedRuleSets>;
   draftOnly: boolean;
 }) {
-  const { t } = useTranslation('widgets/RuleSet/RuleSetTable');
+  const { t } = useTranslation(RULE_SET_TABLE_NS);
   const state = cached?.state;
 
   return (
@@ -74,7 +78,7 @@ export function RuleSetDetails({
         </div>
       )}
 
-      <RuleSetReferenceLinks usage={set.usage} />
+      <RuleSetReferenceLinks referenceLink={links.reference} usage={set.usage} />
     </div>
   );
 }

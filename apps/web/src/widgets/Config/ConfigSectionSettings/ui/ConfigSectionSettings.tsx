@@ -9,8 +9,11 @@ import {
   type ListSettingsSection,
 } from '@entities/Config';
 import { ConfigSectionForm } from '@features/Config/ConfigNodeForm';
+import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 import { Badge, Button, SURFACE } from '@shared/ui';
+
+import { CONFIG_SECTION_SETTINGS_NS } from '../i18n/ConfigSectionSettings.namespace.generated';
 
 /**
  * Scalars of the `route` or `dns` section as a card above its list. Collapsed by
@@ -22,7 +25,7 @@ import { Badge, Button, SURFACE } from '@shared/ui';
  * not a single field could be saved.
  */
 export function ConfigSectionSettings({ section }: { section: ListSettingsSection }) {
-  const { t } = useTranslation('widgets/Config/ConfigSectionSettings');
+  const { t } = useTranslation(CONFIG_SECTION_SETTINGS_NS);
   const document = useConfigDocument();
   const [open, setOpen] = useState(false);
   const headingId = useId();
@@ -58,7 +61,7 @@ export function ConfigSectionSettings({ section }: { section: ListSettingsSectio
         </h2>
         {!recognized && (
           <Badge variant='outline' className='mr-3'>
-            {t('rule.uncovered', { ns: 'shared' })}
+            {t('rule.uncovered', { ns: SHARED_NS })}
           </Badge>
         )}
       </header>

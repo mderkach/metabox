@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { ConnectionRow as ConnectionRowModel } from '@entities/Connection';
 import { cn } from '@shared/lib/utils';
 
+import { CONNECTION_TABLE_NS } from '../i18n/ConnectionTable.namespace.generated';
 import { toCardLines } from '../lib/ConnectionTable.card';
 import { CELL } from './ConnectionCells';
 import { type ConnectionCell } from './ConnectionColumns';
@@ -41,7 +42,7 @@ function ConnectionCardProto({
   selected: boolean;
   panelId?: string;
 }) {
-  const { t } = useTranslation('widgets/ConnectionTable');
+  const { t } = useTranslation(CONNECTION_TABLE_NS);
   const { lines, traffic } = useMemo(() => toCardLines(cells), [cells]);
 
   return (

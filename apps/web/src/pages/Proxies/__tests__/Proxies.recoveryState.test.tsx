@@ -11,6 +11,7 @@ import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture
 import { DEVICE_ENDPOINT } from '@entities/Device';
 import { DELAY_STATE, DELAY_TIMEOUT, PROXY_ENDPOINT, type ProxyNode } from '@entities/Proxy';
 import { ConfigApplyBar } from '@features/Config/ConfigApply';
+import { TestChangeLink } from '@features/Config/ConfigApply/__tests__/ConfigApplyLink.fixture';
 import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
 
 import { useProxiesRecovery } from '../model/Proxies.recoveryState';
@@ -108,7 +109,7 @@ function Screen() {
           Restore
         </button>
       )}
-      <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />
+      <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />
     </>
   );
 }

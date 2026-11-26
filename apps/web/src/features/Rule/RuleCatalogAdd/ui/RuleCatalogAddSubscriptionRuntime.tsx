@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 
 import { useProxies, useProxyProviders } from '@entities/Proxy';
 
+import { RULE_CATALOG_ADD_NS } from '../i18n/RuleCatalogAdd.namespace.generated';
+
 export function RuleCatalogAddSubscriptionRuntime({
   providerTags,
   group,
@@ -9,7 +11,7 @@ export function RuleCatalogAddSubscriptionRuntime({
   providerTags: ReadonlySet<string>;
   group?: string;
 }) {
-  const { t } = useTranslation('features/Rule/RuleCatalogAdd');
+  const { t } = useTranslation(RULE_CATALOG_ADD_NS);
   const providers = useProxyProviders();
   const proxies = useProxies();
   const names = new Set(

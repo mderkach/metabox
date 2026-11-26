@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -54,9 +54,12 @@ describe('metaboxI18n', () => {
 
     server.watcher.emit('add', added);
     expect(await localeMap(server)).toContain('ru:pages/New');
+    const identifier = path.join(path.dirname(added), 'New.namespace.generated.ts');
+    expect(readFileSync(identifier, 'utf8')).toContain("export const NEW_NS = 'pages/New' as const;");
 
     rmSync(added);
     server.watcher.emit('unlink', added);
+    expect(existsSync(identifier)).toBe(false);
     expect(await localeMap(server)).not.toContain('ru:pages/New');
   });
 });

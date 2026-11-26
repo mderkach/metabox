@@ -1,6 +1,6 @@
+import { CONFIG_NODE_FORM_NS } from '../src/features/Config/ConfigNodeForm/i18n/ConfigNodeForm.namespace.generated.ts';
 import { E2E_TAG, expect, test, translate } from './fixtures/index.ts';
 
-const NODE_FORM = 'features/Config/ConfigNodeForm';
 const NODE = 'node-a-vless-reality';
 // The longest enum list of the mock VLESS node: its last value is wider than a phone sheet allows in one row.
 const ENUM_LIST = /curve_preferences/;
@@ -39,7 +39,7 @@ for (const width of Object.values(PHONE_WIDTH)) {
 
         await test.step('a required field cleared in the sheet is reported, and a new value is written', async () => {
           const server = sectionPage.serverField(NODE);
-          const required = sectionPage.panel(NODE).getByText(translate(NODE_FORM, 'error.required'));
+          const required = sectionPage.panel(NODE).getByText(translate(CONFIG_NODE_FORM_NS, 'error.required'));
 
           await server.fill('');
           await server.blur();

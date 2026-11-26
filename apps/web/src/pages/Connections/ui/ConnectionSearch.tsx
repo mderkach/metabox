@@ -2,13 +2,15 @@ import { useTranslation } from 'react-i18next';
 
 import { SearchInput } from '@shared/ui';
 
+import { CONNECTIONS_NS } from '../i18n/Connections.namespace.generated';
+
 /**
  * Search: the left edge of the table toolbar. In a row with facets and actions
  * the field shrinks first, otherwise at laptop width the outermost action moves
  * to a separate row.
  */
 export function ConnectionSearch({ query, onQueryChange }: { query: string; onQueryChange: (query: string) => void }) {
-  const { t } = useTranslation('pages/Connections');
+  const { t } = useTranslation(CONNECTIONS_NS);
 
   return (
     <SearchInput

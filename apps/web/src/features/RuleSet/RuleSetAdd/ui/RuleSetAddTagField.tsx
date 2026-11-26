@@ -4,12 +4,13 @@ import { useTranslation } from 'react-i18next';
 
 import { Input, Label } from '@shared/ui';
 
+import { RULE_SET_ADD_NS } from '../i18n/RuleSetAdd.namespace.generated';
 import { type RuleSetAddModel } from '../model/RuleSetAdd.schema';
 import { RuleSetAddFieldError } from './RuleSetAddFieldError';
 
 /** Set name: rules refer to it by it, so it is unique. */
 export function RuleSetAddTagField() {
-  const { t } = useTranslation('features/RuleSet/RuleSetAdd');
+  const { t } = useTranslation(RULE_SET_ADD_NS);
   const { control } = useFormContext<RuleSetAddModel>();
   const id = useId();
   const errorId = useId();

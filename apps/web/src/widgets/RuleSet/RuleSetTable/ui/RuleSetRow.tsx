@@ -7,6 +7,8 @@ import type { CachedRuleSet } from '@entities/RuleSet';
 import { cn } from '@shared/lib/utils';
 import { Button } from '@shared/ui';
 
+import { RULE_SET_TABLE_NS } from '../i18n/RuleSetTable.namespace.generated';
+import type { RuleSetLinks } from '../model/RuleSetTable.links';
 import { isEditable } from '../model/RuleSetTable.model';
 import { CELL } from './RuleSetCells';
 import { RULE_SET_COLUMN, RULE_SET_COLUMNS } from './RuleSetColumns';
@@ -26,6 +28,7 @@ import { RuleSetRemove } from './RuleSetRemove';
  */
 function RuleSetRowProto({
   set,
+  links,
   rowIndex,
   expanded,
   reveal,
@@ -36,6 +39,7 @@ function RuleSetRowProto({
   onEdit,
   onRemove,
 }: {
+  links: RuleSetLinks;
   set: RuleSetRowModel;
   rowIndex: number;
   expanded: boolean;
@@ -48,7 +52,7 @@ function RuleSetRowProto({
   onEdit?: (index: number) => void;
   onRemove: (index: number) => void;
 }) {
-  const { t } = useTranslation('widgets/RuleSet/RuleSetTable');
+  const { t } = useTranslation(RULE_SET_TABLE_NS);
   const detailsId = useId();
   const rowRef = useRef<HTMLDivElement>(null);
 
@@ -77,7 +81,7 @@ function RuleSetRowProto({
               checked === undefined && def.accessorFn(set, position) === null && 'max-md:hidden'
             )}
           >
-            <Cell set={set} cached={checked} />
+            <Cell byTag={links.byTag} set={set} cached={checked} />
           </span>
         );
       })}
@@ -125,7 +129,7 @@ function RuleSetRowProto({
       )}
       <div role='cell' aria-colspan={RULE_SET_COLUMNS.length + 1} hidden={!expanded} className='col-span-2 basis-full'>
         <section id={detailsId} aria-label={t('details.toggle', { tag: set.tag })}>
-          {expanded && <RuleSetDetails set={set} cached={cached} cache={cache} draftOnly={draftOnly} />}
+          {expanded && <RuleSetDetails links={links} set={set} cached={cached} cache={cache} draftOnly={draftOnly} />}
         </section>
       </div>
     </div>

@@ -1,9 +1,9 @@
-import { Link, useRouterState } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import { ChevronDown } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { sectionSize, type ConfigDocument } from '@entities/Config';
+import { sectionSize, type ConfigDocument, type ConfigSection } from '@entities/Config';
 import { useScrollEdges } from '@shared/lib/useScrollEdges';
 import { cn } from '@shared/lib/utils';
 import {
@@ -17,7 +17,8 @@ import {
   TabsTrigger,
 } from '@shared/ui';
 
-import { CONFIG_TABS, CONFIG_TABS_FREQUENT, tabPath } from '../model';
+import { CONFIG_TABS_NS } from '../i18n/ConfigTabs.namespace.generated';
+import { CONFIG_TABS, CONFIG_TABS_FREQUENT, type ConfigViewLinks } from '../model';
 import { ConfigSectionCount } from './ConfigSectionCount';
 
 const HALF = 0.5;
@@ -31,10 +32,16 @@ const HALF = 0.5;
  * At a narrow width the strip scrolls, the edge with hidden tabs fades out
  * with a gradient, and the selected tab scrolls to the middle of the visible part.
  */
-export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
-  const { t } = useTranslation('widgets/Config/ConfigTabs');
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const current = CONFIG_TABS.find((section) => tabPath(section) === pathname)?.key ?? null;
+export function ConfigTabs({
+  config,
+  links,
+  current,
+}: {
+  config: ConfigDocument | null;
+  links: ConfigViewLinks;
+  current: ConfigSection | null;
+}) {
+  const { t } = useTranslation(CONFIG_TABS_NS);
   const shown = CONFIG_TABS.filter((section) => CONFIG_TABS_FREQUENT.has(section.key) || section.key === current);
   const more = CONFIG_TABS.filter((section) => !CONFIG_TABS_FREQUENT.has(section.key) && section.key !== current);
   const list = useRef<HTMLDivElement>(null);
@@ -101,7 +108,7 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
                   key={section.key}
                   value={section.key}
                   nativeButton={false}
-                  render={<Link {...section.link} activeOptions={{ exact: true }} />}
+                  render={<Link {...links.section(section.key)} activeOptions={{ exact: true }} />}
                   className='flex-none'
                 >
                   {t(section.label)}
@@ -124,7 +131,7 @@ export function ConfigTabs({ config }: { config: ConfigDocument | null }) {
               return (
                 <DropdownMenuItem
                   key={section.key}
-                  render={<Link {...section.link} />}
+                  render={<Link {...links.section(section.key)} />}
                   className='justify-between gap-4'
                 >
                   {t(section.label)}

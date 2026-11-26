@@ -2,6 +2,8 @@ import type { ParseKeys } from 'i18next';
 
 import { RULE_SET_FORMAT } from '@entities/RuleSet';
 
+import type { RULE_SET_ADD_NS } from '../i18n/RuleSetAdd.namespace.generated';
+
 /**
  * Form failures as codes: the `ui` substitutes the text, because the slice
  * dictionary is its concern, and the schema knows nothing about language.
@@ -17,7 +19,7 @@ export const RULE_SET_ADD_ERROR = {
 } as const;
 
 /** Failure code to a dictionary key: a missed translation is caught by compilation. */
-export const RULE_SET_ADD_ERROR_KEY: Readonly<Record<string, ParseKeys<'features/RuleSet/RuleSetAdd'> | undefined>> = {
+export const RULE_SET_ADD_ERROR_KEY: Readonly<Record<string, ParseKeys<typeof RULE_SET_ADD_NS> | undefined>> = {
   [RULE_SET_ADD_ERROR.UrlRequired]: 'error.urlRequired',
   [RULE_SET_ADD_ERROR.UrlScheme]: 'error.urlScheme',
   [RULE_SET_ADD_ERROR.TagRequired]: 'error.tagRequired',

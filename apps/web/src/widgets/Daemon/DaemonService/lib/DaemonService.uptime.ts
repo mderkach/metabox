@@ -2,7 +2,9 @@ import type { TFunction } from 'i18next';
 
 import { HOURS_IN_DAY, SECONDS_IN_HOUR, SECONDS_IN_MINUTE } from '@shared/lib/time';
 
-export function formatUptime(t: TFunction<'widgets/Daemon/DaemonService'>, seconds: number): string {
+import type { DAEMON_SERVICE_NS } from '../i18n/DaemonService.namespace.generated';
+
+export function formatUptime(t: TFunction<typeof DAEMON_SERVICE_NS>, seconds: number): string {
   if (seconds < SECONDS_IN_MINUTE) {
     return t('uptime.underMinute');
   }

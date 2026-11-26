@@ -12,8 +12,10 @@ import {
   selectConfigCurrent,
 } from '@entities/Config';
 import { showQueryError } from '@shared/api';
+import { SHARED_NS } from '@shared/i18n';
 import { Button, Input, Label, ToggleGroup, ToggleGroupItem, TokenInput } from '@shared/ui';
 
+import { RULE_SET_CUSTOM_NS } from '../i18n/RuleSetCustom.namespace.generated';
 import {
   dropCommentLines,
   entryLines,
@@ -37,7 +39,7 @@ import { RuleSetCustomFieldError } from './RuleSetCustomFieldError';
  * and the file travels with the same apply.
  */
 export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly string[]; onDone?: () => void }) {
-  const { t } = useTranslation('features/RuleSet/RuleSetCustom');
+  const { t } = useTranslation(RULE_SET_CUSTOM_NS);
   const insert = ConfigDocumentState.use.insert();
   const editList = ConfigDocumentState.use.editList();
   const [added, setAdded] = useState<string | null>(null);
@@ -175,7 +177,7 @@ export function RuleSetCustomForm({ takenTags, onDone }: { takenTags: readonly s
         <Button type='submit'>{t('submit')}</Button>
         {onDone !== undefined && (
           <Button type='button' variant='ghost' onClick={onDone}>
-            {t('action.cancel', { ns: 'shared' })}
+            {t('action.cancel', { ns: SHARED_NS })}
           </Button>
         )}
       </div>

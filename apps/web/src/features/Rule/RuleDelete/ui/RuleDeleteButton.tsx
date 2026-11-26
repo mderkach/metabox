@@ -3,7 +3,10 @@ import { useTranslation } from 'react-i18next';
 
 import { ConfigDocumentState, ruleNodePath } from '@entities/Config';
 import { showQueryError } from '@shared/api';
+import { SHARED_NS } from '@shared/i18n';
 import { Button, ConfirmDialog } from '@shared/ui';
+
+import { RULE_DELETE_NS } from '../i18n/RuleDelete.namespace.generated';
 
 /**
  * Deleting a rule from the draft. Asks for confirmation: the draft has no
@@ -18,7 +21,7 @@ export function RuleDeleteButton({
   index: number;
   onDeleted: () => void;
 }) {
-  const { t } = useTranslation('features/Rule/RuleDelete');
+  const { t } = useTranslation(RULE_DELETE_NS);
   const remove = ConfigDocumentState.use.remove();
 
   return (
@@ -30,7 +33,7 @@ export function RuleDeleteButton({
       }
       title={t('confirm.title', { index })}
       description={t('confirm.description')}
-      cancelLabel={t('action.cancel', { ns: 'shared' })}
+      cancelLabel={t('action.cancel', { ns: SHARED_NS })}
       confirmLabel={t('confirm.action')}
       destructive
       onConfirm={() => {

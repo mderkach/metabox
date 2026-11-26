@@ -6,11 +6,14 @@ import { useTranslation } from 'react-i18next';
 import { isNamedRuleAction, RULE_TARGET, ruleSetReferencesOf, type RuleRow } from '@entities/Rule';
 import type { RuleSetRow, RuleSetUsage } from '@entities/RuleSet';
 import { RuleReorderButtons } from '@features/Rule/RuleReorder';
+import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 import { Button } from '@shared/ui';
 import { RuleSetReferenceLinks, RuleSetSourceDetails } from '@widgets/RuleSet/RuleSetTable';
 
+import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
 import { canAddDeviceException } from '../model/SimpleRoutes.custom';
+import type { SimpleRuleNavigation, SimpleRoutesLinks } from '../model/SimpleRoutes.links';
 import type { SimpleMoveLimit, SimpleRuleGroup } from '../model/SimpleRoutes.order';
 import { SimpleRoutesCustomAction } from './SimpleRoutesCustomAction';
 
@@ -31,7 +34,10 @@ export function SimpleRoutesRuleRow({
   onPreview,
   onDrop,
   allowMove,
-}: {
+  ruleLink,
+  referenceLink,
+}: Pick<SimpleRuleNavigation, 'referenceLink'> & {
+  ruleLink: SimpleRoutesLinks['rule'];
   rule: RuleRow;
   node: unknown;
   group: SimpleRuleGroup;
@@ -49,8 +55,8 @@ export function SimpleRoutesRuleRow({
   onDrop: (index: number) => void;
   allowMove: (from: number, to: number) => boolean;
 }) {
-  const { t } = useTranslation('pages/SimpleRoutes');
-  const { t: tShared } = useTranslation('shared');
+  const { t } = useTranslation(SIMPLE_ROUTES_NS);
+  const { t: tShared } = useTranslation(SHARED_NS);
   const id = useId();
   const [expanded, setExpanded] = useState<string | null>(null);
   const tags = ruleSetReferencesOf(rule);
@@ -132,11 +138,7 @@ export function SimpleRoutesRuleRow({
         )}
       </div>
       {group === 'advanced' && (
-        <Link
-          to='/config'
-          search={{ rule: rule.index }}
-          className='w-fit text-xs text-primary underline underline-offset-4'
-        >
+        <Link {...ruleLink(rule.index)} className='w-fit text-xs text-primary underline underline-offset-4'>
           {t('list.advanced')}
         </Link>
       )}
@@ -162,7 +164,7 @@ export function SimpleRoutesRuleRow({
           ) : (
             <p>{t('list.sourceUnavailable')}</p>
           )}
-          <RuleSetReferenceLinks usage={usage.get(expanded) ?? []} />
+          <RuleSetReferenceLinks referenceLink={referenceLink} usage={usage.get(expanded) ?? []} />
         </div>
       )}
     </li>

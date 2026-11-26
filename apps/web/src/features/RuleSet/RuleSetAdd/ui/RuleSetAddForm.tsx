@@ -13,8 +13,10 @@ import {
 } from '@entities/Config';
 import { type RuleSetCatalog } from '@entities/RuleSet';
 import { showQueryError } from '@shared/api';
+import { SHARED_NS } from '@shared/i18n';
 import { Button } from '@shared/ui';
 
+import { RULE_SET_ADD_NS } from '../i18n/RuleSetAdd.namespace.generated';
 import {
   makeRuleSetAddSchema,
   ruleSetAddDefaults,
@@ -42,7 +44,7 @@ export function RuleSetAddForm({
   outbounds: readonly string[];
   onDone?: () => void;
 }) {
-  const { t } = useTranslation('features/RuleSet/RuleSetAdd');
+  const { t } = useTranslation(RULE_SET_ADD_NS);
   const insert = ConfigDocumentState.use.insert();
   // A form that stays on the screen must report its success: the set goes into
   // the draft, and without a table row nearby that is not visible.
@@ -89,7 +91,7 @@ export function RuleSetAddForm({
           <Button type='submit'>{t('submit')}</Button>
           {onDone !== undefined && (
             <Button type='button' variant='ghost' onClick={onDone}>
-              {t('action.cancel', { ns: 'shared' })}
+              {t('action.cancel', { ns: SHARED_NS })}
             </Button>
           )}
         </div>

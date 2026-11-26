@@ -10,7 +10,7 @@ import { CLASH_PROXIES_FIXTURE } from '@entities/Proxy/__tests__/Proxy.fixture';
 import { OverviewNode } from '../ui/OverviewNode';
 
 function OverviewNodeScreen() {
-  return <OverviewNode onSelected={() => {}} stopped={false} />;
+  return <OverviewNode proxiesTo='/proxies' onSelected={() => {}} stopped={false} />;
 }
 
 describe('overview node card', () => {

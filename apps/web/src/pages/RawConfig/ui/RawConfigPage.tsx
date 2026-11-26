@@ -4,6 +4,8 @@ import { ConfigDocumentState, useConfigDocument } from '@entities/Config';
 import { Alert, AlertDescription, AlertTitle, QueryFailure, SURFACE, SkeletonRows } from '@shared/ui';
 import { ConfigRawEditor } from '@widgets/Config/ConfigRawEditor';
 
+import { RAW_CONFIG_NS } from '../i18n/RawConfig.namespace.generated';
+
 /**
  * The whole config as text.
  *
@@ -11,7 +13,7 @@ import { ConfigRawEditor } from '@widgets/Config/ConfigRawEditor';
  * "Discard changes" is there, next to the diff and apply.
  */
 export function RawConfigPage() {
-  const { t } = useTranslation('pages/RawConfig');
+  const { t } = useTranslation(RAW_CONFIG_NS);
   const raw = useConfigDocument();
   const replace = ConfigDocumentState.use.replace();
 

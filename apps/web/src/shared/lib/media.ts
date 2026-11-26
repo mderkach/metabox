@@ -1,10 +1,6 @@
 import { useEffect, useState } from 'react';
 
-/**
- * Width below which the layout stops being desktop: the sidebar yields its
- * place to the bottom bar, the overview becomes the start screen, and the table
- * unfolds into a "label — value" list.
- */
+/** Width below which the bottom bar replaces the sidebar and table rows show as label–value lists. */
 export const NARROW_SCREEN = '(max-width: 48rem)';
 
 /**

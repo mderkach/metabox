@@ -3,6 +3,7 @@ import { TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { ROUTE_MATCH } from '@entities/Route';
+import type { StaticPagePath } from '@shared/lib/navigation';
 import { cn } from '@shared/lib/utils';
 import {
   Alert,
@@ -14,13 +15,14 @@ import {
   buttonVariants,
 } from '@shared/ui';
 
+import { ROUTE_EXPLANATION_NS } from '../i18n/RouteExplanation.namespace.generated';
 import { useRouteExplanationState } from '../lib/RouteExplanation.lib';
 import { RouteExplanationBefore } from './RouteExplanationBefore';
 import { RouteExplanationChain } from './RouteExplanationChain';
 import { RouteExplanationMatched } from './RouteExplanationMatched';
 
-export function RouteExplanationBody({ connectionId }: { connectionId: string }) {
-  const { t } = useTranslation('widgets/RouteExplanation');
+export function RouteExplanationBody({ connectionId, editorTo }: { connectionId: string; editorTo: StaticPagePath }) {
+  const { t } = useTranslation(ROUTE_EXPLANATION_NS);
   const state = useRouteExplanationState(connectionId);
   const showFallback = state.explanation?.match.kind === ROUTE_MATCH.Rule && state.editorSearch.rule === undefined;
   const unmapped = state.appliedIndex === null;
@@ -34,6 +36,7 @@ export function RouteExplanationBody({ connectionId }: { connectionId: string })
       {state.explanation !== null && (
         <>
           <RouteExplanationMatched
+            editorTo={editorTo}
             explanation={state.explanation}
             appliedIndex={state.appliedIndex}
             ruleName={state.ruleName}
@@ -48,7 +51,7 @@ export function RouteExplanationBody({ connectionId }: { connectionId: string })
               <AlertTitle>{t(unmapped ? 'drift.title' : 'draft.title')}</AlertTitle>
               <AlertDescription>{t(unmapped ? 'drift.description' : 'draft.description')}</AlertDescription>
               <AlertAction className='static col-start-2 mt-2 justify-self-start'>
-                <Link to='/config' className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}>
+                <Link to={editorTo} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}>
                   {t('matched.openConfig')}
                 </Link>
               </AlertAction>

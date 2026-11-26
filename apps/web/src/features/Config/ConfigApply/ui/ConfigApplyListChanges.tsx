@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 
 import { useListChanges } from '@entities/Config';
 
+import { CONFIG_APPLY_NS } from '../i18n/ConfigApply.namespace.generated';
+
 /**
  * List files that will go with this apply. Their content does not get into the
  * line-by-line diff, since the file is visible on the sets screen, but the
@@ -9,7 +11,7 @@ import { useListChanges } from '@entities/Config';
  * applied.
  */
 export function ConfigApplyListChanges() {
-  const { t } = useTranslation('features/Config/ConfigApply');
+  const { t } = useTranslation(CONFIG_APPLY_NS);
   const lists = useListChanges();
   const put = Object.keys(lists.put);
 

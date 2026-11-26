@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
 
+import { HOW_IT_WORKS_NS } from '../i18n/HowItWorks.namespace.generated';
 import type { WalkGroup } from '../model/HowItWorks.model';
 
 export function HowItWorksGroup({ group }: { group: WalkGroup }) {
-  const { t } = useTranslation('pages/HowItWorks');
+  const { t } = useTranslation(HOW_IT_WORKS_NS);
   const method = group.type?.toLowerCase();
 
   return (

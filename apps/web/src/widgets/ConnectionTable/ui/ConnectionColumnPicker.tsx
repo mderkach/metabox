@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@shared/lib/utils';
 import { Button, Checkbox, Label, Popover, PopoverContent, PopoverTitle, PopoverTrigger } from '@shared/ui';
 
+import { CONNECTION_TABLE_NS } from '../i18n/ConnectionTable.namespace.generated';
 import type { ConnectionView } from '../lib';
 import { toMoveButtonId, MOVE, type Move } from '../lib/ConnectionTable.move';
 import { CONNECTION_COLUMNS, CONNECTION_COLUMNS_HIDDEN, toOrderedColumns } from './ConnectionColumns';
@@ -36,7 +37,7 @@ export function ConnectionColumnPicker({
 }: {
   view: Pick<ConnectionView, 'columns' | 'order' | 'setColumns' | 'setOrder' | 'resetColumns'>;
 }) {
-  const { t } = useTranslation('widgets/ConnectionTable');
+  const { t } = useTranslation(CONNECTION_TABLE_NS);
   const columns = toOrderedColumns(view.order);
   const hidden = columns.filter((def) => view.columns[def.id] === false).length;
   const reordered = columns.some((def, index) => def.id !== CONNECTION_COLUMNS[index].id);

@@ -5,9 +5,11 @@ import { useController, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { useSaveOutboundMetadata } from '@entities/Proxy';
+import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 import { Button, InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@shared/ui';
 
+import { PROXY_GROUPS_NS } from '../i18n/ProxyGroups.namespace.generated';
 import { ProxyNormFormSchema, type ProxyNormFormModel } from '../model/ProxyMetadata.schema';
 
 export function ProxyNormField({
@@ -21,7 +23,7 @@ export function ProxyNormField({
   manual: boolean;
   onSaved: (tag: string) => void;
 }) {
-  const { t } = useTranslation('widgets/ProxyGroups');
+  const { t } = useTranslation(PROXY_GROUPS_NS);
   const [editing, setEditing] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const action = useRef<HTMLButtonElement>(null);
@@ -161,7 +163,7 @@ export function ProxyNormField({
           </InputGroupButton>
         </InputGroupAddon>
         <span id={normDescriptionId} className='sr-only'>
-          {usual === null ? t('metadata.noNorm') : t('delay.value', { ns: 'shared', value: usual })}
+          {usual === null ? t('metadata.noNorm') : t('delay.value', { ns: SHARED_NS, value: usual })}
         </span>
         {invalid && (
           <span

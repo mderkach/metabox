@@ -8,8 +8,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE, SERVICE_RUNNING_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 
-import { NAV_ITEMS } from '../model';
 import { AppSidebarBottomNav } from '../ui/AppSidebarBottomNav';
+import { navigation } from './AppSidebar.fixture';
 
 describe('AppSidebarBottomNav', () => {
   beforeEach(() => {
@@ -20,13 +20,13 @@ describe('AppSidebarBottomNav', () => {
   });
 
   it('leads to menu sections with labeled links, service ones in the "More" sheet', async () => {
-    renderWithRouter(AppSidebarBottomNav);
+    renderWithRouter(() => <AppSidebarBottomNav navigation={navigation} />);
 
     const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
     const links = within(nav).getAllByRole('link');
 
     expect(links.map((link) => link.getAttribute('href'))).toEqual(
-      NAV_ITEMS.filter((item) => item.more !== true).map((item) => item.to)
+      navigation.items.filter((item) => item.more !== true).map((item) => item.to)
     );
     expect(within(nav).getByRole('link', { name: 'Обзор' })).toBeInTheDocument();
     expect(within(nav).getByRole('link', { name: 'Маршруты' })).toHaveAttribute('href', '/config/simple');
@@ -36,7 +36,7 @@ describe('AppSidebarBottomNav', () => {
 
   it('puts How metabox works first in More and keeps five bottom links', async () => {
     const user = userEvent.setup();
-    renderWithRouter(AppSidebarBottomNav);
+    renderWithRouter(() => <AppSidebarBottomNav navigation={navigation} />);
 
     const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
     expect(within(nav).getAllByRole('link')).toHaveLength(5);
@@ -50,7 +50,7 @@ describe('AppSidebarBottomNav', () => {
     server.use(
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json({ ...SERVICE_RUNNING_FIXTURE, status: 'stopped' }))
     );
-    renderWithRouter(AppSidebarBottomNav);
+    renderWithRouter(() => <AppSidebarBottomNav navigation={navigation} />);
 
     const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
 
@@ -58,7 +58,7 @@ describe('AppSidebarBottomNav', () => {
   });
 
   it('leaves the "More" item unmarked while sing-box runs', async () => {
-    renderWithRouter(AppSidebarBottomNav);
+    renderWithRouter(() => <AppSidebarBottomNav navigation={navigation} />);
 
     const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
 
@@ -68,7 +68,7 @@ describe('AppSidebarBottomNav', () => {
   });
 
   it('marks one section as current, even when the address is nested in it', async () => {
-    renderWithRouter(AppSidebarBottomNav, { path: '/config/rule-set' });
+    renderWithRouter(() => <AppSidebarBottomNav navigation={navigation} />, { path: '/config/rule-set' });
 
     const nav = await screen.findByRole('navigation', { name: 'Разделы панели' });
     const current = within(nav).getAllByRole('link', { current: 'page' });
@@ -82,7 +82,7 @@ describe('AppSidebarBottomNav', () => {
   it('"More" leads to logs and diagnostics and closes on navigation', async () => {
     const user = userEvent.setup();
 
-    renderWithRouter(AppSidebarBottomNav, { path: '/logs' });
+    renderWithRouter(() => <AppSidebarBottomNav navigation={navigation} />, { path: '/logs' });
 
     await user.click(await screen.findByRole('button', { name: 'Ещё' }));
 
@@ -102,7 +102,7 @@ describe('AppSidebarBottomNav', () => {
   it('"More" opens a sheet with the service state, theme and language', async () => {
     const user = userEvent.setup();
 
-    renderWithRouter(AppSidebarBottomNav);
+    renderWithRouter(() => <AppSidebarBottomNav navigation={navigation} />);
 
     await user.click(await screen.findByRole('button', { name: 'Ещё' }));
 

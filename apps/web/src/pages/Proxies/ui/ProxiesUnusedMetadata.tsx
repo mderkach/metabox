@@ -4,6 +4,7 @@ import { readSectionNodes, useConfig } from '@entities/Config';
 import type { OutboundMetadata, OutboundMetadataMap } from '@entities/Proxy';
 import { CARD_FLUSH, Card } from '@shared/ui';
 
+import { PROXIES_NS } from '../i18n/Proxies.namespace.generated';
 import { ProxiesSection } from './ProxiesSection';
 import { ProxiesUnusedMetadataRow } from './ProxiesUnusedMetadataRow';
 
@@ -18,7 +19,7 @@ export function ProxiesUnusedMetadata({
   runtimeTags: readonly string[];
   announce: (message: string) => void;
 }) {
-  const { t } = useTranslation('pages/Proxies');
+  const { t } = useTranslation(PROXIES_NS);
   const applied = useConfig();
   const configured =
     applied.data === undefined

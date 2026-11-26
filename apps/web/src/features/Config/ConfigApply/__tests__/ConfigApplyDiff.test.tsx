@@ -1,6 +1,6 @@
 import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
-import { act, screen, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import type { FunctionComponent } from 'react';
@@ -11,6 +11,7 @@ import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 
 import { ConfigApplyDiff } from '../ui/ConfigApplyDiff';
+import { TestChangeLink } from './ConfigApplyLink.fixture';
 
 /** The router renders its route after a tick: the screen is queried once it is there. */
 async function renderScreen(Component: FunctionComponent) {
@@ -43,7 +44,7 @@ async function openDiff(applied: unknown[], draft: unknown[]) {
   ConfigDocumentState.getState().load(toText(applied));
   ConfigDocumentState.getState().replace(toText(draft));
   await renderScreen(function Screen() {
-    return <ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />;
+    return <ConfigApplyDiff ChangeLink={TestChangeLink} canApply blocked={null} onApply={() => undefined} />;
   });
 
   await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
@@ -119,7 +120,7 @@ describe('ConfigApplyDiff', () => {
         .replace('"site-1.example",\n        "outbound": "proxy"', '"site-1.example",\n        "outbound": "direct"')
     );
     await renderScreen(function Screen() {
-      return <ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />;
+      return <ConfigApplyDiff ChangeLink={TestChangeLink} canApply blocked={null} onApply={() => undefined} />;
     });
 
     await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
@@ -145,7 +146,7 @@ describe('ConfigApplyDiff', () => {
     ConfigDocumentState.getState().load(applied);
     ConfigDocumentState.getState().replace(applied.replace('// TV\n', '// TV through VPN\n'));
     await renderScreen(function Screen() {
-      return <ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />;
+      return <ConfigApplyDiff ChangeLink={TestChangeLink} canApply blocked={null} onApply={() => undefined} />;
     });
 
     await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
@@ -157,7 +158,7 @@ describe('ConfigApplyDiff', () => {
         .getAllByRole('listitem')
         .map((item) => item.textContent)
     ).toEqual(['Переименовано из «TV» в «TV through VPN» (правило 2)']);
-    expect(within(summary).getByRole('link', { name: 'TV through VPN' })).toHaveAttribute('href', '/config?rule=2');
+    expect(within(summary).getByRole('link', { name: 'TV through VPN' })).toHaveAttribute('href', '#rule-2');
   });
 
   it('truncates a long summary and says how many remain', async () => {
@@ -184,7 +185,7 @@ describe('ConfigApplyDiff', () => {
       })
     );
     await renderScreen(function Screen() {
-      return <ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />;
+      return <ConfigApplyDiff ChangeLink={TestChangeLink} canApply blocked={null} onApply={() => undefined} />;
     });
 
     await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
@@ -196,7 +197,7 @@ describe('ConfigApplyDiff', () => {
         .getAllByRole('listitem')
         .map((item) => item.textContent)
     ).toEqual(['Добавлено: выход NL test', 'Параметр route.default_mark: 100 → 7']);
-    expect(within(summary).getByRole('link', { name: 'NL test' })).toHaveAttribute('href', '/config/outbounds?node=2');
+    expect(within(summary).getByRole('link', { name: 'NL test' })).toHaveAttribute('href', '#outbounds-2');
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: /Текст изменений/ }));
@@ -209,14 +210,16 @@ describe('ConfigApplyDiff', () => {
 
     await userEvent.click(await screen.findByRole('link', { name: 'site-1.example' }));
 
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
   });
 
   it('shows the text at once when no summary line names the edit', async () => {
     ConfigDocumentState.getState().load('{\n  "log": { "level": "info" }\n}');
     ConfigDocumentState.getState().replace('{\n  // verbose\n  "log": { "level": "info" }\n}');
     await renderScreen(function Screen() {
-      return <ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />;
+      return <ConfigApplyDiff ChangeLink={TestChangeLink} canApply blocked={null} onApply={() => undefined} />;
     });
 
     await userEvent.click(screen.getByRole('button', { name: 'Применить' }));
@@ -229,7 +232,7 @@ describe('ConfigApplyDiff', () => {
     ConfigDocumentState.getState().load('{\n  "log": { "level": "info" }\n}');
     ConfigDocumentState.getState().replace('{\n  "log": { "level": "debug" }\n}');
     await renderScreen(function Screen() {
-      return <ConfigApplyDiff canApply blocked={null} onApply={() => undefined} />;
+      return <ConfigApplyDiff ChangeLink={TestChangeLink} canApply blocked={null} onApply={() => undefined} />;
     });
 
     await userEvent.click(screen.getByRole('button', { name: 'Применить' }));

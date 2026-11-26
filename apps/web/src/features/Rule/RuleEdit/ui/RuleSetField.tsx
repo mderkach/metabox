@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 
 import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
+import { RULE_EDIT_NS } from '../i18n/RuleEdit.namespace.generated';
 import type { RuleEditModel } from '../model/RuleEdit.schema';
 
 /** A tag missing from the document stays selected and marked: only `sing-box check` may reject it. */
 export function RuleSetField({ ruleSets, initial }: { ruleSets: string[]; initial: string[] }) {
-  const { t } = useTranslation('features/Rule/RuleEdit');
+  const { t } = useTranslation(RULE_EDIT_NS);
   const { control, watch } = useFormContext<RuleEditModel>();
   const value = watch('ruleSet');
   const known = new Set(ruleSets);

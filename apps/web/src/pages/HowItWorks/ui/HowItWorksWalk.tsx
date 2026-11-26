@@ -6,6 +6,8 @@ import { ROUTE_MATCH } from '@entities/Route';
 import { cn } from '@shared/lib/utils';
 import { RouteOriginBadge } from '@widgets/RouteExplanation';
 
+import { HOW_IT_WORKS_NS } from '../i18n/HowItWorks.namespace.generated';
+import type { HowItWorksTermLinks } from '../model/HowItWorks.links';
 import type { ConnectionWalk } from '../model/HowItWorks.model';
 import type { WalkTerm } from '../model/HowItWorks.terms';
 import { HowItWorksGroup } from './HowItWorksGroup';
@@ -20,19 +22,21 @@ const STEPS = [
 ] as const;
 
 export function HowItWorksWalk({
+  links,
   walk,
   loading,
   selected,
   inline,
   onSelect,
 }: {
+  links: HowItWorksTermLinks;
   walk: ConnectionWalk | null;
   loading: boolean;
   selected: WalkTerm;
   inline: boolean;
   onSelect: (term: WalkTerm) => void;
 }) {
-  const { t } = useTranslation('pages/HowItWorks');
+  const { t } = useTranslation(HOW_IT_WORKS_NS);
   const panels =
     walk === null
       ? null
@@ -132,6 +136,7 @@ export function HowItWorksWalk({
             </div>
             {inline && selected === term && (
               <HowItWorksTermPanel
+                links={links}
                 term={term}
                 ruleSearch={verified?.editorSearch}
                 ruleSetTag={verified?.services[0]}
@@ -145,7 +150,7 @@ export function HowItWorksWalk({
   );
 }
 
-type WalkTranslator = ReturnType<typeof useTranslation<'pages/HowItWorks'>>['t'];
+type WalkTranslator = ReturnType<typeof useTranslation<typeof HOW_IT_WORKS_NS>>['t'];
 
 function ruleValue(walk: ConnectionWalk, t: WalkTranslator): string {
   if (walk.rule.verified !== null) return walk.rule.verified.label;

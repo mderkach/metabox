@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import type { WorkdirMismatch } from '@entities/Config';
 import { Alert, AlertDescription, AlertTitle } from '@shared/ui';
 
+import { CONFIG_APPLY_NS } from '../i18n/ConfigApply.namespace.generated';
+
 /**
  * The service working directory is set by the `workdir` UCI option of the
  * sing-box package for OpenWrt: the init script passes it with the `-D` flag.
@@ -20,7 +22,7 @@ function toShellWord(value: string): string {
 
 /** The command is built from the directory named by the daemon: the panel does not invent the config path. */
 export function ConfigApplyWorkdir({ mismatch }: { mismatch: WorkdirMismatch }) {
-  const { t } = useTranslation('features/Config/ConfigApply');
+  const { t } = useTranslation(CONFIG_APPLY_NS);
 
   return (
     <Alert variant='destructive'>

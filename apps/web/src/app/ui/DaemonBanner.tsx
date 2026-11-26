@@ -5,9 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { useDaemonReachable, useDaemonStatus } from '@entities/Daemon';
 import { useDaemonRestarting } from '@features/Daemon/DaemonControl';
 import { API_FAILURE, ApiError } from '@shared/api';
+import { SHARED_NS } from '@shared/i18n';
 import { useReducedMotion } from '@shared/lib/media';
 import { cn } from '@shared/lib/utils';
 import { Button } from '@shared/ui';
+
+import { APP_NS } from '../i18n';
 
 type BannerMessage = 'banner.restarting' | 'banner.unreachable' | 'banner.schema';
 
@@ -45,7 +48,7 @@ const BANNER_TONE: Readonly<Record<BannerMessage, { strip: string; text: string;
  * a retry: the panel is already waiting for the daemon itself.
  */
 export function DaemonBanner() {
-  const { t } = useTranslation('app');
+  const { t } = useTranslation(APP_NS);
   const status = useDaemonStatus();
   const reachable = useDaemonReachable();
   const restarting = useDaemonRestarting();
@@ -111,7 +114,7 @@ export function DaemonBanner() {
                     void status.refetch();
                   }}
                 >
-                  {t(status.isFetching ? 'source.retrying' : 'source.retry', { ns: 'shared' })}
+                  {t(status.isFetching ? 'source.retrying' : 'source.retry', { ns: SHARED_NS })}
                 </Button>
               )}
             </div>

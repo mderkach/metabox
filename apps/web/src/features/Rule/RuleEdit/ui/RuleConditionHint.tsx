@@ -2,6 +2,8 @@ import type { ParseKeys } from 'i18next';
 import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { RULE_EDIT_NS } from '../i18n/RuleEdit.namespace.generated';
+
 /** What a condition field says under itself: the input hint or the error in its place, then the field's own helper. */
 export function RuleConditionHint({
   id,
@@ -9,10 +11,10 @@ export function RuleConditionHint({
   helper: Helper,
 }: {
   id: string;
-  error: ParseKeys<'features/Rule/RuleEdit'> | undefined;
+  error: ParseKeys<typeof RULE_EDIT_NS> | undefined;
   helper: ComponentType | undefined;
 }) {
-  const { t } = useTranslation('features/Rule/RuleEdit');
+  const { t } = useTranslation(RULE_EDIT_NS);
 
   return (
     <>

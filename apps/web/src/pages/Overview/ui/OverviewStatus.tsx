@@ -4,6 +4,8 @@ import type { ServerLatencies } from '@entities/Proxy';
 import { CARD_FLUSH, Card } from '@shared/ui';
 import { DaemonServiceControl } from '@widgets/Daemon/DaemonService';
 
+import { OVERVIEW_NS } from '../i18n/Overview.namespace.generated';
+import type { OverviewLinks } from '../model/Overview.links';
 import { OverviewCheck } from './OverviewCheck';
 import { OverviewNode } from './OverviewNode';
 
@@ -13,17 +15,19 @@ import { OverviewNode } from './OverviewNode';
  * the header says what is wrong, this strip is where it is fixed.
  */
 export function OverviewStatus({
+  links,
   onAnnounce,
   stopped,
   latencies,
   latencyAvailable,
 }: {
+  links: Pick<OverviewLinks, 'diagnostics' | 'proxies'>;
   onAnnounce: (message: string) => void;
   stopped: boolean;
   latencies: ServerLatencies | undefined;
   latencyAvailable: boolean;
 }) {
-  const { t } = useTranslation('pages/Overview');
+  const { t } = useTranslation(OVERVIEW_NS);
 
   return (
     <section aria-label={t('status.label')}>
@@ -34,6 +38,7 @@ export function OverviewStatus({
           </div>
           <div className='bg-card p-4'>
             <OverviewNode
+              proxiesTo={links.proxies}
               onSelected={onAnnounce}
               stopped={stopped}
               latencies={latencies}
@@ -41,7 +46,7 @@ export function OverviewStatus({
             />
           </div>
           <div className='bg-card p-4'>
-            <OverviewCheck onChecked={onAnnounce} />
+            <OverviewCheck diagnosticsTo={links.diagnostics} onChecked={onAnnounce} />
           </div>
         </div>
       </Card>

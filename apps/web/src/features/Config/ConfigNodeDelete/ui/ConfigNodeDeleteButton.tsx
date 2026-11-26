@@ -12,8 +12,10 @@ import {
   type GenericSection,
 } from '@entities/Config';
 import { showQueryError } from '@shared/api';
+import { SHARED_NS } from '@shared/i18n';
 import { Button, ConfirmDialog } from '@shared/ui';
 
+import { CONFIG_NODE_DELETE_NS } from '../i18n/ConfigNodeDelete.namespace.generated';
 import { ConfigNodeDeleteReferences } from './ConfigNodeDeleteReferences';
 
 /**
@@ -36,7 +38,7 @@ export function ConfigNodeDeleteButton({
   tag: string;
   onDeleted: () => void;
 }) {
-  const { t } = useTranslation('features/Config/ConfigNodeDelete');
+  const { t } = useTranslation(CONFIG_NODE_DELETE_NS);
   const remove = ConfigDocumentState.use.remove();
   const [references, setReferences] = useState<readonly ConfigReference[]>([]);
 
@@ -49,7 +51,7 @@ export function ConfigNodeDeleteButton({
       }
       title={t('confirm.title', { name })}
       description={<ConfigNodeDeleteReferences references={references} />}
-      cancelLabel={t('action.cancel', { ns: 'shared' })}
+      cancelLabel={t('action.cancel', { ns: SHARED_NS })}
       confirmLabel={t('confirm.action')}
       destructive
       onOpenChange={(open) => {

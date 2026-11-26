@@ -4,6 +4,7 @@ import { type ConfigVersion } from '@entities/Config';
 import { formatBytes } from '@shared/lib/format';
 import { Badge, Button } from '@shared/ui';
 
+import { CONFIG_APPLY_NS } from '../i18n/ConfigApply.namespace.generated';
 import { ConfigApplySavedAt } from './ConfigApplySavedAt';
 
 /** Rollback to the current version would restart the service for the same config, so it has no button. */
@@ -16,7 +17,7 @@ export function ConfigApplyVersionRow({
   disabled: boolean;
   onRestore: (id: number) => void;
 }) {
-  const { t } = useTranslation('features/Config/ConfigApply');
+  const { t } = useTranslation(CONFIG_APPLY_NS);
   return (
     <li className='flex items-center gap-3 border-t border-border py-2 first:border-t-0'>
       <span className='text-sm font-medium'>{t('history.version', { id: version.id })}</span>

@@ -1,4 +1,4 @@
-import { Link, useNavigate } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import { ArrowDown, ArrowRight, Check } from 'lucide-react';
 import type { Ref } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@shared/lib/utils';
 import { Badge, Button, Card, CardContent } from '@shared/ui';
 
+import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
+import type { SimpleRuleNavigation, SimpleRoutesLinks } from '../model/SimpleRoutes.links';
 import { SIMPLE_SERVICE_SUGGESTIONS_ID, type toSimpleRoutes } from '../model/SimpleRoutes.model';
 import { SimpleRoutesAddTrigger } from './SimpleRoutesAddTrigger';
 import { SimpleRoutesSection } from './SimpleRoutesSection';
@@ -23,9 +25,15 @@ export function SimpleRoutesOutbounds({
   suggestServices,
   outbound,
   addTriggerRef,
-}: OutboundSummary & { outbound?: string; addTriggerRef: Ref<HTMLButtonElement> }) {
-  const { t } = useTranslation('pages/SimpleRoutes');
-  const navigate = useNavigate({ from: '/config/simple' });
+  proxiesTo,
+  onOutboundChange,
+}: OutboundSummary &
+  Pick<SimpleRuleNavigation, 'onOutboundChange'> & {
+    proxiesTo: SimpleRoutesLinks['proxies'];
+    outbound?: string;
+    addTriggerRef: Ref<HTMLButtonElement>;
+  }) {
+  const { t } = useTranslation(SIMPLE_ROUTES_NS);
 
   function labelForType(type: string): string {
     if (type === 'selector') return t('outbounds.manual');
@@ -56,7 +64,7 @@ export function SimpleRoutesOutbounds({
                   aria-pressed={hasTag ? selected : undefined}
                   className='h-auto max-w-full min-w-0 flex-col items-start gap-0.5 px-3 py-2 text-left wrap-anywhere whitespace-normal disabled:opacity-100 aria-pressed:border-primary aria-pressed:bg-selected max-sm:w-full dark:aria-pressed:bg-selected'
                   onClick={() => {
-                    void navigate({ search: { outbound: selected ? undefined : tag }, resetScroll: false });
+                    onOutboundChange(selected ? undefined : tag);
                   }}
                 >
                   <span className='flex min-w-0 flex-wrap items-center gap-x-2'>
@@ -96,7 +104,7 @@ export function SimpleRoutesOutbounds({
             </a>
           )}
           <Link
-            to='/proxies'
+            to={proxiesTo}
             className='inline-flex w-fit items-center gap-1 text-sm text-primary underline underline-offset-4'
           >
             {t('outbounds.inventory')}

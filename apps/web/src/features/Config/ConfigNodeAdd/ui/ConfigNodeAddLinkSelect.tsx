@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@shared/ui';
 
+import { CONFIG_NODE_ADD_NS } from '../i18n/ConfigNodeAdd.namespace.generated';
 import type { ConnectionLinkModel } from '../model/ConfigNodeAdd.schema';
 
 export function ConfigNodeAddLinkSelect({
@@ -30,7 +31,7 @@ export function ConfigNodeAddLinkSelect({
   items: { value: string; label: string }[];
   onChange?: (value: string) => void;
 }) {
-  const { t } = useTranslation('features/Config/ConfigNodeAdd');
+  const { t } = useTranslation(CONFIG_NODE_ADD_NS);
   const { control } = useFormContext<ConnectionLinkModel>();
   const id = useId();
   const errorId = useId();

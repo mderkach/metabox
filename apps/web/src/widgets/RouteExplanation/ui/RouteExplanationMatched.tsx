@@ -4,15 +4,19 @@ import { Trans, useTranslation } from 'react-i18next';
 import { toActionText, toRuleText } from '@entities/Connection';
 import { ROUTE_MATCH, type RouteExplanation as RouteExplanationModel, type RuleEditorSearch } from '@entities/Route';
 import { isNamedRuleAction, isNamedRuleMatcher } from '@entities/Rule';
+import { SHARED_NS } from '@shared/i18n';
+import type { StaticPagePath } from '@shared/lib/navigation';
 import { cn } from '@shared/lib/utils';
 import { buttonVariants } from '@shared/ui';
 
+import { ROUTE_EXPLANATION_NS } from '../i18n/RouteExplanation.namespace.generated';
 import { unknownReason } from '../lib/RouteExplanation.reason';
 import { RouteExplanationRow } from './RouteExplanationRow';
 import { RouteExplanationUnknown } from './RouteExplanationUnknown';
 import { RouteOriginBadge } from './RouteOriginBadge';
 
 export function RouteExplanationMatched({
+  editorTo,
   explanation,
   appliedIndex,
   ruleName,
@@ -21,9 +25,10 @@ export function RouteExplanationMatched({
   explanation: RouteExplanationModel;
   appliedIndex: number | null;
   ruleName: string | null;
+  editorTo: StaticPagePath;
   editorSearch: RuleEditorSearch;
 }) {
-  const { t } = useTranslation('widgets/RouteExplanation');
+  const { t } = useTranslation(ROUTE_EXPLANATION_NS);
   const { match } = explanation;
 
   if (match.kind === ROUTE_MATCH.Final) {
@@ -46,12 +51,12 @@ export function RouteExplanationMatched({
 
   const conditions =
     match.conditions.length > 0
-      ? toRuleText(match.conditions, (key) => (isNamedRuleMatcher(key) ? t(`matcher.${key}`, { ns: 'shared' }) : null))
-      : t('rule.unconditional', { ns: 'shared' });
+      ? toRuleText(match.conditions, (key) => (isNamedRuleMatcher(key) ? t(`matcher.${key}`, { ns: SHARED_NS }) : null))
+      : t('rule.unconditional', { ns: SHARED_NS });
   const action = toActionText(
     match.action,
-    (outbound) => t('route.via', { ns: 'shared', outbound }),
-    (name) => (isNamedRuleAction(name) ? t(`ruleAction.${name}`, { ns: 'shared' }) : null)
+    (outbound) => t('route.via', { ns: SHARED_NS, outbound }),
+    (name) => (isNamedRuleAction(name) ? t(`ruleAction.${name}`, { ns: SHARED_NS }) : null)
   );
 
   return (
@@ -65,13 +70,17 @@ export function RouteExplanationMatched({
 
       <dl className='text-sm'>
         {ruleName !== null && <RouteExplanationRow label={t('matched.name')} value={ruleName} raw={ruleName} />}
-        <RouteExplanationRow label={t('rule.conditions', { ns: 'shared' })} value={conditions} raw={match.conditions} />
+        <RouteExplanationRow
+          label={t('rule.conditions', { ns: SHARED_NS })}
+          value={conditions}
+          raw={match.conditions}
+        />
         <RouteExplanationRow label={t('matched.action')} value={action} raw={match.action} />
       </dl>
 
       {editorSearch.rule !== undefined && (
         <Link
-          to='/config'
+          to={editorTo}
           search={editorSearch}
           // Styled as a button but stays a link: `Button` with `render` puts
           // `role="button"` on top of `<a href>` even with `nativeButton={false}`.

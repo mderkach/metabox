@@ -1,11 +1,12 @@
+import { SHARED_NS } from '../src/shared/i18n/Shared.namespace.generated.ts';
 import { E2E_TAG, expect, test, translate } from './fixtures/index.ts';
 
 const RULE = { title: '192.168.1.100/32 → direct', index: 4 };
 // The DNS hijack rule leads the CI bench config; the checks before e2e only append rules after it.
 const BENCH_RULE = {
-  title: translate('shared', 'rule.caption', {
+  title: translate(SHARED_NS, 'rule.caption', {
     subject: 'dns-in',
-    target: translate('shared', 'ruleAction.hijack-dns'),
+    target: translate(SHARED_NS, 'ruleAction.hijack-dns'),
   }),
   index: 1,
 };

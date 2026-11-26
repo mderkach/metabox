@@ -27,7 +27,7 @@ import { PROXY_ENDPOINT } from '@entities/Proxy';
 import { CHECKED_AT, CLASH_PROXIES_FIXTURE } from '@entities/Proxy/__tests__/Proxy.fixture';
 import { proxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
 
-import { OverviewPage } from '../ui/OverviewPage';
+import { OverviewScreen } from './OverviewScreen';
 
 function serveStatus(configPath?: string, singboxVersion = SCHEMA_VERSION) {
   server.use(
@@ -68,7 +68,7 @@ describe('overview screen', () => {
   it('shows the core verdict in the header and keeps the core service card for commands', async () => {
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('Всё работает')).toBeInTheDocument();
     const service = within(await screen.findByRole('region', { name: 'Состояние системы' }));
@@ -81,7 +81,7 @@ describe('overview screen', () => {
     server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_UNMANAGED_FIXTURE)));
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('Ядро работает вне metabox')).toBeInTheDocument();
     const service = within(await screen.findByRole('region', { name: 'Состояние системы' }));
@@ -92,7 +92,7 @@ describe('overview screen', () => {
 
   it('keeps the highlighted core restart in the service card and explains interrupted connections', async () => {
     const user = userEvent.setup();
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     const service = within(await screen.findByRole('region', { name: 'Состояние системы' }));
     const restart = await service.findByRole('button', { name: 'Перезапустить' });
@@ -108,7 +108,7 @@ describe('overview screen', () => {
   it('shows speed from the stream, not the cumulative counter', async () => {
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     const tiles = within(await screen.findByRole('list', { name: 'Скорость' }));
 
@@ -121,7 +121,7 @@ describe('overview screen', () => {
   it('splits the sing-box volume into proxied and direct and counts the share over the proxy', async () => {
     RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     const tiles = within(await screen.findByRole('list', { name: 'Скорость' }));
     const items = tiles.getAllByRole('listitem');
@@ -140,7 +140,7 @@ describe('overview screen', () => {
       share: { ...SYSTEM_FIXTURE.share, split: { ...SYSTEM_FIXTURE.share.split, block: 2048 } },
     });
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     const tiles = within(await screen.findByRole('list', { name: 'Скорость' }));
 
@@ -152,7 +152,7 @@ describe('overview screen', () => {
   it('does not show a line for a zero memory sample', async () => {
     RuntimeStore.getState().pushMemory({ inuse: 0, oslimit: 0 });
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByRole('heading', { name: 'Ядро', level: 3 })).toBeInTheDocument();
     expect(screen.queryByText('Память Go')).not.toBeInTheDocument();
@@ -161,7 +161,7 @@ describe('overview screen', () => {
   it('shows Go memory when a non-empty sample arrived', async () => {
     RuntimeStore.getState().pushMemory({ inuse: 51_380_224, oslimit: 0 });
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('49.0 МБ')).toBeInTheDocument();
   });
@@ -169,7 +169,7 @@ describe('overview screen', () => {
   it('counts connections by the stream snapshot', async () => {
     ConnectionStore.getState().apply(makeConnectionsSnapshot(7));
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('7')).toBeInTheDocument();
   });
@@ -178,7 +178,7 @@ describe('overview screen', () => {
     RuntimeStore.getState().pushTraffic({ up: 500, down: 20_000 });
     RuntimeStore.getState().pushTraffic({ up: 1000, down: 100_000 });
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(
       await screen.findByRole('figure', {
@@ -190,7 +190,7 @@ describe('overview screen', () => {
   it('shows a live snapshot summary: route outbound, network types and top devices', async () => {
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('Куда уходит трафик')).toBeInTheDocument();
     expect(screen.getByText('через прокси')).toBeInTheDocument();
@@ -203,7 +203,7 @@ describe('overview screen', () => {
   it('without live connections and selected nodes the summary cards say there is no data', async () => {
     ConnectionStore.getState().apply(makeConnectionsSnapshot(0));
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findAllByText('Живых соединений нет')).not.toHaveLength(0);
     expect(await screen.findByText('Нет доступных серверов')).toBeInTheDocument();
@@ -216,7 +216,7 @@ describe('overview screen', () => {
 
     const user = userEvent.setup();
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     const region = await screen.findByRole('status', { name: 'Результат действия' });
 
@@ -274,7 +274,7 @@ describe('overview screen', () => {
     );
     const user = userEvent.setup();
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     const check = await screen.findByRole('button', { name: 'Проверить задержку standalone' });
     expect(screen.queryByRole('button', { name: 'Проверить задержку direct' })).not.toBeInTheDocument();
@@ -318,7 +318,7 @@ describe('overview screen', () => {
   it('offers no switch for a group that picks its node by latency', async () => {
     server.use(...proxyHandlers);
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByRole('combobox', { name: 'Выход группы us-fallback' })).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Выход группы proxy' })).not.toBeInTheDocument();
@@ -340,7 +340,7 @@ describe('overview screen', () => {
 
     const user = userEvent.setup();
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     const region = await screen.findByRole('status', { name: 'Результат действия' });
 
@@ -367,7 +367,7 @@ describe('overview screen', () => {
       thermal: [{ name: 'cpu-thermal', celsius: 42.5 }],
     });
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     const cells = within(await screen.findByRole('list', { name: 'Показания устройства' }));
 
@@ -380,7 +380,7 @@ describe('overview screen', () => {
   it('shows sing-box memory and board readings together for the whole daemon history window', async () => {
     RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByRole('img', { name: 'Память процесса ядра за время работы демона' })).toBeInTheDocument();
     expect(screen.getAllByText(/^за 13 мин · от /)).toHaveLength(5);
@@ -389,7 +389,7 @@ describe('overview screen', () => {
   // The panel is not always open: a minute of traffic accumulates at the daemon, and the chart
   // opens full, not from the moment the tab was opened.
   it('draws traffic and connection charts with the daemon minute before the first stream frame', async () => {
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByRole('figure', { name: /Трафик за минуту/ })).toBeInTheDocument();
     expect(await screen.findByRole('img', { name: 'Открытые соединения за минуту' })).toBeInTheDocument();
@@ -403,7 +403,7 @@ describe('overview screen', () => {
       http.get(PROXY_ENDPOINT.outbounds(), () => HttpResponse.json({ 'us-fallback': { label: 'Work traffic' } }))
     );
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(
       await screen.findByRole('combobox', { name: 'Выход группы Work traffic · us-fallback' })
@@ -415,7 +415,7 @@ describe('overview screen', () => {
 
   // The verdict answers the question the screen is opened for, and stands in the header.
   it('before the first runtime data says it is waiting for it', async () => {
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('Ждём данные от ядра')).toBeInTheDocument();
   });
@@ -426,7 +426,7 @@ describe('overview screen', () => {
     server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_UNREAD_FIXTURE)));
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('Всё работает')).toBeInTheDocument();
     expect(screen.queryByText('Ядро не работает')).not.toBeInTheDocument();
@@ -436,7 +436,7 @@ describe('overview screen', () => {
     server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_FAILED_FIXTURE)));
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('Ядро не работает')).toBeInTheDocument();
   });
@@ -447,7 +447,7 @@ describe('overview screen', () => {
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
     RuntimeStore.getState().closeStream();
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('Ждём данные от ядра')).toBeInTheDocument();
     expect(screen.queryByText('Нет данных от ядра')).not.toBeInTheDocument();
@@ -460,7 +460,7 @@ describe('overview screen', () => {
     RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
     RuntimeStore.setState({ sampledAt: Date.now() - STALE_MS });
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('Нет данных от ядра')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Открыть логи' })).toHaveAttribute('href', '/logs');
@@ -472,7 +472,7 @@ describe('overview screen', () => {
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
     RuntimeStore.setState({ sampledAt: Date.now() - STALE_MS });
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('Нет связи с демоном')).toBeInTheDocument();
     expect(screen.queryByText('Нет данных от ядра')).not.toBeInTheDocument();
@@ -484,7 +484,7 @@ describe('overview screen', () => {
     server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_FAILED_FIXTURE)));
     RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByRole('link', { name: 'Открыть логи' })).toHaveAttribute('href', '/logs');
   });
@@ -527,7 +527,7 @@ describe('overview screen', () => {
       server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_FAILED_FIXTURE)));
       RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
 
-      renderWithRouter(OverviewPage);
+      renderWithRouter(OverviewScreen);
 
       expect(await (await card('Всего передано')).findByText(STOPPED)).toBeInTheDocument();
 
@@ -550,7 +550,7 @@ describe('overview screen', () => {
     it('with the core stopped the header names the card and the button that start it', async () => {
       server.use(http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_FAILED_FIXTURE)));
 
-      renderWithRouter(OverviewPage);
+      renderWithRouter(OverviewScreen);
 
       const status = within(await screen.findByRole('region', { name: 'Состояние системы' }));
       const start = await status.findByRole('button', { name: 'Запустить' });
@@ -569,7 +569,7 @@ describe('overview screen', () => {
         http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_FAILED_FIXTURE))
       );
 
-      renderWithRouter(OverviewPage);
+      renderWithRouter(OverviewScreen);
 
       expect(await (await card('Выбор выхода')).findByText(STOPPED)).toBeInTheDocument();
       expect((await card('Выбор выхода')).queryByRole('combobox')).not.toBeInTheDocument();
@@ -580,7 +580,7 @@ describe('overview screen', () => {
       vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] });
       RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
 
-      renderWithRouter(OverviewPage);
+      renderWithRouter(OverviewScreen);
 
       expect(await screen.findByText('Ждём данные от ядра')).toBeInTheDocument();
       expect(screen.queryByText(SILENT)).not.toBeInTheDocument();
@@ -605,7 +605,7 @@ describe('overview screen', () => {
       ConnectionStore.getState().apply(makeConnectionsSnapshot(7));
       ConnectionStore.setState({ sampledAt: Date.now() - STALE_MS });
 
-      renderWithRouter(OverviewPage);
+      renderWithRouter(OverviewScreen);
 
       expect(await screen.findByText('Нет данных от ядра')).toBeInTheDocument();
       expect((await card('Открытые соединения')).getByText(SILENT)).toBeInTheDocument();
@@ -622,7 +622,7 @@ describe('overview screen', () => {
       RuntimeStore.getState().pushMemory({ inuse: 51_380_224, oslimit: 0 });
       ConnectionStore.getState().apply(makeConnectionsSnapshot(7));
 
-      renderWithRouter(OverviewPage);
+      renderWithRouter(OverviewScreen);
 
       expect(await (await card('Открытые соединения')).findByText(STOPPED)).toBeInTheDocument();
 
@@ -655,7 +655,7 @@ describe('overview screen', () => {
 
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
-      renderWithRouter(OverviewPage);
+      renderWithRouter(OverviewScreen);
 
       await (await card('Открытые соединения')).findByText(STOPPED);
       await act(async () => {
@@ -687,7 +687,7 @@ describe('overview screen', () => {
   it('labels closed connections with the count since the tab was opened, also at zero', async () => {
     ConnectionStore.getState().apply(CONNECTIONS_FIXTURE);
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('закрыто с открытия вкладки: 0')).toBeInTheDocument();
   });
@@ -699,7 +699,7 @@ describe('overview screen', () => {
     RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
     RuntimeStore.setState({ uplink: { rx: 2048, tx: 1024 } });
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(
       await screen.findByText('интернет-подключение pppoe-wan сейчас: скачивание 2.0 кБ/с, отправка 1.0 кБ/с', {
@@ -711,14 +711,14 @@ describe('overview screen', () => {
   });
 
   it('shows daemon availability and stream liveness', async () => {
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('демон отвечает')).toBeInTheDocument();
     expect(screen.getByText('поток молчит')).toBeInTheDocument();
   });
 
   it('shows the Clash API mode in words, not as a response field: the clash_mode rule in the config is checked against it', async () => {
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('по правилам')).toBeInTheDocument();
     expect(screen.queryByText('Rule')).not.toBeInTheDocument();
@@ -729,7 +729,7 @@ describe('overview screen', () => {
       http.get(DAEMON_ENDPOINT.clashConfigs(), () => HttpResponse.json({ ...CLASH_CONFIGS_FIXTURE, mode: 'Global' }))
     );
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('глобально')).toBeInTheDocument();
   });
@@ -737,19 +737,19 @@ describe('overview screen', () => {
   it('the config path is taken from the daemon: it is set by launch flags, not by the panel', async () => {
     serveStatus('/srv/sing-box/router.json');
 
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('/srv/sing-box/router.json')).toBeInTheDocument();
   });
 
   it('a daemon without this field does not leave the screen without a path', async () => {
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('/etc/sing-box/config.json')).toBeInTheDocument();
   });
 
   it('on a matching version there is no warning', async () => {
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     expect(await screen.findByText('демон отвечает')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -784,7 +784,7 @@ describe('overview screen on a phone', () => {
 
   it('shows the folded sections when the screen gets wide', async () => {
     RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     await screen.findByRole('button', { name: 'Роутер' });
 
@@ -802,7 +802,7 @@ describe('overview screen on a phone', () => {
     const user = userEvent.setup();
 
     RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
-    renderWithRouter(OverviewPage);
+    renderWithRouter(OverviewScreen);
 
     const device = await screen.findByRole('button', { name: 'Роутер' });
 

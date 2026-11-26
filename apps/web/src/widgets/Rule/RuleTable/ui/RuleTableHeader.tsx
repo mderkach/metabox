@@ -1,8 +1,10 @@
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 import { TABLE_HEADER } from '@shared/ui';
 
+import { RULE_TABLE_NS } from '../i18n/RuleTable.namespace.generated';
 import { RULE_COLUMN } from './RuleColumns';
 
 /**
@@ -10,7 +12,7 @@ import { RULE_COLUMN } from './RuleColumns';
  * `hits` — whether to show the hits column: without a count it is absent in the rows too.
  */
 export function RuleTableHeader({ hits }: { hits: boolean }) {
-  const { t } = useTranslation('widgets/Rule/RuleTable');
+  const { t } = useTranslation(RULE_TABLE_NS);
 
   return (
     <div role='rowgroup' className='sticky top-0 z-10 bg-card'>
@@ -25,7 +27,7 @@ export function RuleTableHeader({ hits }: { hits: boolean }) {
         </span>
 
         <span role='columnheader' className={RULE_COLUMN.Conditions}>
-          {t('rule.conditions', { ns: 'shared' })}
+          {t('rule.conditions', { ns: SHARED_NS })}
         </span>
 
         <span role='columnheader' className={RULE_COLUMN.TargetGroup}>

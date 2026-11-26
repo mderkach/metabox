@@ -2,10 +2,11 @@ import { useTranslation } from 'react-i18next';
 
 import { ROUTE_ORIGIN } from '@entities/Route';
 
+import { ROUTE_EXPLANATION_NS } from '../i18n/RouteExplanation.namespace.generated';
 import { RouteOriginBadge } from './RouteOriginBadge';
 
 export function RouteExplanationUnknown({ reason }: { reason: string }) {
-  const { t } = useTranslation('widgets/RouteExplanation');
+  const { t } = useTranslation(ROUTE_EXPLANATION_NS);
 
   return (
     <section className='flex flex-col gap-1.5'>

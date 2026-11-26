@@ -5,13 +5,15 @@ import { useTranslation } from 'react-i18next';
 import { APPLY_PHASE, type ApplyReasonCode, type ApplyTransaction } from '@entities/Daemon';
 import { Alert, AlertAction, AlertDescription, AlertTitle, Button } from '@shared/ui';
 
+import { DEVICE_ROUTE_NS } from '../i18n/DeviceRoute.namespace.generated';
+
 /**
  * The step the change stopped at, in the user's words. A table of its own, not
  * the config bar table: the cycle codes are shared, but the subject differs,
  * UCI and interception settings rather than the config file. A new daemon code
  * is a compile error here.
  */
-const REASON_KEY: Readonly<Record<ApplyReasonCode, ParseKeys<'features/Device/DeviceRoute'>>> = {
+const REASON_KEY: Readonly<Record<ApplyReasonCode, ParseKeys<typeof DEVICE_ROUTE_NS>>> = {
   backup_failed: 'failure.reason.backup_failed',
   write_failed: 'failure.reason.write_failed',
   restart_failed: 'failure.reason.restart_failed',
@@ -30,7 +32,7 @@ export function DeviceRouteFailure({
   transaction: ApplyTransaction;
   onDismiss: () => void;
 }) {
-  const { t } = useTranslation('features/Device/DeviceRoute');
+  const { t } = useTranslation(DEVICE_ROUTE_NS);
   const reasonKey = transaction.reasonCode === undefined ? undefined : REASON_KEY[transaction.reasonCode];
 
   return (

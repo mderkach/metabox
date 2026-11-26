@@ -1,15 +1,17 @@
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '@shared/i18n';
 import { Button, ConfirmDialog } from '@shared/ui';
 
 import { useDaemonRestart, useDaemonRestarting } from '../api';
+import { DAEMON_CONTROL_NS } from '../i18n/DaemonControl.namespace.generated';
 
 /**
  * Restart of the panel's own daemon. Asks first: the panel goes silent for a few
  * seconds, and what the daemon keeps in memory starts over.
  */
 export function DaemonRestart() {
-  const { t } = useTranslation('features/Daemon/DaemonControl');
+  const { t } = useTranslation(DAEMON_CONTROL_NS);
   const restart = useDaemonRestart();
   const restarting = useDaemonRestarting();
 
@@ -23,7 +25,7 @@ export function DaemonRestart() {
       }
       title={t('restart.title')}
       description={t('restart.description')}
-      cancelLabel={t('action.cancel', { ns: 'shared' })}
+      cancelLabel={t('action.cancel', { ns: SHARED_NS })}
       confirmLabel={t('restart.confirm')}
       onConfirm={() => {
         restart.mutate();

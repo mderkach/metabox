@@ -3,6 +3,7 @@ import { ChevronDownIcon } from 'lucide-react';
 import { useState, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '../i18n';
 import { cn } from '../lib/utils';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from './shadcn/input-group';
 
@@ -32,7 +33,7 @@ export function Autocomplete({
   onValueChange: (value: string) => void;
   listClassName?: string;
 }) {
-  const { t } = useTranslation('shared');
+  const { t } = useTranslation(SHARED_NS);
   const [open, setOpen] = useState(false);
 
   return (

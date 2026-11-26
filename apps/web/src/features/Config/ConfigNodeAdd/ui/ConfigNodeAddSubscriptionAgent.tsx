@@ -4,13 +4,14 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, Popover, PopoverContent, PopoverTrigger } from '@shared/ui';
 
+import { CONFIG_NODE_ADD_NS } from '../i18n/ConfigNodeAdd.namespace.generated';
 import type { ConnectionLinkModel } from '../model/ConfigNodeAdd.schema';
 import { SUBSCRIPTION_AGENTS, SUBSCRIPTION_AGENT_PROFILES } from '../model/ConfigNodeAdd.subscription';
 import { ConfigNodeAddLinkInput } from './ConfigNodeAddLinkInput';
 import { ConfigNodeAddLinkSelect } from './ConfigNodeAddLinkSelect';
 
 export function ConfigNodeAddSubscriptionAgent() {
-  const { t } = useTranslation('features/Config/ConfigNodeAdd');
+  const { t } = useTranslation(CONFIG_NODE_ADD_NS);
   const { control, setValue } = useFormContext<ConnectionLinkModel>();
   const agent = useWatch({ control, name: 'agent' });
 

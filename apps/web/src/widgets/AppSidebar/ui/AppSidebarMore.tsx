@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { SERVICE_STATUS } from '@entities/Daemon';
+import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 import { Button, Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@shared/ui';
 
+import { APP_SIDEBAR_NS } from '../i18n/AppSidebar.namespace.generated';
 import { useShellServiceStatus } from '../lib/AppSidebar.lib';
-import { NAV_ITEMS } from '../model';
+import type { SidebarNavigation } from '../model';
 import { AppSidebarControls } from './AppSidebarControls';
 import { SERVICE_LABEL, SERVICE_TONE } from './AppSidebarService';
 
@@ -21,15 +23,17 @@ const LINK_CLASS =
  * from the bottom. On a phone there is no room for them next to the sections, and they cannot be lost.
  */
 export function AppSidebarMore({
+  navigation,
   className,
   active,
   current,
 }: {
   className: string;
+  navigation: SidebarNavigation;
   active: string | null;
   current: boolean;
 }) {
-  const { t } = useTranslation('widgets/AppSidebar');
+  const { t } = useTranslation(APP_SIDEBAR_NS);
   // The sheet is controlled: navigating to a section from it must close it.
   const [open, setOpen] = useState(false);
   const service = useShellServiceStatus();
@@ -64,7 +68,7 @@ export function AppSidebarMore({
         </header>
         <nav aria-label={t('more.sections')} className='border-b border-border p-2'>
           <ul className='flex flex-col'>
-            {NAV_ITEMS.map((item) =>
+            {navigation.items.map((item) =>
               item.more === true && item.to !== undefined ? (
                 <li key={item.key}>
                   <Link
@@ -82,7 +86,7 @@ export function AppSidebarMore({
                     }}
                   >
                     <item.icon aria-hidden='true' className='size-5 shrink-0' />
-                    {t(item.key, { ns: 'shared' })}
+                    {t(item.key, { ns: SHARED_NS })}
                   </Link>
                 </li>
               ) : null

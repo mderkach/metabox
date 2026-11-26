@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { StaticPagePath } from '@shared/lib/navigation';
 import { cn } from '@shared/lib/utils';
 import { Sheet, SheetContent, SheetTitle, SHEET_BOTTOM } from '@shared/ui';
 
+import { ROUTE_EXPLANATION_NS } from '../i18n/RouteExplanation.namespace.generated';
 import { HEADING } from './RouteExplanation.styles';
 import { RouteExplanationBody } from './RouteExplanationBody';
 import { RouteExplanationHeader } from './RouteExplanationHeader';
@@ -15,12 +17,14 @@ import { RouteExplanationTitle } from './RouteExplanationTitle';
  * for the panel.
  */
 export function RouteExplanationSheet({
+  editorTo,
   id,
   connectionId,
   host,
   source,
   onClose,
 }: {
+  editorTo: StaticPagePath;
   id?: string;
   /** `null` means no connection is selected, the sheet is closed. */
   connectionId: string | null;
@@ -28,7 +32,7 @@ export function RouteExplanationSheet({
   source: string;
   onClose: () => void;
 }) {
-  const { t } = useTranslation('widgets/RouteExplanation');
+  const { t } = useTranslation(ROUTE_EXPLANATION_NS);
   // The sheet slides away with an animation after the selection is reset and all that time
   // shows the last connection, not emptiness.
   const [shown, setShown] = useState({ connectionId, host, source });
@@ -64,7 +68,7 @@ export function RouteExplanationSheet({
           }
           onClose={onClose}
         />
-        {shown.connectionId !== null && <RouteExplanationBody connectionId={shown.connectionId} />}
+        {shown.connectionId !== null && <RouteExplanationBody editorTo={editorTo} connectionId={shown.connectionId} />}
       </SheetContent>
     </Sheet>
   );

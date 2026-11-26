@@ -1,6 +1,6 @@
-import { renderWithQuery } from '@test/renderWithQuery';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { server } from '@test/server';
-import { screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -34,7 +34,7 @@ const TEXT = JSON.stringify({
   },
 });
 
-function openDialog(variant: string) {
+function openDialog(variant: string, outbounds = OUTBOUNDS) {
   ConfigDocumentStore.getState().load(TEXT);
   server.use(
     http.get(RULE_SET_ENDPOINT.catalog(), () => HttpResponse.json(RULE_SET_CATALOG_FIXTURE)),
@@ -45,11 +45,13 @@ function openDialog(variant: string) {
       })
     )
   );
-  renderWithQuery(
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  const dialog = (initialOutbound?: string) => (
     <Dialog open>
       <RuleCatalogAddDialog
         text={TEXT}
-        outbounds={OUTBOUNDS}
+        outbounds={outbounds}
+        initialOutbound={initialOutbound}
         stagedTags={new Set()}
         initialService='youtube'
         onAdded={vi.fn<() => void>()}
@@ -57,11 +59,35 @@ function openDialog(variant: string) {
       />
     </Dialog>
   );
+  const { rerender } = render(dialog(), {
+    wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+  });
+
+  return (outbound?: string) => {
+    rerender(dialog(outbound));
+  };
 }
 
 describe('RuleCatalogAddDialog', () => {
   afterEach(() => {
     ConfigDocumentStore.getState().reset();
+  });
+
+  it('inherits a late route filter until the user chooses an outbound', async () => {
+    const updateFilter = openDialog('extended', [...OUTBOUNDS, { type: 'socks', tag: 'backup' }]);
+    const user = userEvent.setup();
+    const select = await screen.findByRole('combobox', { name: 'Куда направлять' });
+    expect(select).toHaveTextContent('Выберите выход');
+
+    updateFilter('backup');
+    expect(select).toHaveTextContent('backup');
+
+    await user.click(select);
+    await user.click(await screen.findByRole('option', { name: 'direct' }));
+    updateFilter(undefined);
+    expect(select).toHaveTextContent('direct');
+    updateFilter('backup');
+    expect(select).toHaveTextContent('direct');
   });
 
   it('retains a concurrent draft edit when the reviewed catalog pair is submitted', async () => {

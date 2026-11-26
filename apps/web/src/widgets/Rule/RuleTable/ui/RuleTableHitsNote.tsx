@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { RULE_TABLE_NS } from '../i18n/RuleTable.namespace.generated';
 import { RULE_HITS_STATE, type RuleHitsColumn } from '../model';
 
 const HITS_NOTE = {
@@ -8,7 +9,7 @@ const HITS_NOTE = {
 } as const;
 
 export function RuleTableHitsNote({ hits }: { hits: RuleHitsColumn | null }) {
-  const { t } = useTranslation('widgets/Rule/RuleTable');
+  const { t } = useTranslation(RULE_TABLE_NS);
 
   if (hits === null || hits.state === RULE_HITS_STATE.Pending || hits.state === RULE_HITS_STATE.Counted) {
     return null;

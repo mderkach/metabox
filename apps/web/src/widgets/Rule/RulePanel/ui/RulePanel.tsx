@@ -6,6 +6,7 @@ import { ConfigDocumentState } from '@entities/Config';
 import { useRuleTitle, type RuleRow } from '@entities/Rule';
 import { actionOutsideForm, RuleEditForm } from '@features/Rule/RuleEdit';
 import { RuleRawEditor } from '@features/Rule/RuleRaw';
+import { SHARED_NS } from '@shared/i18n';
 import { useFocusReturn } from '@shared/lib/useFocusReturn';
 import { cn } from '@shared/lib/utils';
 import {
@@ -24,6 +25,7 @@ import {
   TabsTrigger,
 } from '@shared/ui';
 
+import { RULE_PANEL_NS } from '../i18n/RulePanel.namespace.generated';
 import { RulePanelConditions } from './RulePanelConditions';
 
 const TAB = {
@@ -70,11 +72,11 @@ export function RulePanel({
   onCreate?: (node: Record<string, unknown>) => boolean;
   onClose: () => void;
 }) {
-  const { t } = useTranslation('widgets/Rule/RulePanel');
+  const { t } = useTranslation(RULE_PANEL_NS);
   const { title: titleOf } = useRuleTitle();
   const creating = onCreate !== undefined;
   const title = creating ? t('titleNew', { index: rule.index }) : titleOf(rule);
-  const number = t('rule.numbered', { ns: 'shared', index: rule.index });
+  const number = t('rule.numbered', { ns: SHARED_NS, index: rule.index });
   const formlessAction = actionOutsideForm(node);
   const formable = recognized && formlessAction === null;
   const [tab, setTab] = useState<string>(formable ? TAB.Form : TAB.Raw);
@@ -120,7 +122,7 @@ export function RulePanel({
           {!creating && title !== number && <p className='text-xs text-muted-foreground'>{number}</p>}
           {!recognized && (
             <Badge variant='outline' className='mt-1 h-auto min-h-5 max-w-full whitespace-normal'>
-              {t('rule.uncovered', { ns: 'shared' })}
+              {t('rule.uncovered', { ns: SHARED_NS })}
             </Badge>
           )}
         </div>
@@ -128,7 +130,7 @@ export function RulePanel({
         <Button
           variant='outline'
           size='icon-sm'
-          aria-label={t('action.closePanel', { ns: 'shared' })}
+          aria-label={t('action.closePanel', { ns: SHARED_NS })}
           onClick={onClose}
         >
           <X />

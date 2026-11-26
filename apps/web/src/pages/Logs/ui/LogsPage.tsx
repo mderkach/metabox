@@ -15,6 +15,7 @@ import {
   type LogStreamStatus,
 } from '@entities/Log';
 import { LogClearButton } from '@features/Log/LogClear';
+import { SHARED_NS } from '@shared/i18n';
 import { formatDateTime } from '@shared/lib/format';
 import { cn } from '@shared/lib/utils';
 import {
@@ -35,17 +36,18 @@ import {
 } from '@shared/ui';
 import { PageHeader } from '@widgets/PageHeader';
 
+import { LOGS_NS } from '../i18n/Logs.namespace.generated';
 import { LogsLevelSelect } from './LogsLevelSelect';
 import { LogsList } from './LogsList';
 
-const STATUS_VIEW: Readonly<Record<LogStreamStatus, { tone: string; label: ParseKeys<'pages/Logs'> }>> = {
+const STATUS_VIEW: Readonly<Record<LogStreamStatus, { tone: string; label: ParseKeys<typeof LOGS_NS> }>> = {
   [LOG_STREAM_STATUS.Open]: { tone: 'text-signal-ok', label: 'stream.open' },
   [LOG_STREAM_STATUS.Connecting]: { tone: 'text-signal-warn', label: 'stream.connecting' },
   [LOG_STREAM_STATUS.Reconnecting]: { tone: 'text-signal-warn', label: 'stream.reconnecting' },
   [LOG_STREAM_STATUS.Closed]: { tone: 'text-signal-bad', label: 'stream.closed' },
 };
 
-const SOURCE_LABEL: Readonly<Record<string, ParseKeys<'pages/Logs'> | undefined>> = {
+const SOURCE_LABEL: Readonly<Record<string, ParseKeys<typeof LOGS_NS> | undefined>> = {
   [LOG_SOURCE.Logread]: 'source.logread',
   [LOG_SOURCE.File]: 'source.file',
 };
@@ -56,7 +58,7 @@ const SOURCE_LABEL: Readonly<Record<string, ParseKeys<'pages/Logs'> | undefined>
  * never reach the panel.
  */
 export function LogsPage() {
-  const { t } = useTranslation('pages/Logs');
+  const { t } = useTranslation(LOGS_NS);
   const [level, setLevel] = useState<LogLevel>(DEFAULT_LOG_LEVEL);
   const [follow, setFollow] = useState(true);
   const followId = useId();
@@ -73,7 +75,7 @@ export function LogsPage() {
 
   return (
     <>
-      <PageHeader title={t('section.logs', { ns: 'shared' })}>
+      <PageHeader title={t('section.logs', { ns: SHARED_NS })}>
         <p role='status' className={cn('flex items-center gap-1.5 text-xs', STATUS_VIEW[status].tone)}>
           <span aria-hidden='true' className='size-2 rounded-full bg-current' />
           {t(STATUS_VIEW[status].label)}

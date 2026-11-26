@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { strings } from '@entities/Config';
 import { useRuleSetCatalog } from '@entities/RuleSet';
+import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 import {
   Button,
@@ -17,6 +18,7 @@ import {
   QueryFailure,
 } from '@shared/ui';
 
+import { RULE_CATALOG_ADD_NS } from '../i18n/RuleCatalogAdd.namespace.generated';
 import { useRuleCatalogDraft } from '../model/RuleCatalogAdd.draft';
 import { RuleCatalogFormSchema, searchCatalog, type RuleCatalogForm } from '../model/RuleCatalogAdd.form';
 import { getCatalogResolvers, planCatalogService } from '../model/RuleCatalogAdd.plan';
@@ -48,7 +50,7 @@ export function RuleCatalogAddDialog({
   finalFocus,
   onAdded,
 }: RuleCatalogAddDialogProps) {
-  const { t } = useTranslation(['features/Rule/RuleCatalogAdd', 'shared']);
+  const { t } = useTranslation([RULE_CATALOG_ADD_NS, SHARED_NS]);
   const catalog = useRuleSetCatalog();
   const { coreVersion, stage, stale } = useRuleCatalogDraft(text);
   const outboundItems = useMemo(() => {
@@ -63,16 +65,18 @@ export function RuleCatalogAddDialog({
       search: initialService ?? '',
       service: '',
       resolver: '',
-      outbound:
-        outboundItems.find(({ value }) => value === initialOutbound)?.value ??
-        (outboundItems.length === 1 ? outboundItems[0].value : ''),
+      outbound: '',
     },
     resolver: zodResolver(RuleCatalogFormSchema),
   });
-  const [search, service, outbound, resolver] = useWatch({
+  const [search, service, chosenOutbound, resolver] = useWatch({
     control: form.control,
     name: ['search', 'service', 'outbound', 'resolver'],
   });
+  const inheritedOutbound =
+    outboundItems.find(({ value }) => value === initialOutbound)?.value ??
+    (outboundItems.length === 1 ? outboundItems[0].value : undefined);
+  const outbound = chosenOutbound === '' ? (inheritedOutbound ?? '') : chosenOutbound;
   const choices = useMemo(() => searchCatalog(catalog.data, search), [catalog.data, search]);
   const selected = choices.find((choice) => choice.id === service) ?? choices.at(0);
   const selectedExit = outbounds.find(({ tag }) => tag === outbound);
@@ -104,7 +108,7 @@ export function RuleCatalogAddDialog({
     if (stage({ list: selected.list, category: selected.category, outbound, resolver }, plan.text)) {
       onAdded();
       if (initialOutbound !== undefined && outbound !== initialOutbound && plan.text !== text) {
-        toast.success(t('toast.rule.stagedOutsideFilter', { ns: 'shared', outbound }));
+        toast.success(t('toast.rule.stagedOutsideFilter', { ns: SHARED_NS, outbound }));
       }
     } else {
       form.setError('root', { type: 'stale' });
@@ -139,6 +143,7 @@ export function RuleCatalogAddDialog({
               label={t('outbound')}
               placeholder={outboundItems.length ? t('selectOutbound') : t('noOutbounds')}
               items={outboundItems}
+              inherited={inheritedOutbound}
               hint={selectedExit && t(stagedTags.has(outbound) ? 'stagedStatus' : 'appliedStatus')}
             />
             {showResolver && (

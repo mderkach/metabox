@@ -1,6 +1,7 @@
 import type { Namespace, TFunction } from 'i18next';
 
 import type { LatencyHistoryWire } from '@shared/api/daemon.generated';
+import { SHARED_NS } from '@shared/i18n';
 
 import { toDelayLabel } from './Proxy.delay';
 import {
@@ -122,9 +123,9 @@ export function toServerDelayLabel(
   latency: ServerLatency | undefined,
   available = true
 ): string {
-  if (!available) return t('delay.unavailable', { ns: 'shared' });
+  if (!available) return t('delay.unavailable', { ns: SHARED_NS });
 
   const reading = serverDelay(latency);
 
-  return reading.delay === null ? t('delay.noMeasurement', { ns: 'shared' }) : toDelayLabel(t, reading);
+  return reading.delay === null ? t('delay.noMeasurement', { ns: SHARED_NS }) : toDelayLabel(t, reading);
 }

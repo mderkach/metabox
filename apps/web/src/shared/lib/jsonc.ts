@@ -10,12 +10,14 @@ import {
   visit,
 } from 'jsonc-parser';
 
+import { SHARED_NS } from '../i18n';
+
 /**
  * `jsonc-parser` error codes as human-readable text. It prints them itself
  * as English names like `CloseBraceExpected`, and a router owner has nothing
  * to fix a typo by.
  */
-const PARSE_ERROR_KEY: Record<number, ParseKeys<'shared'> | undefined> = {
+const PARSE_ERROR_KEY: Record<number, ParseKeys<typeof SHARED_NS> | undefined> = {
   1: 'jsonc.invalidSymbol',
   2: 'jsonc.invalidNumberFormat',
   3: 'jsonc.propertyNameExpected',
@@ -35,7 +37,7 @@ const PARSE_ERROR_KEY: Record<number, ParseKeys<'shared'> | undefined> = {
 };
 
 function parseErrorText(code: number): string {
-  return i18next.t(PARSE_ERROR_KEY[code] ?? 'jsonc.unparsed', { ns: 'shared' });
+  return i18next.t(PARSE_ERROR_KEY[code] ?? 'jsonc.unparsed', { ns: SHARED_NS });
 }
 
 /**

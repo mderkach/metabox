@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@shared/ui';
 
+import { CONNECTIONS_NS } from '../i18n/Connections.namespace.generated';
 import { ConnectionCloseAll } from './ConnectionCloseAll';
 
 /**
@@ -21,7 +22,7 @@ export function ConnectionActions({
   closableCount: number | null;
   onCloseAll: () => void;
 }) {
-  const { t } = useTranslation('pages/Connections');
+  const { t } = useTranslation(CONNECTIONS_NS);
 
   return (
     <>

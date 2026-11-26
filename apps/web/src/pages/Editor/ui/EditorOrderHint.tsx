@@ -1,7 +1,9 @@
 import { Trans, useTranslation } from 'react-i18next';
 
+import { EDITOR_NS } from '../i18n/Editor.namespace.generated';
+
 export function EditorOrderHint() {
-  const { t } = useTranslation('pages/Editor');
+  const { t } = useTranslation(EDITOR_NS);
 
   return (
     <div className='flex items-center gap-1 text-sm text-muted-foreground'>

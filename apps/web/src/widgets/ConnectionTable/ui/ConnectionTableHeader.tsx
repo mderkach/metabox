@@ -1,9 +1,11 @@
 import { ArrowDown, ArrowUp, ChevronsUpDown, ListFilter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 import { TABLE_HEADER } from '@shared/ui';
 
+import { CONNECTION_TABLE_NS } from '../i18n/ConnectionTable.namespace.generated';
 import { DENSITY_PADDING, type TableDensity } from '../lib';
 import { CONNECTION_COLUMN, type ConnectionField, type ConnectionTableColumn } from './ConnectionColumns';
 
@@ -40,7 +42,7 @@ export function ConnectionTableHeader({
   density: TableDensity;
   filteredColumns: ReadonlySet<ConnectionField>;
 }) {
-  const { t } = useTranslation('widgets/ConnectionTable');
+  const { t } = useTranslation(CONNECTION_TABLE_NS);
 
   return (
     <div role='rowgroup' className='sticky top-0 z-10 bg-card'>
@@ -94,7 +96,7 @@ export function ConnectionTableHeader({
         })}
 
         <span role='columnheader' className={CONNECTION_COLUMN.RowActions}>
-          <span className='sr-only'>{t('list.rowActions', { ns: 'shared' })}</span>
+          <span className='sr-only'>{t('list.rowActions', { ns: SHARED_NS })}</span>
         </span>
       </div>
     </div>

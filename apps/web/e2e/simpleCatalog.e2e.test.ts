@@ -1,10 +1,11 @@
 import type { Page } from '@playwright/test';
 
+import { CONFIG_NODE_ADD_NS } from '../src/features/Config/ConfigNodeAdd/i18n/ConfigNodeAdd.namespace.generated.ts';
+import { RULE_CATALOG_ADD_NS } from '../src/features/Rule/RuleCatalogAdd/i18n/RuleCatalogAdd.namespace.generated.ts';
+import { SIMPLE_ROUTES_NS } from '../src/pages/SimpleRoutes/i18n/SimpleRoutes.namespace.generated.ts';
+import { SHARED_NS } from '../src/shared/i18n/Shared.namespace.generated.ts';
 import { E2E_TAG, expect, test, translate } from './fixtures/index.ts';
 
-const CATALOG = 'features/Rule/RuleCatalogAdd';
-const SIMPLE_ROUTES = 'pages/SimpleRoutes';
-const NODE_ADD = 'features/Config/ConfigNodeAdd';
 const CORE_VERSION = '1.14.3-extended-2.7.3';
 const DESKTOP = { width: 1280, height: 800 };
 const NARROW = { width: 529, height: 960 };
@@ -110,9 +111,13 @@ test(
       await suggestion.press('Enter');
       await expect(catalog.search).toHaveValue('YouTube');
       await expect(catalog.outbound).toContainText(BACKUP);
-      await expect(catalog.outbound).toHaveAccessibleDescription(translate(CATALOG, 'appliedStatus'));
-      await expect(catalog.dialog).toContainText(translate(CATALOG, 'blocker.resolver', { detail: BACKUP }));
-      await expect(catalog.dialog.getByText(translate(CATALOG, 'allDevices'), { exact: true })).toBeHidden();
+      await expect(catalog.outbound).toHaveAccessibleDescription(translate(RULE_CATALOG_ADD_NS, 'appliedStatus'));
+      await expect(catalog.dialog).toContainText(
+        translate(RULE_CATALOG_ADD_NS, 'blocker.resolver', { detail: BACKUP })
+      );
+      await expect(
+        catalog.dialog.getByText(translate(RULE_CATALOG_ADD_NS, 'allDevices'), { exact: true })
+      ).toBeHidden();
       await expect(catalog.submit).toBeDisabled();
       await catalog.cancel.click();
       await expect(suggestion).toBeFocused();
@@ -128,12 +133,12 @@ test(
       await catalog.select(catalog.outbound, EXIT);
       await catalog.select(catalog.resolver, RESOLVER);
       await expect(catalog.submit).toBeEnabled();
-      await expect(catalog.dialog).toContainText(translate(CATALOG, 'preview'));
+      await expect(catalog.dialog).toContainText(translate(RULE_CATALOG_ADD_NS, 'preview'));
       await expect(catalog.dialog).toContainText(SET_TAG);
       await expect(catalog.dialog.getByRole('combobox')).toHaveCount(PAIR_SELECTOR_COUNT);
-      await expect(catalog.dialog.getByRole('region', { name: translate(CATALOG, 'preview') })).toContainText(
-        translate(CATALOG, 'allDevices')
-      );
+      await expect(
+        catalog.dialog.getByRole('region', { name: translate(RULE_CATALOG_ADD_NS, 'preview') })
+      ).toContainText(translate(RULE_CATALOG_ADD_NS, 'allDevices'));
       await expect(applyBar.dirty).toBeHidden();
       await page.screenshot({ path: testInfo.outputPath('catalog-desktop.png') });
     });
@@ -145,10 +150,10 @@ test(
       await expect(page).toHaveURL(`/config/simple?outbound=${BACKUP}`);
       await expect(suggestion).toBeHidden();
       await expect(
-        page.getByText(translate('shared', 'toast.rule.stagedOutsideFilter', { outbound: EXIT }))
+        page.getByText(translate(SHARED_NS, 'toast.rule.stagedOutsideFilter', { outbound: EXIT }))
       ).toBeVisible();
       await expect(routes.rules).not.toContainText(SET_TAG);
-      await routes.rules.getByRole('link', { name: translate(SIMPLE_ROUTES, 'rules.clear') }).click();
+      await routes.rules.getByRole('link', { name: translate(SIMPLE_ROUTES_NS, 'rules.clear') }).click();
       await expect(page).toHaveURL('/config/simple');
       await expect(routes.rules).toContainText(SET_TAG);
       await routes.jsonView.click();
@@ -163,7 +168,7 @@ test(
       });
       await applyBar.apply();
       await expect(applyBar.ruleChanges).toContainText(SET_TAG);
-      await expect(applyBar.nodeChanges).toContainText(translate('shared', 'nodeKind.dnsRules'));
+      await expect(applyBar.nodeChanges).toContainText(translate(SHARED_NS, 'nodeKind.dnsRules'));
       await expect(applyBar.nodeChanges).toContainText(SET_TAG);
       await expect(applyBar.confirmPrompt).toBeHidden();
     });
@@ -186,9 +191,11 @@ test(
     await catalog.select(catalog.resolver, RESOLVER);
     await expect(catalog.submit).toBeEnabled();
     await expect(catalog.dialog).toContainText(
-      translate(CATALOG, 'routeRow', { position: config.route.rules.length + 1 })
+      translate(RULE_CATALOG_ADD_NS, 'routeRow', { position: config.route.rules.length + 1 })
     );
-    await expect(catalog.dialog).toContainText(translate(CATALOG, 'dnsRow', { position: config.dns.rules.length + 1 }));
+    await expect(catalog.dialog).toContainText(
+      translate(RULE_CATALOG_ADD_NS, 'dnsRow', { position: config.dns.rules.length + 1 })
+    );
     await catalog.submit.press('Enter');
     await expect(catalog.trigger).toBeFocused();
     await routes.jsonView.click();
@@ -203,7 +210,7 @@ test(
     });
     await applyBar.apply();
     await expect(applyBar.ruleChanges).toContainText(SET_TAG);
-    await expect(applyBar.nodeChanges).toContainText(translate('shared', 'nodeKind.dnsRules'));
+    await expect(applyBar.nodeChanges).toContainText(translate(SHARED_NS, 'nodeKind.dnsRules'));
   }
 );
 
@@ -222,20 +229,24 @@ for (const { grouped, viewport, theme } of [
       }, theme);
       await openEmptyApplyStand(page);
       const suggestion = routes.rules.getByRole('button', { name: 'Discord', exact: true });
-      const pending = translate(CATALOG, 'subscriptionPending');
-      const count = translate(CATALOG, grouped ? 'subscriptionGroupLoaded' : 'subscriptionLoaded', { count: 1 });
-      const blocker = translate(CATALOG, 'blocker.subscriptionExit', { detail: GROUP });
+      const pending = translate(RULE_CATALOG_ADD_NS, 'subscriptionPending');
+      const count = translate(RULE_CATALOG_ADD_NS, grouped ? 'subscriptionGroupLoaded' : 'subscriptionLoaded', {
+        count: 1,
+      });
+      const blocker = translate(RULE_CATALOG_ADD_NS, 'blocker.subscriptionExit', { detail: GROUP });
 
       await routes.addFromStarter.press('Enter');
       await routes.serverLink.fill(SUBSCRIPTION_URL);
       await routes.subscriptionTag.fill(PROVIDER);
       if (grouped) {
-        await routes.selectSubscriptionGroup(translate(NODE_ADD, 'subscription.newGroup'));
-        await routes.dialog.getByRole('textbox', { name: translate(NODE_ADD, 'subscription.groupName') }).fill(GROUP);
+        await routes.selectSubscriptionGroup(translate(CONFIG_NODE_ADD_NS, 'subscription.newGroup'));
+        await routes.dialog
+          .getByRole('textbox', { name: translate(CONFIG_NODE_ADD_NS, 'subscription.groupName') })
+          .fill(GROUP);
       }
       await routes.stageSubscription.press('Enter');
       await expect(routes.addFromOutbounds).toBeFocused();
-      await expect(routes.outbounds).toContainText(translate(SIMPLE_ROUTES, 'outbounds.providers', { count: 1 }));
+      await expect(routes.outbounds).toContainText(translate(SIMPLE_ROUTES_NS, 'outbounds.providers', { count: 1 }));
       await expect(routes.outboundTile(PROVIDER)).toHaveCount(0);
       await suggestion.press('Enter');
       await expect(catalog.search).toHaveValue('Discord');
@@ -244,7 +255,7 @@ for (const { grouped, viewport, theme } of [
       await expect(catalog.submit).toBeDisabled();
       if (grouped) {
         await expect(catalog.outbound).toContainText(GROUP);
-        await expect(catalog.outbound).toHaveAccessibleDescription(translate(CATALOG, 'stagedStatus'));
+        await expect(catalog.outbound).toHaveAccessibleDescription(translate(RULE_CATALOG_ADD_NS, 'stagedStatus'));
         await expect(catalog.dialog).toContainText(blocker);
       } else {
         await expect(catalog.outbound).toBeDisabled();
@@ -271,7 +282,7 @@ for (const { grouped, viewport, theme } of [
       await expect(catalog.dialog).not.toContainText(pending);
       await expect(catalog.submit).toBeDisabled();
       if (grouped) {
-        await expect(catalog.outbound).toHaveAccessibleDescription(translate(CATALOG, 'appliedStatus'));
+        await expect(catalog.outbound).toHaveAccessibleDescription(translate(RULE_CATALOG_ADD_NS, 'appliedStatus'));
         await expect(catalog.dialog).toContainText(blocker);
         await catalog.outbound.press('Enter');
         await expect(page.getByRole('option')).toHaveText([GROUP]);
@@ -297,7 +308,7 @@ test(
     await page.addInitScript({ content: "localStorage.setItem('theme', 'light')" });
     await openEmptyApplyStand(page);
     const suggestion = routes.rules.getByRole('button', { name: 'YouTube', exact: true });
-    const findAnother = routes.rules.getByRole('button', { name: translate(SIMPLE_ROUTES, 'catalog.findAnother') });
+    const findAnother = routes.rules.getByRole('button', { name: translate(SIMPLE_ROUTES_NS, 'catalog.findAnother') });
     const tile = routes.outboundTile(FIRST_SERVER);
 
     for (const name of ['YouTube', 'Discord', 'GitHub']) {
@@ -314,11 +325,11 @@ test(
     await routes.serverLink.fill(SERVER_LINK);
     await routes.addServer.press('Enter');
     await expect(routes.addFromOutbounds).toBeFocused();
-    await expect(tile).toContainText(translate(SIMPLE_ROUTES, 'outbounds.staged'));
+    await expect(tile).toContainText(translate(SIMPLE_ROUTES_NS, 'outbounds.staged'));
     await expect(suggestion).toBeVisible();
     await page.setViewportSize(PHONE);
     await routes.outbounds
-      .getByRole('link', { name: translate(SIMPLE_ROUTES, 'outbounds.serviceSuggestions') })
+      .getByRole('link', { name: translate(SIMPLE_ROUTES_NS, 'outbounds.serviceSuggestions') })
       .press('Enter');
     await expect(suggestion).toBeInViewport();
     await page.keyboard.press('Tab');
@@ -339,8 +350,10 @@ test(
     await expect(catalog.search).toHaveValue('YouTube');
     await expect(catalog.service(CATEGORY, 'v2fly')).toBeVisible();
     await expect(catalog.outbound).toContainText(FIRST_SERVER);
-    await expect(catalog.outbound).toHaveAccessibleDescription(translate(CATALOG, 'stagedStatus'));
-    await expect(catalog.dialog).toContainText(translate(CATALOG, 'blocker.exit', { detail: FIRST_SERVER }));
+    await expect(catalog.outbound).toHaveAccessibleDescription(translate(RULE_CATALOG_ADD_NS, 'stagedStatus'));
+    await expect(catalog.dialog).toContainText(
+      translate(RULE_CATALOG_ADD_NS, 'blocker.exit', { detail: FIRST_SERVER })
+    );
     await expect(catalog.submit).toBeDisabled();
     await page.screenshot({ path: testInfo.outputPath('first-server-staged.png') });
     await page.keyboard.press('Escape');
@@ -353,14 +366,16 @@ test(
     await applyBar.apply();
     await applyBar.confirmDiff();
     await expect(applyBar.confirmPrompt).toBeVisible();
-    await expect(tile).toContainText(translate(SIMPLE_ROUTES, 'outbounds.staged'));
+    await expect(tile).toContainText(translate(SIMPLE_ROUTES_NS, 'outbounds.staged'));
     await applyBar.keep();
 
-    await expect(tile).toContainText(translate(SIMPLE_ROUTES, 'outbounds.applied'));
+    await expect(tile).toContainText(translate(SIMPLE_ROUTES_NS, 'outbounds.applied'));
     await expect(applyBar.dirty).toBeHidden();
     await suggestion.press('Enter');
-    await expect(catalog.outbound).toHaveAccessibleDescription(translate(CATALOG, 'appliedStatus'));
-    await expect(catalog.dialog).toContainText(translate(CATALOG, 'blocker.exit', { detail: FIRST_SERVER }));
+    await expect(catalog.outbound).toHaveAccessibleDescription(translate(RULE_CATALOG_ADD_NS, 'appliedStatus'));
+    await expect(catalog.dialog).toContainText(
+      translate(RULE_CATALOG_ADD_NS, 'blocker.exit', { detail: FIRST_SERVER })
+    );
     await expect(catalog.submit).toBeDisabled();
   }
 );
@@ -386,12 +401,12 @@ test.describe('phone', () => {
       await catalog.select(catalog.outbound, EXIT);
       await expect(catalog.submit).toBeEnabled();
       await expect(catalog.dialog).toContainText(EXISTING_TAG);
-      await expect(catalog.dialog).toContainText(translate(CATALOG, 'dnsRow', { position: 1 }));
-      await expect(catalog.dialog).toContainText(translate(CATALOG, 'reused'));
+      await expect(catalog.dialog).toContainText(translate(RULE_CATALOG_ADD_NS, 'dnsRow', { position: 1 }));
+      await expect(catalog.dialog).toContainText(translate(RULE_CATALOG_ADD_NS, 'reused'));
       await expect(catalog.resolver).toContainText(RESOLVER);
-      await expect(catalog.dialog.getByRole('region', { name: translate(CATALOG, 'preview') })).toContainText(
-        translate(CATALOG, 'allDevices')
-      );
+      await expect(
+        catalog.dialog.getByRole('region', { name: translate(RULE_CATALOG_ADD_NS, 'preview') })
+      ).toContainText(translate(RULE_CATALOG_ADD_NS, 'allDevices'));
       expect(
         await catalog.dialog.evaluate(
           (element: { scrollWidth: number; clientWidth: number }) => element.scrollWidth - element.clientWidth
@@ -444,7 +459,7 @@ test.describe('phone', () => {
       await catalog.select(catalog.outbound, EXIT);
       await catalog.select(catalog.resolver, RESOLVER);
       await expect(catalog.submit).toBeDisabled();
-      await expect(catalog.dialog).toContainText(translate(CATALOG, 'blocker.dnsConflict', { detail: 1 }));
+      await expect(catalog.dialog).toContainText(translate(RULE_CATALOG_ADD_NS, 'blocker.dnsConflict', { detail: 1 }));
       await catalog.cancel.click();
       await expect(catalog.trigger).toBeFocused();
       await routes.jsonView.click();
@@ -463,7 +478,9 @@ test.describe('phone', () => {
       await expect(catalog.service(CATEGORY, 'v2fly')).toBeVisible();
       await expect(catalog.submit).toBeDisabled();
       await expect(catalog.dialog.getByRole('combobox')).toHaveCount(1);
-      await expect(catalog.dialog.getByText(translate(CATALOG, 'allDevices'), { exact: true })).toBeHidden();
+      await expect(
+        catalog.dialog.getByText(translate(RULE_CATALOG_ADD_NS, 'allDevices'), { exact: true })
+      ).toBeHidden();
       await catalog.search.press('d');
       await expect(catalog.search).toHaveValue('d');
       await page.keyboard.press('Escape');

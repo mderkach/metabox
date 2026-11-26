@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import type { ConnectionRow as ConnectionRowModel } from '@entities/Connection';
 import { cn } from '@shared/lib/utils';
 
+import { CONNECTION_TABLE_NS } from '../i18n/ConnectionTable.namespace.generated';
+
 const ROW_ACTION =
   'flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors pointer-coarse:size-11 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none';
 
@@ -21,7 +23,7 @@ export function ConnectionRowActions({
   selected: boolean;
   panelId?: string;
 }) {
-  const { t } = useTranslation('widgets/ConnectionTable');
+  const { t } = useTranslation(CONNECTION_TABLE_NS);
 
   return (
     <>

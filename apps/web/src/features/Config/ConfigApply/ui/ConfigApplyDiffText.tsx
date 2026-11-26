@@ -7,6 +7,8 @@ import { DIFF_KIND, toDiffHunks, type DiffLine } from '@shared/lib/diff';
 import { cn } from '@shared/lib/utils';
 import { Button, ScrollArea } from '@shared/ui';
 
+import { CONFIG_APPLY_NS } from '../i18n/ConfigApply.namespace.generated';
+
 /** Lines around an edit: fewer, and it is unclear which section it was made in. */
 const DIFF_CONTEXT = 3;
 
@@ -29,7 +31,7 @@ const LINE_MARK: Readonly<Record<DiffLine['kind'], string>> = {
  * order) opens it from the start.
  */
 export function ConfigApplyDiffText({ folded }: { folded: boolean }) {
-  const { t } = useTranslation('features/Config/ConfigApply');
+  const { t } = useTranslation(CONFIG_APPLY_NS);
   const [open, setOpen] = useState(false);
   const contentId = useId();
   const lines = useConfigDiff({ maskCredentials: true });

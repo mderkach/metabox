@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@shared/ui';
 
+import { PROXY_GROUPS_NS } from '../i18n/ProxyGroups.namespace.generated';
+
 export function ProxyMetadataButton({
   tag,
   expanded,
@@ -17,7 +19,7 @@ export function ProxyMetadataButton({
   onClick: () => void;
   ref: Ref<HTMLButtonElement>;
 }) {
-  const { t } = useTranslation('widgets/ProxyGroups');
+  const { t } = useTranslation(PROXY_GROUPS_NS);
 
   return (
     <Button

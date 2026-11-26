@@ -21,6 +21,7 @@ import {
   SECTION_HEADING,
 } from '@shared/ui';
 
+import { PROXY_GROUPS_NS } from '../i18n/ProxyGroups.namespace.generated';
 import { useProxyMetadataEditor } from '../lib/ProxyMetadata.editor';
 import { toGroupLabel } from './ProxyGroupLabel';
 import { ProxyGroupManualChoice } from './ProxyGroupManualChoice';
@@ -53,7 +54,7 @@ export function ProxyGroupCard({
   primaryGroup: ReadonlyMap<string, string>;
   onMetadataSaved: (tag: string, label?: string) => void;
 }) {
-  const { t } = useTranslation('widgets/ProxyGroups');
+  const { t } = useTranslation(PROXY_GROUPS_NS);
   const select = useSelectProxy();
   const { editing, trigger, editorId, open, close } = useProxyMetadataEditor();
   const entry = metadata?.get(group.name);

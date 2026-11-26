@@ -27,7 +27,11 @@ import {
 } from '@entities/Daemon';
 import { LATENCY_LEVEL, useProxies, type ServerLatencies } from '@entities/Proxy';
 import { useDaemonRestarting } from '@features/Daemon/DaemonControl';
+import { SHARED_NS } from '@shared/i18n';
 import { MS_IN_SECOND } from '@shared/lib/time';
+
+import { OVERVIEW_NS } from '../i18n/Overview.namespace.generated';
+import type { OverviewLinks } from '../model/Overview.links';
 
 /**
  * How many seconds without a frame count as a drop. The stream runs once a second, but
@@ -278,13 +282,14 @@ export interface Verdict {
  */
 export function useOverviewVerdict(
   runtime: Pick<OverviewRuntime, 'system' | 'live' | 'awaiting' | 'daemonLive' | 'overdue' | 'starting'>,
-  latencies: ServerLatencies | undefined
+  latencies: ServerLatencies | undefined,
+  links: Pick<OverviewLinks, 'logs' | 'proxies'>
 ): Verdict {
-  const { t } = useTranslation('pages/Overview');
+  const { t } = useTranslation(OVERVIEW_NS);
   const reachable = useDaemonReachable();
   const service = useServiceState();
   const proxies = useProxies();
-  const logs = { to: '/logs', label: t('verdict.action.logs') } as const;
+  const logs = { to: links.logs, label: t('verdict.action.logs') } as const;
 
   if (!reachable) {
     return { tone: VERDICT_TONE.Idle, title: t('verdict.offline'), hint: t('verdict.offlineHint'), action: null };
@@ -317,7 +322,7 @@ export function useOverviewVerdict(
       tone: VERDICT_TONE.Warn,
       title: t('verdict.nodeDown'),
       hint: t('verdict.nodeDownHint'),
-      action: { to: '/proxies', label: t('verdict.action.proxies') },
+      action: { to: links.proxies, label: t('verdict.action.proxies') },
     };
   }
 
@@ -358,7 +363,7 @@ export function useOverviewVerdict(
  * expected silence, not a failure.
  */
 export function useDaemonMark(answers: boolean): { tone: string; label: string } {
-  const { t } = useTranslation('pages/Overview');
+  const { t } = useTranslation(OVERVIEW_NS);
   const restarting = useDaemonRestarting();
 
   if (restarting) {
@@ -367,5 +372,5 @@ export function useDaemonMark(answers: boolean): { tone: string; label: string }
 
   return answers
     ? { tone: 'bg-signal-ok', label: t('process.daemonUp') }
-    : { tone: 'bg-signal-bad', label: t('daemon.silent', { ns: 'shared' }) };
+    : { tone: 'bg-signal-bad', label: t('daemon.silent', { ns: SHARED_NS }) };
 }

@@ -9,8 +9,10 @@ import { useProxies, useProxyProviders } from '@entities/Proxy';
 import { useNarrowScreen } from '@shared/lib/media';
 import { QueryFailure } from '@shared/ui';
 
+import { HOW_IT_WORKS_NS } from '../i18n/HowItWorks.namespace.generated';
 import { useHowItWorksLive } from '../lib/HowItWorks.live';
 import { useHowItWorksRule } from '../lib/HowItWorks.rule';
+import type { HowItWorksLinks } from '../model/HowItWorks.links';
 import { toConnectionWalk } from '../model/HowItWorks.model';
 import type { WalkTerm } from '../model/HowItWorks.terms';
 import { HowItWorksChoices } from './HowItWorksChoices';
@@ -18,8 +20,8 @@ import { HowItWorksTermPanel } from './HowItWorksTermPanel';
 import { HowItWorksTerms } from './HowItWorksTerms';
 import { HowItWorksWalk } from './HowItWorksWalk';
 
-export function HowItWorksPage() {
-  const { t } = useTranslation('pages/HowItWorks');
+export function HowItWorksPage({ links }: { links: HowItWorksLinks }) {
+  const { t } = useTranslation(HOW_IT_WORKS_NS);
   useConnectionStream();
   useRuntimeStream();
   const service = useServiceState();
@@ -63,7 +65,7 @@ export function HowItWorksPage() {
           <p role='status' className='text-sm'>
             {t(status === SERVICE_STATUS.Failed ? 'failed' : 'stopped')}
           </p>
-          <Link to='/overview' className='inline-flex min-h-11 items-center text-sm text-primary underline'>
+          <Link to={links.overview} className='inline-flex min-h-11 items-center text-sm text-primary underline'>
             {t('overview')}
           </Link>
         </section>
@@ -94,6 +96,7 @@ export function HowItWorksPage() {
             <QueryFailure messageKey='source.route' query={live.query} />
           ) : (
             <HowItWorksWalk
+              links={links}
               walk={walk}
               loading={pending}
               selected={selected.term}
@@ -108,6 +111,7 @@ export function HowItWorksPage() {
 
       {!inline && !narrow && (
         <HowItWorksTermPanel
+          links={links}
           term={selected.term}
           ruleSearch={target?.editorSearch}
           ruleSetTag={target?.services[0]}
@@ -118,6 +122,7 @@ export function HowItWorksPage() {
         {t(`terms.${selected.term}.title`)}. {t(`terms.${selected.term}.description`)}
       </p>
       <HowItWorksTerms
+        links={links}
         selected={selected.term}
         inline={narrow && !inline}
         ruleSearch={target?.editorSearch}

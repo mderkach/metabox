@@ -3,6 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { toRuleText } from '@entities/Connection';
 import type { RouteExplanation as RouteExplanationModel } from '@entities/Route';
 import { isNamedRuleMatcher } from '@entities/Rule';
+import { SHARED_NS } from '@shared/i18n';
+
+import { ROUTE_EXPLANATION_NS } from '../i18n/RouteExplanation.namespace.generated';
 
 /**
  * Rules above the one that hit; without `numbered` their positions are not those of the file.
@@ -16,7 +19,7 @@ export function RouteExplanationBefore({
   rules: RouteExplanationModel['rules'];
   numbered: boolean;
 }) {
-  const { t } = useTranslation('widgets/RouteExplanation');
+  const { t } = useTranslation(ROUTE_EXPLANATION_NS);
 
   return (
     <section className='flex flex-col gap-1.5'>
@@ -28,9 +31,9 @@ export function RouteExplanationBefore({
             <span className='truncate' title={rule.conditions.length > 0 ? rule.conditions : undefined}>
               {rule.conditions.length > 0
                 ? toRuleText(rule.conditions, (key) =>
-                    isNamedRuleMatcher(key) ? t(`matcher.${key}`, { ns: 'shared' }) : null
+                    isNamedRuleMatcher(key) ? t(`matcher.${key}`, { ns: SHARED_NS }) : null
                   )
-                : t('rule.unconditional', { ns: 'shared' })}
+                : t('rule.unconditional', { ns: SHARED_NS })}
             </span>
           </li>
         ))}

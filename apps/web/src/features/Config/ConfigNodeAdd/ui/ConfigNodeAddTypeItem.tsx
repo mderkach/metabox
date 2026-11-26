@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { NODE_REGISTRY } from '@entities/Config';
 import { Badge, SelectItem } from '@shared/ui';
 
+import { CONFIG_NODE_ADD_NS } from '../i18n/ConfigNodeAdd.namespace.generated';
 import type { NodeTypeOption } from '../model/ConfigNodeAdd.model';
 
 /** Type in the choice list: the name, what the type does, and a mark when the binary is built without it. */
 export function ConfigNodeAddTypeItem({ option }: { option: NodeTypeOption }) {
-  const { t } = useTranslation('features/Config/ConfigNodeAdd');
+  const { t } = useTranslation(CONFIG_NODE_ADD_NS);
 
   return (
     <SelectItem value={option.type} className='items-start'>

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { RULE_CATALOG_ADD_NS } from '../i18n/RuleCatalogAdd.namespace.generated';
 import type { planCatalogService } from '../model/RuleCatalogAdd.plan';
 
 export function RuleCatalogAddPreview({
@@ -13,7 +14,7 @@ export function RuleCatalogAddPreview({
   hasResolvers: boolean;
   subscriptionGroup: boolean;
 }) {
-  const { t } = useTranslation('features/Rule/RuleCatalogAdd');
+  const { t } = useTranslation(RULE_CATALOG_ADD_NS);
   if (!plan.ok) {
     let message = t(`blocker.${plan.reason}`, { detail: plan.detail || t('unknown') });
     if (plan.reason === 'resolver' && hasResolvers) message = t('chooseResolver');

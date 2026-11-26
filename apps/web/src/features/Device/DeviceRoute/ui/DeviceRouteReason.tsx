@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import { ROUTE_REASON, type RouteReason } from '@entities/Dataplane';
 
-type Namespace = 'features/Device/DeviceRoute';
+import { DEVICE_ROUTE_NS } from '../i18n/DeviceRoute.namespace.generated';
+
+type Namespace = typeof DEVICE_ROUTE_NS;
 
 /** Reason briefly in the row, in full in the hint and the toggle description. */
 const REASON_KEY: Readonly<Record<RouteReason['kind'], { short: ParseKeys<Namespace>; full: ParseKeys<Namespace> }>> = {
@@ -15,7 +17,7 @@ const REASON_KEY: Readonly<Record<RouteReason['kind'], { short: ParseKeys<Namesp
 };
 
 export function DeviceRouteReason({ id, reason }: { id: string; reason: RouteReason }) {
-  const { t } = useTranslation('features/Device/DeviceRoute');
+  const { t } = useTranslation(DEVICE_ROUTE_NS);
   const values = { subnet: 'subnet' in reason ? reason.subnet : '' };
   const full = t(REASON_KEY[reason.kind].full, values);
 

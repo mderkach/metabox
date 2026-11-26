@@ -23,6 +23,7 @@ import {
 import { deviceLabel, useDeviceIndex } from '@entities/Device';
 import { CONNECTION_FIELD, type ConnectionField } from '@widgets/ConnectionTable';
 
+import { CONNECTIONS_PATH } from '../config/Connections.route';
 import { useThrottledRows } from './Connections.throttle';
 
 /**
@@ -117,8 +118,8 @@ function useTabFilter(
  * overview and its minute history.
  */
 export function useConnectionsScreen(interval: number, paused: boolean): ConnectionsScreen {
-  const search = useSearch({ from: '/connections' });
-  const navigate = useNavigate({ from: '/connections' });
+  const search = useSearch({ from: CONNECTIONS_PATH });
+  const navigate = useNavigate({ from: CONNECTIONS_PATH });
 
   const tab = search.tab ?? CONNECTION_TAB.Active;
   const query = search.q ?? '';

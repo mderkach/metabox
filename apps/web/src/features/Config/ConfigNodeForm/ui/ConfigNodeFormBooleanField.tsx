@@ -5,11 +5,11 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, Switch } from '@shared/ui';
 
+import { CONFIG_NODE_FORM_NS } from '../i18n/ConfigNodeForm.namespace.generated';
 import { isUnset, UNSET, type ConfigNodeFormModel } from '../model';
 import { errorText } from './ConfigNodeForm.error';
 import type { NodeFieldProps } from './ConfigNodeForm.field';
 import { useBooleanFieldHint, useFieldLabel } from './ConfigNodeForm.labels';
-import { NS } from './ConfigNodeForm.namespace';
 import { ConfigNodeFormFieldRow } from './ConfigNodeFormFieldRow';
 
 /**
@@ -18,7 +18,7 @@ import { ConfigNodeFormFieldRow } from './ConfigNodeFormFieldRow';
  * deletes the key.
  */
 export function ConfigNodeFormBooleanField({ field, name }: NodeFieldProps) {
-  const { t } = useTranslation(NS);
+  const { t } = useTranslation(CONFIG_NODE_FORM_NS);
   const label = useFieldLabel(name) ?? field.key;
   const hint = useBooleanFieldHint(name);
   const { control } = useFormContext<ConfigNodeFormModel>();

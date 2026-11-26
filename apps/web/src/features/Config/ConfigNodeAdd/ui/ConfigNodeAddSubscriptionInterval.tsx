@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { FieldLegend, FieldSet, Label } from '@shared/ui';
 
+import { CONFIG_NODE_ADD_NS } from '../i18n/ConfigNodeAdd.namespace.generated';
 import type { ConnectionLinkModel } from '../model/ConfigNodeAdd.schema';
 import { MAX_INTERVAL, SUBSCRIPTION_INTERVALS, SUBSCRIPTION_INTERVAL_UNITS } from '../model/ConfigNodeAdd.subscription';
 import { ConfigNodeAddLinkInput } from './ConfigNodeAddLinkInput';
@@ -18,7 +19,7 @@ const INTERVAL_LABEL = {
 } as const;
 
 export function ConfigNodeAddSubscriptionInterval() {
-  const { t } = useTranslation('features/Config/ConfigNodeAdd');
+  const { t } = useTranslation(CONFIG_NODE_ADD_NS);
   const { control } = useFormContext<ConnectionLinkModel>();
   const [interval, unit] = useWatch({ control, name: ['interval', 'intervalUnit'] });
 

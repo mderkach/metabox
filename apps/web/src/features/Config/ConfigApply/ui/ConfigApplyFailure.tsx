@@ -5,8 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { APPLY_PHASE, type ApplyReasonCode, type ApplyTransaction } from '@entities/Daemon';
 import { Alert, AlertAction, AlertDescription, AlertTitle, Button } from '@shared/ui';
 
+import { CONFIG_APPLY_NS } from '../i18n/ConfigApply.namespace.generated';
+
 /** The step the cycle stopped at, in the user's words: a new daemon code is a compile error here. */
-const REASON_KEY: Readonly<Record<ApplyReasonCode, ParseKeys<'features/Config/ConfigApply'>>> = {
+const REASON_KEY: Readonly<Record<ApplyReasonCode, ParseKeys<typeof CONFIG_APPLY_NS>>> = {
   backup_failed: 'failure.reason.backup_failed',
   write_failed: 'failure.reason.write_failed',
   restart_failed: 'failure.reason.restart_failed',
@@ -25,7 +27,7 @@ export function ConfigApplyFailure({
   transaction: ApplyTransaction;
   onDismiss: () => void;
 }) {
-  const { t } = useTranslation('features/Config/ConfigApply');
+  const { t } = useTranslation(CONFIG_APPLY_NS);
   const reasonKey = transaction.reasonCode === undefined ? undefined : REASON_KEY[transaction.reasonCode];
 
   return (

@@ -5,15 +5,15 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@shared/lib/utils';
 import { Button, FieldLegend, FieldSet } from '@shared/ui';
 
+import { CONFIG_NODE_FORM_NS } from '../i18n/ConfigNodeForm.namespace.generated';
 import { useHasError } from './ConfigNodeForm.error';
-import { NS } from './ConfigNodeForm.namespace';
 
 /**
  * Disclosure of empty fields. Collapsed fields are not mounted, and form values are not lost.
  * `names` are the form names of the fields inside: a field with a remark keeps the disclosure open.
  */
 export function ConfigNodeFormAdvancedFields({ names, children }: { names: readonly string[]; children: ReactNode }) {
-  const { t } = useTranslation(NS);
+  const { t } = useTranslation(CONFIG_NODE_FORM_NS);
   const [open, setOpen] = useState(false);
   const hasError = useHasError(names);
 

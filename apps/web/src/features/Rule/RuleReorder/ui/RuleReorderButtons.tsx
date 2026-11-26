@@ -6,6 +6,7 @@ import { ConfigDocumentState, RULES_PATH } from '@entities/Config';
 import { showQueryError } from '@shared/api';
 import { Button } from '@shared/ui';
 
+import { RULE_REORDER_NS } from '../i18n/RuleReorder.namespace.generated';
 import { MOVE, type Move } from '../model/RuleReorder.constants';
 
 /**
@@ -36,7 +37,7 @@ export function RuleReorderButtons({
   /** A restricted view may refuse crossing an imported or overlapping rule. */
   allowMove?: (target: number) => boolean;
 }) {
-  const { t } = useTranslation('features/Rule/RuleReorder');
+  const { t } = useTranslation(RULE_REORDER_NS);
   const move = ConfigDocumentState.use.move();
   const upRef = useRef<HTMLButtonElement>(null);
   const downRef = useRef<HTMLButtonElement>(null);

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { deviceLabel, useDeviceIndex } from '@entities/Device/@x/rule';
+import { SHARED_NS } from '@shared/i18n';
 
 import { toRuleCaption } from '../model/Rule.caption';
 import { isNamedRuleAction, isNamedRuleMatcher } from '../model/Rule.constants';
@@ -21,7 +22,7 @@ export interface RuleTitle {
  * its number.
  */
 export function useRuleTitle(): RuleTitle {
-  const { t } = useTranslation('shared');
+  const { t } = useTranslation(SHARED_NS);
   const devices = useDeviceIndex();
 
   return useMemo(() => {

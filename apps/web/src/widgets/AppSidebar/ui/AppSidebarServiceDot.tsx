@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { type ServiceStatus } from '@entities/Daemon';
 import { cn } from '@shared/lib/utils';
 
+import { APP_SIDEBAR_NS } from '../i18n/AppSidebar.namespace.generated';
 import { SERVICE_LABEL, SERVICE_TONE } from './AppSidebarService';
 
 export function AppSidebarServiceDot({ status, collapsed }: { status: ServiceStatus | null; collapsed: boolean }) {
-  const { t } = useTranslation('widgets/AppSidebar');
+  const { t } = useTranslation(APP_SIDEBAR_NS);
   const label = t(status === null ? 'service.unknown' : SERVICE_LABEL[status]);
   const tone = status === null ? 'bg-signal-idle' : SERVICE_TONE[status];
 

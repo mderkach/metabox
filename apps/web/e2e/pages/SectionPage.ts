@@ -1,8 +1,8 @@
 import type { Locator, Page } from '@playwright/test';
 
+import { CONFIG_NODE_FORM_NS } from '../../src/features/Config/ConfigNodeForm/i18n/ConfigNodeForm.namespace.generated.ts';
+import { SHARED_NS } from '../../src/shared/i18n/Shared.namespace.generated.ts';
 import { translate } from '../lib/i18n.ts';
-
-const NODE_FORM = 'features/Config/ConfigNodeForm';
 
 /** A config section screen with a node list, such as DNS servers, and the side panel of the open node. */
 export class SectionPage {
@@ -11,7 +11,7 @@ export class SectionPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.closePanel = page.getByRole('button', { name: translate('shared', 'action.closePanel') });
+    this.closePanel = page.getByRole('button', { name: translate(SHARED_NS, 'action.closePanel') });
   }
 
   async goto(section: string) {
@@ -24,7 +24,7 @@ export class SectionPage {
   }
 
   serverField(name: string): Locator {
-    return this.panel(name).getByRole('textbox', { name: translate(NODE_FORM, 'label.server'), exact: true });
+    return this.panel(name).getByRole('textbox', { name: translate(CONFIG_NODE_FORM_NS, 'label.server'), exact: true });
   }
 
   async openNode(name: string) {

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@shared/lib/utils';
 import { Input } from '@shared/ui';
 
+import { AUTH_PASSWORD_NS } from '../i18n/AuthPassword.namespace.generated';
 import { PASSWORD_LIMIT, type AuthPasswordModel } from '../model';
 import { FIELD_ERROR_KEY } from './AuthPassword.error';
 
@@ -21,7 +22,7 @@ export function AuthPasswordField({
   hint?: string;
   autoComplete: string;
 }) {
-  const { t } = useTranslation('features/Auth/AuthPassword');
+  const { t } = useTranslation(AUTH_PASSWORD_NS);
   const inputId = useId();
   const noteId = useId();
 

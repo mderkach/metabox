@@ -4,9 +4,12 @@ import { useTranslation } from 'react-i18next';
 
 import type { RuleSetRow as RuleSetRowModel, useCachedRuleSets } from '@entities/RuleSet';
 import type { CachedRuleSet } from '@entities/RuleSet';
+import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 import { SURFACE } from '@shared/ui';
 
+import { RULE_SET_TABLE_NS } from '../i18n/RuleSetTable.namespace.generated';
+import type { RuleSetLinks } from '../model/RuleSetTable.links';
 import { RULE_SET_COLUMNS, RULE_SET_TABLE_FEATURES } from './RuleSetColumns';
 import { RuleSetRow } from './RuleSetRow';
 import { RuleSetTableHeader } from './RuleSetTableHeader';
@@ -26,6 +29,7 @@ const HEADER_ROWS = 1;
  */
 export function RuleSetTable({
   sets,
+  links,
   total,
   empty,
   search = null,
@@ -36,6 +40,7 @@ export function RuleSetTable({
   onEdit,
   onRemove,
 }: {
+  links: RuleSetLinks;
   sets: RuleSetRowModel[];
   openedTag?: string;
   appliedTags?: ReadonlySet<string>;
@@ -52,7 +57,7 @@ export function RuleSetTable({
   onEdit?: (index: number) => void;
   onRemove: (index: number) => void;
 }) {
-  const { t } = useTranslation('widgets/RuleSet/RuleSetTable');
+  const { t } = useTranslation(RULE_SET_TABLE_NS);
   const table = useTable({ features: RULE_SET_TABLE_FEATURES, columns: RULE_SET_COLUMNS, data: sets });
   const rows = table.getRowModel().rows;
   const shown = useMemo(() => rows.map((row) => row.original), [rows]);
@@ -92,6 +97,7 @@ export function RuleSetTable({
           <div role='rowgroup'>
             {shown.map((set, position) => (
               <RuleSetRow
+                links={links}
                 key={set.id}
                 set={set}
                 rowIndex={position + 1 + HEADER_ROWS}
@@ -113,7 +119,7 @@ export function RuleSetTable({
         <p role='status'>
           {sets.length === total
             ? t('footer.rows', { count: total })
-            : t('list.shown', { ns: 'shared', shown: sets.length, total })}
+            : t('list.shown', { ns: SHARED_NS, shown: sets.length, total })}
         </p>
       </div>
     </section>

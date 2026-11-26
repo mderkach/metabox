@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@shared/ui';
 
+import { EDITOR_NS } from '../i18n/Editor.namespace.generated';
 import type { RuleFilterState } from '../lib/Editor.lib';
 
 /**
@@ -10,7 +11,7 @@ import type { RuleFilterState } from '../lib/Editor.lib';
  * would read as the whole one.
  */
 export function EditorRuleSetChip({ filter }: { filter: RuleFilterState }) {
-  const { t } = useTranslation('pages/Editor');
+  const { t } = useTranslation(EDITOR_NS);
 
   if (filter.ruleSet === null) {
     return null;

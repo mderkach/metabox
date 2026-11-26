@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useDiagReport, type DiagRun } from '@entities/Diag';
 import { toOutboundTargets, useProxies } from '@entities/Proxy';
+import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 import {
   Button,
@@ -18,6 +19,7 @@ import {
 } from '@shared/ui';
 import { PageHeader } from '@widgets/PageHeader';
 
+import { DIAGNOSTICS_NS } from '../i18n/Diagnostics.namespace.generated';
 import { DIAGNOSTICS_COLUMN } from './DiagnosticsColumns';
 import { DiagnosticsRow } from './DiagnosticsRow';
 import { DiagnosticsSummary } from './DiagnosticsSummary';
@@ -32,7 +34,7 @@ const HEADER_ROWS = 1;
  * in the sing-box log.
  */
 export function DiagnosticsPage() {
-  const { t } = useTranslation('pages/Diagnostics');
+  const { t } = useTranslation(DIAGNOSTICS_NS);
   const proxies = useProxies();
   const targets = useMemo(() => toOutboundTargets(proxies.data), [proxies.data]);
   const [chosen, setChosen] = useState<string | null>(null);
@@ -45,7 +47,7 @@ export function DiagnosticsPage() {
 
   return (
     <>
-      <PageHeader title={t('section.diagnostics', { ns: 'shared' })} />
+      <PageHeader title={t('section.diagnostics', { ns: SHARED_NS })} />
 
       <div className='flex min-h-0 grow flex-col gap-5 overflow-y-auto px-4 py-5 *:shrink-0 sm:px-6'>
         <section className={cn('flex min-w-0 flex-col overflow-hidden', SURFACE)}>

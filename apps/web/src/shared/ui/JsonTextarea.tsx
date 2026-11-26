@@ -1,6 +1,7 @@
 import { useImperativeHandle, useMemo, useRef, type KeyboardEvent, type Ref } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '../i18n';
 import { cn } from '../lib/utils';
 import { indentLines, indentUnit, lineIndexOf, replaceText, toJsonTokens, tokenIndexAt } from './JsonTextarea.lib';
 import { JSON_CODE, JSON_HEIGHT, JSON_LAYER, JSON_LAYOUT, SURFACE } from './styles';
@@ -55,7 +56,7 @@ export function JsonTextarea({
   height?: 'fill' | 'content';
   className?: string;
 }) {
-  const { t } = useTranslation('shared');
+  const { t } = useTranslation(SHARED_NS);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const tabReleased = useRef(false);
   const highlightRef = useRef<HTMLPreElement>(null);

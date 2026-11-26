@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import type { ConnectionShare } from '@entities/Connection';
 import { formatBytes, formatRate } from '@shared/lib/format';
+import type { StaticPagePath } from '@shared/lib/navigation';
 
+import { CONNECTION_SUMMARY_NS } from '../i18n/ConnectionSummary.namespace.generated';
 import { ConnectionSummaryBars, type SummaryBar } from './ConnectionSummaryBars';
 import { ConnectionSummaryPanel } from './ConnectionSummaryPanel';
 
@@ -22,7 +24,7 @@ export function ConnectionSummaryTop({
   placeholder,
 }: {
   title: string;
-  href?: string;
+  href?: StaticPagePath;
   shares: ConnectionShare[];
   /** Caption of an empty row; without it, the general "no live connections". */
   empty?: string;
@@ -31,7 +33,7 @@ export function ConnectionSummaryTop({
   /** Replaces the card body when the page knows the data is missing or still loading. */
   placeholder?: ReactNode;
 }) {
-  const { t } = useTranslation('widgets/ConnectionSummary');
+  const { t } = useTranslation(CONNECTION_SUMMARY_NS);
   const bars: SummaryBar[] = shares.map((share) => ({
     key: share.key,
     label: label === undefined ? share.key : label(share.key),

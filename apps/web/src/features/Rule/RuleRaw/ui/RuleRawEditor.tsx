@@ -9,8 +9,11 @@ import {
   ruleNodePath,
 } from '@entities/Config';
 import { checkRuleNode } from '@entities/Rule';
+import { SHARED_NS } from '@shared/i18n';
 import { failureLine, parseJsonc } from '@shared/lib/jsonc';
 import { Alert, AlertDescription, AlertTitle, JsonTextarea } from '@shared/ui';
+
+import { RULE_RAW_NS } from '../i18n/RuleRaw.namespace.generated';
 
 /** Node indent: the same as in the config file on the device. */
 const JSON_INDENT = 2;
@@ -21,7 +24,7 @@ const JSON_INDENT = 2;
  * decides validity.
  */
 export function RuleRawEditor({ index, node }: { index: number; node: unknown }) {
-  const { t } = useTranslation('features/Rule/RuleRaw');
+  const { t } = useTranslation(RULE_RAW_NS);
   const edit = ConfigDocumentState.use.edit();
   const [text, setText] = useState(() => JSON.stringify(node, null, JSON_INDENT));
   const [failure, setFailure] = useState<{ line: number; reason: string } | null>(null);
@@ -65,7 +68,7 @@ export function RuleRawEditor({ index, node }: { index: number; node: unknown })
 
       {/* Keeps its height while empty: the error comes and goes with typing. */}
       <p role='status' className='min-h-4 text-xs text-destructive'>
-        {failure !== null && t('nodeEditor.notWritten', { ns: 'shared', ...failure })}
+        {failure !== null && t('nodeEditor.notWritten', { ns: SHARED_NS, ...failure })}
       </p>
 
       {warning !== null && (

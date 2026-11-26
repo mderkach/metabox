@@ -2,7 +2,9 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { ConnectionShare } from '@entities/Connection';
+import { SHARED_NS } from '@shared/i18n';
 
+import { CONNECTION_SUMMARY_NS } from '../i18n/ConnectionSummary.namespace.generated';
 import { byProtocol } from '../model/ConnectionSummary.network';
 import { ConnectionSummaryPanel } from './ConnectionSummaryPanel';
 import { ConnectionSummarySplit, type SplitSlice } from './ConnectionSummarySplit';
@@ -23,12 +25,12 @@ export function ConnectionSummaryNetwork({
   /** Replaces the card body when the page knows the data is missing or still loading. */
   placeholder?: ReactNode;
 }) {
-  const { t } = useTranslation('widgets/ConnectionSummary');
+  const { t } = useTranslation(CONNECTION_SUMMARY_NS);
   const slices: SplitSlice[] = shares.toSorted(byProtocol).map((share) => ({
     key: share.key,
     label: share.key.toUpperCase(),
     value: share.count,
-    caption: t('count.connection', { ns: 'shared', count: share.count }),
+    caption: t('count.connection', { ns: SHARED_NS, count: share.count }),
     tone: PROTOCOL_TONES[share.key] ?? OTHER_TONE,
   }));
 

@@ -6,10 +6,14 @@ import { useTranslation } from 'react-i18next';
 
 import { DIAG_STATUS, toDiagAreas, useDiagReport, type CheckStatus, type DiagArea, type DiagRun } from '@entities/Diag';
 import { toOutboundTargets, useProxies } from '@entities/Proxy';
+import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 import { Button, CARD_TITLE, QueryFailure, Skeleton } from '@shared/ui';
 
-const AREA_KEY: Readonly<Record<DiagArea, ParseKeys<'pages/Overview'>>> = {
+import { OVERVIEW_NS } from '../i18n/Overview.namespace.generated';
+import type { OverviewLinks } from '../model/Overview.links';
+
+const AREA_KEY: Readonly<Record<DiagArea, ParseKeys<typeof OVERVIEW_NS>>> = {
   interception: 'check.area.interception',
   dns: 'check.area.dns',
   proxy: 'check.area.proxy',
@@ -18,7 +22,7 @@ const AREA_KEY: Readonly<Record<DiagArea, ParseKeys<'pages/Overview'>>> = {
 
 /** The result carries two signs, an icon and a color: one of them is not color-based. */
 const STATUS_VIEW: Readonly<
-  Record<CheckStatus, { icon: LucideIcon; tone: string; label: ParseKeys<'pages/Overview'> }>
+  Record<CheckStatus, { icon: LucideIcon; tone: string; label: ParseKeys<typeof OVERVIEW_NS> }>
 > = {
   ok: { icon: CircleCheck, tone: 'text-signal-ok', label: 'check.status.ok' },
   fail: { icon: CircleX, tone: 'text-signal-bad', label: 'check.status.fail' },
@@ -30,8 +34,14 @@ const STATUS_VIEW: Readonly<
  * the diagnostics screen: a check sends packets from the router and leaves lines in
  * the sing-box log. The target is the same default one as there.
  */
-export function OverviewCheck({ onChecked }: { onChecked: (message: string) => void }) {
-  const { t } = useTranslation('pages/Overview');
+export function OverviewCheck({
+  diagnosticsTo,
+  onChecked,
+}: {
+  diagnosticsTo: OverviewLinks['diagnostics'];
+  onChecked: (message: string) => void;
+}) {
+  const { t } = useTranslation(OVERVIEW_NS);
   const proxies = useProxies();
   const target = toOutboundTargets(proxies.data).at(0) ?? '';
   const [run, setRun] = useState<DiagRun | null>(null);
@@ -94,7 +104,7 @@ export function OverviewCheck({ onChecked }: { onChecked: (message: string) => v
                 <span className='sr-only'>{t(view.label)}</span>
                 {area.delayMs !== null && (
                   <span className='font-mono text-xs text-muted-foreground tabular-nums'>
-                    {t('delay.value', { ns: 'shared', value: area.delayMs })}
+                    {t('delay.value', { ns: SHARED_NS, value: area.delayMs })}
                   </span>
                 )}
               </li>
@@ -105,7 +115,7 @@ export function OverviewCheck({ onChecked }: { onChecked: (message: string) => v
 
       {failed && (
         <Link
-          to='/diagnostics'
+          to={diagnosticsTo}
           className='w-fit text-sm font-medium underline underline-offset-3 hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none'
         >
           {t('check.details')}

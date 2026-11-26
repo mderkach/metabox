@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { RULE_SET_CUSTOM_NS } from '../i18n/RuleSetCustom.namespace.generated';
 import { RULE_SET_CUSTOM_ERROR, parseListEntries } from '../model/RuleSetCustom.schema';
 
 export function RuleSetCustomFieldError({
@@ -11,7 +12,7 @@ export function RuleSetCustomFieldError({
   error: string | undefined;
   entries: string;
 }) {
-  const { t } = useTranslation('features/RuleSet/RuleSetCustom');
+  const { t } = useTranslation(RULE_SET_CUSTOM_NS);
   let text = error ?? null;
 
   switch (error) {

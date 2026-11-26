@@ -31,6 +31,7 @@ import {
 import { ConfigNode, ConfigNodeRow } from '@widgets/Config/ConfigNode';
 import { ConfigSectionSettings } from '@widgets/Config/ConfigSectionSettings';
 
+import { SECTION_NS } from '../i18n/Section.namespace.generated';
 import { nodeName } from '../model/Section.name';
 import { SectionAddButton } from './SectionAddButton';
 import { SectionPanel, type SectionPanelNode } from './SectionPanel';
@@ -49,7 +50,7 @@ const CLOSED: PanelState = { open: false, target: { kind: 'add' } };
  * changes, and otherwise the screen owns the panel, so a closed panel stays closed.
  */
 export function SectionNodes({ section, requestedNode }: { section: GenericSection; requestedNode?: number }) {
-  const { t } = useTranslation('pages/Section');
+  const { t } = useTranslation(SECTION_NS);
   const document = useConfigDocument();
   const status = useDaemonStatus();
   const asSheet = usePanelAsSheet();

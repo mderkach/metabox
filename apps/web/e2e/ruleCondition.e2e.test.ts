@@ -1,6 +1,6 @@
+import { RULE_EDIT_NS } from '../src/features/Rule/RuleEdit/i18n/RuleEdit.namespace.generated.ts';
 import { E2E_TAG, expect, test, translate } from './fixtures/index.ts';
 
-const RULE_EDIT = 'features/Rule/RuleEdit';
 const RULE = { title: '192.168.1.100/32 → direct', index: 4 };
 const CONDITION = 'source_ip_cidr';
 // A device of the mock stand: its name on the option and the chip, its address as the condition value.
@@ -14,8 +14,8 @@ test(
     await configPage.openRule(RULE.title, RULE.index);
 
     const suggestions = configPage.conditionSuggestions(CONDITION);
-    const devices = suggestions.getByRole('group', { name: translate(RULE_EDIT, 'suggestion.group.devices') });
-    const networks = suggestions.getByRole('group', { name: translate(RULE_EDIT, 'suggestion.group.networks') });
+    const devices = suggestions.getByRole('group', { name: translate(RULE_EDIT_NS, 'suggestion.group.devices') });
+    const networks = suggestions.getByRole('group', { name: translate(RULE_EDIT_NS, 'suggestion.group.networks') });
 
     await test.step('the source field offers devices, and no network around the address already in it', async () => {
       await configPage.conditionField(CONDITION).click();

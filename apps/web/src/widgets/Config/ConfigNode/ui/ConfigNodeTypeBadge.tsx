@@ -1,12 +1,13 @@
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '@shared/i18n';
 import { Badge } from '@shared/ui';
 
 import { GROUP_TYPE_LABEL } from '../model';
 
 /** Node type in the header: a group type in words with the config key beside it, a protocol as is. */
 export function ConfigNodeTypeBadge({ type }: { type: string }) {
-  const { t } = useTranslation('shared');
+  const { t } = useTranslation(SHARED_NS);
   const label = GROUP_TYPE_LABEL[type];
 
   return (

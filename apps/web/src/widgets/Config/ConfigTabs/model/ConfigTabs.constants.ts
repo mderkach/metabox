@@ -1,47 +1,40 @@
 import type { ParseKeys } from 'i18next';
 
-import { CONFIG_SECTION, type ConfigSection, type GenericSection } from '@entities/Config';
+import { CONFIG_SECTION, type ConfigSection } from '@entities/Config';
+import type { PageLink, StaticPagePath } from '@shared/lib/navigation';
 
-/** Tab link target in router terms: sections without a screen of their own go as a parameter of a shared one. */
-type TabLink = { to: '/config' | '/config/rule-set' } | { to: '/config/$section'; params: { section: GenericSection } };
-
-function sectionLink(section: GenericSection): TabLink {
-  return { to: '/config/$section', params: { section } };
-}
+import type { CONFIG_TABS_NS } from '../i18n/ConfigTabs.namespace.generated';
 
 /**
  * Config sections in the same order as they lie in the file — so a tab
  * is found by memory of `config.json`, not alphabetically.
  */
 export const CONFIG_TABS = [
-  { key: CONFIG_SECTION.Route, label: 'section.route', link: { to: '/config' } },
-  { key: CONFIG_SECTION.RuleSet, label: 'section.ruleSet', link: { to: '/config/rule-set' } },
-  { key: CONFIG_SECTION.Inbounds, label: 'section.inbounds', link: sectionLink(CONFIG_SECTION.Inbounds) },
-  { key: CONFIG_SECTION.Outbounds, label: 'section.outbounds', link: sectionLink(CONFIG_SECTION.Outbounds) },
-  { key: CONFIG_SECTION.Providers, label: 'section.providers', link: sectionLink(CONFIG_SECTION.Providers) },
-  { key: CONFIG_SECTION.Endpoints, label: 'section.endpoints', link: sectionLink(CONFIG_SECTION.Endpoints) },
-  { key: CONFIG_SECTION.Dns, label: 'section.dns', link: sectionLink(CONFIG_SECTION.Dns) },
-  { key: CONFIG_SECTION.DnsRules, label: 'section.dnsRules', link: sectionLink(CONFIG_SECTION.DnsRules) },
-  { key: CONFIG_SECTION.Services, label: 'section.services', link: sectionLink(CONFIG_SECTION.Services) },
-  { key: CONFIG_SECTION.Ntp, label: 'section.ntp', link: sectionLink(CONFIG_SECTION.Ntp) },
-  { key: CONFIG_SECTION.Certificate, label: 'section.certificate', link: sectionLink(CONFIG_SECTION.Certificate) },
+  { key: CONFIG_SECTION.Route, label: 'section.route' },
+  { key: CONFIG_SECTION.RuleSet, label: 'section.ruleSet' },
+  { key: CONFIG_SECTION.Inbounds, label: 'section.inbounds' },
+  { key: CONFIG_SECTION.Outbounds, label: 'section.outbounds' },
+  { key: CONFIG_SECTION.Providers, label: 'section.providers' },
+  { key: CONFIG_SECTION.Endpoints, label: 'section.endpoints' },
+  { key: CONFIG_SECTION.Dns, label: 'section.dns' },
+  { key: CONFIG_SECTION.DnsRules, label: 'section.dnsRules' },
+  { key: CONFIG_SECTION.Services, label: 'section.services' },
+  { key: CONFIG_SECTION.Ntp, label: 'section.ntp' },
+  { key: CONFIG_SECTION.Certificate, label: 'section.certificate' },
   {
     key: CONFIG_SECTION.CertificateProviders,
     label: 'section.certificateProviders',
-    link: sectionLink(CONFIG_SECTION.CertificateProviders),
   },
-  { key: CONFIG_SECTION.HttpClients, label: 'section.httpClients', link: sectionLink(CONFIG_SECTION.HttpClients) },
+  { key: CONFIG_SECTION.HttpClients, label: 'section.httpClients' },
   {
     key: CONFIG_SECTION.NetworkNamespaces,
     label: 'section.networkNamespaces',
-    link: sectionLink(CONFIG_SECTION.NetworkNamespaces),
   },
-  { key: CONFIG_SECTION.Log, label: 'section.log', link: sectionLink(CONFIG_SECTION.Log) },
-  { key: CONFIG_SECTION.Experimental, label: 'section.experimental', link: sectionLink(CONFIG_SECTION.Experimental) },
+  { key: CONFIG_SECTION.Log, label: 'section.log' },
+  { key: CONFIG_SECTION.Experimental, label: 'section.experimental' },
 ] as const satisfies ReadonlyArray<{
   key: ConfigSection;
-  label: ParseKeys<'widgets/Config/ConfigTabs'>;
-  link: TabLink;
+  label: ParseKeys<typeof CONFIG_TABS_NS>;
 }>;
 
 /**
@@ -61,10 +54,8 @@ export const CONFIG_TABS_FREQUENT: ReadonlySet<ConfigSection> = new Set([
   CONFIG_SECTION.Dns,
 ]);
 
-/** Tab address for comparison with the current one: for the shared screen it is built from the parameter. */
-export function tabPath(tab: (typeof CONFIG_TABS)[number]): string {
-  return 'params' in tab.link ? `/config/${tab.link.params.section}` : tab.link.to;
+export interface ConfigViewLinks {
+  simple: StaticPagePath;
+  raw: StaticPagePath;
+  section: (section: ConfigSection) => PageLink;
 }
-
-export const CONFIG_TEXT_ROUTE = '/config/raw';
-export const CONFIG_SIMPLE_ROUTE = '/config/simple';

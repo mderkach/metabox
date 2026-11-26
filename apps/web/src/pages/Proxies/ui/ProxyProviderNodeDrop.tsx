@@ -4,6 +4,8 @@ import { Trans, useTranslation } from 'react-i18next';
 import { NODE_DROP, type ProviderNodeChange } from '@entities/Proxy';
 import { cn } from '@shared/lib/utils';
 
+import { PROXIES_NS } from '../i18n/Proxies.namespace.generated';
+
 /**
  * The core has already replaced the node set by the time the panel sees it, so
  * the warning names what is left and where to look, not a way to undo it.
@@ -12,7 +14,7 @@ import { cn } from '@shared/lib/utils';
  * manual update is announced, a drop already there on opening is not.
  */
 export function ProxyProviderNodeDrop({ change }: { change: ProviderNodeChange }) {
-  const { t } = useTranslation('pages/Proxies');
+  const { t } = useTranslation(PROXIES_NS);
   const empty = change.drop === NODE_DROP.Empty;
 
   return (

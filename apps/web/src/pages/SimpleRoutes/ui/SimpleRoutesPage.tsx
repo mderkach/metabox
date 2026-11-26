@@ -1,4 +1,3 @@
-import { useSearch } from '@tanstack/react-router';
 import { use, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -18,6 +17,8 @@ import {
   SURFACE,
 } from '@shared/ui';
 
+import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
+import type { SimpleRuleNavigation, SimpleRoutesLinks } from '../model/SimpleRoutes.links';
 import { toSimpleRoutes } from '../model/SimpleRoutes.model';
 import { SimpleRoutesAddDialog } from './SimpleRoutesAddDialog';
 import { SimpleRoutesAddTrigger } from './SimpleRoutesAddTrigger';
@@ -27,9 +28,13 @@ import { SimpleRoutesInterception } from './SimpleRoutesInterception';
 import { SimpleRoutesOutbounds } from './SimpleRoutesOutbounds';
 import { SimpleRoutesRules } from './SimpleRoutesRules';
 
-export function SimpleRoutesPage() {
-  const { t } = useTranslation('pages/SimpleRoutes');
-  const { outbound } = useSearch({ from: '/config/simple' });
+export function SimpleRoutesPage({
+  links,
+  outbound,
+  referenceLink,
+  onOutboundChange,
+}: Omit<SimpleRuleNavigation, 'links'> & { links: SimpleRoutesLinks; outbound?: string }) {
+  const { t } = useTranslation(SIMPLE_ROUTES_NS);
   const document = useConfigDocument();
   const addDialog = use(ConfigNodeAddDialogContext);
   const starterId = useId();
@@ -82,7 +87,7 @@ export function SimpleRoutesPage() {
 
         {model !== null && (
           <>
-            <SimpleRoutesHelp />
+            <SimpleRoutesHelp to={links.help} />
             <Dialog
               handle={addDialog?.handle}
               open={open}
@@ -112,6 +117,8 @@ export function SimpleRoutesPage() {
                 <SimpleRoutesDns text={text} servers={model.dnsServers} rules={model.dnsRules} final={model.dnsFinal} />
               )}
               <SimpleRoutesOutbounds
+                proxiesTo={links.proxies}
+                onOutboundChange={onOutboundChange}
                 outboundEntries={model.outboundEntries}
                 providers={model.providers}
                 stagedTags={model.stagedTags}
@@ -121,12 +128,22 @@ export function SimpleRoutesPage() {
                 addTriggerRef={outboundsTrigger}
               />
               <SimpleRoutesAddDialog
+                providersLink={links.providers}
                 takenTags={model.takenTags}
                 onAdded={closeAddDialog}
                 finalFocus={restoreAddFocus}
               />
             </Dialog>
-            {text !== null && <SimpleRoutesRules model={model} text={text} outbound={outbound} />}
+            {text !== null && (
+              <SimpleRoutesRules
+                links={links}
+                onOutboundChange={onOutboundChange}
+                referenceLink={referenceLink}
+                model={model}
+                text={text}
+                outbound={outbound}
+              />
+            )}
           </>
         )}
       </div>

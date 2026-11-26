@@ -89,15 +89,17 @@ A schema describes the shape and does not convert: `.transform()` inside it is f
 
 ### Localization
 
-Interface text lives in the `i18n` segment of the slice that shows it: `features/Rule/RuleEdit/i18n/ru.json`. The namespace is the slice path from `src`, so the component names it in full:
+Interface text lives in the `i18n` segment of the slice that shows it. The generator derives the namespace from the dictionary directory and writes its literal alongside the language files. Inside the slice, import the constant by a relative path. Other layers consume the owner’s named public export.
 
 ```tsx
-const { t } = useTranslation('features/Rule/RuleEdit');
+import { RULE_EDIT_NS } from '../i18n/RuleEdit.namespace.generated';
+
+const { t } = useTranslation(RULE_EDIT_NS);
 ```
 
 This way `t` knows only the keys of its own slice: a foreign key will not be substituted and will not appear in autocompletion.
 
-**Keys are typed from the JSON itself.** `tools/i18n.ts` prints `src/i18n.generated.d.ts`, a map of the form `'features/Rule/RuleEdit': typeof import('./features/Rule/RuleEdit/i18n/ru.json')`. Keys are not copied into it, so the file changes only when a locale appears or disappears. The import in the map exists only as a type and is erased at build time. The artifact is not edited by hand: on the dev server it is updated by the `metabox-i18n` plugin, in the build by the `gen:i18n` step.
+**Keys are typed from the JSON itself.** `tools/i18n.ts` prints `src/i18n.generated.d.ts`, a map of the form `'features/Rule/RuleEdit': typeof import('./features/Rule/RuleEdit/i18n/ru.json')`. Keys are not copied into it, so the file changes only when a locale appears or disappears. The import in the map exists only as a type and is erased at build time. Both the type map and the colocated namespace modules are generated: on the dev server it is updated by the `metabox-i18n` plugin, in the build by the `gen:i18n` step.
 
 **A dictionary arrives over the network as a file, not as a chunk.** The build puts each `i18n/<language>.json` into `dist/locales/<namespace>/<language>-<fingerprint>.json`, the runtime loads it with `fetch` (`app/lib/i18n.ts`). The text is in no build module, so a wrong import cannot pull it into the bundle: there is nothing to import.
 
@@ -210,7 +212,7 @@ const APPLY_STAGE = {
 } as const;
 ```
 
-Everything repeated more than twice is moved into a constant. There are no magic numbers or strings in the code.
+Once a second production site requires the same string identifier, import it from its owner. Keep a page’s registration path in its `config/<Page>.route.ts`, a namespace beside its dictionaries, an endpoint in its domain API, and an event name with its protocol. Expected public URLs in contract tests can be stated independently. Other values repeated more than twice are moved into constants.
 
 Time conversion factors (`MS_IN_SECOND`, `SECONDS_IN_MINUTE`, `MINUTES_IN_HOUR`, `HOURS_IN_DAY`, `NS_IN_SECOND`) are taken from `shared/lib/time`, not declared locally. Thresholds and periods (poll interval, request timeout, ring buffer length) stay settings of their modules, but are expressed in these units: `15 * MS_IN_SECOND` reads, `15_000` needs mental arithmetic.
 
@@ -350,7 +352,7 @@ The response to width is structural, not typographic: the sidebar collapses, col
 - Wrap long names and translations when space is tight. Check the document and its nested containers separately at 320 CSS px, intermediate and wide widths. Essential two-dimensional content may scroll inside its own region. At 200% text resize, verify that essential copy and controls remain available. Preserve keyboard order, focus visibility, contrast in both themes and touch target size. [WCAG reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html), [WCAG resize text](https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html), [WCAG focus visibility](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html)
 - At 48rem or narrower (`NARROW_SCREEN` in `shared/lib/media.ts`) there is no side panel: sections move to a bottom bar with labels under the icons, and the sidebar footer (service state, theme and language) moves to the sheet of its "More" item («Ещё»). A strip of icons on the side would take width from the content and give no labels. The bottom bar sits in the layout flow, not `fixed`: the screen above it gets the remaining height and does not go under it. It has an `env(safe-area-inset-bottom)` bottom padding, the touch target is at least 44px. The page declares `viewport-fit=cover`, otherwise the browser reports safe-area insets as zero; side cutouts in landscape orientation are covered by the shell root padding. Width is tracked by a `matchMedia` subscription, not measured once on mount.
 - A touch target under a finger is at least 44px, and this is held by `@media (pointer: coarse)` in `index.css`, not by screen classes: buttons, tabs, dropdowns and fields grow to 44px there, the switch and the checkbox extend their hit area with their `::after`. The pointer decides, not the width: a narrow window under a mouse stays dense, a tablet under a finger does not. Our own interactive element outside the primitives gets the same size with the `pointer-coarse:` variant.
-- The start screen at a narrow width is the overview, at a wide width the configuration: the redirect from `/` checks the width in `beforeLoad`.
+- Opening `/` shows Overview at every viewport width. The Configuration menu opens Simple Routes.
 - Tables with fixed columns scroll horizontally as a whole, together with the header. Shrinking columns is forbidden: address, rule and chain get truncated beyond recognition. At the width where the table stops being readable, a row unfolds into a "label — value" list; rules and limits are in [Tables.md](./Tables.md).
 
 ### Transition animation

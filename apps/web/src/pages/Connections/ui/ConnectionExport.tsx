@@ -7,16 +7,17 @@ import { downloadConnections, EXPORT_FORMAT, type ExportFormat } from '@features
 import { useNarrowScreen } from '@shared/lib/media';
 import { Button } from '@shared/ui';
 
+import { CONNECTIONS_NS } from '../i18n/Connections.namespace.generated';
 import { ConnectionExportMenu } from './ConnectionExportMenu';
 
 const EXPORT_FORMATS = [
   { format: EXPORT_FORMAT.Csv, label: 'export.csv' },
   { format: EXPORT_FORMAT.Json, label: 'export.json' },
-] as const satisfies readonly { format: ExportFormat; label: ParseKeys<'pages/Connections'> }[];
+] as const satisfies readonly { format: ExportFormat; label: ParseKeys<typeof CONNECTIONS_NS> }[];
 
 /** Export: the table footer, next to the counter; exactly what it names is exported. */
 export function ConnectionExport({ rows, sourceLabel }: { rows: ConnectionRow[]; sourceLabel: ConnectionSourceLabel }) {
-  const { t } = useTranslation('pages/Connections');
+  const { t } = useTranslation(CONNECTIONS_NS);
   const narrow = useNarrowScreen();
   const disabled = rows.length === 0;
   const onExport = (format: ExportFormat) => {

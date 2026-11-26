@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useConfigCurrent } from '@entities/Config';
 import { FieldGroup } from '@shared/ui';
 
+import { CONFIG_NODE_ADD_NS } from '../i18n/ConfigNodeAdd.namespace.generated';
 import type { ConnectionLinkModel } from '../model/ConfigNodeAdd.schema';
 import { SUBSCRIPTION_GROUP, subscriptionGroups } from '../model/ConfigNodeAdd.subscription';
 import { ConfigNodeAddLinkInput } from './ConfigNodeAddLinkInput';
@@ -12,7 +13,7 @@ import { ConfigNodeAddSubscriptionAgent } from './ConfigNodeAddSubscriptionAgent
 import { ConfigNodeAddSubscriptionInterval } from './ConfigNodeAddSubscriptionInterval';
 
 export function ConfigNodeAddSubscriptionFields() {
-  const { t } = useTranslation('features/Config/ConfigNodeAdd');
+  const { t } = useTranslation(CONFIG_NODE_ADD_NS);
   const { control } = useFormContext<ConnectionLinkModel>();
   const group = useWatch({ control, name: 'group' });
   const { explicit, automatic } = subscriptionGroups(useConfigCurrent() ?? '{}');

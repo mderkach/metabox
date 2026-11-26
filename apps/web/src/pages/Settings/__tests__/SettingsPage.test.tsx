@@ -21,7 +21,7 @@ describe('settings screen', () => {
       http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_RUNNING_FIXTURE))
     );
 
-    renderWithRouter(SettingsPage);
+    renderWithRouter(() => <SettingsPage devicesTo='/devices' />);
 
     expect(await screen.findByRole('heading', { level: 2, name: 'Доступ' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Агенты' })).toBeInTheDocument();

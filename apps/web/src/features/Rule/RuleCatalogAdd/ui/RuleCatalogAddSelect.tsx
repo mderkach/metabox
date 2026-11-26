@@ -29,36 +29,40 @@ export function RuleCatalogAddSelect({
       <Controller
         name={name}
         control={control}
-        render={({ field }) => (
-          <Select
-            items={items}
-            value={field.value === '' ? (inherited ?? null) : field.value}
-            disabled={items.length === 0}
-            onValueChange={(value: string | null) => {
-              field.onChange(value ?? '');
-              if (name === 'outbound') setValue('resolver', '');
-            }}
-          >
-            <SelectTrigger
-              ref={field.ref}
-              onBlur={field.onBlur}
-              id={id}
-              aria-describedby={hint !== undefined ? `${id}-hint` : undefined}
-              className='w-full min-w-0'
+        render={({ field }) => {
+          const value = field.value === '' ? inherited : field.value;
+
+          return (
+            <Select
+              items={items}
+              value={value ?? null}
+              disabled={items.length === 0}
+              onValueChange={(value: string | null) => {
+                field.onChange(value ?? '');
+                if (name === 'outbound') setValue('resolver', '');
+              }}
             >
-              <SelectValue placeholder={placeholder} className='min-w-0 truncate'>
-                {hint !== undefined ? field.value : undefined}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {items.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  <span className='min-w-0 truncate'>{item.label}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+              <SelectTrigger
+                ref={field.ref}
+                onBlur={field.onBlur}
+                id={id}
+                aria-describedby={hint !== undefined ? `${id}-hint` : undefined}
+                className='w-full min-w-0'
+              >
+                <SelectValue placeholder={placeholder} className='min-w-0 truncate'>
+                  {hint !== undefined ? value : undefined}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {items.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    <span className='min-w-0 truncate'>{item.label}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          );
+        }}
       />
       {hint !== undefined && (
         <p id={`${id}-hint`} className='text-xs text-muted-foreground'>

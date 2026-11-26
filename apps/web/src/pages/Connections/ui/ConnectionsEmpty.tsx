@@ -1,6 +1,9 @@
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '@shared/i18n';
 import { Button, Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle, SkeletonRows } from '@shared/ui';
+
+import { CONNECTIONS_NS } from '../i18n/Connections.namespace.generated';
 
 /**
  * Empty list states.
@@ -20,7 +23,7 @@ export function ConnectionsEmpty({
   pending: boolean;
   onReset: () => void;
 }) {
-  const { t } = useTranslation('pages/Connections');
+  const { t } = useTranslation(CONNECTIONS_NS);
 
   if (pending) {
     return <SkeletonRows className='w-full self-start' />;
@@ -30,11 +33,11 @@ export function ConnectionsEmpty({
     return (
       <Empty>
         <EmptyHeader>
-          <EmptyTitle>{t('list.notFound', { ns: 'shared' })}</EmptyTitle>
+          <EmptyTitle>{t('list.notFound', { ns: SHARED_NS })}</EmptyTitle>
         </EmptyHeader>
         <EmptyContent>
           <Button variant='outline' size='sm' onClick={onReset}>
-            {t('list.resetFilter', { ns: 'shared' })}
+            {t('list.resetFilter', { ns: SHARED_NS })}
           </Button>
         </EmptyContent>
       </Empty>

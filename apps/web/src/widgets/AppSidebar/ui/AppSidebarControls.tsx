@@ -4,8 +4,10 @@ import { useDaemonStatus } from '@entities/Daemon';
 import { AuthLogout } from '@features/Auth/AuthLogout';
 import { LanguageSwitch } from '@features/Language/LanguageSwitch';
 import { ThemeSwitch } from '@features/Theme/ThemeSwitch';
+import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 
+import { APP_SIDEBAR_NS } from '../i18n/AppSidebar.namespace.generated';
 import { useShellServiceStatus } from '../lib/AppSidebar.lib';
 import { AppSidebarDrift } from './AppSidebarDrift';
 import { AppSidebarServiceDot } from './AppSidebarServiceDot';
@@ -16,7 +18,7 @@ import { AppSidebarServiceDot } from './AppSidebarServiceDot';
  * container.
  */
 export function AppSidebarControls({ collapsed }: { collapsed: boolean }) {
-  const { t } = useTranslation('widgets/AppSidebar');
+  const { t } = useTranslation(APP_SIDEBAR_NS);
   const status = useDaemonStatus();
   const service = useShellServiceStatus();
 
@@ -28,7 +30,7 @@ export function AppSidebarControls({ collapsed }: { collapsed: boolean }) {
 
       {!collapsed && (
         <dl className='flex items-baseline justify-between gap-2 text-xs'>
-          <dt className='text-muted-foreground'>{t('daemon.name', { ns: 'shared' })}</dt>
+          <dt className='text-muted-foreground'>{t('daemon.name', { ns: SHARED_NS })}</dt>
           <dd className='truncate font-mono text-muted-foreground'>
             {status.isSuccess ? status.data.version : t('daemon.silent')}
           </dd>

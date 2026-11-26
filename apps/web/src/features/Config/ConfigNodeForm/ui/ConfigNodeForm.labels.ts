@@ -1,14 +1,14 @@
 import type { ParseKeys } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
-const NS = 'features/Config/ConfigNodeForm';
+import { CONFIG_NODE_FORM_NS } from '../i18n/ConfigNodeForm.namespace.generated';
 
 /**
  * Human labels of frequent fields by the dotted path from the node root. A
  * field without an entry is labelled with its key; `url` has none, since the
  * rule set form labels the same widget on its own.
  */
-const FIELD_LABEL_KEY: Readonly<Record<string, ParseKeys<typeof NS> | undefined>> = {
+const FIELD_LABEL_KEY: Readonly<Record<string, ParseKeys<typeof CONFIG_NODE_FORM_NS> | undefined>> = {
   tag: 'label.tag',
   server: 'label.server',
   server_port: 'label.serverPort',
@@ -47,14 +47,14 @@ const FIELD_LABEL_KEY: Readonly<Record<string, ParseKeys<typeof NS> | undefined>
 
 /** Human label of a field by its dotted path; `null` means the field is labelled with its key. */
 export function useFieldLabel(name: string): string | null {
-  const { t } = useTranslation(NS);
+  const { t } = useTranslation(CONFIG_NODE_FORM_NS);
   const key = FIELD_LABEL_KEY[name];
 
   return key === undefined ? null : t(key);
 }
 
 export function useBooleanFieldHint(name: string): string | null {
-  const { t } = useTranslation(NS);
+  const { t } = useTranslation(CONFIG_NODE_FORM_NS);
 
   return name === 'tls.reality.support_x25519mlkem768' ? t('boolean.realityHybridKeyShareHint') : null;
 }

@@ -2,7 +2,9 @@ import type { ParseKeys } from 'i18next';
 
 import { isCheckReason, type CheckReason } from '@entities/Diag';
 
-const REASON_KEY: Readonly<Record<CheckReason, ParseKeys<'pages/Diagnostics'>>> = {
+import type { DIAGNOSTICS_NS } from '../i18n/Diagnostics.namespace.generated';
+
+const REASON_KEY: Readonly<Record<CheckReason, ParseKeys<typeof DIAGNOSTICS_NS>>> = {
   model_unavailable: 'reason.model_unavailable',
   interception_disabled: 'reason.interception_disabled',
   not_listening: 'reason.not_listening',
@@ -26,6 +28,6 @@ const REASON_KEY: Readonly<Record<CheckReason, ParseKeys<'pages/Diagnostics'>>> 
   unsupported: 'reason.unsupported',
 };
 
-export function toReasonKey(reason: string | null): ParseKeys<'pages/Diagnostics'> | null {
+export function toReasonKey(reason: string | null): ParseKeys<typeof DIAGNOSTICS_NS> | null {
   return reason !== null && isCheckReason(reason) ? REASON_KEY[reason] : null;
 }

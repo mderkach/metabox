@@ -1,9 +1,11 @@
 import { Trans, useTranslation } from 'react-i18next';
 
 import { RULE_CHANGE, useRuleTitle, type RuleChange, type RuleRow } from '@entities/Rule';
+import { SHARED_NS } from '@shared/i18n';
 
+import { CONFIG_APPLY_NS } from '../i18n/ConfigApply.namespace.generated';
 import { useRuleChangeSides, useRuleChanges } from '../lib/ConfigApply.lib';
-import { ConfigApplySectionLink } from './ConfigApplySectionLink';
+import type { ConfigApplyNavigation } from '../model/ConfigApply.link';
 
 /** Summary lines before "and N more": further details are read in the diff itself. */
 const SHOWN_CHANGES = 5;
@@ -22,8 +24,8 @@ const CHANGE_TEXT = {
  * the number second. A removed rule is looked up in the applied config and has
  * no place in the draft to lead to; the others link to their row.
  */
-export function ConfigApplyRuleChanges({ onNavigate }: { onNavigate: () => void }) {
-  const { t } = useTranslation('features/Config/ConfigApply');
+export function ConfigApplyRuleChanges({ onNavigate, ChangeLink }: ConfigApplyNavigation & { onNavigate: () => void }) {
+  const { t } = useTranslation(CONFIG_APPLY_NS);
   const changes = useRuleChanges();
   const sides = useRuleChangeSides();
   const { title, subject } = useRuleTitle();
@@ -33,7 +35,7 @@ export function ConfigApplyRuleChanges({ onNavigate }: { onNavigate: () => void 
   const labelOf = (change: RuleChange): string => {
     const rule = ruleOf(change);
 
-    if (rule === undefined) return t('rule.numbered', { ns: 'shared', index: change.index });
+    if (rule === undefined) return t('rule.numbered', { ns: SHARED_NS, index: change.index });
 
     return change.kind === RULE_CHANGE.Target ? subject(rule) : title(rule);
   };
@@ -44,7 +46,7 @@ export function ConfigApplyRuleChanges({ onNavigate }: { onNavigate: () => void 
 
     const rule = sides.applied.at(change.previous - 1);
 
-    return rule === undefined ? t('rule.numbered', { ns: 'shared', index: change.previous }) : title(rule);
+    return rule === undefined ? t('rule.numbered', { ns: SHARED_NS, index: change.previous }) : title(rule);
   };
 
   if (changes.length === 0) return null;
@@ -63,12 +65,7 @@ export function ConfigApplyRuleChanges({ onNavigate }: { onNavigate: () => void 
               i18nKey={CHANGE_TEXT[change.kind]}
               values={{ ...change, title: labelOf(change), previousTitle: previousTitleOf(change) }}
               components={{
-                node: (
-                  <ConfigApplySectionLink
-                    link={{ to: '/config', search: { rule: change.index } }}
-                    onNavigate={onNavigate}
-                  />
-                ),
+                node: <ChangeLink target={{ rule: change.index }} onNavigate={onNavigate} />,
               }}
             />
           )}

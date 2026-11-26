@@ -1,3 +1,6 @@
+import { CONFIG_NODE_ADD_NS } from '../src/features/Config/ConfigNodeAdd/i18n/ConfigNodeAdd.namespace.generated.ts';
+import { SIMPLE_ROUTES_NS } from '../src/pages/SimpleRoutes/i18n/SimpleRoutes.namespace.generated.ts';
+import { SHARED_NS } from '../src/shared/i18n/Shared.namespace.generated.ts';
 import { E2E_TAG, expect, test, translate } from './fixtures/index.ts';
 import { SIMPLE_SECTION_HEADINGS } from './pages/SimpleRoutesPage.ts';
 
@@ -7,8 +10,6 @@ const LINK = `vless://${UUID}@server.example.invalid:443#${SERVER}`;
 const DIRECT = 'direct';
 const DIRECT_RULE = 'home.example.com';
 const OTHER_RULE = 'docs.example.com';
-const SIMPLE_ROUTES = 'pages/SimpleRoutes';
-const NODE_ADD = 'features/Config/ConfigNodeAdd';
 const STAND_COUNTS = { inbounds: 3, dnsResolvers: 11, dnsRules: 12 };
 const DESKTOP = { width: 1280, height: 600 };
 const PHONE = { width: 375, height: 812 };
@@ -37,14 +38,16 @@ test(
 
     await test.step('the four sections show the populated draft and the linked outbound filter', async () => {
       await expect(routes.sectionHeadings).toHaveText(SIMPLE_SECTION_HEADINGS);
-      await expect(routes.interception).toContainText(translate(SIMPLE_ROUTES, 'interception.listed'));
+      await expect(routes.interception).toContainText(translate(SIMPLE_ROUTES_NS, 'interception.listed'));
       await expect(routes.interception).toContainText(
-        translate(SIMPLE_ROUTES, 'interception.inbounds', { count: STAND_COUNTS.inbounds })
+        translate(SIMPLE_ROUTES_NS, 'interception.inbounds', { count: STAND_COUNTS.inbounds })
       );
       await expect(routes.dns).toContainText(
-        translate(SIMPLE_ROUTES, 'dns.servers', { count: STAND_COUNTS.dnsResolvers })
+        translate(SIMPLE_ROUTES_NS, 'dns.servers', { count: STAND_COUNTS.dnsResolvers })
       );
-      await expect(routes.dns).toContainText(translate(SIMPLE_ROUTES, 'dns.rules', { count: STAND_COUNTS.dnsRules }));
+      await expect(routes.dns).toContainText(
+        translate(SIMPLE_ROUTES_NS, 'dns.rules', { count: STAND_COUNTS.dnsRules })
+      );
       await expect(routes.outbounds).toContainText(DIRECT);
       await expect(routes.rules).toContainText(DIRECT_RULE);
       await expect(routes.rules).not.toContainText(OTHER_RULE);
@@ -176,10 +179,10 @@ for (const viewport of [NARROW, DESKTOP]) {
     async ({ page, simpleRoutesPage: routes, applyBar }) => {
       await page.setViewportSize(viewport);
       await routes.goto(DIRECT);
-      await expect(routes.routingMode).toContainText(translate('shared', 'clashMode.rule'));
+      await expect(routes.routingMode).toContainText(translate(SHARED_NS, 'clashMode.rule'));
       await routes.routingMode.click();
-      await page.getByRole('option', { name: translate('shared', 'clashMode.direct'), exact: true }).click();
-      await expect(routes.routingMode).toContainText(translate('shared', 'clashMode.direct'));
+      await page.getByRole('option', { name: translate(SHARED_NS, 'clashMode.direct'), exact: true }).click();
+      await expect(routes.routingMode).toContainText(translate(SHARED_NS, 'clashMode.direct'));
       await expect(applyBar.dirty).toBeHidden();
       await routes.addFromHeader.click();
       await routes.stageServer(LINK);
@@ -201,13 +204,13 @@ for (const viewport of [NARROW, DESKTOP]) {
       await expect(routes.routingSettings).toHaveAttribute('aria-expanded', 'false');
       await routes.routingSettings.press('Enter');
       await expect(routes.routingSettings).toHaveAttribute('aria-expanded', 'true');
-      await expect(routes.routingMode).toContainText(translate('shared', 'clashMode.direct'));
+      await expect(routes.routingMode).toContainText(translate(SHARED_NS, 'clashMode.direct'));
       expect(await Promise.all(commonControls.map(async (control) => control.boundingBox()))).toEqual(bounds);
 
       await routes.jsonView.click();
       await expect(page).toHaveURL('/config/raw');
       await expect(routes.configPath).toBeVisible();
-      await expect(routes.routingMode).toContainText(translate('shared', 'clashMode.direct'));
+      await expect(routes.routingMode).toContainText(translate(SHARED_NS, 'clashMode.direct'));
       expect(await Promise.all(commonControls.map(async (control) => control.boundingBox()))).toEqual(bounds);
     }
   );
@@ -243,7 +246,7 @@ for (const { touch, title } of HELP_SCENARIOS) {
         if (touch) await trigger.tap();
         else await trigger.press('Enter');
 
-        await expect(popup).toHaveAccessibleDescription(translate(SIMPLE_ROUTES, 'help.dns'));
+        await expect(popup).toHaveAccessibleDescription(translate(SIMPLE_ROUTES_NS, 'help.dns'));
         await expect(popup).toBeInViewport({ ratio: 1 });
         await expect.poll(async () => routes.outbounds.boundingBox()).toEqual(before);
         if (touch) {
@@ -322,16 +325,16 @@ for (const { theme, config } of EMPTY_CONFIGS) {
         await expect(page).toHaveURL('/config/simple');
         await expect(routes.starter).toBeVisible();
         await expect(routes.sectionHeadings).toHaveText(SIMPLE_SECTION_HEADINGS);
-        await expect(routes.interception).toContainText(translate(SIMPLE_ROUTES, 'interception.listed'));
+        await expect(routes.interception).toContainText(translate(SIMPLE_ROUTES_NS, 'interception.listed'));
         await expect(routes.interception).toContainText(
-          translate(SIMPLE_ROUTES, 'interception.inbounds', { count: 0 })
+          translate(SIMPLE_ROUTES_NS, 'interception.inbounds', { count: 0 })
         );
-        await expect(routes.dns).toContainText(translate(SIMPLE_ROUTES, 'dns.servers', { count: 0 }));
-        await expect(routes.dns).toContainText(translate(SIMPLE_ROUTES, 'dns.finalUnknown'));
-        await expect(routes.outbounds).toContainText(translate(SIMPLE_ROUTES, 'outbounds.empty'));
-        await expect(routes.rules).toContainText(translate(SIMPLE_ROUTES, 'rules.suggestions'));
+        await expect(routes.dns).toContainText(translate(SIMPLE_ROUTES_NS, 'dns.servers', { count: 0 }));
+        await expect(routes.dns).toContainText(translate(SIMPLE_ROUTES_NS, 'dns.finalUnknown'));
+        await expect(routes.outbounds).toContainText(translate(SIMPLE_ROUTES_NS, 'outbounds.empty'));
+        await expect(routes.rules).toContainText(translate(SIMPLE_ROUTES_NS, 'rules.suggestions'));
         await expect(
-          routes.rules.getByRole('button', { name: translate(SIMPLE_ROUTES, 'catalog.findAnother') })
+          routes.rules.getByRole('button', { name: translate(SIMPLE_ROUTES_NS, 'catalog.findAnother') })
         ).toBeVisible();
         await expect(page.locator('html')).toHaveCSS('color-scheme', theme);
         expect(await page.evaluate<number>('document.documentElement.scrollWidth')).toBeLessThanOrEqual(PHONE.width);
@@ -453,7 +456,7 @@ test(
       await expect(routes.serverLink).toHaveValue(SUBSCRIPTION_URL);
       await expect(routes.subscriptionGroup).toContainText(GROUP_TAG);
       await expect(routes.subscriptionIntervalValue).toHaveValue(String(CUSTOM_INTERVAL_DAYS));
-      await expect(routes.subscriptionIntervalUnit).toContainText(translate(NODE_ADD, 'subscription.days'));
+      await expect(routes.subscriptionIntervalUnit).toContainText(translate(CONFIG_NODE_ADD_NS, 'subscription.days'));
       await expect(routes.subscriptionAgentValue).toHaveValue(USER_AGENT);
       await expect(routes.dialog).not.toContainText(SUBSCRIPTION_TOKEN);
       await expect(applyBar.dirty).toBeHidden();
@@ -465,7 +468,7 @@ test(
 
       await expect(routes.dialog).toBeHidden();
       await expect(routes.addFromOutbounds).toBeFocused();
-      await expect(routes.outbounds).toContainText(translate(SIMPLE_ROUTES, 'outbounds.providers', { count: 2 }));
+      await expect(routes.outbounds).toContainText(translate(SIMPLE_ROUTES_NS, 'outbounds.providers', { count: 2 }));
       await expect(applyBar.dirty).toBeVisible();
       expect(subscriptionRequests).toHaveLength(0);
       expect(applyRequests).toHaveLength(0);
@@ -482,7 +485,7 @@ test(
       await routes.cancel.click();
       await expect(routes.dialog).toBeHidden();
       await expect(routes.addFromOutbounds).toBeFocused();
-      await expect(routes.outbounds).toContainText(translate(SIMPLE_ROUTES, 'outbounds.providers', { count: 2 }));
+      await expect(routes.outbounds).toContainText(translate(SIMPLE_ROUTES_NS, 'outbounds.providers', { count: 2 }));
     });
 
     await test.step('only confirming Apply sends the original and newly staged settings to the mock daemon', async () => {
@@ -608,7 +611,7 @@ for (const { theme, config } of EMPTY_CONFIGS) {
         await expect(routes.dialog).toBeHidden();
         await expect(routes.starter).toBeHidden();
         await expect(routes.addFromOutbounds).toBeFocused();
-        await expect(routes.outbounds).toContainText(translate(SIMPLE_ROUTES, 'outbounds.providers', { count: 1 }));
+        await expect(routes.outbounds).toContainText(translate(SIMPLE_ROUTES_NS, 'outbounds.providers', { count: 1 }));
         await expect(applyBar.dirty).toBeVisible();
       });
     }
@@ -616,7 +619,7 @@ for (const { theme, config } of EMPTY_CONFIGS) {
 }
 
 const SERVER_GROUP = 'manual-proxies';
-const SIMPLE_ROUTE_MODULE = '/src/pages/SimpleRoutes/index.ts';
+const SIMPLE_ROUTE_MODULE = '/src/pages/SimpleRoutes/ui/SimpleRoutesPage.tsx';
 const APPLIED_SERVER = {
   type: 'vless',
   tag: 'existing-server',
@@ -672,8 +675,8 @@ test(
     await routes.addFromHeader.press('Enter');
     await expect(routes.serverLink).toBeFocused();
 
-    const duplicate = routes.dialog.getByText(translate(NODE_ADD, 'server.duplicate'), { exact: true });
-    const omitted = translate(NODE_ADD, 'field.link.omittedParams', { names: 'spx' });
+    const duplicate = routes.dialog.getByText(translate(CONFIG_NODE_ADD_NS, 'server.duplicate'), { exact: true });
+    const omitted = translate(CONFIG_NODE_ADD_NS, 'field.link.omittedParams', { names: 'spx' });
     await routes.serverLink.fill(LINK.replace('#', '?spx=private-omitted-value#'));
     await expect(duplicate).toBeVisible();
     await expect(routes.dialog.getByText(omitted, { exact: true })).toBeHidden();
@@ -683,17 +686,19 @@ test(
 
     await routes.serverLink.fill('vless://fake-credential@server.example.invalid');
     await routes.addServer.click();
-    await expect(routes.dialog.getByRole('alert')).toContainText(translate(NODE_ADD, 'error.link.server'));
+    await expect(routes.dialog.getByRole('alert')).toContainText(translate(CONFIG_NODE_ADD_NS, 'error.link.server'));
     await expect(routes.serverLink).toBeFocused();
     await routes.serverLink.fill('example://unused');
     await routes.addServer.click();
-    await expect(routes.dialog.getByRole('alert')).toContainText(translate(NODE_ADD, 'error.link.scheme'));
+    await expect(routes.dialog.getByRole('alert')).toContainText(translate(CONFIG_NODE_ADD_NS, 'error.link.scheme'));
 
     const different = LINK.replace(':443#', ':8443?spx=private-omitted-value#');
     await routes.serverLink.fill(different);
     await expect(routes.dialog).toContainText('server.example.invalid:8443');
     await expect(routes.dialog).toContainText(omitted);
-    await expect(routes.subscriptionGroup).toHaveAccessibleDescription(translate(NODE_ADD, 'server.groupHint'));
+    await expect(routes.subscriptionGroup).toHaveAccessibleDescription(
+      translate(CONFIG_NODE_ADD_NS, 'server.groupHint')
+    );
     await expect(routes.dialog).not.toContainText(/private-omitted-value|fake-credential|01234567-89ab/);
     await expect(duplicate).toBeHidden();
 
@@ -734,12 +739,14 @@ test(
     await routes.addFromStarter.click();
     await expect(routes.serverLink).toBeFocused();
     await routes.serverLink.fill(LINK);
-    const name = routes.dialog.getByRole('textbox', { name: translate(NODE_ADD, 'server.tag'), exact: true });
+    const name = routes.dialog.getByRole('textbox', { name: translate(CONFIG_NODE_ADD_NS, 'server.tag'), exact: true });
     await expect(name).toHaveValue(SERVER);
     await routes.subscriptionGroup.click();
-    await page.getByRole('option', { name: translate(NODE_ADD, 'subscription.newGroup'), exact: true }).click();
+    await page
+      .getByRole('option', { name: translate(CONFIG_NODE_ADD_NS, 'subscription.newGroup'), exact: true })
+      .click();
     const groupName = routes.dialog.getByRole('textbox', {
-      name: translate(NODE_ADD, 'subscription.groupName'),
+      name: translate(CONFIG_NODE_ADD_NS, 'subscription.groupName'),
       exact: true,
     });
     await groupName.fill(SERVER_GROUP);
@@ -761,7 +768,9 @@ test(
     await routes.serverLink.fill(LINK);
     await expect(groupName).toBeHidden();
     await routes.subscriptionGroup.click();
-    await page.getByRole('option', { name: translate(NODE_ADD, 'subscription.newGroup'), exact: true }).click();
+    await page
+      .getByRole('option', { name: translate(CONFIG_NODE_ADD_NS, 'subscription.newGroup'), exact: true })
+      .click();
     await groupName.fill(SERVER_GROUP);
     await routes.addServer.click();
     await expect(routes.addFromOutbounds).toBeFocused();
@@ -789,7 +798,7 @@ test(
     await test.step('multiple links stay in the form without previewing a server', async () => {
       await routes.serverLink.fill(`${LINK} https://user:private@subscription.example.invalid/token`);
       await routes.serverLink.press('Enter');
-      await expect(routes.dialog.getByRole('alert')).toHaveText(translate(NODE_ADD, 'server.multipleLinks'));
+      await expect(routes.dialog.getByRole('alert')).toHaveText(translate(CONFIG_NODE_ADD_NS, 'server.multipleLinks'));
       await expect(routes.serverLink).toBeFocused();
       await expect(routes.dialog).not.toContainText(/private|01234567-89ab/);
       await expect(applyBar.dirty).toBeHidden();
@@ -797,8 +806,10 @@ test(
 
     await test.step('a possible duplicate requires an explicit choice', async () => {
       await routes.serverLink.fill(LINK);
-      const separate = routes.dialog.getByRole('checkbox', { name: translate(NODE_ADD, 'server.addSeparate') });
-      await expect(separate).toHaveAccessibleDescription(translate(NODE_ADD, 'server.possibleDuplicate'));
+      const separate = routes.dialog.getByRole('checkbox', {
+        name: translate(CONFIG_NODE_ADD_NS, 'server.addSeparate'),
+      });
+      await expect(separate).toHaveAccessibleDescription(translate(CONFIG_NODE_ADD_NS, 'server.possibleDuplicate'));
       await expect
         .poll(async () => {
           const cancelBounds = await routes.cancel.boundingBox();

@@ -3,10 +3,12 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useRuleTitle, type RuleRow as RuleRowModel } from '@entities/Rule';
+import { SHARED_NS } from '@shared/i18n';
 import { moveRowFocus } from '@shared/lib/rowFocus';
 import { cn } from '@shared/lib/utils';
 import { SURFACE } from '@shared/ui';
 
+import { RULE_TABLE_NS } from '../i18n/RuleTable.namespace.generated';
 import { RULE_HITS_STATE, type RuleHitsColumn } from '../model';
 import { toHitCell } from '../model/RuleTable.cell';
 import { RuleRow } from './RuleRow';
@@ -67,7 +69,7 @@ export function RuleTable({
   outboundTypes?: ReadonlyMap<string, string>;
   onSelect: (id: string) => void;
 }) {
-  const { t } = useTranslation('widgets/Rule/RuleTable');
+  const { t } = useTranslation(RULE_TABLE_NS);
   const { title } = useRuleTitle();
   const counts = hits?.state === RULE_HITS_STATE.Counted ? hits.counts : null;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -223,8 +225,8 @@ export function RuleTable({
       <div className='flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-t border-border px-3.5 py-2 text-xs text-muted-foreground'>
         <p role='status'>
           {rules.length === total
-            ? t('count.rule', { ns: 'shared', count: total })
-            : t('list.shown', { ns: 'shared', shown: rules.length, total })}
+            ? t('count.rule', { ns: SHARED_NS, count: total })
+            : t('list.shown', { ns: SHARED_NS, shown: rules.length, total })}
         </p>
         <RuleTableHitsNote hits={hits} />
       </div>

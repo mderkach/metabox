@@ -1,5 +1,6 @@
 import i18next, { type ParseKeys } from 'i18next';
 
+import { SHARED_NS } from '../i18n';
 import { HOURS_IN_DAY, MINUTES_IN_HOUR, SECONDS_IN_MINUTE } from './time';
 
 const BYTE_UNITS = [
@@ -8,7 +9,7 @@ const BYTE_UNITS = [
   'unit.megabyte',
   'unit.gigabyte',
   'unit.terabyte',
-] as const satisfies readonly ParseKeys<'shared'>[];
+] as const satisfies readonly ParseKeys<typeof SHARED_NS>[];
 const BYTE_STEP = 1024;
 
 /** Bytes for a human: the runtime returns them as a number, and the columns are narrow. */
@@ -28,12 +29,12 @@ export function formatBytes(bytes: number): string {
     unit += 1;
   }
 
-  return `${amount} ${i18next.t(BYTE_UNITS[unit], { ns: 'shared' })}`;
+  return `${amount} ${i18next.t(BYTE_UNITS[unit], { ns: SHARED_NS })}`;
 }
 
 /** Speed per second: the same scale, a different label. */
 export function formatRate(bytesPerSecond: number): string {
-  return i18next.t('unit.rate', { ns: 'shared', value: formatBytes(bytesPerSecond) });
+  return i18next.t('unit.rate', { ns: SHARED_NS, value: formatBytes(bytesPerSecond) });
 }
 
 /**
@@ -43,20 +44,20 @@ export function formatRate(bytesPerSecond: number): string {
  */
 export function formatAge(seconds: number): string {
   if (seconds < SECONDS_IN_MINUTE) {
-    return i18next.t('unit.second', { ns: 'shared', value: Math.max(0, Math.floor(seconds)) });
+    return i18next.t('unit.second', { ns: SHARED_NS, value: Math.max(0, Math.floor(seconds)) });
   }
 
   const minutes = Math.floor(seconds / SECONDS_IN_MINUTE);
 
   if (minutes < MINUTES_IN_HOUR) {
-    return i18next.t('unit.minute', { ns: 'shared', value: minutes });
+    return i18next.t('unit.minute', { ns: SHARED_NS, value: minutes });
   }
 
   const hours = Math.floor(minutes / MINUTES_IN_HOUR);
 
   return hours < HOURS_IN_DAY
-    ? i18next.t('unit.hour', { ns: 'shared', value: hours })
-    : i18next.t('unit.day', { ns: 'shared', value: Math.floor(hours / HOURS_IN_DAY) });
+    ? i18next.t('unit.hour', { ns: SHARED_NS, value: hours })
+    : i18next.t('unit.day', { ns: SHARED_NS, value: Math.floor(hours / HOURS_IN_DAY) });
 }
 
 const DATE_PARTS = { day: '2-digit', month: '2-digit', year: 'numeric' } as const satisfies Intl.DateTimeFormatOptions;

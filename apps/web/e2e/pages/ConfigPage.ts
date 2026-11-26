@@ -1,9 +1,9 @@
 import type { Locator, Page } from '@playwright/test';
 
+import { RULE_EDIT_NS } from '../../src/features/Rule/RuleEdit/i18n/RuleEdit.namespace.generated.ts';
+import { SHARED_NS } from '../../src/shared/i18n/Shared.namespace.generated.ts';
+import { RULE_TABLE_NS } from '../../src/widgets/Rule/RuleTable/i18n/RuleTable.namespace.generated.ts';
 import { translate } from '../lib/i18n.ts';
-
-const RULE_TABLE = 'widgets/Rule/RuleTable';
-const RULE_EDIT = 'features/Rule/RuleEdit';
 
 /** The routing tab of the config editor: the rule table and the side panel of the open rule. */
 export class ConfigPage {
@@ -13,8 +13,8 @@ export class ConfigPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.rules = page.getByRole('table', { name: translate(RULE_TABLE, 'label') });
-    this.ruleName = page.getByLabel(translate(RULE_EDIT, 'field.name.label'), { exact: true });
+    this.rules = page.getByRole('table', { name: translate(RULE_TABLE_NS, 'label') });
+    this.ruleName = page.getByLabel(translate(RULE_EDIT_NS, 'field.name.label'), { exact: true });
   }
 
   async goto() {
@@ -23,14 +23,14 @@ export class ConfigPage {
 
   /** `title` is what the row shows for the rule: its name, or `<conditions> → <target>` without one. */
   ruleRow(title: string, index: number): Locator {
-    const name = translate(RULE_TABLE, 'row.label', { title, index });
+    const name = translate(RULE_TABLE_NS, 'row.label', { title, index });
 
     return this.rules.getByRole('button', { name, exact: true });
   }
 
   /** The row of a rule the draft changed: its name says so after the number. */
   editedRuleRow(title: string, index: number): Locator {
-    const name = `${translate(RULE_TABLE, 'row.label', { title, index })}, ${translate(RULE_TABLE, 'row.edited')}`;
+    const name = `${translate(RULE_TABLE_NS, 'row.label', { title, index })}, ${translate(RULE_TABLE_NS, 'row.edited')}`;
 
     return this.rules.getByRole('button', { name, exact: true });
   }
@@ -41,18 +41,21 @@ export class ConfigPage {
 
   /** The chip field of a rule condition by its key, such as `source_ip_cidr`. */
   conditionField(condition: string): Locator {
-    return this.page.getByRole('combobox', { name: translate(RULE_EDIT, `condition.${condition}.label`), exact: true });
+    return this.page.getByRole('combobox', {
+      name: translate(RULE_EDIT_NS, `condition.${condition}.label`),
+      exact: true,
+    });
   }
 
   conditionSuggestions(condition: string): Locator {
-    const label = translate(RULE_EDIT, `condition.${condition}.label`);
+    const label = translate(RULE_EDIT_NS, `condition.${condition}.label`);
 
-    return this.page.getByRole('listbox', { name: translate('shared', 'tokenInput.suggestions', { label }) });
+    return this.page.getByRole('listbox', { name: translate(SHARED_NS, 'tokenInput.suggestions', { label }) });
   }
 
   conditionChips(condition: string): Locator {
-    const label = translate(RULE_EDIT, `condition.${condition}.label`);
+    const label = translate(RULE_EDIT_NS, `condition.${condition}.label`);
 
-    return this.page.getByRole('list', { name: translate('shared', 'tokenInput.values', { label }) });
+    return this.page.getByRole('list', { name: translate(SHARED_NS, 'tokenInput.values', { label }) });
   }
 }

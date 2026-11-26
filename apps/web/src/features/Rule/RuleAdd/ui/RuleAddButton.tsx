@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { SHORTCUT } from '@shared/lib/shortcuts';
 import { Button, ShortcutKbd } from '@shared/ui';
 
+import { RULE_ADD_NS } from '../i18n/RuleAdd.namespace.generated';
+
 /**
  * Opens a new rule in the panel. Nothing is written until the rule gets a
  * condition: a rule without one would take all traffic.
@@ -13,7 +15,7 @@ import { Button, ShortcutKbd } from '@shared/ui';
  * the config.
  */
 export function RuleAddButton({ disabled, onAdd }: { disabled: boolean; onAdd: () => void }) {
-  const { t } = useTranslation('features/Rule/RuleAdd');
+  const { t } = useTranslation(RULE_ADD_NS);
 
   return (
     <>

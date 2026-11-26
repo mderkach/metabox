@@ -3,8 +3,17 @@ import { useTranslation } from 'react-i18next';
 
 import type { RuleSetUsage } from '@entities/RuleSet';
 
-export function RuleSetReferenceLinks({ usage }: { usage: readonly RuleSetUsage[] }) {
-  const { t } = useTranslation('widgets/RuleSet/RuleSetTable');
+import { RULE_SET_TABLE_NS } from '../i18n/RuleSetTable.namespace.generated';
+import type { RuleSetLinks } from '../model/RuleSetTable.links';
+
+export function RuleSetReferenceLinks({
+  usage,
+  referenceLink,
+}: {
+  usage: readonly RuleSetUsage[];
+  referenceLink: RuleSetLinks['reference'];
+}) {
+  const { t } = useTranslation(RULE_SET_TABLE_NS);
   const routeRules = usage.filter((item) => item.kind === 'route');
   const dnsRules = usage.filter((item) => item.kind === 'dns');
 
@@ -19,8 +28,7 @@ export function RuleSetReferenceLinks({ usage }: { usage: readonly RuleSetUsage[
             {routeRules.map((item) => (
               <li key={item.number}>
                 <Link
-                  to='/config'
-                  search={{ rule: item.number }}
+                  {...referenceLink(item)}
                   className='inline-flex items-center text-primary underline max-md:min-h-11'
                 >
                   {item.name ?? t('details.rule', { number: item.number })}
@@ -37,9 +45,7 @@ export function RuleSetReferenceLinks({ usage }: { usage: readonly RuleSetUsage[
             {dnsRules.map((item) => (
               <li key={item.number}>
                 <Link
-                  to='/config/$section'
-                  params={{ section: 'dnsRules' }}
-                  search={{ node: item.number }}
+                  {...referenceLink(item)}
                   className='inline-flex items-center text-primary underline max-md:min-h-11'
                 >
                   {item.name ?? t('details.rule', { number: item.number })}

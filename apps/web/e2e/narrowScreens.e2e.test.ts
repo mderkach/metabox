@@ -1,3 +1,4 @@
+import { SHARED_NS } from '../src/shared/i18n/Shared.namespace.generated.ts';
 import { E2E_TAG, expect, test, translate } from './fixtures/index.ts';
 
 const PHONE = { width: 400, height: 812 } as const;
@@ -20,7 +21,7 @@ const SCREENS = [
 // The scenarios are typed without the DOM library, so the code that runs in the page is a string.
 const PAGE_WIDTH = 'document.documentElement.scrollWidth';
 
-const CONNECTIONS = translate('shared', 'section.connections');
+const CONNECTIONS = translate(SHARED_NS, 'section.connections');
 
 /** Scrolls the connections table sideways and says how far its first column header and its first cell moved. */
 const SCROLL_SIDEWAYS = `(() => {

@@ -2,6 +2,7 @@ import { CircleAlert, RotateCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { failureText, type MessageKey } from '../api';
+import { SHARED_NS } from '../i18n';
 import { cn } from '../lib/utils';
 import { Button } from './Button';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from './shadcn/empty';
@@ -23,7 +24,7 @@ export function QueryFailure({
   messageKey: MessageKey;
   query: { error: Error | null; isFetching: boolean; refetch: () => unknown };
 }) {
-  const { t } = useTranslation('shared');
+  const { t } = useTranslation(SHARED_NS);
 
   return (
     <Empty className='border'>

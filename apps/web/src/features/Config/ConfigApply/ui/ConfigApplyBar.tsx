@@ -7,8 +7,10 @@ import { useNarrowScreen, useReducedMotion } from '@shared/lib/media';
 import { cn } from '@shared/lib/utils';
 import { Separator } from '@shared/ui';
 
+import { CONFIG_APPLY_NS } from '../i18n/ConfigApply.namespace.generated';
 import { useConfigApply } from '../lib/ConfigApply.lib';
 import { useBarSpace } from '../lib/ConfigApply.space';
+import type { ConfigApplyNavigation } from '../model/ConfigApply.link';
 import { ConfigApplyBlocked } from './ConfigApplyBlocked';
 import { ConfigApplyCheck } from './ConfigApplyCheck';
 import { ConfigApplyConfirmWindow } from './ConfigApplyConfirmWindow';
@@ -27,8 +29,11 @@ import { ConfigApplyWorkdir } from './ConfigApplyWorkdir';
  * layout. The screen frees the space under it itself: `onSpaceChange` reports
  * the height the bar covers while visible, and zero when it is gone.
  */
-export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: number) => void }) {
-  const { t } = useTranslation('features/Config/ConfigApply');
+export function ConfigApplyBar({
+  onSpaceChange,
+  ChangeLink,
+}: ConfigApplyNavigation & { onSpaceChange: (space: number) => void }) {
+  const { t } = useTranslation(CONFIG_APPLY_NS);
   const apply = useConfigApply();
   const [dismissed, setDismissed] = useState<string | null>(null);
   const phase = apply.transaction?.phase;
@@ -125,7 +130,12 @@ export function ConfigApplyBar({ onSpaceChange }: { onSpaceChange: (space: numbe
                 <>
                   <ConfigApplyDiscard compact={narrow} onDiscard={apply.discard} />
                   {!narrow && <Separator orientation='vertical' className='mx-1.5 h-5' />}
-                  <ConfigApplyDiff canApply={apply.canApply} blocked={apply.blocked} onApply={apply.apply} />
+                  <ConfigApplyDiff
+                    ChangeLink={ChangeLink}
+                    canApply={apply.canApply}
+                    blocked={apply.blocked}
+                    onApply={apply.apply}
+                  />
                 </>
               )}
             </div>

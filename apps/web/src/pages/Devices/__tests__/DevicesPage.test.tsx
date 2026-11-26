@@ -1,3 +1,4 @@
+import { linkOptions } from '@tanstack/react-router';
 import { renderWithRouter } from '@test/renderWithRouter';
 import { server } from '@test/server';
 import { screen, waitFor, within } from '@testing-library/react';
@@ -59,7 +60,7 @@ function DevicesWithRouteBar() {
 
   return (
     <>
-      <DevicesPage />
+      <DevicesPage connectionLink={(source) => linkOptions({ to: '/connections', search: { source } })} />
       <DeviceRouteBar transaction={route.transaction} isConfirming={route.isConfirming} onConfirm={route.confirm} />
     </>
   );

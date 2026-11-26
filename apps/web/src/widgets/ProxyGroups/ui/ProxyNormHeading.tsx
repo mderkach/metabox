@@ -2,10 +2,12 @@ import { useTranslation } from 'react-i18next';
 
 import { cn } from '@shared/lib/utils';
 
+import { PROXY_GROUPS_NS } from '../i18n/ProxyGroups.namespace.generated';
+
 import layout from './ProxyNodeLayout.module.css';
 
 export function ProxyNormHeading() {
-  const { t } = useTranslation('widgets/ProxyGroups');
+  const { t } = useTranslation(PROXY_GROUPS_NS);
 
   return (
     <div

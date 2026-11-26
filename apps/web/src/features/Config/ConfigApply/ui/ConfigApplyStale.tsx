@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@shared/ui';
 
+import { CONFIG_APPLY_NS } from '../i18n/ConfigApply.namespace.generated';
 import { ConfigApplyDiscard } from './ConfigApplyDiscard';
 
 /**
@@ -12,7 +13,7 @@ import { ConfigApplyDiscard } from './ConfigApplyDiscard';
  * decides.
  */
 export function ConfigApplyStale({ onDiscard }: { onDiscard: () => void }) {
-  const { t } = useTranslation('features/Config/ConfigApply');
+  const { t } = useTranslation(CONFIG_APPLY_NS);
 
   return (
     <Alert className='max-sm:pr-2.5'>

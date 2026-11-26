@@ -92,7 +92,7 @@ describe('connections screen budget', () => {
         ConnectionStore.getState().apply(nextFrame());
       }
 
-      renderWithRouter(ConnectionsPage, {
+      renderWithRouter(() => <ConnectionsPage editorTo='/config' />, {
         path: '/connections',
         validateSearch: parseConnectionSearch,
         initialEntry: '/connections',

@@ -1,3 +1,4 @@
+import { CONFIG_RAW_EDITOR_NS } from '../src/widgets/Config/ConfigRawEditor/i18n/ConfigRawEditor.namespace.generated.ts';
 import { E2E_TAG, expect, test, translate } from './fixtures/index.ts';
 import {
   describeFocus,
@@ -112,7 +113,7 @@ test(
     await page.goto('/config/raw');
 
     const editor = page.getByRole('textbox', {
-      name: translate('widgets/Config/ConfigRawEditor', 'editor.label'),
+      name: translate(CONFIG_RAW_EDITOR_NS, 'editor.label'),
     });
 
     await editor.focus();

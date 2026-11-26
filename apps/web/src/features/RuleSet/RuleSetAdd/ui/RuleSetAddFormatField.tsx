@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { defaultFormatOf } from '@entities/RuleSet';
 import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
+import { RULE_SET_ADD_NS } from '../i18n/RuleSetAdd.namespace.generated';
 import { describedBy } from '../lib/RuleSetAdd.descriptions';
 import { RULE_SET_FORMAT_OPTIONS } from '../model/RuleSetAdd.constants';
 import { type RuleSetAddModel } from '../model/RuleSetAdd.schema';
@@ -16,7 +17,7 @@ import { RuleSetAddFieldError } from './RuleSetAddFieldError';
  * value would be an edit the user did not make.
  */
 export function RuleSetAddFormatField() {
-  const { t } = useTranslation('features/RuleSet/RuleSetAdd');
+  const { t } = useTranslation(RULE_SET_ADD_NS);
   const { control } = useFormContext<RuleSetAddModel>();
   const url = useWatch({ control, name: 'url' });
   const id = useId();

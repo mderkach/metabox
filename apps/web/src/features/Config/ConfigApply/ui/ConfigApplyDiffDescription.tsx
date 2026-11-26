@@ -4,9 +4,11 @@ import { useConfirmWindow } from '@entities/Daemon';
 import { SECONDS_IN_MINUTE } from '@shared/lib/time';
 import { DialogDescription } from '@shared/ui';
 
+import { CONFIG_APPLY_NS } from '../i18n/ConfigApply.namespace.generated';
+
 /** The confirmation window comes from the daemon flag; whole minutes are named in minutes. */
 export function ConfigApplyDiffDescription() {
-  const { t } = useTranslation('features/Config/ConfigApply');
+  const { t } = useTranslation(CONFIG_APPLY_NS);
   const seconds = useConfirmWindow();
 
   if (seconds === null) {

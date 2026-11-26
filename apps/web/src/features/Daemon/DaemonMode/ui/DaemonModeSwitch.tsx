@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useClashConfigs } from '@entities/Daemon';
 import { failureText } from '@shared/api';
+import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 import { PENDING_REVEAL, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton } from '@shared/ui';
 
@@ -21,7 +22,7 @@ import { toClashModeLabel } from './DaemonMode.labels';
  * text instead of the control: there is nothing to choose from.
  */
 export function DaemonModeSwitch({ inHeader = false }: { inHeader?: boolean }) {
-  const { t } = useTranslation('shared');
+  const { t } = useTranslation(SHARED_NS);
   const clash = useClashConfigs();
   const setMode = useSetClashMode();
 

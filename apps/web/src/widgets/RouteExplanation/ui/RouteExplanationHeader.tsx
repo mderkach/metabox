@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@shared/lib/utils';
 import { Button, SURFACE_HEAD } from '@shared/ui';
 
+import { ROUTE_EXPLANATION_NS } from '../i18n/RouteExplanation.namespace.generated';
+
 export function RouteExplanationHeader({
   heading,
   actions = null,
@@ -14,7 +16,7 @@ export function RouteExplanationHeader({
   actions?: ReactNode;
   onClose: () => void;
 }) {
-  const { t } = useTranslation('widgets/RouteExplanation');
+  const { t } = useTranslation(ROUTE_EXPLANATION_NS);
 
   return (
     <header className={cn('flex items-center gap-2.5', SURFACE_HEAD)}>

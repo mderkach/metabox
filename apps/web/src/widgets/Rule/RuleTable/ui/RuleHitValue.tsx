@@ -2,10 +2,11 @@ import { useTranslation } from 'react-i18next';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/ui';
 
+import { RULE_TABLE_NS } from '../i18n/RuleTable.namespace.generated';
 import { RULE_HIT, type RuleHitCell } from '../model';
 
 export function RuleHitValue({ hits, language }: { hits: RuleHitCell; language: string }) {
-  const { t } = useTranslation('widgets/Rule/RuleTable');
+  const { t } = useTranslation(RULE_TABLE_NS);
 
   if (hits === RULE_HIT.Edited) {
     return <span aria-hidden='true'>—</span>;

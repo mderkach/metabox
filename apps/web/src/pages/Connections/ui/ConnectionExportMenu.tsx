@@ -5,17 +5,19 @@ import { useTranslation } from 'react-i18next';
 import type { ExportFormat } from '@features/Connection/ConnectionExport';
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@shared/ui';
 
+import { CONNECTIONS_NS } from '../i18n/Connections.namespace.generated';
+
 /** Export formats under one button: on a phone two buttons crowd the counter out of the footer. */
 export function ConnectionExportMenu({
   formats,
   disabled,
   onExport,
 }: {
-  formats: readonly { format: ExportFormat; label: ParseKeys<'pages/Connections'> }[];
+  formats: readonly { format: ExportFormat; label: ParseKeys<typeof CONNECTIONS_NS> }[];
   disabled: boolean;
   onExport: (format: ExportFormat) => void;
 }) {
-  const { t } = useTranslation('pages/Connections');
+  const { t } = useTranslation(CONNECTIONS_NS);
 
   return (
     <DropdownMenu>

@@ -4,13 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { SCHEMA_DRIFT, schemaDrift, useServiceState } from '@entities/Daemon';
 import { cn } from '@shared/lib/utils';
 
+import { APP_SIDEBAR_NS } from '../i18n/AppSidebar.namespace.generated';
+
 /**
  * A mark about sing-box diverging from the form schema. Sits in the footer, not only in the
  * config section: the divergence must be visible from any screen, and
  * the details are where the forms are edited.
  */
 export function AppSidebarDrift({ collapsed }: { collapsed: boolean }) {
-  const { t } = useTranslation('widgets/AppSidebar');
+  const { t } = useTranslation(APP_SIDEBAR_NS);
   const service = useServiceState();
   const drift = schemaDrift(service.data?.binary);
 

@@ -2,6 +2,7 @@ import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse 
 import i18next from 'i18next';
 import { z } from 'zod';
 
+import { SHARED_NS } from '../i18n';
 import { API_FAILURE, ApiError } from './ApiError';
 import { TIMEOUT } from './cacheTime';
 import { ErrorSchema } from './daemon.generated';
@@ -66,7 +67,7 @@ function fromResponse(response: AxiosResponse<unknown>): ApiError {
   }
 
   if (GATEWAY_STATUS.has(response.status)) {
-    return new ApiError(API_FAILURE.Unreachable, i18next.t('daemon.silent', { ns: 'shared' }), {
+    return new ApiError(API_FAILURE.Unreachable, i18next.t('daemon.silent', { ns: SHARED_NS }), {
       status: response.status,
     });
   }
@@ -87,7 +88,7 @@ function toApiError(error: unknown): unknown {
   }
 
   if (error.response === undefined) {
-    return new ApiError(API_FAILURE.Unreachable, i18next.t('daemon.silent', { ns: 'shared' }), {
+    return new ApiError(API_FAILURE.Unreachable, i18next.t('daemon.silent', { ns: SHARED_NS }), {
       cause: error,
     });
   }

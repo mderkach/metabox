@@ -1,3 +1,4 @@
+import { SHARED_NS } from '@shared/i18n';
 vi.mock('i18next', async (importOriginal) => {
   const actual = await importOriginal<typeof import('i18next')>();
 
@@ -50,9 +51,9 @@ describe('production locale backend', () => {
     );
     localStorage.setItem('metabox.language', 'ru');
     await initI18n();
-    await preloadNamespaces('shared');
+    await preloadNamespaces(SHARED_NS);
 
     expect(requested).toHaveBeenCalledOnce();
-    expect(i18next.t('action.done', { ns: 'shared' })).toBe('Loaded from HTTP');
+    expect(i18next.t('action.done', { ns: SHARED_NS })).toBe('Loaded from HTTP');
   });
 });

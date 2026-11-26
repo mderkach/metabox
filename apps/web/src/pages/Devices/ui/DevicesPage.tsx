@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 import { useDevices } from '@entities/Device';
 import { DeviceRouteSubnets, useDeviceRoute } from '@features/Device/DeviceRoute';
+import { SHARED_NS } from '@shared/i18n';
+import type { PageLink } from '@shared/lib/navigation';
 import { useLiveRegion } from '@shared/lib/useLiveRegion';
 import { cn } from '@shared/lib/utils';
 import {
@@ -17,6 +19,7 @@ import {
 } from '@shared/ui';
 import { PageHeader } from '@widgets/PageHeader';
 
+import { DEVICES_NS } from '../i18n/Devices.namespace.generated';
 import { DevicesRow } from './DevicesRow';
 import { DevicesTableHeader } from './DevicesTableHeader';
 
@@ -34,8 +37,8 @@ const HEADER_ROWS = 1;
  * The list is not virtualized for the same reason, but it is built with roles anyway: the header
  * must name the columns, not only mark them up with styles.
  */
-export function DevicesPage() {
-  const { t } = useTranslation('pages/Devices');
+export function DevicesPage({ connectionLink }: { connectionLink: (source: string) => PageLink }) {
+  const { t } = useTranslation(DEVICES_NS);
   const devices = useDevices();
   const route = useDeviceRoute();
   const [editing, setEditing] = useState<string | null>(null);
@@ -55,7 +58,7 @@ export function DevicesPage() {
 
   return (
     <>
-      <PageHeader title={t('section.devices', { ns: 'shared' })} />
+      <PageHeader title={t('section.devices', { ns: SHARED_NS })} />
 
       <LiveRegion message={message} />
 
@@ -87,6 +90,7 @@ export function DevicesPage() {
               <div role='rowgroup'>
                 {list.map((device, position) => (
                   <DevicesRow
+                    connectionLink={connectionLink}
                     key={device.mac}
                     device={device}
                     rowIndex={position + 1 + HEADER_ROWS}

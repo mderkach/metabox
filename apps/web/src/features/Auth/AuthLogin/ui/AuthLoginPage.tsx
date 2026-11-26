@@ -9,9 +9,10 @@ import { ApiError, failureText, type ApiFailureCode } from '@shared/api';
 import { Button, Card, CardContent, CardDescription, CardHeader, Input } from '@shared/ui';
 
 import { useLogin } from '../api';
+import { AUTH_LOGIN_NS } from '../i18n/AuthLogin.namespace.generated';
 import { AUTH_LOGIN_ERROR, AuthLoginSchema, lockoutMinutes, type AuthLoginModel } from '../model';
 
-type LoginKey = ParseKeys<'features/Auth/AuthLogin'>;
+type LoginKey = ParseKeys<typeof AUTH_LOGIN_NS>;
 
 const FIELD_ERROR_KEY: Readonly<Record<string, LoginKey | undefined>> = {
   [AUTH_LOGIN_ERROR.Required]: 'error.required',
@@ -24,13 +25,13 @@ const REFUSAL_KEY: Readonly<Record<string, LoginKey | undefined>> = {
   password_wrong: 'error.wrong',
 } satisfies Partial<Record<ApiFailureCode, LoginKey>>;
 
-function lockedText(error: ApiError, t: TFunction<'features/Auth/AuthLogin'>): string {
+function lockedText(error: ApiError, t: TFunction<typeof AUTH_LOGIN_NS>): string {
   const minutes = lockoutMinutes(error.retryAfter);
 
   return minutes === null ? t('error.lockedUnknown') : t('error.locked', { count: minutes });
 }
 
-function refusalText(error: unknown, t: TFunction<'features/Auth/AuthLogin'>): string {
+function refusalText(error: unknown, t: TFunction<typeof AUTH_LOGIN_NS>): string {
   if (error instanceof ApiError && error.code === LOGIN_LOCKED) {
     return lockedText(error, t);
   }
@@ -51,7 +52,7 @@ function refusalText(error: unknown, t: TFunction<'features/Auth/AuthLogin'>): s
  * every request of the shell gets 401.
  */
 export function AuthLoginPage() {
-  const { t } = useTranslation('features/Auth/AuthLogin');
+  const { t } = useTranslation(AUTH_LOGIN_NS);
   const login = useLogin();
   const inputId = useId();
   const errorId = useId();

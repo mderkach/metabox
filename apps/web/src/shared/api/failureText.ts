@@ -1,5 +1,6 @@
 import i18next, { type ParseKeys } from 'i18next';
 
+import { SHARED_NS } from '../i18n';
 import { ApiError } from './ApiError';
 import { ERROR_CODE } from './daemon.generated';
 
@@ -11,7 +12,7 @@ import { ERROR_CODE } from './daemon.generated';
  */
 export type ApiFailureCode = (typeof ERROR_CODE)[number];
 
-const FAILURE_KEY: Readonly<Record<ApiFailureCode, ParseKeys<'shared'>>> = {
+const FAILURE_KEY: Readonly<Record<ApiFailureCode, ParseKeys<typeof SHARED_NS>>> = {
   not_found: 'failure.not_found',
   origin_mismatch: 'failure.origin_mismatch',
   upgrade_unsupported: 'failure.upgrade_unsupported',
@@ -64,5 +65,5 @@ export function failureText(error: unknown): string | null {
     return null;
   }
 
-  return i18next.t(FAILURE_KEY[error.code], { ns: 'shared' });
+  return i18next.t(FAILURE_KEY[error.code], { ns: SHARED_NS });
 }

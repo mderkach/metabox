@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '../i18n';
 import type { LiveMessage } from '../lib/useLiveRegion';
 
 /**
@@ -16,7 +17,7 @@ import type { LiveMessage } from '../lib/useLiveRegion';
  * loading — and both a test and a screen reader find it in the region list by name.
  */
 export function LiveRegion({ message }: { message: LiveMessage | null }) {
-  const { t } = useTranslation('shared');
+  const { t } = useTranslation(SHARED_NS);
 
   return (
     <div role='status' aria-live='polite' aria-atomic='true' aria-label={t('liveRegion.label')} className='sr-only'>

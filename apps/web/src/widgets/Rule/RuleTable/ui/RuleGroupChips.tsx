@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 
 import type { RuleGroup } from '@entities/Rule';
 
+import { RULE_TABLE_NS } from '../i18n/RuleTable.namespace.generated';
 import { RuleGroupBranchChips } from './RuleGroupBranchChips';
 
-const MODE_LABEL: Readonly<Record<string, ParseKeys<'widgets/Rule/RuleTable'> | undefined>> = {
+const MODE_LABEL: Readonly<Record<string, ParseKeys<typeof RULE_TABLE_NS> | undefined>> = {
   and: 'group.and',
   or: 'group.or',
 };
@@ -16,7 +17,7 @@ const MODE_LABEL: Readonly<Record<string, ParseKeys<'widgets/Rule/RuleTable'> | 
  * without them an `or` rule reads as `and`, and these are different rules.
  */
 function RuleGroupChipsProto({ group }: { group: RuleGroup }) {
-  const { t } = useTranslation('widgets/Rule/RuleTable');
+  const { t } = useTranslation(RULE_TABLE_NS);
   const mode = MODE_LABEL[group.mode];
   const label = mode === undefined ? group.mode : t(mode);
 

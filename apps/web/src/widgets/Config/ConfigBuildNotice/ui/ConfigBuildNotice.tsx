@@ -5,6 +5,7 @@ import { findUnbuiltNodes, findUnbuiltOptions, type ConfigDocument } from '@enti
 import { useDaemonStatus } from '@entities/Daemon';
 import { Alert, AlertDescription, AlertTitle } from '@shared/ui';
 
+import { CONFIG_BUILD_NOTICE_NS } from '../i18n/ConfigBuildNotice.namespace.generated';
 import { toNodeName } from '../model/ConfigBuildNotice.model';
 
 /**
@@ -16,7 +17,7 @@ import { toNodeName } from '../model/ConfigBuildNotice.model';
  * warn about, and there is no block.
  */
 export function ConfigBuildNotice({ config }: { config: ConfigDocument | null }) {
-  const { t } = useTranslation('widgets/Config/ConfigBuildNotice');
+  const { t } = useTranslation(CONFIG_BUILD_NOTICE_NS);
   const status = useDaemonStatus();
   const tags = status.data?.singboxTags ?? null;
   const nodes = findUnbuiltNodes(config, tags);

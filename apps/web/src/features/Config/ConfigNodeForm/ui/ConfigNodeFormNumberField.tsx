@@ -4,14 +4,14 @@ import { useTranslation } from 'react-i18next';
 
 import { Input } from '@shared/ui';
 
+import { CONFIG_NODE_FORM_NS } from '../i18n/ConfigNodeForm.namespace.generated';
 import { parseNumber, toInputText, type ConfigNodeFormModel } from '../model';
 import { errorText } from './ConfigNodeForm.error';
 import type { NodeFieldProps } from './ConfigNodeForm.field';
-import { NS } from './ConfigNodeForm.namespace';
 import { ConfigNodeFormFieldRow } from './ConfigNodeFormFieldRow';
 
 export function ConfigNodeFormNumberField({ field, name }: NodeFieldProps) {
-  const { t } = useTranslation(NS);
+  const { t } = useTranslation(CONFIG_NODE_FORM_NS);
   const { control } = useFormContext<ConfigNodeFormModel>();
   const id = useId();
   const errorId = useId();

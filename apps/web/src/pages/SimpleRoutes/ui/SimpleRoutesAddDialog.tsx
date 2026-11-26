@@ -6,16 +6,21 @@ import { CONFIG_SECTION } from '@entities/Config';
 import { ConfigNodeAddLink } from '@features/Config/ConfigNodeAdd';
 import { Button, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@shared/ui';
 
+import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
+import type { SimpleRoutesLinks } from '../model/SimpleRoutes.links';
+
 export function SimpleRoutesAddDialog({
   takenTags,
+  providersLink,
   onAdded,
   finalFocus,
 }: {
+  providersLink: SimpleRoutesLinks['providers'];
   takenTags: readonly string[];
   onAdded: () => void;
   finalFocus: ComponentProps<typeof DialogContent>['finalFocus'];
 }) {
-  const { t } = useTranslation('pages/SimpleRoutes');
+  const { t } = useTranslation(SIMPLE_ROUTES_NS);
 
   return (
     <DialogContent
@@ -34,8 +39,7 @@ export function SimpleRoutesAddDialog({
         cancel={<DialogClose render={<Button variant='ghost' />}>{t('addServer.cancel')}</DialogClose>}
         subscriptionFallback={
           <Link
-            to='/config/$section'
-            params={{ section: CONFIG_SECTION.Providers }}
+            {...providersLink}
             className='inline-flex min-h-8 items-center self-start text-sm text-primary underline underline-offset-4 pointer-coarse:min-h-11'
           >
             {t('addServer.subscription')}

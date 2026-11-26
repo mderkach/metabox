@@ -12,6 +12,8 @@ import {
   DropdownMenuTrigger,
 } from '@shared/ui';
 
+import { CONFIG_APPLY_NS } from '../i18n/ConfigApply.namespace.generated';
+
 /**
  * Discard of the whole draft, after a confirmation: the document has no
  * step-by-step undo. `compact` puts it into a menu, which keeps the phone bar
@@ -26,7 +28,7 @@ export function ConfigApplyDiscard({
   compact?: boolean;
   onDiscard: () => void;
 }) {
-  const { t } = useTranslation('features/Config/ConfigApply');
+  const { t } = useTranslation(CONFIG_APPLY_NS);
   const [open, setOpen] = useState(false);
   const menuTrigger = useRef<HTMLButtonElement>(null);
   const text = label ?? t('bar.discard');

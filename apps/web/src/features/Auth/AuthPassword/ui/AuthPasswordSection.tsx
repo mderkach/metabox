@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@entities/Auth';
 import { CARD_TITLE, Card, CardContent, CardHeader } from '@shared/ui';
 
+import { AUTH_PASSWORD_NS } from '../i18n/AuthPassword.namespace.generated';
 import { AuthPasswordForm } from './AuthPasswordForm';
 
 /**
@@ -11,7 +12,7 @@ import { AuthPasswordForm } from './AuthPasswordForm';
  * the daemon has not answered about login: an older daemon without the endpoint has nothing to set.
  */
 export function AuthPasswordSection() {
-  const { t } = useTranslation('features/Auth/AuthPassword');
+  const { t } = useTranslation(AUTH_PASSWORD_NS);
   const auth = useAuth();
   // A finished save remounts the form: fields and the refusal of the previous attempt go away.
   const [round, setRound] = useState(0);

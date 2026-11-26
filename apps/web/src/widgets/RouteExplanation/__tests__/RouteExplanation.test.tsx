@@ -51,6 +51,7 @@ describe('RouteExplanation', () => {
 
     renderWithRouter(() => (
       <RouteExplanation
+        editorTo='/config'
         connectionId='c-1'
         host='video.example:443'
         source='192.168.1.60'
@@ -67,6 +68,7 @@ describe('RouteExplanation', () => {
 
     renderWithRouter(() => (
       <RouteExplanation
+        editorTo='/config'
         connectionId='c-1'
         host='video.example:443'
         source='192.168.1.60'
@@ -87,6 +89,7 @@ describe('RouteExplanation', () => {
 
     renderWithRouter(() => (
       <RouteExplanation
+        editorTo='/config'
         connectionId='c-1'
         host='video.example:443'
         source='192.168.1.60'
@@ -112,6 +115,7 @@ describe('RouteExplanation', () => {
 
     renderWithRouter(() => (
       <RouteExplanation
+        editorTo='/config'
         connectionId='c-1'
         host='video.example:443'
         source='192.168.1.60'
@@ -144,7 +148,13 @@ describe('RouteExplanation', () => {
     serveConfig(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length, 'Unverified rule name'));
 
     renderWithRouter(() => (
-      <RouteExplanation connectionId='c-1' host='video.example:443' source='' onClose={vi.fn<() => void>()} />
+      <RouteExplanation
+        editorTo='/config'
+        connectionId='c-1'
+        host='video.example:443'
+        source=''
+        onClose={vi.fn<() => void>()}
+      />
     ));
 
     expect(await screen.findByText('Сработавшее правило по данным ядра')).toBeInTheDocument();
@@ -162,7 +172,13 @@ describe('RouteExplanation', () => {
     ConfigDocumentState.getState().replace(configWithRules(ROUTE_EXPLANATION_FIXTURE.rules.length, 'Draft rule name'));
 
     renderWithRouter(() => (
-      <RouteExplanation connectionId='c-1' host='video.example:443' source='' onClose={vi.fn<() => void>()} />
+      <RouteExplanation
+        editorTo='/config'
+        connectionId='c-1'
+        host='video.example:443'
+        source=''
+        onClose={vi.fn<() => void>()}
+      />
     ));
 
     expect(await screen.findByText('Applied rule name')).toBeInTheDocument();
@@ -177,6 +193,7 @@ describe('RouteExplanation', () => {
 
     renderWithRouter(() => (
       <RouteExplanation
+        editorTo='/config'
         connectionId='c-1'
         host='video.example:443'
         source='192.168.1.60'
@@ -194,6 +211,7 @@ describe('RouteExplanation', () => {
 
     renderWithRouter(() => (
       <RouteExplanation
+        editorTo='/config'
         connectionId='c-1'
         host='video.example:443'
         source='192.168.1.60'
@@ -214,6 +232,7 @@ describe('RouteExplanation', () => {
 
     renderWithRouter(() => (
       <RouteExplanation
+        editorTo='/config'
         connectionId='c-1'
         host='video.example:443'
         source='192.168.1.60'
@@ -232,6 +251,7 @@ describe('RouteExplanation', () => {
 
     renderWithRouter(() => (
       <RouteExplanation
+        editorTo='/config'
         connectionId='c-1'
         host='video.example:443'
         source='192.168.1.60'
@@ -252,7 +272,13 @@ describe('RouteExplanation', () => {
     const user = userEvent.setup();
 
     renderWithRouter(() => (
-      <RouteExplanation connectionId='c-1' host='video.example:443' source='192.168.1.60' onClose={onClose} />
+      <RouteExplanation
+        editorTo='/config'
+        connectionId='c-1'
+        host='video.example:443'
+        source='192.168.1.60'
+        onClose={onClose}
+      />
     ));
 
     await screen.findByRole('complementary');
@@ -273,6 +299,7 @@ describe('RouteExplanationSheet', () => {
   it('is open while a connection is selected, and is named after it', async () => {
     renderWithRouter(() => (
       <RouteExplanationSheet
+        editorTo='/config'
         connectionId='c-1'
         host='video.example:443'
         source='192.168.1.60'
@@ -287,7 +314,7 @@ describe('RouteExplanationSheet', () => {
 
   it('is closed without a selected connection', () => {
     renderWithRouter(() => (
-      <RouteExplanationSheet connectionId={null} host='' source='' onClose={vi.fn<() => void>()} />
+      <RouteExplanationSheet editorTo='/config' connectionId={null} host='' source='' onClose={vi.fn<() => void>()} />
     ));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -298,7 +325,13 @@ describe('RouteExplanationSheet', () => {
     const user = userEvent.setup();
 
     renderWithRouter(() => (
-      <RouteExplanationSheet connectionId='c-1' host='video.example:443' source='192.168.1.60' onClose={onClose} />
+      <RouteExplanationSheet
+        editorTo='/config'
+        connectionId='c-1'
+        host='video.example:443'
+        source='192.168.1.60'
+        onClose={onClose}
+      />
     ));
 
     await screen.findByRole('dialog');

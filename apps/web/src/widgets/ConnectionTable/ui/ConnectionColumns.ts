@@ -16,6 +16,8 @@ import type { ParseKeys } from 'i18next';
 
 import type { ConnectionRow, ConnectionSourceLabel } from '@entities/Connection';
 
+import type { CONNECTION_TABLE_NS } from '../i18n/ConnectionTable.namespace.generated';
+
 /**
  * Column layout. Widths are distributed by content length: the rule
  * stretches over the remainder, the rest keep a fixed width.
@@ -59,7 +61,7 @@ export interface ConnectionCell {
   id: ConnectionField;
   className: string;
   /** The label is needed by the "label — value" list: in a table the header carries it. */
-  label: ParseKeys<'widgets/ConnectionTable'>;
+  label: ParseKeys<typeof CONNECTION_TABLE_NS>;
 }
 
 /**
@@ -78,7 +80,7 @@ export type ConnectionTableFeatures = typeof CONNECTION_TABLE_FEATURES;
 
 /** Label, layout class and a ban on hiding. */
 export interface ConnectionColumnMeta {
-  label: ParseKeys<'widgets/ConnectionTable'>;
+  label: ParseKeys<typeof CONNECTION_TABLE_NS>;
   className: string;
   /**
    * Column width in `rem`, the same as `className` sets. The browser reads

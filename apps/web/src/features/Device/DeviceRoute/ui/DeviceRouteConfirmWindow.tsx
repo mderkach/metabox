@@ -6,6 +6,8 @@ import { NS_IN_SECOND } from '@shared/lib/time';
 import { useCountdown } from '@shared/lib/useCountdown';
 import { Button } from '@shared/ui';
 
+import { DEVICE_ROUTE_NS } from '../i18n/DeviceRoute.namespace.generated';
+
 /** The remainder is counted by the daemon, the browser only ticks between poll responses: rollback at zero is done by the daemon. */
 export function DeviceRouteConfirmWindow({
   transaction,
@@ -16,7 +18,7 @@ export function DeviceRouteConfirmWindow({
   isConfirming: boolean;
   onConfirm: () => void;
 }) {
-  const { t } = useTranslation('features/Device/DeviceRoute');
+  const { t } = useTranslation(DEVICE_ROUTE_NS);
   const remaining = useCountdown(Math.ceil(transaction.window / NS_IN_SECOND));
 
   return (

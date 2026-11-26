@@ -2,13 +2,14 @@ import { useTranslation } from 'react-i18next';
 
 import { CONFIG_REFERENCE, type ConfigReference } from '@entities/Config';
 
+import { CONFIG_NODE_DELETE_NS } from '../i18n/ConfigNodeDelete.namespace.generated';
 import { toRanges } from '../lib/ConfigNodeDelete.lib';
 import { groupNodeReferences } from '../model/ConfigNodeDelete.model';
 import { ConfigNodeDeleteGroup } from './ConfigNodeDeleteGroup';
 
 /** The confirmation text: where the tag is still named, rules and nodes of one section gathered in one line. */
 export function ConfigNodeDeleteReferences({ references }: { references: readonly ConfigReference[] }) {
-  const { t } = useTranslation('features/Config/ConfigNodeDelete');
+  const { t } = useTranslation(CONFIG_NODE_DELETE_NS);
   const rules = references.flatMap((reference) => (reference.kind === CONFIG_REFERENCE.Rule ? [reference.index] : []));
   const settings = references.flatMap((reference) =>
     reference.kind === CONFIG_REFERENCE.Setting ? [reference.path] : []

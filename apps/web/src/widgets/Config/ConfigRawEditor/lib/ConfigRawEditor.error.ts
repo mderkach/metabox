@@ -2,7 +2,9 @@ import type { TFunction } from 'i18next';
 
 import { failureLine, firstJsoncError } from '@shared/lib/jsonc';
 
-export function parseError(t: TFunction<'widgets/Config/ConfigRawEditor'>, text: string): string | null {
+import type { CONFIG_RAW_EDITOR_NS } from '../i18n/ConfigRawEditor.namespace.generated';
+
+export function parseError(t: TFunction<typeof CONFIG_RAW_EDITOR_NS>, text: string): string | null {
   const failure = firstJsoncError(text);
 
   if (failure === null) {

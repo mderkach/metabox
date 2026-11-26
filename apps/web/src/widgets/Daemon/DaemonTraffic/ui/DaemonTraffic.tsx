@@ -16,6 +16,7 @@ import {
   useFollowNow,
 } from '@shared/ui';
 
+import { DAEMON_TRAFFIC_NS } from '../i18n/DaemonTraffic.namespace.generated';
 import { buildOptions } from '../lib/DaemonTraffic.chart';
 import { FILL_ALPHA, HALF_INTERVALS, TRAFFIC_MIN_CEILING } from '../model';
 
@@ -51,7 +52,7 @@ export function DaemonTraffic({
   peakDown: number;
   peakUp: number;
 }) {
-  const { t } = useTranslation('widgets/Daemon/DaemonTraffic');
+  const { t } = useTranslation(DAEMON_TRAFFIC_NS);
   const reducedMotion = useReducedMotion();
   const [chart, setChart] = useState<PlotInstance | null>(null);
   const options = useMemo(() => buildOptions(t), [t]);

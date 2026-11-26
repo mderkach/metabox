@@ -2,8 +2,10 @@ import { useTranslation } from 'react-i18next';
 
 import { deviceLabel, useDeviceIndex } from '@entities/Device';
 
+import { ROUTE_EXPLANATION_NS } from '../i18n/RouteExplanation.namespace.generated';
+
 export function RouteExplanationTitle({ host, source }: { host: string; source: string }) {
-  const { t } = useTranslation('widgets/RouteExplanation');
+  const { t } = useTranslation(ROUTE_EXPLANATION_NS);
   const devices = useDeviceIndex();
 
   return (

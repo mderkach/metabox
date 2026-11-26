@@ -1,6 +1,9 @@
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '@shared/i18n';
 import { ConfirmDialog } from '@shared/ui';
+
+import { CONNECTION_CLOSE_NS } from '../i18n/ConnectionClose.namespace.generated';
 
 /**
  * Confirmation before tearing one connection: it cannot be undone, and the
@@ -17,7 +20,7 @@ export function ConnectionCloseConfirm({
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
 }) {
-  const { t } = useTranslation('features/Connection/ConnectionClose');
+  const { t } = useTranslation(CONNECTION_CLOSE_NS);
 
   return (
     <ConfirmDialog
@@ -25,7 +28,7 @@ export function ConnectionCloseConfirm({
       onOpenChange={onOpenChange}
       title={t('title', { host })}
       description={t('description')}
-      cancelLabel={t('action.cancel', { ns: 'shared' })}
+      cancelLabel={t('action.cancel', { ns: SHARED_NS })}
       confirmLabel={t('confirm')}
       destructive
       onConfirm={onConfirm}

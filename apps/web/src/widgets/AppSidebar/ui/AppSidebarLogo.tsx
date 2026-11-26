@@ -3,11 +3,13 @@ import { useTranslation } from 'react-i18next';
 
 import { cn } from '@shared/lib/utils';
 
+import { APP_SIDEBAR_NS } from '../i18n/AppSidebar.namespace.generated';
+
 const LOGO_CLASS =
   'flex size-7 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground';
 
 export function AppSidebarLogo({ expand }: { expand?: () => void }) {
-  const { t } = useTranslation('widgets/AppSidebar');
+  const { t } = useTranslation(APP_SIDEBAR_NS);
   if (expand === undefined) {
     return (
       <span title='metabox' className={LOGO_CLASS}>

@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@shared/lib/utils';
 import { ToggleGroup, ToggleGroupItem } from '@shared/ui';
 
+import { THEME_SWITCH_NS } from '../i18n/ThemeSwitch.namespace.generated';
+
 const THEME_OPTIONS = [
   { value: 'system', label: 'option.system', icon: Monitor },
   { value: 'light', label: 'option.light', icon: Sun },
@@ -19,7 +21,7 @@ const THEME_OPTIONS = [
  */
 export function ThemeSwitch({ vertical = false }: { vertical?: boolean }) {
   const { theme, setTheme } = useTheme();
-  const { t } = useTranslation('features/Theme/ThemeSwitch');
+  const { t } = useTranslation(THEME_SWITCH_NS);
 
   return (
     <ToggleGroup

@@ -13,6 +13,7 @@ import { fingerprint } from '@shared/lib/fingerprint';
 
 import { ConfigApplyStore } from '../model/ConfigApply.store';
 import { ConfigApplyBar } from '../ui/ConfigApplyBar';
+import { TestChangeLink } from './ConfigApplyLink.fixture';
 
 async function renderScreen(Component: FunctionComponent) {
   const { router } = renderWithRouter(Component);
@@ -23,7 +24,7 @@ async function renderScreen(Component: FunctionComponent) {
 }
 
 function Screen() {
-  return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+  return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
 }
 
 const APPLIED = '{\n  "log": { "level": "info" }\n}';

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useDeviceIndex } from '@entities/Device';
 
+import { RULE_EDIT_NS } from '../i18n/RuleEdit.namespace.generated';
 import { dynamicSourceNames } from '../model/RuleEdit.model';
 import { conditionLines, RULE_CONDITION, type RuleEditModel } from '../model/RuleEdit.schema';
 
@@ -16,7 +17,7 @@ const FIELD = `conditions.${RULE_CONDITION.SourceIpCidr}` as const;
  * address, and the rule will stop recognizing it.
  */
 export function RuleSourceDevices() {
-  const { t } = useTranslation('features/Rule/RuleEdit');
+  const { t } = useTranslation(RULE_EDIT_NS);
   const { control } = useFormContext<RuleEditModel>();
   const text = useWatch({ control, name: FIELD });
   const devices = useDeviceIndex({ poll: true });

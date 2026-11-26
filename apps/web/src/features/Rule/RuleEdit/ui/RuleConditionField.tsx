@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useDeviceIndex } from '@entities/Device';
 import { Label, TokenInput } from '@shared/ui';
 
+import { RULE_EDIT_NS } from '../i18n/RuleEdit.namespace.generated';
 import { useConditionSuggestions } from '../lib/RuleEdit.suggestions';
 import { sourceDeviceName } from '../model/RuleEdit.model';
 import {
@@ -20,7 +21,7 @@ import {
 import { RuleConditionHint } from './RuleConditionHint';
 import { RuleSourceDevices } from './RuleSourceDevices';
 
-const ERROR_KEY: Readonly<Record<string, ParseKeys<'features/Rule/RuleEdit'> | undefined>> = {
+const ERROR_KEY: Readonly<Record<string, ParseKeys<typeof RULE_EDIT_NS> | undefined>> = {
   [RULE_EDIT_ERROR.PortInvalid]: 'error.portInvalid',
   [RULE_EDIT_ERROR.CidrInvalid]: 'error.cidrInvalid',
 };
@@ -37,7 +38,7 @@ const CONDITION_VALID: Readonly<Partial<Record<RuleCondition, (value: string) =>
 };
 
 export function RuleConditionField({ condition, focusOnMount }: { condition: RuleCondition; focusOnMount: boolean }) {
-  const { t } = useTranslation('features/Rule/RuleEdit');
+  const { t } = useTranslation(RULE_EDIT_NS);
   const { control } = useFormContext<RuleEditModel>();
   const id = useId();
   const hintId = useId();

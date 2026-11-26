@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '@shared/i18n';
 import { useFocusReturn } from '@shared/lib/useFocusReturn';
 import { cn } from '@shared/lib/utils';
 import { Button, SECTION_HEADING, SURFACE, SURFACE_HEAD, SheetTitle } from '@shared/ui';
@@ -40,7 +41,7 @@ export function ConfigNodePanel({
   /** The add form or the editor of the picked node. */
   children: ReactNode;
 }) {
-  const { t } = useTranslation('shared');
+  const { t } = useTranslation(SHARED_NS);
   const headingRef = useFocusReturn<HTMLHeadingElement>();
 
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {

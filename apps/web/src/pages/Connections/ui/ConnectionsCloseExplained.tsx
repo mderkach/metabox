@@ -5,9 +5,11 @@ import { useTranslation } from 'react-i18next';
 import { ConnectionCloseConfirm, useCloseConnection } from '@features/Connection/ConnectionClose';
 import { Button } from '@shared/ui';
 
+import { CONNECTIONS_NS } from '../i18n/Connections.namespace.generated';
+
 /** Closes the explained connection from the panel: over the list the panel covers the row's own button. */
 export function ConnectionsCloseExplained({ connectionId, host }: { connectionId: string; host: string }) {
-  const { t } = useTranslation('pages/Connections');
+  const { t } = useTranslation(CONNECTIONS_NS);
   const close = useCloseConnection();
   const [confirming, setConfirming] = useState(false);
 

@@ -14,6 +14,7 @@ import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture
 import { fingerprint } from '@shared/lib/fingerprint';
 
 import { ConfigApplyBar } from '../ui/ConfigApplyBar';
+import { TestChangeLink } from './ConfigApplyLink.fixture';
 
 /** The router renders its route after a tick: the screen is queried once it is there. */
 async function renderScreen(Component: FunctionComponent) {
@@ -96,7 +97,7 @@ describe('ConfigApplyBar', () => {
   it('stays silent while there are no edits and no apply is running', async () => {
     loadDocument(false);
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     expect(screen.queryByRole('region', { name: 'Применение конфига' })).not.toBeInTheDocument();
@@ -109,7 +110,7 @@ describe('ConfigApplyBar', () => {
     vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(barHeight);
     loadDocument();
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={onSpaceChange} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={onSpaceChange} />;
     });
 
     expect(onSpaceChange).toHaveBeenLastCalledWith(barHeight);
@@ -128,7 +129,7 @@ describe('ConfigApplyBar', () => {
   it('on a draft applies through the summary of changes', async () => {
     loadDocument();
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     expect(screen.getByRole('region', { name: 'Применение конфига' })).toBeInTheDocument();
@@ -145,7 +146,7 @@ describe('ConfigApplyBar', () => {
     ConfigDocumentState.getState().load(APPLIED, APPLIED_ETAG);
     ConfigDocumentState.getState().replace('{\n  "log": {\n}');
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     expect(await screen.findByText(/ошибка в строке \d+/)).toBeInTheDocument();
@@ -163,7 +164,7 @@ describe('ConfigApplyBar', () => {
     server.use(http.get(DAEMON_ENDPOINT.status(), () => new HttpResponse(null, { status: 502 })));
     loadDocument();
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     expect(await screen.findByText('metabox не отвечает — применить сейчас нельзя.')).toBeInTheDocument();
@@ -180,7 +181,7 @@ describe('ConfigApplyBar', () => {
   it('keeps the draft reset at the edge, apart from "Apply"', async () => {
     loadDocument();
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     const bar = screen.getByRole('region', { name: 'Применение конфига' });
@@ -194,7 +195,7 @@ describe('ConfigApplyBar', () => {
   it('cancels edits only after confirmation: the draft is cleared, the file from the device is in place', async () => {
     loadDocument();
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     await userEvent.click(screen.getByRole('button', { name: 'Отменить правки' }));
@@ -211,7 +212,7 @@ describe('ConfigApplyBar', () => {
     loadDocument();
     ConfigDocumentState.getState().load(APPLIED.replace('info', 'warn'), APPLIED_ETAG);
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     expect(screen.getByText('Конфиг на роутере изменился после начала правок')).toBeInTheDocument();
@@ -237,7 +238,7 @@ describe('ConfigApplyBar', () => {
 
     loadDocument();
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     await applyFromSummary();
@@ -262,7 +263,7 @@ describe('ConfigApplyBar', () => {
     serveStatus(TRANSACTION);
     loadDocument();
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     const confirm = await screen.findByRole('button', { name: 'Связь есть, оставить' });
@@ -285,7 +286,7 @@ describe('ConfigApplyBar', () => {
 
     vi.useFakeTimers();
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     // The confirmation window arrives with a deferred render: `act` brings it along with
@@ -325,7 +326,7 @@ describe('ConfigApplyBar', () => {
 
     loadDocument();
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     await applyFromSummary();
@@ -352,7 +353,7 @@ describe('ConfigApplyBar', () => {
 
     loadDocument();
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     await applyFromSummary();
@@ -380,7 +381,7 @@ describe('ConfigApplyBar', () => {
 
     loadDocument();
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     expect(await screen.findByText('metabox добавил в конфиг experimental.clash_api')).toBeInTheDocument();
@@ -398,7 +399,7 @@ describe('ConfigApplyBar', () => {
 
     loadDocument(false);
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     expect(await screen.findByText('Подтверждения не было — предыдущий конфиг возвращён')).toBeInTheDocument();
@@ -426,7 +427,7 @@ describe('ConfigApplyBar', () => {
 
     loadDocument(false);
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     expect(await screen.findByText('Применение не прошло')).toBeInTheDocument();
@@ -458,7 +459,7 @@ describe('ConfigApplyBar', () => {
     );
     ConfigDocumentStore.setState({ draft: DRAFT, draftBase: fingerprint(APPLIED) });
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     expect(await screen.findByText('Конфиг с устройства ещё не прочитан — применить пока нельзя.')).toBeInTheDocument();
@@ -484,7 +485,7 @@ describe('ConfigApplyBar', () => {
     serveDocument(APPLIED.replace('info', 'warn'));
     ConfigDocumentStore.setState({ draft: DRAFT, draftBase: fingerprint(APPLIED) });
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     expect(await screen.findByText('Конфиг на роутере изменился после начала правок')).toBeInTheDocument();
@@ -502,7 +503,7 @@ describe('ConfigApplyBar', () => {
     );
     ConfigDocumentStore.setState({ draft: DRAFT, draftBase: fingerprint(APPLIED) });
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     expect(await screen.findByText(/Конфиг с устройства не прочитался — применить нельзя\./)).toBeInTheDocument();
@@ -529,7 +530,7 @@ describe('ConfigApplyBar', () => {
     );
     ConfigDocumentStore.setState({ draft: DRAFT, draftBase: fingerprint(APPLIED) });
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     await waitFor(() => {
@@ -549,7 +550,7 @@ describe('ConfigApplyBar', () => {
     );
     ConfigDocumentStore.setState({ listsDraft: { 'rule-sets/old.json': null } });
     await renderScreen(function Screen() {
-      return <ConfigApplyBar onSpaceChange={vi.fn<(space: number) => void>()} />;
+      return <ConfigApplyBar ChangeLink={TestChangeLink} onSpaceChange={vi.fn<(space: number) => void>()} />;
     });
 
     expect(await screen.findByRole('region', { name: 'Применение конфига' })).toBeInTheDocument();

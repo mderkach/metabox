@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { SCHEMA_DRIFT, SCHEMA_VERSION, schemaDrift, useServiceState } from '@entities/Daemon';
 import { Alert, AlertDescription } from '@shared/ui';
 
+import { APP_NS } from '../i18n';
+
 /**
  * Mismatch between the sing-box version on the device and the form schema. It
  * sits in the configuration section, not above all screens: the mismatch
@@ -15,7 +17,7 @@ import { Alert, AlertDescription } from '@shared/ui';
  * reject a field from the form.
  */
 export function SchemaDriftNotice() {
-  const { t } = useTranslation('app');
+  const { t } = useTranslation(APP_NS);
   const service = useServiceState();
   const binary = service.data?.binary;
   const drift = schemaDrift(binary);
