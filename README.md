@@ -49,6 +49,19 @@ metabox installs on the router as one apk package. It contains the `metaboxd` da
 - Read-only MCP endpoint for AI agents such as Claude Code
 - Light and dark theme, English and Russian, desktop and phone layouts
 
+### Set up a service route from an empty configuration
+
+Open **Routes** → **Simple** with an empty, editable config.
+
+1. Under **First steps**, choose **Server or subscription** and paste a server link or an HTTPS subscription URL. Review the recognized settings and any skipped parameters for a server. For a subscription, review its name, group and refresh interval. Select **Add to draft**. The router fetches a new subscription on **Apply**.
+2. If the draft only has the imported connection, prepare a supported traffic and DNS path in **Editor**. One supported setup uses a SOCKS or mixed inbound for traffic addressed by domain, and a dedicated direct inbound that the first routing rule sends to the `hijack-dns` action. For a direct service route, use a plain direct outbound and a TCP DNS resolver with an IPv4 address and no detour. Set the first resolver in **DNS servers & options**.
+3. Back in **Simple**, select a suggested service in **Rules** or choose **Add service**. Pick the service and its catalog source, then choose an eligible outbound in **Send traffic through** and check **DNS resolver**. If you imported a subscription, use a separate supported outbound for the catalog pair, such as a direct connection or a compatible SOCKS5 server. If there is no compatible service assignment, select an eligible resolver. Review the positions of both rules under **Draft changes**, then select **Add to draft** to stage the pair together.
+4. To assign DNS separately for the domains shown under a supported path, open **DNS settings** → **DNS assignment**. Choose an eligible resolver for direct connections, proxied connections or a specific outbound. Use **Add server** to extend the DNS inventory. Adding a server leaves the existing assignments in place.
+5. If the router already has supported managed interception, open **Interception settings**. Set the scope to **Selected devices** and use **Choose devices**, or select **All devices** explicitly. **Review scope change** shows the current and proposed scope. To apply it, select **Apply interception** and confirm with **Connection works, keep it** before the countdown ends. If it expires, the previous scope returns. This is a separate operation and preserves the configuration draft.
+6. Switch among **Simple**, **Editor** and **JSON** to inspect the same draft. The first **Apply** opens **What goes to the device**. Review **Routing rule changes** and **Node and parameter changes**, then expand **Text of the changes** for the line-by-line diff. Select **Apply** in the dialog to start the checks and apply the config.
+
+If the core rejects the config, the panel shows the error and keeps the draft for correction. After a successful restart and health check, select **Link is alive, keep it** within one minute. If confirmation expires, the router restores the previous config and the panel keeps your edits in the draft. For a manual restore, open **Version history** and choose **Restore** on a saved version. It goes through the same checks and confirmation.
+
 ### Set a server's usual latency
 
 In **Proxies**, select the displayed norm or its pencil to set a server’s usual latency in milliseconds. Save with Enter or the check mark. **Return to auto** removes the override and uses the computed norm when available. These changes save immediately and do not require Apply.
