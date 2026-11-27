@@ -11,10 +11,12 @@ export class SimpleInterception {
   readonly review: Locator;
   readonly preview: Locator;
   readonly start: Locator;
+  readonly listed: Locator;
   readonly all: Locator;
   readonly reset: Locator;
   readonly keep: Locator;
   readonly progress: Locator;
+  readonly rolledBack: Locator;
   readonly proxy: Locator;
   readonly scope: Locator;
 
@@ -24,6 +26,7 @@ export class SimpleInterception {
     this.settings = scope.locator('summary').filter({ hasText: translate(SIMPLE_ROUTES_NS, 'interception.settings') });
     this.current = scope.getByRole('heading', { name: text('scope.current') });
     this.picker = scope.locator('summary').filter({ hasText: text('scope.pick') });
+    this.listed = scope.getByRole('radio', { name: text('scope.mode.listed'), exact: true });
     this.all = scope.getByRole('radio', { name: text('scope.mode.all'), exact: true });
     this.review = scope.getByRole('button', { name: text('scope.review'), exact: true });
     this.preview = page.getByRole('dialog', { name: text('scope.review') });
@@ -31,6 +34,7 @@ export class SimpleInterception {
     this.reset = scope.getByRole('button', { name: text('scope.reset') });
     this.progress = page.getByRole('region', { name: text('bar.label') });
     this.keep = this.progress.getByRole('button', { name: text('bar.submit') });
+    this.rolledBack = this.progress.getByText(text('failure.rolledBack'), { exact: true });
     this.proxy = scope.locator('summary').filter({ hasText: translate(SIMPLE_ROUTES_NS, 'proxyAccess.disclosure') });
   }
 

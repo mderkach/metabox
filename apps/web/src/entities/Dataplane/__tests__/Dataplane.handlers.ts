@@ -1,13 +1,14 @@
 import { http, HttpResponse } from 'msw';
 
 import type { ApplyTransactionWire } from '@entities/Daemon/@x/dataplane';
+import { MS_IN_MINUTE, NS_IN_SECOND, SECONDS_IN_MINUTE } from '@shared/lib/time';
 
 import { DATAPLANE_ENDPOINT } from '../api/Dataplane.endpoints';
 import type { DataplaneChangeWire, DataplaneWire } from '../api/Dataplane.schema';
 import { DATAPLANE_FIXTURE } from './Dataplane.fixture';
 
 /** The daemon confirmation window is a minute, in nanoseconds of `time.Duration`. */
-const CONFIRM_WINDOW_NS = 60_000_000_000;
+const CONFIRM_WINDOW_NS = SECONDS_IN_MINUTE * NS_IN_SECOND;
 
 function isChange(body: unknown): body is DataplaneChangeWire {
   return typeof body === 'object' && body !== null && 'model' in body && typeof body.model === 'object';
@@ -23,24 +24,41 @@ function isChange(body: unknown): body is DataplaneChangeWire {
 export function createDataplaneMock(initial: DataplaneWire = DATAPLANE_FIXTURE) {
   let dataplane = initial;
   let revision = 1;
+  let nextRevision = revision;
   let transaction: ApplyTransactionWire | null = null;
+  let pending: { previous: DataplaneWire; revision: number; deadline: number } | null = null;
 
   const etag = () => `"dataplane-${String(revision)}"`;
+  const expire = () => {
+    if (pending === null || transaction === null || Date.now() < pending.deadline) return;
+
+    dataplane = pending.previous;
+    revision = pending.revision;
+    pending = null;
+    transaction = { ...transaction, phase: 'rolled_back', window: 0 };
+  };
 
   return {
     edit: (model: DataplaneWire['model']) => {
       dataplane = { ...dataplane, model };
-      revision += 1;
+      revision = ++nextRevision;
     },
-    status: () =>
-      transaction === null
+    status: () => {
+      expire();
+
+      return transaction === null
         ? {}
         : {
             dataplane_transaction: transaction,
             dataplane_transaction_href: DATAPLANE_ENDPOINT.applyState(transaction.id),
-          },
+          };
+    },
     handlers: [
-      http.get(DATAPLANE_ENDPOINT.dataplane(), () => HttpResponse.json(dataplane, { headers: { ETag: etag() } })),
+      http.get(DATAPLANE_ENDPOINT.dataplane(), () => {
+        expire();
+
+        return HttpResponse.json(dataplane, { headers: { ETag: etag() } });
+      }),
 
       http.put(DATAPLANE_ENDPOINT.dataplane(), async ({ request }) => {
         const match = request.headers.get('If-Match');
@@ -62,27 +80,33 @@ export function createDataplaneMock(initial: DataplaneWire = DATAPLANE_FIXTURE) 
           return HttpResponse.json({ code: 'dataplane_invalid', message: 'тело не разобрано' }, { status: 400 });
         }
 
+        pending = { previous: dataplane, revision, deadline: Date.now() + MS_IN_MINUTE };
         dataplane = { ...dataplane, model: body.model };
-        revision += 1;
+        revision = ++nextRevision;
         transaction = { id: `dataplane-${String(Date.now())}`, phase: 'awaiting_confirm', window: CONFIRM_WINDOW_NS };
 
         return HttpResponse.json(transaction, { status: 202 });
       }),
 
-      http.get(DATAPLANE_ENDPOINT.applyState(':id'), () =>
-        transaction === null
+      http.get(DATAPLANE_ENDPOINT.applyState(':id'), () => {
+        expire();
+
+        return transaction === null
           ? HttpResponse.json(
               { code: 'unknown_transaction', message: 'смены с таким идентификатором нет' },
               { status: 404 }
             )
-          : HttpResponse.json(transaction)
-      ),
+          : HttpResponse.json(transaction);
+      }),
 
       http.post(DATAPLANE_ENDPOINT.applyConfirm(':id'), () => {
-        if (transaction === null) {
+        expire();
+
+        if (transaction?.phase !== 'awaiting_confirm') {
           return HttpResponse.json({ code: 'nothing_to_confirm', message: 'подтверждать нечего' }, { status: 409 });
         }
 
+        pending = null;
         transaction = { ...transaction, phase: 'confirmed', window: 0 };
 
         return HttpResponse.json(transaction);

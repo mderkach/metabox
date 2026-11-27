@@ -17,6 +17,8 @@ export class ApplyBar {
   readonly nodeChanges: Locator;
   readonly keepButton: Locator;
   readonly confirmed: Locator;
+  readonly checkFailure: Locator;
+  readonly rolledBack: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -33,6 +35,8 @@ export class ApplyBar {
     this.nodeChanges = this.diff.getByRole('list', { name: translate(CONFIG_APPLY_NS, 'changes.label') });
     this.keepButton = this.region.getByRole('button', { name: translate(CONFIG_APPLY_NS, 'confirm.submit') });
     this.confirmed = page.getByText(translate(SHARED_NS, 'toast.apply.confirm.done'));
+    this.checkFailure = this.region.getByText(translate(CONFIG_APPLY_NS, 'check.title'));
+    this.rolledBack = this.region.getByText(translate(CONFIG_APPLY_NS, 'failure.rolledBack'));
   }
 
   async apply() {

@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 
+import { CONFIG_DNS_EDIT_NS } from '../src/features/Config/ConfigDnsEdit/i18n/ConfigDnsEdit.namespace.generated.ts';
 import { CONFIG_NODE_ADD_NS } from '../src/features/Config/ConfigNodeAdd/i18n/ConfigNodeAdd.namespace.generated.ts';
 import { RULE_CATALOG_ADD_NS } from '../src/features/Rule/RuleCatalogAdd/i18n/RuleCatalogAdd.namespace.generated.ts';
 import { SIMPLE_ROUTES_NS } from '../src/pages/SimpleRoutes/i18n/SimpleRoutes.namespace.generated.ts';
@@ -21,6 +22,10 @@ const SET_TAG = 'geosite-youtube';
 const EXISTING_TAG = 'video-sites';
 const FIRST_SERVER = 'first-server';
 const SERVER_LINK = `vless://01234567-89ab-4cde-8123-456789abcdef@server.example.invalid:443#${FIRST_SERVER}`;
+const INVALID_LEVEL = 'invalid-level';
+const CHECK_OUTPUT = `FATAL invalid log level: ${INVALID_LEVEL}`;
+const CONFIRM_WINDOW_MS = 60_000;
+const NS_PER_MS = 1_000_000;
 const SUBSCRIPTION_URL = 'https://subscription.example.invalid/synthetic-list';
 const PROVIDER = 'synthetic-provider';
 const GROUP = 'subscription-group';
@@ -54,25 +59,61 @@ async function openEmptyApplyStand(page: Page) {
           let pending = applied;
           let transaction = null;
           let revision = 0;
+          let sequence = 0;
+          let deadline = 0;
           const hash = (value) => String(value).padStart(64, '0');
+          const current = () => {
+            if (transaction?.phase === 'awaiting_confirm') {
+              const remaining = deadline - Date.now();
+              if (remaining <= 0) {
+                pending = applied;
+                transaction = { ...transaction, phase: 'rolled_back', window: 0 };
+              } else {
+                transaction = { ...transaction, window: remaining * ${NS_PER_MS} };
+              }
+            }
+            return transaction;
+          };
+          const status = () => {
+            const active = current();
+            return active === null ? {} : { transaction: active, transaction_href: '/api/apply/' + active.id };
+          };
           const child = { name: '${CHILD}', type: 'Socks5', udp: true, history: [] };
           const provider = () => JSON.parse(applied).providers?.find(({ tag }) => tag === '${PROVIDER}');
 
           worker.use(
-            http.get('/api/config', () => HttpResponse.text(applied, { headers: { etag: '"' + hash(revision) + '"' } })),
+            http.get('/api/config', () => {
+              const awaiting = current()?.phase === 'awaiting_confirm';
+              const etag = '"' + hash(awaiting ? revision + 1 : revision) + '"';
+              return HttpResponse.text(awaiting ? pending : applied, { headers: { etag } });
+            }),
             http.get('/api/status', () => HttpResponse.json({
               ...DAEMON_STATUS_FIXTURE,
               core: { ...DAEMON_STATUS_FIXTURE.core, version: '${CORE_VERSION}' },
               singbox_version: '${CORE_VERSION}',
-              ...(transaction === null ? {} : { transaction, transaction_href: '/api/apply/' + transaction.id })
+              ...status()
             })),
             http.post('/api/apply', async ({ request }) => {
-              pending = await request.text();
-              transaction = { id: 'setup-apply', phase: 'awaiting_confirm', window: 60_000_000_000, sha256: hash(revision + 1) };
+              const candidate = await request.text();
+              if (JSON.parse(candidate).log?.level === '${INVALID_LEVEL}') {
+                return HttpResponse.json({
+                  code: 'check_failed', message: 'sing-box rejected the config',
+                  details: { stdout: '', stderr: '${CHECK_OUTPUT}', exit_code: 1 }
+                }, { status: 422 });
+              }
+              pending = candidate;
+              deadline = Date.now() + ${CONFIRM_WINDOW_MS};
+              transaction = {
+                id: 'setup-apply-' + ++sequence, phase: 'awaiting_confirm',
+                window: ${CONFIRM_WINDOW_MS * NS_PER_MS}, sha256: hash(revision + 1)
+              };
               return HttpResponse.json(transaction, { status: 202 });
             }),
-            http.get('/api/apply/:id', () => HttpResponse.json(transaction)),
+            http.get('/api/apply/:id', () => HttpResponse.json(current())),
             http.post('/api/apply/:id/confirm', () => {
+              if (current()?.phase !== 'awaiting_confirm') {
+                return HttpResponse.json({ code: 'nothing_to_confirm' }, { status: 409 });
+              }
               applied = pending;
               revision++;
               transaction = { ...transaction, phase: 'confirmed', window: 0 };
@@ -301,11 +342,12 @@ for (const { grouped, viewport, theme } of [
 }
 
 test(
-  'the first server keeps service suggestions, the outbound filter and the draft through confirmation',
+  'from an empty config, the first server and service share validation, confirmation and rollback',
   { tag: E2E_TAG.Mock },
-  async ({ page, simpleCatalog: catalog, simpleRoutesPage: routes, applyBar }, testInfo) => {
+  async ({ page, simpleCatalog: catalog, simpleRoutesPage: routes, simpleDns: dns, applyBar }, testInfo) => {
     await page.setViewportSize(DESKTOP);
     await page.addInitScript({ content: "localStorage.setItem('theme', 'light')" });
+    await page.clock.install();
     await openEmptyApplyStand(page);
     await routes.starter.waitFor();
     const suggestion = routes.rules.getByRole('button', { name: 'YouTube', exact: true });
@@ -363,21 +405,114 @@ test(
     await expect(page).toHaveURL(`/config/simple?outbound=${FIRST_SERVER}`);
     await routes.jsonView.click();
     await expect(routes.configText).toHaveValue(serverDraft);
-    await routes.simpleView.click();
-    await applyBar.apply();
-    await applyBar.confirmDiff();
-    await expect(applyBar.confirmPrompt).toBeVisible();
-    await expect(tile).toContainText(translate(SIMPLE_ROUTES_NS, 'outbounds.staged'));
-    await applyBar.keep();
 
-    await expect(tile).toContainText(translate(SIMPLE_ROUTES_NS, 'outbounds.applied'));
-    await expect(applyBar.dirty).toBeHidden();
-    await suggestion.press('Enter');
-    await expect(catalog.outbound).toHaveAccessibleDescription(translate(RULE_CATALOG_ADD_NS, 'appliedStatus'));
-    await expect(catalog.dialog).toContainText(
-      translate(RULE_CATALOG_ADD_NS, 'blocker.exit', { detail: FIRST_SERVER })
-    );
-    await expect(catalog.submit).toBeDisabled();
+    await test.step('a failed core check keeps the same draft across the three views', async () => {
+      const invalid = serverDraft.replace('{', `{\n  "log": {"level": "${INVALID_LEVEL}"},`);
+      await routes.configText.fill(invalid);
+      await routes.simpleView.click();
+      await applyBar.apply();
+      await expect(applyBar.nodeChanges).toContainText(FIRST_SERVER);
+      await applyBar.confirmDiff();
+      await expect(applyBar.checkFailure).toBeVisible();
+      await expect(applyBar.region).toContainText(CHECK_OUTPUT);
+      await expect(applyBar.confirmPrompt).toBeHidden();
+      await routes.editorView.click();
+      await routes.editorOutbounds.click();
+      await expect(page.getByText(FIRST_SERVER, { exact: true })).toBeVisible();
+      await routes.jsonView.click();
+      await expect(routes.configText).toHaveValue(invalid);
+    });
+
+    await test.step('repair the draft and explicitly keep the first server', async () => {
+      await routes.configText.fill(serverDraft);
+      await routes.simpleView.click();
+      await applyBar.apply();
+      await applyBar.confirmDiff();
+      await expect(applyBar.confirmPrompt).toBeVisible();
+      await expect(tile).toContainText(translate(SIMPLE_ROUTES_NS, 'outbounds.staged'));
+      await applyBar.keep();
+
+      await expect(applyBar.confirmed).toBeVisible();
+      await expect(tile).toContainText(translate(SIMPLE_ROUTES_NS, 'outbounds.applied'));
+      await expect(applyBar.dirty).toBeHidden();
+      await suggestion.press('Enter');
+      await expect(catalog.outbound).toHaveAccessibleDescription(translate(RULE_CATALOG_ADD_NS, 'appliedStatus'));
+      await expect(catalog.dialog).toContainText(
+        translate(RULE_CATALOG_ADD_NS, 'blocker.exit', { detail: FIRST_SERVER })
+      );
+      await expect(catalog.submit).toBeDisabled();
+      await catalog.cancel.press('Enter');
+    });
+
+    await test.step('stage the first service after explicitly configuring eligible ingress, exit and DNS', async () => {
+      const saved: unknown = JSON.parse(serverDraft);
+      if (typeof saved !== 'object' || saved === null || !('outbounds' in saved) || !Array.isArray(saved.outbounds)) {
+        throw new Error('The first server is missing from the saved outbounds');
+      }
+      const outbounds: unknown[] = saved.outbounds;
+      const compatible = { ...saved, ...CONFIG, outbounds: [...outbounds, ...CONFIG.outbounds] };
+      await routes.jsonView.click();
+      await routes.configText.fill(JSON.stringify(compatible, null, JSON_INDENT));
+      await routes.simpleView.click();
+      await suggestion.press('Enter');
+      await catalog.service(CATEGORY, 'v2fly').press('Space');
+      const stagedStatus = translate(RULE_CATALOG_ADD_NS, 'stagedStatus');
+      await catalog.select(catalog.outbound, `${EXIT} · ${stagedStatus}`);
+      await expect(catalog.outbound).toHaveAccessibleDescription(stagedStatus);
+      await catalog.select(catalog.resolver, RESOLVER);
+      await expect(catalog.dialog).toContainText(translate(RULE_CATALOG_ADD_NS, 'routeRow', { position: 2 }));
+      await expect(catalog.dialog).toContainText(translate(RULE_CATALOG_ADD_NS, 'dnsRow', { position: 1 }));
+      await catalog.submit.press('Enter');
+      await expect(catalog.trigger).toBeFocused();
+
+      await dns.settings.press('Enter');
+      await dns.advanced.press('Enter');
+      await dns.select(dns.family, translate(CONFIG_DNS_EDIT_NS, 'options.strategy.prefer_ipv6'));
+      await routes.jsonView.click();
+      const staged: unknown = JSON.parse(await routes.configText.inputValue());
+      expect(staged).toEqual({
+        ...compatible,
+        route: {
+          rules: [HIJACK, { action: 'route', rule_set: [SET_TAG], outbound: EXIT }],
+          rule_set: [{ type: 'remote', tag: SET_TAG, format: 'binary', url: SET_URL }],
+        },
+        dns: {
+          ...compatible.dns,
+          strategy: 'prefer_ipv6',
+          rules: [{ action: 'route', rule_set: [SET_TAG], server: RESOLVER }],
+        },
+      });
+    });
+
+    await test.step('the pair appears together in the diff and a missed confirmation restores the saved config', async () => {
+      const staged = await routes.configText.inputValue();
+      await routes.simpleView.click();
+      await applyBar.apply();
+      await expect(applyBar.ruleChanges).toContainText(SET_TAG);
+      await expect(applyBar.nodeChanges).toContainText(translate(SHARED_NS, 'nodeKind.dnsRules'));
+      await expect(applyBar.nodeChanges).toContainText(SET_TAG);
+      await applyBar.showChangesText();
+      await expect(applyBar.diff).toContainText(new RegExp(`"outbound":\\s*"${EXIT}"`));
+      await expect(applyBar.diff).toContainText(new RegExp(`"server":\\s*"${RESOLVER}"`));
+      await expect(applyBar.diff).toContainText('prefer_ipv6');
+      await applyBar.confirmDiff();
+      await expect(applyBar.confirmPrompt).toBeVisible();
+      await routes.jsonView.click();
+      await expect(applyBar.confirmPrompt).toBeVisible();
+      await page.clock.fastForward(CONFIRM_WINDOW_MS);
+      await expect(applyBar.rolledBack).toBeVisible();
+      await expect(applyBar.keepButton).toBeHidden();
+      await expect(routes.configText).toHaveValue(staged);
+      await expect(applyBar.dirty).toBeVisible();
+      await expect(tile).toBeHidden();
+      await routes.simpleView.click();
+      await expect(tile).toContainText(translate(SIMPLE_ROUTES_NS, 'outbounds.applied'));
+      await expect(routes.outboundTile(EXIT)).toContainText(translate(SIMPLE_ROUTES_NS, 'outbounds.staged'));
+      await applyBar.apply();
+      await expect(applyBar.ruleChanges).toContainText(SET_TAG);
+      await expect(applyBar.nodeChanges).toContainText(translate(SHARED_NS, 'nodeKind.dnsRules'));
+      await expect(applyBar.nodeChanges).not.toContainText(FIRST_SERVER);
+    });
   }
 );
 
