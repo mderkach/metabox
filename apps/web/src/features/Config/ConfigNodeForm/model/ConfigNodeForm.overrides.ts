@@ -1,5 +1,6 @@
 import { CONFIG_SECRET_KEYS, NODE_REGISTRY, type NodeRegistry } from '@entities/Config';
 import { FIELD_KIND } from '@shared/lib/schemaShape';
+import { SECRET_MASK, type SecretMask } from '@shared/lib/secretMask';
 
 /** Failure codes of override checks on top of the schema: the `ui` substitutes the text by them. */
 export const NODE_OVERRIDE_ERROR = {
@@ -43,8 +44,6 @@ export interface NodeOverride {
    * (`sing-box check`), and it does not stop writing the fields being filled in.
    */
   required?: string[];
-  /** New node of the type: what it cannot be built without is already filled in. */
-  preset?: (tag: string) => Record<string, unknown>;
   /**
    * Checks the schema does not know, verified against the fork sources.
    * `before` is the node before the edit: a value the user did not touch is not
@@ -157,12 +156,6 @@ const VLESS_OVERRIDE: NodeOverride = {
   // the Reality key are needed only for Reality: VLESS with ordinary TLS opens
   // with the same form.
   required: ['server', 'server_port', 'uuid'],
-  // Reality without uTLS is not created by the fork client: `uTLS is required by reality client`.
-  preset: (tag) => ({
-    type: 'vless',
-    tag,
-    tls: { enabled: true, utls: { enabled: true, fingerprint: 'chrome' }, reality: { enabled: true } },
-  }),
   refine: (node, before) => [
     ...(readField(node, 'tls.reality.enabled') === true
       ? requireFields(node, before, ['tls.server_name', 'tls.reality.public_key'])
@@ -171,23 +164,6 @@ const VLESS_OVERRIDE: NodeOverride = {
     ...checkPattern(node, before, 'tls.reality.short_id', REALITY_SHORT_ID, NODE_OVERRIDE_ERROR.RealityShortId),
   ],
 };
-
-/** Length of the `api` service secret in bytes: 24 bytes is 32 base64url characters. */
-const API_SECRET_BYTES = 24;
-
-/**
- * Random secret: base64url without padding from a cryptographic generator. An
- * empty `secret` would leave the fork gRPC service open to anyone who reaches
- * the port.
- */
-function randomSecret(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(API_SECRET_BYTES));
-
-  return btoa(String.fromCharCode(...bytes))
-    .replaceAll('+', '-')
-    .replaceAll('/', '_')
-    .replace(/=+$/, '');
-}
 
 /**
  * The `api` service is the fork gRPC service, the only service with a form:
@@ -201,7 +177,6 @@ function randomSecret(): string {
 const API_OVERRIDE: NodeOverride = {
   primary: ['tag', 'listen', 'listen_port', 'secret', 'access_control_allow_origin', 'tls'],
   required: ['listen_port'],
-  preset: (tag) => ({ type: 'api', tag, listen: '127.0.0.1', secret: randomSecret() }),
 };
 
 /**
@@ -213,18 +188,6 @@ export const NODE_OVERRIDE: Readonly<Partial<Record<NodeOverrideKey, NodeOverrid
   'outbound/vless': VLESS_OVERRIDE,
   'service/api': API_OVERRIDE,
 };
-
-/**
- * How a secret field hides its value: entirely, everything after the URL host, or the
- * same only for a URL that carries userinfo or a query string.
- */
-export const SECRET_MASK = {
-  Whole: 'whole',
-  AfterHost: 'afterHost',
-  UrlCredentials: 'urlCredentials',
-} as const;
-
-export type SecretMask = (typeof SECRET_MASK)[keyof typeof SECRET_MASK];
 
 /**
  * URL keys. In a provider the URL is a subscription and its token may lie in the path, so
@@ -267,20 +230,6 @@ export function nodeOverrideOf(registry: NodeRegistry, type: string): NodeOverri
 /** Whether a type has a handwritten override: registries without an autoform open the form by it. */
 export function hasNodeOverride(registry: NodeRegistry, type: string): boolean {
   return nodeOverrideOf(registry, type) !== null;
-}
-
-/**
- * New node of a type: the override template, and without it `fallback`, a node
- * of the type and tag. The template fills in only what the type cannot be built
- * without.
- */
-export function nodePreset(
-  registry: NodeRegistry,
-  type: string,
-  tag: string,
-  fallback: (type: string, tag: string) => object
-): object {
-  return nodeOverrideOf(registry, type)?.preset?.(tag) ?? fallback(type, tag);
 }
 
 /**

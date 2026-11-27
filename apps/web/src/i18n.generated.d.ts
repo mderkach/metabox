@@ -31,8 +31,9 @@ declare module 'i18next' {
       'features/Rule/RuleEdit': typeof import('./features/Rule/RuleEdit/i18n/ru.json');
       'features/Rule/RuleRaw': typeof import('./features/Rule/RuleRaw/i18n/ru.json');
       'features/Rule/RuleReorder': typeof import('./features/Rule/RuleReorder/i18n/ru.json');
-      'features/RuleSet/RuleSetAdd': typeof import('./features/RuleSet/RuleSetAdd/i18n/ru.json');
       'features/RuleSet/RuleSetCustom': typeof import('./features/RuleSet/RuleSetCustom/i18n/ru.json');
+      'features/RuleSet/RuleSetDelete': typeof import('./features/RuleSet/RuleSetDelete/i18n/ru.json');
+      'features/RuleSet/RuleSetRemoteForm': typeof import('./features/RuleSet/RuleSetRemoteForm/i18n/ru.json');
       'features/Theme/ThemeSwitch': typeof import('./features/Theme/ThemeSwitch/i18n/ru.json');
       'pages/Connections': typeof import('./pages/Connections/i18n/ru.json');
       'pages/Devices': typeof import('./pages/Devices/i18n/ru.json');

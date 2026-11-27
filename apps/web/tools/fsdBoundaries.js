@@ -151,7 +151,7 @@ function checkAlias(from, alias, report) {
   if (alias.layer === from.layer && !isCrossImport) {
     report(
       SLICED.has(from.layer)
-        ? 'A neighboring slice only through `@x`, an own slice by a relative path.'
+        ? 'A neighboring slice cannot be imported directly; use relative paths within your own slice.'
         : 'Within a layer use relative paths: the layer alias is an entry from outside.'
     );
     return;
@@ -179,15 +179,23 @@ function checkAlias(from, alias, report) {
   }
 }
 
-/** An @x entry belongs to one named consumer in the same layer. */
+/** An @x entry belongs to one named consumer in the entities layer. */
 function checkCrossImport(from, alias, deep, report) {
+  if (alias.layer !== ENTITIES) {
+    report('`@x` is reserved for cross-imports between entities.');
+    return;
+  }
   if (alias.layer !== from.layer || !from.slice) {
     report(
       `\`@x\` is an entry for a neighbor in its own layer; from ${from.layer} use the Public API \`@${alias.layer}/…\`.`
     );
     return;
   }
-  const target = deep[1];
+  const [, target, ...internalPath] = deep;
+  if (internalPath.length > 0) {
+    report('Use the cross-import Public API directly, without reaching into its files.');
+    return;
+  }
   const consumer = from.slice.split('/').at(-1);
   if (!target || target.toLowerCase() !== consumer.toLowerCase()) {
     report(`Entry \`@x/${target}\` is open to slice \`${target}\`, but \`${consumer}\` imports it.`);

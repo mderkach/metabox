@@ -38,6 +38,7 @@ export { Plot } from './Plot';
 export type { PlotOptions, PlotData, PlotInstance, PlotTone, PlotScales } from './Plot';
 export { QueryFailure } from './QueryFailure';
 export { SearchInput } from './SearchInput';
+export { SecretInput } from './SecretInput';
 export { ShortcutKbd } from './ShortcutKbd';
 export * as SidePanelLayout from './SidePanelLayout';
 export { SkeletonRows } from './SkeletonRows';

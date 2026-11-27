@@ -42,8 +42,9 @@ import { RULE_DELETE_NS } from '@features/Rule/RuleDelete';
 import { RULE_EDIT_NS } from '@features/Rule/RuleEdit';
 import { RULE_RAW_NS } from '@features/Rule/RuleRaw';
 import { RULE_REORDER_NS } from '@features/Rule/RuleReorder';
-import { RULE_SET_ADD_NS } from '@features/RuleSet/RuleSetAdd';
 import { RULE_SET_CUSTOM_NS } from '@features/RuleSet/RuleSetCustom';
+import { RULE_SET_DELETE_NS } from '@features/RuleSet/RuleSetDelete';
+import { RULE_SET_REMOTE_FORM_NS } from '@features/RuleSet/RuleSetRemoteForm';
 import { CONNECTIONS_NS, CONNECTIONS_PATH, loadConnectionsPage } from '@pages/Connections';
 import { DEVICES_NS, DEVICES_PATH, loadDevicesPage } from '@pages/Devices';
 import { DIAGNOSTICS_NS, DIAGNOSTICS_PATH, loadDiagnosticsPage } from '@pages/Diagnostics';
@@ -169,8 +170,9 @@ export const ruleSetsRoute = createRoute({
       preloadNamespaces([
         RULE_SETS_NS,
         RULE_SET_TABLE_NS,
-        RULE_SET_ADD_NS,
+        RULE_SET_REMOTE_FORM_NS,
         RULE_SET_CUSTOM_NS,
+        RULE_SET_DELETE_NS,
         CONFIG_CACHE_FILE_NS,
         CONFIG_NODE_FORM_NS,
       ]),

@@ -54,7 +54,7 @@ Non-goals: a GitHub token, parsing `geosite.dat`, checking that the file exists 
 
 ### Scope and boundaries
 
-`apps/metaboxd/internal/ruleset`, `internal/config` (cache), `internal/httpapi` (endpoint), `cmd/rulesetsnap`, `apps/web/src/entities/RuleSet`, the form `features/RuleSet/RuleSetAdd`.
+`apps/metaboxd/internal/ruleset`, `internal/config` (cache), `internal/httpapi` (endpoint), `cmd/rulesetsnap`, `apps/web/src/entities/RuleSet`, the form `features/RuleSet/RuleSetRemoteForm`.
 
 ## Consequences
 

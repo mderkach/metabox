@@ -27,9 +27,7 @@ export {
   hasNodeOverride,
   NODE_OVERRIDE_ERROR,
   nodeOverrideOf,
-  nodePreset,
   overrideIssues,
-  SECRET_MASK,
   secretMaskOf,
 } from './ConfigNodeForm.overrides';
-export type { NodeOverride, SecretMask } from './ConfigNodeForm.overrides';
+export type { NodeOverride } from './ConfigNodeForm.overrides';

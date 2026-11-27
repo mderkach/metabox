@@ -1,0 +1,10 @@
+{
+  "remove": "Remove the {{tag}} set",
+  "confirm": {
+    "title": "Remove the {{tag}} set?",
+    "description": "The set leaves the draft. Only discarding the whole draft brings it back.",
+    "used_one": "{{count}} rule uses the set. Remove it there first, or the config will not apply.",
+    "used_other": "{{count}} rules use the set. Remove it there first, or the config will not apply.",
+    "action": "Remove"
+  }
+}

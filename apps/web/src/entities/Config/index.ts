@@ -109,3 +109,4 @@ export {
   onlyKeys,
   strings,
 } from './model/Config.dnsPath';
+export { nodePreset } from './model/Config.nodePreset';

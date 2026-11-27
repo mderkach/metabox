@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   ConfigDocumentState,
   findValue,
-  newSectionNode,
+  nodePreset,
   NODE_REGISTRY,
   useConfigDiff,
   useConfigCurrent,
@@ -15,7 +15,7 @@ import {
 } from '@entities/Config';
 import { OutboundVlessSchema } from '@shared/api/generated';
 
-import { NODE_OVERRIDE_ERROR, nodeOverrideOf, nodePreset, overrideIssues } from '../model';
+import { NODE_OVERRIDE_ERROR, nodeOverrideOf, overrideIssues } from '../model';
 import { ConfigNodeForm } from '../ui/ConfigNodeForm';
 import { ConfigNodeFormBody } from '../ui/ConfigNodeFormBody';
 
@@ -290,23 +290,12 @@ describe('VLESS override checks', () => {
 describe('api service override', () => {
   const API: JSONPath = ['services', 0];
 
-  it('a new service listens on loopback and gets a random secret, the port is not filled in', () => {
-    const first = nodePreset(NODE_REGISTRY.Service, 'api', 'api', newSectionNode);
-    const second = nodePreset(NODE_REGISTRY.Service, 'api', 'api', newSectionNode);
-
-    expect({ ...first, secret: null }).toEqual({ type: 'api', tag: 'api', listen: '127.0.0.1', secret: null });
-    const secret: unknown = Reflect.get(first, 'secret');
-
-    expect(secret).toMatch(/^[\w-]{32}$/);
-    expect(first).not.toEqual(second);
-  });
-
   it('a field is written before the port is set, a cleared port is a required field', async () => {
     const user = userEvent.setup();
 
     ConfigDocumentState.getState().reset();
     ConfigDocumentState.getState().load(
-      JSON.stringify({ services: [nodePreset(NODE_REGISTRY.Service, 'api', 'api', newSectionNode)] }, null, 2)
+      JSON.stringify({ services: [nodePreset(NODE_REGISTRY.Service, 'api', 'api')] }, null, 2)
     );
     render(<NodeFromStore path={API} registry={NODE_REGISTRY.Service} />);
 

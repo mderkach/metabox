@@ -301,8 +301,9 @@ describe('panel routes', () => {
       expect.arrayContaining([
         'pages/RuleSets',
         'widgets/RuleSet/RuleSetTable',
-        'features/RuleSet/RuleSetAdd',
+        'features/RuleSet/RuleSetRemoteForm',
         'features/RuleSet/RuleSetCustom',
+        'features/RuleSet/RuleSetDelete',
         'features/Config/ConfigCacheFile',
       ])
     );

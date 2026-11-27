@@ -2,18 +2,10 @@ import { Plus } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import {
-  selectConfigCurrent,
-  ConfigDocumentState,
-  ConfigDocumentStore,
-  readRuleSets,
-  ruleSetNodePath,
-} from '@entities/Config';
-import { localListFile, RULE_SET_TYPE, useCachedRuleSets } from '@entities/RuleSet';
+import { RULE_SET_TYPE, useCachedRuleSets } from '@entities/RuleSet';
 import { ConfigCacheNotice } from '@features/Config/ConfigCacheFile';
-import { RuleSetAddForm } from '@features/RuleSet/RuleSetAdd';
 import { RuleSetCustomForm } from '@features/RuleSet/RuleSetCustom';
-import { showQueryError } from '@shared/api';
+import { RuleSetAddForm } from '@features/RuleSet/RuleSetRemoteForm';
 import { usePanelAsSheet } from '@shared/lib/media';
 import { SHORTCUT } from '@shared/lib/shortcuts';
 import {
@@ -54,31 +46,14 @@ export function RuleSetsPage({ openedTag, ruleSetLinks }: { openedTag?: string; 
     editor.sets.some((set) => set.type === RULE_SET_TYPE.Remote && appliedTags.has(set.tag))
   );
   const filter = useRuleSetFilter(editor.sets);
-  const remove = ConfigDocumentState.use.remove();
-  const removeList = ConfigDocumentState.use.removeList();
   const panel = useRuleSetPanel();
   const asSheet = usePanelAsSheet();
 
   const { form: openForm, close: closePanel } = panel;
-  const onRemove = useCallback(
-    (index: number) => {
-      // The file of its own list goes away with the node: an orphaned file is not visible
-      // in the config but stays on the device.
-      const file = localListFile(readRuleSets(selectConfigCurrent(ConfigDocumentStore.getState()) ?? '')[index]);
-
-      if (!remove(ruleSetNodePath(index))) {
-        showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
-
-        return;
-      }
-
-      // Editing addresses a rule set by position: after deletion it would point to a neighbor.
-      if (openForm === RULE_SET_FORM.Edit) closePanel();
-
-      if (file !== null) removeList(file);
-    },
-    [remove, removeList, openForm, closePanel]
-  );
+  const onNodeRemoved = useCallback(() => {
+    // Editing addresses a rule set by position: after deletion it would point to a neighbor.
+    if (openForm === RULE_SET_FORM.Edit) closePanel();
+  }, [openForm, closePanel]);
 
   // The catalog is needed for hints and source labels, but not for the list itself: without
   // it rule sets are visible and deletable, and the form stays with its own address.
@@ -156,7 +131,7 @@ export function RuleSetsPage({ openedTag, ruleSetLinks }: { openedTag?: string; 
               appliedTags={appliedTags}
               cache={cached}
               onEdit={panel.edit}
-              onRemove={onRemove}
+              onNodeRemoved={onNodeRemoved}
               search={<RuleSetsSearch filter={filter} />}
               empty={<RuleSetsEmptyState onReset={filter.reset} />}
               actions={

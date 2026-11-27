@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { RuleSetRow as RuleSetRowModel, useCachedRuleSets } from '@entities/RuleSet';
 import type { CachedRuleSet } from '@entities/RuleSet';
+import { RuleSetDeleteButton } from '@features/RuleSet/RuleSetDelete';
 import { cn } from '@shared/lib/utils';
 import { Button } from '@shared/ui';
 
@@ -13,7 +14,6 @@ import { isEditable } from '../model/RuleSetTable.model';
 import { CELL } from './RuleSetCells';
 import { RULE_SET_COLUMN, RULE_SET_COLUMNS } from './RuleSetColumns';
 import { RuleSetDetails } from './RuleSetDetails';
-import { RuleSetRemove } from './RuleSetRemove';
 
 /**
  * Rule set row.
@@ -37,7 +37,7 @@ function RuleSetRowProto({
   cache,
   onToggleDetails,
   onEdit,
-  onRemove,
+  onNodeRemoved,
 }: {
   links: RuleSetLinks;
   set: RuleSetRowModel;
@@ -50,7 +50,7 @@ function RuleSetRowProto({
   onToggleDetails?: (tag: string) => void;
   /** Without it the row does not offer editing. */
   onEdit?: (index: number) => void;
-  onRemove: (index: number) => void;
+  onNodeRemoved: () => void;
 }) {
   const { t } = useTranslation(RULE_SET_TABLE_NS);
   const detailsId = useId();
@@ -100,13 +100,7 @@ function RuleSetRowProto({
           </Button>
         )}
 
-        <RuleSetRemove
-          tag={set.tag}
-          usedBy={set.usedBy}
-          onConfirm={() => {
-            onRemove(set.index);
-          }}
-        />
+        <RuleSetDeleteButton index={set.index} tag={set.tag} usedBy={set.usedBy} onNodeRemoved={onNodeRemoved} />
       </span>
       {onToggleDetails !== undefined && set.tag !== '' && (
         <span role='cell' className='col-span-2 md:absolute md:top-2.5 md:left-2'>

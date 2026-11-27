@@ -1,4 +1,11 @@
 {
+  "secret": {
+    "show": "Показать {{name}}",
+    "hide": "Скрыть {{name}}"
+  },
+  "validation": {
+    "schema": "Значение не проходит схему"
+  },
   "toast": {
     "config": {
       "edit": {
