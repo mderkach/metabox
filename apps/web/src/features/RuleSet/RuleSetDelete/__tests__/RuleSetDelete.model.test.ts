@@ -8,10 +8,15 @@ afterEach(() => {
   ConfigDocumentStore.getState().reset();
 });
 
-it('keeps a shared local file until the last rule set using it is removed', () => {
+it.each([
+  'rule-sets/shared.json',
+  './rule-sets/shared.json',
+  'rule-sets/imported/../shared.json',
+  'rule-sets/{tag}.json',
+])('keeps a shared local file until the last reference is removed: %s', (path) => {
   const file = 'shared.json';
   const first = { type: 'local', tag: 'first', path: 'rule-sets/shared.json' };
-  const second = { ...first, tag: 'second' };
+  const second = { ...first, tag: 'shared', path };
   const text = JSON.stringify({ route: { rule_set: [first, second] } });
   const applied = '{"version":3,"rules":[{"domain":["original.example"]}]}';
   const updated = '{"version":3,"rules":[{"domain":["updated.example"]}]}';
