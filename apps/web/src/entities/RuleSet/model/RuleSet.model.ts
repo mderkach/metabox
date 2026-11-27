@@ -119,8 +119,7 @@ export interface RuleSetRow {
  */
 /**
  * Own list file name when the node is `local` from the `rule-sets/`
- * subdirectory; otherwise `null`. Deleting such a node must take the file
- * along: an orphaned file is not visible in the config but stays on the device.
+ * subdirectory; otherwise `null`.
  */
 export function localListFile(node: unknown): string | null {
   if (typeof node !== 'object' || node === null || Reflect.get(node, 'type') !== RULE_SET_TYPE.Local) {

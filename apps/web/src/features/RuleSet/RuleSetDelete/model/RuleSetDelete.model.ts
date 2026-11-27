@@ -9,7 +9,12 @@ export function removeRuleSet(index: number, onNodeRemoved: () => void): boolean
   if (!document.remove(ruleSetNodePath(index))) return false;
 
   onNodeRemoved();
-  if (file !== null) document.removeList(file);
+  if (file !== null) {
+    const current = selectConfigCurrent(ConfigDocumentStore.getState());
+    if (current !== null && !readRuleSets(current).some((node) => localListFile(node) === file)) {
+      document.removeList(file);
+    }
+  }
 
   return true;
 }
