@@ -834,6 +834,7 @@ An independent Impeccable review on the mock stand at 1280 × 800 and 375 × 812
 | AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/Proxies.recoveryState.test.tsx`                     | `stages the original value $original after a confirmed same-server retest returning $delay`                    |
 | AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/Proxies.recoveryState.test.tsx`                     | `does not attribute a confirm made outside this tab to the staged fix`                                         |
 | AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/Proxies.recoveryState.test.tsx`                     | `ignores a delayed $label retest once a newer probe has started for that same node`                            |
+| AC-11  | vitest | `apps/web/src/pages/Proxies/__tests__/Proxies.recoveryState.test.tsx`                     | `discards a failed retest when the applied revision changes during the probe`                                  |
 | AC-11  | e2e    | `apps/web/e2e/realityRecovery.e2e.test.ts`                                                | `applies and restores a REALITY setting after distinct retest failures`                                        |
 
 ### Server import in Simple Routes

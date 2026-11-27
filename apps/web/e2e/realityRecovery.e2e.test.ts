@@ -1,6 +1,6 @@
 import { CONFIG_NODE_ADD_NS } from '../src/features/Config/ConfigNodeAdd/i18n/ConfigNodeAdd.namespace.generated.ts';
 import { CONFIG_NODE_FORM_NS } from '../src/features/Config/ConfigNodeForm/i18n/ConfigNodeForm.namespace.generated.ts';
-import { PROXIES_NS } from '../src/pages/Proxies/i18n/Proxies.namespace.generated.ts';
+import { PROXY_REALITY_RECOVERY_NS } from '../src/features/Proxy/ProxyRealityRecovery/i18n/ProxyRealityRecovery.namespace.generated.ts';
 import { SECTION_NS } from '../src/pages/Section/i18n/Section.namespace.generated.ts';
 import { SHARED_NS } from '../src/shared/i18n/Shared.namespace.generated.ts';
 import { PROXY_GROUPS_NS } from '../src/widgets/ProxyGroups/i18n/ProxyGroups.namespace.generated.ts';
@@ -148,10 +148,12 @@ test(
     await proxiesLink.click();
 
     const check = page.getByRole('button', { name: translate(PROXY_GROUPS_NS, 'empty.testOutbounds') });
-    const diagnosis = page.getByRole('button', { name: translate(PROXIES_NS, 'recovery.open', { tag: TAG }) });
-    const stage = page.getByRole('button', { name: translate(PROXIES_NS, 'recovery.stage') });
-    const retry = page.getByRole('button', { name: translate(PROXIES_NS, 'recovery.retry') });
-    const restore = page.getByRole('button', { name: translate(PROXIES_NS, 'recovery.restore') });
+    const diagnosis = page.getByRole('button', {
+      name: translate(PROXY_REALITY_RECOVERY_NS, 'recovery.open', { tag: TAG }),
+    });
+    const stage = page.getByRole('button', { name: translate(PROXY_REALITY_RECOVERY_NS, 'recovery.stage') });
+    const retry = page.getByRole('button', { name: translate(PROXY_REALITY_RECOVERY_NS, 'recovery.retry') });
+    const restore = page.getByRole('button', { name: translate(PROXY_REALITY_RECOVERY_NS, 'recovery.restore') });
     const node = page.getByRole('listitem').filter({
       has: page.getByRole('button', { name: translate(PROXY_GROUPS_NS, 'metadata.editLabel', { tag: TAG }) }),
     });
@@ -191,18 +193,18 @@ test(
         ],
       });
       await applyBar.keep();
-      await expect(page.getByText(translate(PROXIES_NS, 'recovery.states.ready'))).toBeVisible();
+      await expect(page.getByText(translate(PROXY_REALITY_RECOVERY_NS, 'recovery.states.ready'))).toBeVisible();
     });
 
     await test.step('separates a test failure from a server that did not answer', async () => {
       await retry.click();
-      await expect(page.getByText(translate(PROXIES_NS, 'recovery.states.probe-error'))).toBeVisible();
+      await expect(page.getByText(translate(PROXY_REALITY_RECOVERY_NS, 'recovery.states.probe-error'))).toBeVisible();
       await expect(restore).toBeHidden();
 
       await retry.click();
-      await expect(page.getByText(translate(PROXIES_NS, 'recovery.states.no-response'))).toBeVisible();
+      await expect(page.getByText(translate(PROXY_REALITY_RECOVERY_NS, 'recovery.states.no-response'))).toBeVisible();
       await expect(restore).toBeVisible();
-      const status = node.getByText(translate(PROXIES_NS, 'recovery.noResponse'), { exact: true });
+      const status = node.getByText(translate(PROXY_REALITY_RECOVERY_NS, 'recovery.noResponse'), { exact: true });
       await expect(status).toBeVisible();
       const statusBox = await status.boundingBox();
       const controlBox = await diagnosis.boundingBox();

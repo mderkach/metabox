@@ -2,8 +2,8 @@ import { Stethoscope } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useDiagReport, type DiagRun } from '@entities/Diag';
 import { toOutboundTargets, useProxies } from '@entities/Proxy';
+import { useDiagRun } from '@features/Diag/DiagRun';
 import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 import {
@@ -38,8 +38,7 @@ export function DiagnosticsPage() {
   const proxies = useProxies();
   const targets = useMemo(() => toOutboundTargets(proxies.data), [proxies.data]);
   const [chosen, setChosen] = useState<string | null>(null);
-  const [run, setRun] = useState<DiagRun | null>(null);
-  const report = useDiagReport(run);
+  const { report, start, started } = useDiagRun();
   // Until the user picks a node, the first group is checked: usually
   // it is the selector that the traffic goes through.
   const target = chosen ?? targets.at(0) ?? '';
@@ -57,7 +56,7 @@ export function DiagnosticsPage() {
               size='sm'
               disabled={report.isFetching}
               onClick={() => {
-                setRun({ proxy: target, run: Date.now() });
+                start(target);
               }}
             >
               <Stethoscope data-icon='inline-start' />
@@ -66,7 +65,7 @@ export function DiagnosticsPage() {
             <p className='max-w-prose text-xs text-pretty text-muted-foreground'>{t('run.hint')}</p>
           </div>
 
-          {run === null && (
+          {!started && (
             <Empty>
               <EmptyHeader>
                 <EmptyTitle>{t('idle.title')}</EmptyTitle>
@@ -75,7 +74,7 @@ export function DiagnosticsPage() {
             </Empty>
           )}
 
-          {run !== null && report.isPending && <SkeletonRows className='p-4' />}
+          {started && report.isPending && <SkeletonRows className='p-4' />}
 
           {report.isLoadingError && (
             <div className='p-4'>

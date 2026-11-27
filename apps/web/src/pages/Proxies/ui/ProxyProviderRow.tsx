@@ -1,13 +1,13 @@
 import { useTranslation } from 'react-i18next';
 
 import type { ProviderNodeChange, ProxyProvider } from '@entities/Proxy';
+import { ProxyProviderUpdate } from '@features/Proxy/ProxyProviderUpdate';
 import { formatBytes, formatDate } from '@shared/lib/format';
 
 import { PROXIES_NS } from '../i18n/Proxies.namespace.generated';
 import { ProxiesProviderUpdatedAt } from './ProxiesProviderUpdatedAt';
 import { ProxyProviderNodeDrop } from './ProxyProviderNodeDrop';
 import { ProxyProviderNodes } from './ProxyProviderNodes';
-import { ProxyProviderUpdate } from './ProxyProviderUpdate';
 
 export function ProxyProviderRow({
   provider,

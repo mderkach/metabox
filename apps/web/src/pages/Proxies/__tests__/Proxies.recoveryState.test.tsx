@@ -5,16 +5,15 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { CONFIG_ENDPOINT, ConfigDocumentStore, findValue, selectConfigCurrent } from '@entities/Config';
+import { CONFIG_ENDPOINT, ConfigDocumentStore, findValue, selectConfigCurrent, setValue } from '@entities/Config';
 import { APPLY_PHASE, DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { DEVICE_ENDPOINT } from '@entities/Device';
 import { DELAY_STATE, DELAY_TIMEOUT, PROXY_ENDPOINT, type ProxyNode } from '@entities/Proxy';
-import { ConfigApplyBar } from '@features/Config/ConfigApply';
+import { ConfigApplyBar, useLatestConfigApplySubmission } from '@features/Config/ConfigApply';
 import { TestChangeLink } from '@features/Config/ConfigApply/__tests__/ConfigApplyLink.fixture';
 import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
-
-import { useProxiesRecovery } from '../model/Proxies.recoveryState';
+import { useProxyRealityRecovery } from '@features/Proxy/ProxyRealityRecovery';
 
 const TAG = 'reality';
 const FLAG = ['outbounds', 0, 'tls', 'reality', 'support_x25519mlkem768'];
@@ -73,6 +72,10 @@ function serveRecovery(original: boolean | undefined, delay = DELAY_TIMEOUT) {
   );
 
   return {
+    changeRevision: (revision: string) => {
+      text = setValue(text, ['log', 'level'], 'debug');
+      etag = `"${revision}"`;
+    },
     foreignConfirm: (draft: string) => {
       outcome(draft, APPLY_PHASE.Confirmed);
     },
@@ -80,15 +83,17 @@ function serveRecovery(original: boolean | undefined, delay = DELAY_TIMEOUT) {
 }
 
 function Screen() {
-  const { mutate } = useTestProxyDelay();
-  const diagnostic = useProxiesRecovery(NODES).at(0);
+  const initialProbe = useTestProxyDelay();
+  const retest = useTestProxyDelay();
+  const submission = useLatestConfigApplySubmission();
+  const diagnostic = useProxyRealityRecovery({ nodes: NODES, submission, testServer: retest.mutateAsync }).at(0);
 
   return (
     <>
       <button
         type='button'
         onClick={() => {
-          mutate(TAG);
+          initialProbe.mutate(TAG);
         }}
       >
         Probe
@@ -203,6 +208,28 @@ describe('REALITY recovery attempt', () => {
     finish();
 
     await waitFor(() => expect(screen.getByRole('status', { name: 'Recovery phase' })).toHaveTextContent('ready'));
+    expect(screen.queryByRole('button', { name: 'Restore' })).not.toBeInTheDocument();
+  });
+
+  it('discards a failed retest when the applied revision changes during the probe', async () => {
+    const updated = 'c'.repeat(64);
+    const { changeRevision } = serveRecovery(false);
+    await startRecovery();
+    await confirmRecovery();
+    server.use(
+      http.get(PROXY_ENDPOINT.proxyDelay(TAG), () => {
+        changeRevision(updated);
+
+        return HttpResponse.json({ delay: DELAY_TIMEOUT });
+      })
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Retry' }));
+
+    await waitFor(() => {
+      expect(ConfigDocumentStore.getState().appliedEtag).toBe(`"${updated}"`);
+      expect(screen.getByRole('status', { name: 'Recovery phase' })).toHaveTextContent('none');
+    });
     expect(screen.queryByRole('button', { name: 'Restore' })).not.toBeInTheDocument();
   });
 

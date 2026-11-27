@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 
 import type { RouteExplanation as RouteExplanationModel } from '@entities/Route';
+import { RouteOriginBadge } from '@entities/Route';
 
 import { ROUTE_EXPLANATION_NS } from '../i18n/RouteExplanation.namespace.generated';
-import { RouteOriginBadge } from './RouteOriginBadge';
 
 export function RouteExplanationChain({
   nodes,

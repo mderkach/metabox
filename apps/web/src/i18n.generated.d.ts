@@ -9,6 +9,7 @@ declare module 'i18next' {
   interface CustomTypeOptions {
     resources: {
       app: typeof import('./app/i18n/ru.json');
+      'entities/Route': typeof import('./entities/Route/i18n/ru.json');
       'entities/RuleSet': typeof import('./entities/RuleSet/i18n/ru.json');
       'features/Auth/AuthLogin': typeof import('./features/Auth/AuthLogin/i18n/ru.json');
       'features/Auth/AuthLogout': typeof import('./features/Auth/AuthLogout/i18n/ru.json');
@@ -27,6 +28,8 @@ declare module 'i18next' {
       'features/Language/LanguageSwitch': typeof import('./features/Language/LanguageSwitch/i18n/ru.json');
       'features/Log/LogClear': typeof import('./features/Log/LogClear/i18n/ru.json');
       'features/Mcp/McpAccess': typeof import('./features/Mcp/McpAccess/i18n/ru.json');
+      'features/Proxy/ProxyProviderUpdate': typeof import('./features/Proxy/ProxyProviderUpdate/i18n/ru.json');
+      'features/Proxy/ProxyRealityRecovery': typeof import('./features/Proxy/ProxyRealityRecovery/i18n/ru.json');
       'features/Rule/RuleAdd': typeof import('./features/Rule/RuleAdd/i18n/ru.json');
       'features/Rule/RuleCatalogAdd': typeof import('./features/Rule/RuleCatalogAdd/i18n/ru.json');
       'features/Rule/RuleCustomAdd': typeof import('./features/Rule/RuleCustomAdd/i18n/ru.json');

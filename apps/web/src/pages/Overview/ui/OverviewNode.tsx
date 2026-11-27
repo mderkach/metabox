@@ -11,6 +11,7 @@ import {
   useProxies,
   type ServerLatencies,
 } from '@entities/Proxy';
+import { DELAY_TONE } from '@entities/Proxy';
 import { useSelectProxy } from '@features/Proxy/ProxySelect';
 import { cn } from '@shared/lib/utils';
 import {
@@ -23,7 +24,6 @@ import {
   SelectValue,
   SkeletonRows,
 } from '@shared/ui';
-import { DELAY_TONE } from '@widgets/ProxyGroups';
 
 import { OVERVIEW_NS } from '../i18n/Overview.namespace.generated';
 import type { OverviewLinks } from '../model/Overview.links';

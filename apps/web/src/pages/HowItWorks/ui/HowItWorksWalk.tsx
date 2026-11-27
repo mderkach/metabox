@@ -3,8 +3,8 @@ import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ROUTE_MATCH } from '@entities/Route';
+import { RouteOriginBadge } from '@entities/Route';
 import { cn } from '@shared/lib/utils';
-import { RouteOriginBadge } from '@widgets/RouteExplanation';
 
 import { HOW_IT_WORKS_NS } from '../i18n/HowItWorks.namespace.generated';
 import type { HowItWorksTermLinks } from '../model/HowItWorks.links';

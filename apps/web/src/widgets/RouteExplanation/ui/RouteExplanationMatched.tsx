@@ -3,6 +3,7 @@ import { Trans, useTranslation } from 'react-i18next';
 
 import { toActionText, toRuleText } from '@entities/Connection';
 import { ROUTE_MATCH, type RouteExplanation as RouteExplanationModel, type RuleEditorSearch } from '@entities/Route';
+import { RouteOriginBadge } from '@entities/Route';
 import { isNamedRuleAction, isNamedRuleMatcher } from '@entities/Rule';
 import { SHARED_NS } from '@shared/i18n';
 import type { StaticPagePath } from '@shared/lib/navigation';
@@ -13,7 +14,6 @@ import { ROUTE_EXPLANATION_NS } from '../i18n/RouteExplanation.namespace.generat
 import { unknownReason } from '../lib/RouteExplanation.reason';
 import { RouteExplanationRow } from './RouteExplanationRow';
 import { RouteExplanationUnknown } from './RouteExplanationUnknown';
-import { RouteOriginBadge } from './RouteOriginBadge';
 
 export function RouteExplanationMatched({
   editorTo,

@@ -1,4 +1,4 @@
-import { DELAY_STATE, type DelayState } from '@entities/Proxy';
+import { DELAY_STATE, type DelayState } from '../model/Proxy.model';
 
 /** Latency tone: one for the node tile and the legend, otherwise the legend diverges from the tiles. */
 export const DELAY_TONE: Readonly<Record<DelayState, string>> = {

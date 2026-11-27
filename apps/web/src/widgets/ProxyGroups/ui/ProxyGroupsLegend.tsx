@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next';
 
 import { DELAY_FAST, DELAY_STATE } from '@entities/Proxy';
+import { DELAY_TONE } from '@entities/Proxy';
 import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 
 import { PROXY_GROUPS_NS } from '../i18n/ProxyGroups.namespace.generated';
-import { DELAY_TONE } from './ProxyDelayTone';
 
 /** Latency tone thresholds in words: with one color the boundary between 290 and 310 ms is invisible. */
 export function ProxyGroupsLegend() {

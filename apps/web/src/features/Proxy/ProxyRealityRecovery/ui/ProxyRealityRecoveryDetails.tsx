@@ -2,11 +2,11 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@shared/ui';
 
-import { PROXIES_NS } from '../i18n/Proxies.namespace.generated';
-import type { ProxyRecoveryItem } from '../model/Proxies.recoveryState';
+import { PROXY_REALITY_RECOVERY_NS } from '../i18n/ProxyRealityRecovery.namespace.generated';
+import type { ProxyRecoveryItem } from '../model/ProxyRealityRecovery.state';
 
-export function ProxiesRecoveryDetails({ item }: { item: ProxyRecoveryItem }) {
-  const { t } = useTranslation(PROXIES_NS);
+export function ProxyRealityRecoveryDetails({ item }: { item: ProxyRecoveryItem }) {
+  const { t } = useTranslation(PROXY_REALITY_RECOVERY_NS);
 
   return (
     <div className='mt-2 flex min-w-0 flex-col gap-3 rounded-md border bg-muted/40 p-3'>

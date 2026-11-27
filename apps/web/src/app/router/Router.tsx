@@ -22,7 +22,7 @@ import { getDataplaneOptions } from '@entities/Dataplane';
 import { getDevicesOptions } from '@entities/Device';
 import { DEFAULT_LOG_LEVEL, getLogTailOptions } from '@entities/Log';
 import { getProxiesOptions, getProxyProvidersOptions } from '@entities/Proxy';
-import type { RuleEditorSearch } from '@entities/Route';
+import { ROUTE_NS, type RuleEditorSearch } from '@entities/Route';
 import { parseRuleSearch } from '@entities/Rule';
 import { getRuleSetCatalogOptions, parseRuleSetSearch, RULE_SET_NS } from '@entities/RuleSet';
 import { AUTH_PASSWORD_NS } from '@features/Auth/AuthPassword';
@@ -37,6 +37,8 @@ import { DEVICE_RENAME_NS } from '@features/Device/DeviceRename';
 import { DEVICE_ROUTE_NS } from '@features/Device/DeviceRoute';
 import { LOG_CLEAR_NS } from '@features/Log/LogClear';
 import { MCP_ACCESS_NS } from '@features/Mcp/McpAccess';
+import { PROXY_PROVIDER_UPDATE_NS } from '@features/Proxy/ProxyProviderUpdate';
+import { PROXY_REALITY_RECOVERY_NS } from '@features/Proxy/ProxyRealityRecovery';
 import { RULE_ADD_NS } from '@features/Rule/RuleAdd';
 import { RULE_CATALOG_ADD_NS } from '@features/Rule/RuleCatalogAdd';
 import { RULE_CUSTOM_ADD_NS } from '@features/Rule/RuleCustomAdd';
@@ -222,7 +224,7 @@ export const howItWorksRoute = createRoute({
   getParentRoute: () => rootRoute,
   loader: async () =>
     Promise.all([
-      preloadNamespaces([HOW_IT_WORKS_NS, ROUTE_EXPLANATION_NS]),
+      preloadNamespaces([HOW_IT_WORKS_NS, ROUTE_NS]),
       QueryClientInstance.query(getProxiesOptions()).catch(keepFailureForScreen),
       QueryClientInstance.query(getProxyProvidersOptions()).catch(keepFailureForScreen),
       QueryClientInstance.query(getDevicesOptions()).catch(keepFailureForScreen),
@@ -234,7 +236,7 @@ export const proxiesRoute = createRoute({
   getParentRoute: () => rootRoute,
   loader: async () =>
     Promise.all([
-      preloadNamespaces([PROXIES_NS, PROXY_GROUPS_NS]),
+      preloadNamespaces([PROXIES_NS, PROXY_GROUPS_NS, PROXY_PROVIDER_UPDATE_NS, PROXY_REALITY_RECOVERY_NS]),
       QueryClientInstance.query(getConfigOptions()).catch(keepFailureForScreen),
       QueryClientInstance.query(getProxiesOptions()).catch(keepFailureForScreen),
       QueryClientInstance.query(getProxyProvidersOptions()).catch(keepFailureForScreen),
@@ -246,7 +248,7 @@ export const proxiesRoute = createRoute({
 export const connectionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   loader: async () =>
-    preloadNamespaces([CONNECTIONS_NS, CONNECTION_TABLE_NS, ROUTE_EXPLANATION_NS, CONNECTION_CLOSE_NS]),
+    preloadNamespaces([CONNECTIONS_NS, CONNECTION_TABLE_NS, ROUTE_NS, ROUTE_EXPLANATION_NS, CONNECTION_CLOSE_NS]),
   path: CONNECTIONS_PATH,
   validateSearch: parseConnectionSearch,
 });

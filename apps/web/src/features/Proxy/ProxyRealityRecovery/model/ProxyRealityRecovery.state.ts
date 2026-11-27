@@ -10,16 +10,14 @@ import {
   useConfigFileLoad,
 } from '@entities/Config';
 import { APPLY_PHASE, isApplyActive, useDaemonStatus, type ApplyTransaction } from '@entities/Daemon';
-import { PROXY_MUTATION, PROXY_QUERY, useFailedConfigProbes, type ProxyNode } from '@entities/Proxy';
-import { useLatestConfigApplySubmission } from '@features/Config/ConfigApply';
-import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
+import { PROXY_MUTATION, PROXY_QUERY, useFailedConfigProbes, type ProbeOutcome, type ProxyNode } from '@entities/Proxy';
 
 import {
   realityRecoveryField,
   realityRecoveryHints,
   sameRealityEndpoint,
   type RealityRecoveryField,
-} from './Proxies.recovery';
+} from './ProxyRealityRecovery.field';
 
 const runningRetests = new Set<string>();
 
@@ -40,6 +38,12 @@ export interface ProxyRecoveryItem {
   stage?: () => void;
   retry?: () => void;
   restore?: () => void;
+}
+
+interface ApplySubmission {
+  id: string;
+  base: string;
+  text: string;
 }
 
 interface Attempt {
@@ -76,7 +80,7 @@ function transactionProgress(
   tag: string,
   attempt: Attempt,
   restored: boolean,
-  submission: ReturnType<typeof useLatestConfigApplySubmission>,
+  submission: ApplySubmission | null,
   transaction: ApplyTransaction | null,
   revision: string | null,
   current: RealityRecoveryField | null
@@ -99,7 +103,7 @@ function transactionProgress(
 function progressOf(
   tag: string,
   attempt: Attempt,
-  submission: ReturnType<typeof useLatestConfigApplySubmission>,
+  submission: ApplySubmission | null,
   transaction: ApplyTransaction | null,
   revision: string | null,
   applied: string,
@@ -137,7 +141,16 @@ function editableField(tag: string, original: RealityRecoveryField, revision: st
   return draft;
 }
 
-export function useProxiesRecovery(nodes: readonly ProxyNode[]): readonly ProxyRecoveryItem[] {
+export function useProxyRealityRecovery({
+  nodes,
+  submission,
+  testServer,
+}: {
+  nodes: readonly ProxyNode[];
+  submission: ApplySubmission | null;
+  /** Starts a delay mutation on the same query client so a newer check can supersede its result. */
+  testServer: (tag: string) => Promise<ProbeOutcome>;
+}): readonly ProxyRecoveryItem[] {
   const file = useConfigFileLoad(true);
   const applied = file.data?.text;
   const revision = file.data?.etag ?? null;
@@ -145,11 +158,9 @@ export function useProxiesRecovery(nodes: readonly ProxyNode[]): readonly ProxyR
   const documentRevision = useStore(ConfigDocumentStore, (document) => document.appliedEtag);
   const failed = useFailedConfigProbes(revision);
   const daemon = useDaemonStatus().data;
-  const submission = useLatestConfigApplySubmission();
   const ownTransaction = daemon?.transaction?.id === submission?.id ? (daemon?.transaction ?? null) : null;
   const transaction = useApplyTransaction(ownTransaction?.id ?? null).data ?? ownTransaction;
   const client = useQueryClient();
-  const { mutateAsync } = useTestProxyDelay();
   const [attempts, setAttempts] = useState<ReadonlyMap<string, Attempt>>(() => new Map());
 
   const remember = useCallback((tag: string, attempt: Attempt) => {
@@ -180,7 +191,7 @@ export function useProxiesRecovery(nodes: readonly ProxyNode[]): readonly ProxyR
         }
         if (before.etag !== startedOn) return null;
 
-        const probe = mutateAsync(tag);
+        const probe = testServer(tag);
         const probeId = latestProbe()?.mutationId;
         const outcome = await probe.catch(() => null);
         const after = await client.fetchQuery({ ...query, staleTime: 0 }).catch(() => null);
@@ -211,7 +222,7 @@ export function useProxiesRecovery(nodes: readonly ProxyNode[]): readonly ProxyR
         runningRetests.delete(tag);
       }
     },
-    [client, mutateAsync, remember, transaction?.phase]
+    [client, remember, testServer, transaction?.phase]
   );
 
   const restore = useCallback(
