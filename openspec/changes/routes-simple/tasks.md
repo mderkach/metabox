@@ -27,4 +27,4 @@
 ## 5. Integrated verification and documentation
 
 - [x] 5.1 AC-115 through AC-119. Verify the complete Simple workflow at a narrow and desktop width, in both themes, including keyboard operation, reduced motion, shared draft, failed validation, and existing confirmation and rollback. Run `pnpm --filter web test:e2e` on the mock stand and `make trace-check`. Record the integration results and corresponding verification rows.
-- [ ] 5.2 AC-115 through AC-119. Update the English and Russian user documentation and refresh the corresponding derived Russian spec through its normal generation workflow. Run `pnpm spec:check` and `make trace-check` to verify the final docs and requirement references.
+- [x] 5.2 AC-115 through AC-119. Update the English and Russian user documentation. Run `pnpm spec:check` and `make trace-check` to verify the final docs and requirement references. Publication and freshness checks for the derived Russian spec are tracked in [#495](https://github.com/mderkach/metabox/issues/495).
