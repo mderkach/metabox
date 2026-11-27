@@ -59,5 +59,39 @@
     "apply": "Apply the list",
     "reset": "Reset",
     "dialog": "Apply the new list of addresses and subnets?"
+  },
+  "scope": {
+    "current": "Current scope",
+    "proposed": "Proposed scope",
+    "off": "Off",
+    "allValue": "All devices on the configured LAN interfaces",
+    "none": "No devices",
+    "except": "Excluded: {{entries}}",
+    "question": "Whose traffic should be intercepted?",
+    "mode": {
+      "listed": "Selected devices",
+      "all": "All devices"
+    },
+    "pick": "Choose devices",
+    "missing": "Absent from the current inventory",
+    "noDevices": "The router has no devices in its inventory.",
+    "empty": "Select at least one device to apply this scope.",
+    "review": "Review scope change",
+    "reviewChanged": "Settings or transaction status changed. Close this preview and review the latest scope.",
+    "apply": "Apply interception",
+    "reset": "Discard selection",
+    "busy": "A change is already in progress. Wait for its confirmation or rollback before applying another one.",
+    "statusUnknown": "The router’s transaction status is unavailable.",
+    "conflict": "The router settings or transaction status changed. Your selection is kept. Review the current and proposed scope again.",
+    "restriction": {
+      "disabled": "Interception is off. A device selection takes effect only after managed interception is set up.",
+      "unknown": "Simple cannot edit this interception mode.",
+      "exclusions": "This configuration has address or MAC exclusions. Simple preserves them and shows the scope read-only.",
+      "subnets": "This list includes subnets. Use Devices to edit address ranges.",
+      "version": "The router did not return a usable settings version. The scope is read-only.",
+      "chains": "The router has not confirmed that its managed interception rules are installed. The scope is read-only.",
+      "service": "Changing the scope requires a running routing service managed by metabox."
+    },
+    "leaseChanged": "The address record for {{name}} at {{ip}} changed. Discard the selection and choose devices from the updated list."
   }
 }

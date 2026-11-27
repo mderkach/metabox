@@ -9,6 +9,7 @@ import { SectionPage } from '../pages/SectionPage.ts';
 import { SettingsPage } from '../pages/SettingsPage.ts';
 import { SimpleCatalogDialog } from '../pages/SimpleCatalogDialog.ts';
 import { SimpleDnsSettings } from '../pages/SimpleDnsSettings.ts';
+import { SimpleInterception } from '../pages/SimpleInterception.ts';
 import { SimpleRoutesPage } from '../pages/SimpleRoutesPage.ts';
 import { SimpleRuleControls } from '../pages/SimpleRuleControls.ts';
 
@@ -23,6 +24,7 @@ export const test = base.extend<{
   simpleCatalog: SimpleCatalogDialog;
   simpleDns: SimpleDnsSettings;
   simpleRuleControls: SimpleRuleControls;
+  interception: SimpleInterception;
   simpleRoutesPage: SimpleRoutesPage;
 }>({
   applyBar: async ({ page }, use) => {
@@ -54,6 +56,9 @@ export const test = base.extend<{
   },
   simpleRuleControls: async ({ page, simpleRoutesPage }, use) => {
     await use(new SimpleRuleControls(page, simpleRoutesPage));
+  },
+  interception: async ({ page, simpleRoutesPage }, use) => {
+    await use(new SimpleInterception(page, simpleRoutesPage.interception));
   },
   simpleRoutesPage: async ({ page }, use) => {
     await use(new SimpleRoutesPage(page));

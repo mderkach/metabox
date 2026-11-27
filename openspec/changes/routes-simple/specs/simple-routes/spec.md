@@ -180,12 +180,30 @@ Simple SHALL let users choose the devices included in supported managed intercep
 - **THEN** the proposed scope is shown in context and staged for the existing confirmation and rollback flow
 - **AND** unrelated inbound and DNS settings stay intact
 
+#### Scenario: Review the router change with an existing configuration draft
+
+- **GIVEN** Simple, Editor or JSON contains unapplied edits
+- **WHEN** the user opens the device picker, changes a selection, reviews it or cancels
+- **THEN** the router receives no write and the shared configuration draft retains its edits
+- **AND** review identifies the current and proposed scope, including configured selectors absent from the inventory
+- **WHEN** the user applies the reviewed scope
+- **THEN** Simple sends the reviewed dataplane model with its section ETag and shows the existing confirmation window
+- **AND** explicit confirmation keeps the change while expiration restores the previous model and its interception rules
+
+#### Scenario: Refresh or conflict during selection
+
+- **GIVEN** a user has chosen devices and the inventory refreshes, the section changes or another Apply is in progress
+- **WHEN** Simple receives the updated state or the daemon refuses the write
+- **THEN** it retains the user's choices, preserves unedited selectors and requires review against the current section before another write
+- **AND** an empty list never selects all devices
+
 #### Scenario: Inspect an optional or unsupported configuration
 
 - **GIVEN** a configuration includes an application proxy, an imported inbound outside managed interception, or an unsupported setup
 - **WHEN** the user opens Interception in Simple
 - **THEN** it distinguishes the application proxy from managed interception and explains what is unavailable for editing
 - **AND** Simple preserves imported settings and presents configured state separately from any observed traffic status
+- **AND** the app proxy disclosure identifies saved listener bindings and known configuration limits, and reports when client access and reachability have not been verified
 
 ### Requirement: AC-119 Simple Routes stages server and subscription additions in context
 

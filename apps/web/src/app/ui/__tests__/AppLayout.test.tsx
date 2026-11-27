@@ -152,7 +152,18 @@ describe('AppLayout', () => {
 
     renderAppLayout();
 
-    expect(await screen.findByRole('button', { name: 'Связь есть, оставить' })).toBeInTheDocument();
+    const user = userEvent.setup();
+    const keep = await screen.findByRole('button', { name: 'Связь есть, оставить' });
+    const skip = screen.getByRole('link', { name: 'К содержимому' });
+    server.use(
+      http.post(DATAPLANE_ENDPOINT.applyConfirm(transaction.id), () =>
+        HttpResponse.json({ ...transaction, phase: 'confirmed', window: 0 })
+      )
+    );
+    skip.focus();
+    await user.click(keep);
+    await waitFor(() => expect(keep).not.toBeInTheDocument());
+    expect(skip).toHaveFocus();
     expect(screen.getByRole('main')).toHaveTextContent('Экран содержимого');
   });
 

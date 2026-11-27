@@ -112,7 +112,7 @@ export function SimpleRoutesPage({
                 </section>
               )}
 
-              <SimpleRoutesInterception inbounds={model.inbounds} />
+              <SimpleRoutesInterception inbounds={model.inbounds} appliedConfig={document.query.data?.config ?? null} />
               {text !== null && (
                 <SimpleRoutesDns text={text} servers={model.dnsServers} rules={model.dnsRules} final={model.dnsFinal} />
               )}

@@ -37,5 +37,5 @@ The Routes screen uses the existing frontend configuration draft, device invento
 ## Open questions
 
 - Which additional imported resolver rules and fallback chains can be edited losslessly in the DNS inventory and assignment workflow? The catalog matrix covers only the listed service pairs.
-- Which core and router combinations support creating an optional HTTP/SOCKS listener through Simple, and what verified access rules make that safe? Expose only supported and verified cases.
+- Application proxy inspection uses the saved file. Listener provisioning would require separate verification of its configuration, firewall access and reachability.
 - Which other server or subscription link types can be classified locally, and which inputs can prove that a manually added server is a duplicate? For an eligible unverified HTTPS URL, open the subscription form with a notice. Simple allows subscriptions with the same full URL through the standard form when each has a unique provider tag.

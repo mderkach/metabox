@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { APPLY_PHASE, type ApplyTransaction } from '@entities/Daemon';
 
 import { DEVICE_ROUTE_NS } from '../i18n/DeviceRoute.namespace.generated';
+import { DEVICE_ROUTE_BAR_ID } from '../model/DeviceRoute.constants';
 import { DeviceRouteConfirmWindow } from './DeviceRouteConfirmWindow';
 import { DeviceRouteFailure } from './DeviceRouteFailure';
 
@@ -31,7 +32,12 @@ export function DeviceRouteBar({
   switch (transaction.phase) {
     case APPLY_PHASE.Applying:
       return (
-        <section aria-label={t('bar.label')} className='flex items-center gap-2.5'>
+        <section
+          id={DEVICE_ROUTE_BAR_ID}
+          tabIndex={-1}
+          aria-label={t('bar.label')}
+          className='flex items-center gap-2.5'
+        >
           <LoaderCircle className='size-4 shrink-0 animate-spin text-muted-foreground motion-reduce:animate-none' />
           <p role='status' className='text-sm'>
             {t('bar.applying')}
@@ -40,7 +46,7 @@ export function DeviceRouteBar({
       );
     case APPLY_PHASE.AwaitingConfirm:
       return (
-        <section aria-label={t('bar.label')}>
+        <section id={DEVICE_ROUTE_BAR_ID} tabIndex={-1} aria-label={t('bar.label')}>
           <DeviceRouteConfirmWindow
             key={transaction.id}
             transaction={transaction}
