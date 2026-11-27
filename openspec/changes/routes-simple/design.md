@@ -86,6 +86,14 @@ The address-family field edits the global `dns.strategy`. An absent, empty or `a
 
 Static entries belong to the selected `type: "hosts"` transport. Its `predefined` map accepts a single IP address or an ordered list, including both families. For a matching A or AAAA question reaching that transport, predefined entries take precedence over its hosts files. The core canonicalizes names, so a case or trailing-dot variant of an existing name cannot be added twice. Simple edits the selected mapping, including renaming its domain. Creating a hosts transport or sending queries to it requires an explicit configuration edit. Editing these options does not expand the [catalog pairing matrix](#which-resolver-can-serve-this-exit).
 
+## Managed interception and application proxies
+
+The device scope belongs to the router's UCI dataplane section. Simple reads its version and the installed interception state, then offers scope editing for a running managed service with a supported, enabled model. The picker combines the device inventory with saved IP and MAC selectors. A device can have both selectors. Existing entries remain effective when a lease disappears. The current and proposed lists show the exact selectors, including entries outside the inventory. An empty selection cannot be applied. Choosing all switches the ACL mode explicitly and preserves the saved list for a return to listed mode.
+
+The review remains local until the user applies it. The request carries the reviewed ETag. Another Apply or a changed section requires a fresh review. The existing shell shows the confirmation window across screens. This operation leaves the Simple, Editor and JSON draft intact. Disabled interception, unverified installation, subnet and exclusion lists remain inspectable. This screen does not provision DNS or change the core configuration.
+
+The application proxy disclosure reads the saved top-level HTTP, SOCKS and mixed listeners. It reports explicit IP bindings and ports, wildcard or loopback bindings, bound interfaces and configured accounts when present. Imported inbound types remain visible. A configured address does not establish firewall permission or demonstrate a successful connection. The verified workflow exposes no listener or access-rule writes.
+
 ## Server import comparison
 
 Simple compares the protocol and every resulting server field in the configuration and draft, excluding the tag. The comparison includes the address, port, credentials, TLS and transport, and any protocol-specific settings such as the Shadowsocks method, VMess security settings or Hysteria 2 obfuscation. JSON object key order has no effect. An exact match is a duplicate regardless of the name in the link. A match with extra settings on the configured server needs an explicit choice to add it separately. Differing mapped values do not establish a duplicate. The comparison uses manually configured outbounds and makes no claim about servers inside subscriptions.
@@ -105,4 +113,4 @@ No data migration. Existing drafts and imported configs remain valid in Editor a
 
 ## Open Questions
 
-See the [proposal](proposal.md#open-questions) for imported DNS chains, application proxy support and ambiguous imports.
+See the [proposal](proposal.md#open-questions) for imported DNS chains, future listener provisioning and ambiguous imports.

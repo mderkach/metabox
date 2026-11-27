@@ -1,4 +1,24 @@
 {
+  "proxyAccess": {
+    "title": "Proxy server on the router",
+    "description": "For apps that ask for a proxy address. Automatic interception works independently.",
+    "disclosure": "Address and access",
+    "unknown": "The saved configuration could not be read. Proxy addresses and access are unknown.",
+    "empty": "The saved configuration has no top-level HTTP or SOCKS proxy entries.",
+    "saved": "Listen addresses in the saved configuration",
+    "protocol": {
+      "http": "HTTP",
+      "socks": "SOCKS",
+      "mixed": "HTTP / SOCKS"
+    },
+    "noAddress": "No explicit IP address and port are available.",
+    "wildcard": "This is a wildcard binding. An app needs a specific router address.",
+    "accounts": "Proxy accounts are configured.",
+    "reachability": "Simple shows saved settings only. It cannot verify which devices the firewall allows or whether the proxy accepts connections.",
+    "other": "Other inbound types in the saved file: <code>{{types}}</code>. Inspect their settings in Editor.",
+    "loopback": "This address is local to the router.",
+    "interface": "Configured interface: <code>{{name}}</code>"
+  },
   "sections": {
     "interception": "Interception",
     "dns": "DNS",
@@ -13,7 +33,7 @@
     "rules": "Rules match traffic by conditions such as the site or device and determine how the core handles it.",
     "title": "How routes work",
     "order": "Rule order matters. If “YouTube → direct” comes before “YouTube on the TV → through a proxy”, the TV connects directly too. Put the TV rule first for the exception to work.",
-    "draft": "Edits go into the draft. Review them with Apply. The router restores the previous version if you lose the connection and cannot confirm the change.",
+    "draft": "Routes, DNS and outbound edits share a draft. Review them with Apply. Device interception has its own review and confirmation. If you lose the connection before confirming, the router restores the previous settings.",
     "examples": "See how outbounds, servers and groups work in real connections"
   },
   "starter": {
@@ -35,7 +55,10 @@
     "scopeUnknown": "Interception is enabled in the router settings. Device scope is unknown.",
     "inbounds_zero": "No inbounds in the config",
     "inbounds_one": "{{count}} inbound in the config",
-    "inbounds_other": "{{count}} inbounds in the config"
+    "inbounds_other": "{{count}} inbounds in the config",
+    "settings": "Interception settings",
+    "automatic": "Automatic interception",
+    "description": "Choose which LAN devices use the routing rules for IPv4 connections. This selection leaves DNS settings unchanged."
   },
   "dns": {
     "servers_zero": "No resolvers in the config",

@@ -765,6 +765,25 @@ The local run passed 2,239 Vitest checks across 199 files and 119 Chromium mock 
 | AC-117 | e2e    | `apps/web/e2e/simpleDnsOptions.e2e.test.ts`                                           | `address family and static records share the JSONC draft and Apply diff`          |
 | AC-117 | e2e    | `apps/web/e2e/simpleDnsOptions.e2e.test.ts`                                           | `an imported parallel chain remains readable while inventory can be extended`     |
 
+### Interception scope in Simple Routes
+
+| ID     | Kind    | File                                                                           | Check                                                                                               |
+| ------ | ------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| AC-118 | e2e     | `apps/web/e2e/simpleInterception.e2e.test.ts`                                  | `Simple previews interception without writing and keeps the shared JSON draft through confirmation` |
+| AC-118 | vitest  | `apps/web/src/features/Device/DeviceRoute/__tests__/DeviceRouteScope.test.tsx` | `keeps the selected device after a stale write and previews untouched new selectors before retry`   |
+| AC-118 | vitest  | `apps/web/src/features/Device/DeviceRoute/__tests__/DeviceRouteScope.test.tsx` | `disables an empty list and requires an explicit all-device choice`                                 |
+| AC-118 | vitest  | `apps/web/src/features/Device/DeviceRoute/__tests__/DeviceRouteScope.test.tsx` | `explains the read-only scope for %s`                                                               |
+| AC-118 | vitest  | `apps/web/src/features/Device/DeviceRoute/__tests__/DeviceRouteScope.test.tsx` | `locks the selection while a config apply awaits confirmation`                                      |
+| AC-118 | vitest  | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutesProxyAccess.test.tsx`   | `discloses saved listeners without exposing credentials or implying client access`                  |
+| AC-118 | go-test | `apps/metaboxd/dataplane_integration_test.go`                                  | `TestInterceptionScopeOnEphemeralBench`                                                             |
+| AC-118 | go-test | `apps/metaboxd/internal/dataplane/write_test.go`                               | `TestRestoreKeepsForeignSingletonListInPlace`                                                       |
+
+The Chromium mock scenario records every dataplane write. It opens the proxy disclosure and picker by keyboard, cancels a device preview, discards the selection, explicitly chooses all devices and confirms the separate interception transaction. The JSON draft survives. The component cases exercise stale versions, missing inventory entries, empty selections, busy transactions and read-only configurations.
+
+On the disposable OpenWrt target, confirming a listed scope added a second MAC alongside the original host and MAC. The next transaction switched to all devices, then timed out after the confirmation window. The daemon returned the previous ETag and model, nft matched the listed scope again, and the full UCI export matched byte for byte, including a foreign single-item list. The saved sing-box file also matched before and after both outcomes. The same test received HTTP 412 with the stale ETag and HTTP 409 during the active transaction. [OpenWrt transaction log](https://github.com/mderkach/metabox/actions/runs/45923952503/job/140260869757#step:9:1).
+
+Independent Impeccable reviews exercised the controls in Chromium. Their rechecks confirmed that the preview keeps an unnamed device's display address next to its MAC, the desktop proxy disclosure stays next to its description, and one Tab reaches the time-limited confirmation after Apply. Keeping the change returns focus to Current scope. A transaction started elsewhere preserves focus.
+
 ### Adding a catalog service in Simple
 
 The tests open the catalog from Rules and from an empty configuration, choose between providers publishing the same category, and review the proposed route and DNS positions before staging. The shared draft and Apply diff show the selected set and new rules. Reuse, cancellation and blocked proposals preserve existing entries. The browser checks use a synthetic configuration and the verified core version on the mock stand.

@@ -356,11 +356,20 @@ func benchRequest(t *testing.T, method, path string, body []byte, status int) []
 
 func benchRequestStatus(t *testing.T, method, path string, body []byte) ([]byte, int) {
 	t.Helper()
+	data, _, status := benchHTTP(t, method, path, body, "")
+	return data, status
+}
+
+func benchHTTP(t *testing.T, method, path string, body []byte, match string) ([]byte, string, int) {
+	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, method, benchURL+path, bytes.NewReader(body))
 	if err != nil {
 		t.Fatal(err)
+	}
+	if match != "" {
+		req.Header.Set("If-Match", match)
 	}
 	if method != http.MethodGet {
 		req.Header.Set("Origin", benchURL)
@@ -379,7 +388,7 @@ func benchRequestStatus(t *testing.T, method, path string, body []byte) ([]byte,
 	if err != nil {
 		t.Fatal(err)
 	}
-	return data, resp.StatusCode
+	return data, resp.Header.Get("ETag"), resp.StatusCode
 }
 
 func assertBenchConfig(t *testing.T, want []byte) {

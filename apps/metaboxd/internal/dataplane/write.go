@@ -187,22 +187,43 @@ func (r *Reader) Write(ctx context.Context, m Model) error {
 	return nil
 }
 
-// Restore returns the section to the snapshot: deletes it and writes anew, so
-// options added after the snapshot do not stay.
+// Restore returns the section to the snapshot. Unchanged options stay in place:
+// uci show cannot distinguish a foreign single-value list from a scalar.
 func (r *Reader) Restore(ctx context.Context, snap Snapshot) error {
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "delete %s.%s\n", config, section)
-
-	if snap.Exists {
+	if !snap.Exists {
+		fmt.Fprintf(&b, "delete %s.%s\n", config, section)
+	} else {
 		if !safeWord(snap.Type) {
 			return fmt.Errorf("section type %q cannot be written", snap.Type)
 		}
 
+		current, err := r.Snapshot(ctx)
+		if err != nil {
+			return fmt.Errorf("section before restore: %w", err)
+		}
+
 		fmt.Fprintf(&b, "set %s.%s=%s\n", config, section, snap.Type)
+
+		for _, name := range slices.Sorted(maps.Keys(current.Options)) {
+			if _, keep := snap.Options[name]; keep {
+				continue
+			}
+
+			if !safeWord(name) {
+				return fmt.Errorf("option %q cannot be removed", name)
+			}
+
+			fmt.Fprintf(&b, "delete %s.%s.%s\n", config, section, name)
+		}
 
 		for _, name := range slices.Sorted(maps.Keys(snap.Options)) {
 			values := snap.Options[name]
+			if slices.Equal(current.Options[name], values) {
+				continue
+			}
+
 			if !safeWord(name) || len(values) == 0 || slices.ContainsFunc(values, splitsCommand) {
 				return fmt.Errorf("option %q cannot be written", name)
 			}

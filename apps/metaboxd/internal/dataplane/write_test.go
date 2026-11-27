@@ -269,6 +269,27 @@ func TestRestoreReturnsSnapshot(t *testing.T) {
 	}
 }
 
+func TestRestoreKeepsForeignSingletonListInPlace(t *testing.T) {
+	u := &fakeUCI{exists: true, typ: "dataplane", options: map[string][]string{
+		"acl_mode":   {"all"},
+		"owner_list": {"only entry"},
+	}}
+	r := newWriter(u)
+	snap, err := r.Snapshot(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap.Options["acl_mode"] = []string{"listed"}
+
+	if err := r.Restore(t.Context(), snap); err != nil {
+		t.Fatal(err)
+	}
+	script := u.scripts[0]
+	if strings.Contains(script, "delete metabox.dataplane\n") || strings.Contains(script, ".owner_list") {
+		t.Fatal("restore rewrote a foreign option whose UCI type is unknown")
+	}
+}
+
 func TestWriteWithoutBatch(t *testing.T) {
 	u := &fakeUCI{}
 	r := dataplane.New(u.run, dataplane.Options{UCI: testUCI})

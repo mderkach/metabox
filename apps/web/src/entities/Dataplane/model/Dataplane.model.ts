@@ -34,6 +34,8 @@ export interface DataplaneModel {
 }
 
 export interface Dataplane {
+  /** The daemon observed managed nft chains on the router. */
+  applied: boolean;
   model: DataplaneModel;
   /** Section fingerprint from `ETag`: with it the change goes into `If-Match`. */
   etag: string | null;

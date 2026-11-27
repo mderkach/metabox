@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 
+import { APPLY_PHASE } from '@entities/Daemon';
 import { DeviceRouteBar, useDeviceRouteTransaction } from '@features/Device/DeviceRoute';
 
 /**
@@ -16,6 +17,19 @@ export function DeviceRouteLayer({
 }) {
   const route = useDeviceRouteTransaction();
   const ref = useRef<HTMLDivElement>(null);
+
+  const previousFocus = useRef<HTMLElement | null>(null);
+  const confirming = useRef<string | null>(null);
+
+  useEffect(
+    function restoreConfirmationFocus() {
+      if (route.transaction?.id !== confirming.current || route.transaction.phase !== APPLY_PHASE.Confirmed) return;
+      confirming.current = null;
+      if (document.activeElement === document.body && previousFocus.current?.isConnected === true)
+        previousFocus.current.focus();
+    },
+    [route.transaction]
+  );
 
   useEffect(
     function reportLayerSpace() {
@@ -44,10 +58,22 @@ export function DeviceRouteLayer({
   return (
     <div
       ref={ref}
+      onFocusCapture={(event) => {
+        const from = event.relatedTarget;
+        if (from instanceof HTMLElement && event.currentTarget.contains(from)) return;
+        previousFocus.current = from instanceof HTMLElement ? from : null;
+      }}
       style={{ bottom: bottom > 0 ? bottom : undefined }}
       className='absolute inset-x-3 bottom-3 z-10 mx-auto max-w-4xl rounded-xl bg-popover px-4 py-2.5 text-popover-foreground shadow-lg ring-1 ring-foreground/10 [view-transition-name:device-route-bar] empty:hidden'
     >
-      <DeviceRouteBar transaction={route.transaction} isConfirming={route.isConfirming} onConfirm={route.confirm} />
+      <DeviceRouteBar
+        transaction={route.transaction}
+        isConfirming={route.isConfirming}
+        onConfirm={() => {
+          confirming.current = route.transaction?.id ?? null;
+          route.confirm();
+        }}
+      />
     </div>
   );
 }
