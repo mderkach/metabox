@@ -1,33 +1,9 @@
 import type { TFunction } from 'i18next';
 
-import { formatBytes, formatRate } from '@shared/lib/format';
+import { formatRate } from '@shared/lib/format';
 
 import type { OVERVIEW_NS } from '../i18n/Overview.namespace.generated';
-import { CORE_GAP, type CoreGap } from './Overview.lib';
-
-export function toVolume(pending: boolean, bytes: number): string | null {
-  if (pending) {
-    return null;
-  }
-
-  return bytes > 0 ? formatBytes(bytes) : '—';
-}
-
-/** Rejected bytes go into the direct tile context: the fork does not list a rejected connection, so the volume is rarely above zero. */
-export function toDirectContext(
-  t: TFunction<typeof OVERVIEW_NS>,
-  link: number,
-  percent: number,
-  rejected: number
-): string {
-  if (link <= 0) {
-    return t('traffic.linkUnknown');
-  }
-
-  return rejected > 0
-    ? t('traffic.linkShareRejected', { percent, volume: formatBytes(rejected) })
-    : t('traffic.linkShare', { percent });
-}
+import { CORE_GAP, type CoreGap } from '../lib/Overview.lib';
 
 export function toRate(awaiting: boolean, rate: number): string | null {
   return awaiting ? null : formatRate(rate);

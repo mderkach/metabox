@@ -13,6 +13,7 @@ import { DAEMON_ENDPOINT, RuntimeStore, SCHEMA_VERSION } from '@entities/Daemon'
 import {
   CLASH_CONFIGS_FIXTURE,
   DAEMON_STATUS_FIXTURE,
+  OUTBOUND_SYSTEM_FIXTURE,
   SERVICE_FAILED_FIXTURE,
   SERVICE_RUNNING_FIXTURE,
   SERVICE_UNMANAGED_FIXTURE,
@@ -116,35 +117,142 @@ describe('overview screen', () => {
     expect(tiles.getByText('8.3 кБ/с', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
   });
 
-  // Traffic a rule released direct passes sing-box too, but it is not proxied: the
-  // channel share counts the proxy part only.
-  it('splits the sing-box volume into proxied and direct and counts the share over the proxy', async () => {
-    RuntimeStore.getState().pushSystem({ ...SYSTEM_FIXTURE, thermal: [{ name: 'cpu-thermal', celsius: 42.5 }] });
+  it('reconciles internet shares with the outbound totals for the same period', async () => {
+    const system = { ...OUTBOUND_SYSTEM_FIXTURE, thermal: [] };
+    RuntimeStore.getState().pushSystem(system);
 
     renderWithRouter(OverviewScreen);
 
-    const tiles = within(await screen.findByRole('list', { name: 'Скорость' }));
-    const items = tiles.getAllByRole('listitem');
-    const proxy = items.find((item) => within(item).queryByText('Через прокси') !== null);
-    const direct = items.find((item) => within(item).queryByText('Напрямую через ядро') !== null);
+    function expectShares() {
+      const shares = within(screen.getByLabelText('Доли трафика'));
+      expect(shares.getByText('30.0 МБ')).toBeInTheDocument();
+      expect(shares.getByText('30%')).toBeInTheDocument();
+      expect(shares.getByText('70.0 МБ')).toBeInTheDocument();
+      expect(shares.getByText('70%')).toBeInTheDocument();
+      expect(screen.getByText('Всего 100.0 МБ')).toBeInTheDocument();
+    }
 
-    expect(stripWordJoiners(proxy?.textContent ?? '')).toBe('Через прокси30.0 МБ12% всего трафика');
-    expect(stripWordJoiners(direct?.textContent ?? '')).toBe('Напрямую через ядро16.2 МБ7% всего трафика');
-    expect(tiles.queryByText('Через ядро')).not.toBeInTheDocument();
+    expect(await screen.findByText('За 10 мин с запуска демона', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+    expect(screen.getByText('pppoe-wan', { exact: true })).toBeInTheDocument();
+    expect(system.outbounds.map(({ tag, bytes }) => [tag, bytes])).toEqual([
+      ['direct', 20 * 1024 ** 2],
+      ['proxy', 30 * 1024 ** 2],
+    ]);
+    expectShares();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Вычислено: доля «Напрямую»' }));
+    expect(screen.getByRole('dialog', { name: 'Вычислено: доля «Напрямую»' })).toHaveTextContent(
+      /50\.0 МБ трафика мимо ядра/
+    );
+    await user.keyboard('{Escape}');
+
+    act(() => {
+      RuntimeStore.getState().pushSystem({
+        ...system,
+        outbounds: system.outbounds.filter(({ tag }) => tag !== 'proxy'),
+      });
+    });
+
+    expectShares();
   });
 
-  it('names the rejected volume next to the direct share', async () => {
+  it('normalizes both shares when the core volume exceeds the internet volume', async () => {
+    const { share } = OUTBOUND_SYSTEM_FIXTURE;
     RuntimeStore.getState().pushSystem({
-      ...SYSTEM_FIXTURE,
-      thermal: [{ name: 'cpu-thermal', celsius: 42.5 }],
-      share: { ...SYSTEM_FIXTURE.share, split: { ...SYSTEM_FIXTURE.share.split, block: 2048 } },
+      ...OUTBOUND_SYSTEM_FIXTURE,
+      thermal: [],
+      share: { ...share, link: share.split.proxy },
     });
 
     renderWithRouter(OverviewScreen);
 
-    const tiles = within(await screen.findByRole('list', { name: 'Скорость' }));
+    const shares = within(await screen.findByLabelText('Доли трафика'));
+    expect(shares.getByText('30.0 МБ')).toBeInTheDocument();
+    expect(shares.getByText('60%')).toBeInTheDocument();
+    expect(shares.getByText('20.0 МБ')).toBeInTheDocument();
+    expect(shares.getByText('40%')).toBeInTheDocument();
+  });
 
-    expect(tiles.getByText('7% всего трафика, отклонено 2.0 кБ', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+  it('distinguishes a missing traffic snapshot from a snapshot with zero traffic', async () => {
+    renderWithRouter(OverviewScreen);
+
+    expect(await screen.findByText('Ждём первый снимок трафика')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Доли трафика')).not.toBeInTheDocument();
+
+    act(() => {
+      RuntimeStore.getState().pushSystem({
+        ...SYSTEM_FIXTURE,
+        thermal: [],
+        share: { link: 0, proxy: 0, split: { proxy: 0, direct: 0, block: 0 }, seconds: 4 },
+      });
+    });
+
+    expect(screen.getByText('Собираем данные с запуска демона')).toBeInTheDocument();
+    const shares = within(screen.getByLabelText('Доли трафика'));
+    expect(shares.getAllByText('0 Б')).toHaveLength(2);
+    expect(shares.getAllByText('0%')).toHaveLength(2);
+  });
+
+  it('marks both zero and nonzero blocked counts as computed from the core log', async () => {
+    const system = { ...OUTBOUND_SYSTEM_FIXTURE, thermal: [] };
+    RuntimeStore.getState().pushSystem(system);
+
+    renderWithRouter(OverviewScreen);
+
+    const mark = await screen.findByRole('button', { name: 'Вычислено из журнала ядра' });
+    const user = userEvent.setup();
+
+    expect(screen.getByText('3', { selector: 'data' })).toBeInTheDocument();
+    await user.click(mark);
+    expect(screen.getByRole('dialog', { name: 'Вычислено из журнала ядра' })).toHaveTextContent(/с запуска демона/);
+
+    act(() => {
+      RuntimeStore.getState().pushSystem({ ...system, blocked: { ...system.blocked, count: 0 } });
+    });
+
+    expect(screen.getByText('0', { selector: 'data' })).toBeInTheDocument();
+  });
+
+  it('explains the log levels when the blocked count is unavailable', async () => {
+    RuntimeStore.getState().pushSystem({
+      ...OUTBOUND_SYSTEM_FIXTURE,
+      thermal: [],
+      blocked: {
+        origin: 'computed',
+        reject: { used: true, visible: false },
+        block: { used: true, visible: true },
+      },
+    });
+
+    renderWithRouter(OverviewScreen);
+
+    const help = await screen.findByRole('button', { name: 'Почему число блокировок недоступно' });
+    expect(screen.getByText('Недоступно', { exact: true })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Вычислено из журнала ядра' })).not.toBeInTheDocument();
+
+    await userEvent.setup().click(help);
+
+    expect(screen.getByRole('dialog', { name: 'Почему число блокировок недоступно' })).toHaveTextContent(
+      /log\.level.*reject.*debug.*block.*info.*Примените конфиг/
+    );
+  });
+
+  it('does not show a partial blocked count even when earlier log lines are the only gap', async () => {
+    RuntimeStore.getState().pushSystem({
+      ...OUTBOUND_SYSTEM_FIXTURE,
+      thermal: [],
+      blocked: { ...OUTBOUND_SYSTEM_FIXTURE.blocked, incomplete: true, count: 7 },
+    });
+
+    renderWithRouter(OverviewScreen);
+
+    expect(await screen.findByText('Недоступно', { exact: true })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Вычислено из журнала ядра' })).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Почему число блокировок недоступно' }));
+    expect(screen.getByRole('dialog', { name: 'Почему число блокировок недоступно' })).toHaveTextContent(
+      /Часть ранних записей журнала/
+    );
   });
 
   // The first stream sample is zero: showing "0 B" would
@@ -538,10 +646,9 @@ describe('overview screen', () => {
 
       expect(down?.textContent).toBe('Ядро: скачивание—нет данных');
       expect(within(down ?? document.body).getByText('—')).toHaveAttribute('aria-hidden', 'true');
-      expect(stripWordJoiners(rateTile('Через прокси')?.textContent ?? '')).toBe(
-        'Через прокси30.0 МБ12% всего трафика'
-      );
-      expect(screen.queryByRole('figure', { name: /Трафик за минуту/ })).not.toBeInTheDocument();
+      expect(within(screen.getByLabelText('Доли трафика')).getByText('30.0 МБ')).toBeInTheDocument();
+      expect(screen.getByText(/Ядро остановлено\. Новые данные/)).toBeInTheDocument();
+      expect(await screen.findByRole('figure', { name: /Трафик за минуту/ })).toBeInTheDocument();
       expect((await card('Задержка серверов')).getByRole('button', { name: 'Проверить' })).toBeDisabled();
     });
 
@@ -808,7 +915,7 @@ describe('overview screen on a phone', () => {
     expect(device).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByRole('button', { name: 'Процессы' })).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('list', { name: 'Показания устройства' })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Трафик' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Куда ушёл трафик' })).toBeInTheDocument();
 
     await user.click(device);
 
