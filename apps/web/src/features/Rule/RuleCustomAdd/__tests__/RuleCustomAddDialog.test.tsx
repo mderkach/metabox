@@ -6,14 +6,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ConfigDocumentStore } from '@entities/Config';
 import { Dialog } from '@shared/ui';
 
-import { SimpleRoutesCustomDialog } from '../ui/SimpleRoutesCustomDialog';
+import { RuleCustomAddDialog } from '../ui/RuleCustomAddDialog';
 
 const TEXT = JSON.stringify({
   outbounds: [{ type: 'direct', tag: 'home' }],
   route: { rules: [{ domain_suffix: 'example.org', outbound: 'home' }] },
 });
 
-describe('SimpleRoutesCustomDialog', () => {
+describe('RuleCustomAddDialog', () => {
   afterEach(() => {
     ConfigDocumentStore.getState().reset();
   });
@@ -24,7 +24,7 @@ describe('SimpleRoutesCustomDialog', () => {
     ConfigDocumentStore.getState().load(TEXT);
     renderWithQuery(
       <Dialog open>
-        <SimpleRoutesCustomDialog text={TEXT} changed={false} onAdded={onAdded} />
+        <RuleCustomAddDialog text={TEXT} changed={false} onAdded={onAdded} />
       </Dialog>
     );
     await user.type(screen.getByRole('textbox', { name: 'Домен или IP-адрес' }), 'video.example.org');

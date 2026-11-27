@@ -1,0 +1,17 @@
+{
+  "details": {
+    "geosite": "A list of sites from {{provider}}. The catalog calls it {{category}}.",
+    "geoip": "A list of addresses from {{provider}}. The catalog calls it {{category}}.",
+    "remote": "The core downloads this list from {{host}}.",
+    "remoteUnknown": "A remote list without a recognized host.",
+    "local": "A file on the router: {{path}}.",
+    "inline": "Conditions written in the config.",
+    "mirror": "Mirror: {{host}}",
+    "file": "File: {{name}}",
+    "usage": "Used in the draft",
+    "unused": "No rule in the draft uses this rule set.",
+    "routeRules": "Routing rules",
+    "dnsRules": "DNS rules",
+    "rule": "Rule {{number}}"
+  }
+}

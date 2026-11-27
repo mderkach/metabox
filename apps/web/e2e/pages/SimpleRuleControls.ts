@@ -1,8 +1,10 @@
 import type { Locator, Page } from '@playwright/test';
 
+import { RULE_SET_NS } from '../../src/entities/RuleSet/i18n/RuleSet.namespace.generated.ts';
+import { RULE_CUSTOM_ADD_NS } from '../../src/features/Rule/RuleCustomAdd/i18n/RuleCustomAdd.namespace.generated.ts';
 import { RULE_REORDER_NS } from '../../src/features/Rule/RuleReorder/i18n/RuleReorder.namespace.generated.ts';
 import { SIMPLE_ROUTES_NS } from '../../src/pages/SimpleRoutes/i18n/SimpleRoutes.namespace.generated.ts';
-import { RULE_SET_TABLE_NS } from '../../src/widgets/RuleSet/RuleSetTable/i18n/RuleSetTable.namespace.generated.ts';
+import { SHARED_NS } from '../../src/shared/i18n/Shared.namespace.generated.ts';
 import { translate } from '../lib/i18n.ts';
 import type { SimpleRoutesPage } from './SimpleRoutesPage.ts';
 
@@ -28,15 +30,21 @@ export class SimpleRuleControls {
     this.byType = rules.getByRole('button', { name: translate(SIMPLE_ROUTES_NS, 'list.byType'), exact: true });
     this.filter = rules.getByRole('combobox', { name: translate(SIMPLE_ROUTES_NS, 'list.filter'), exact: true });
     this.clearFilter = rules.getByRole('link', { name: translate(SIMPLE_ROUTES_NS, 'rules.clear'), exact: true });
-    this.addSite = rules.getByRole('button', { name: translate(SIMPLE_ROUTES_NS, 'custom.add'), exact: true });
+    this.addSite = rules.getByRole('button', { name: translate(RULE_CUSTOM_ADD_NS, 'custom.add'), exact: true });
     this.form = page.getByRole('dialog');
-    this.address = this.form.getByRole('textbox', { name: translate(SIMPLE_ROUTES_NS, 'custom.address'), exact: true });
-    this.device = this.form.getByRole('combobox', { name: translate(SIMPLE_ROUTES_NS, 'custom.device'), exact: true });
-    this.outbound = this.form.getByRole('combobox', {
-      name: translate(SIMPLE_ROUTES_NS, 'custom.outbound'),
+    this.address = this.form.getByRole('textbox', {
+      name: translate(RULE_CUSTOM_ADD_NS, 'custom.address'),
       exact: true,
     });
-    this.submit = this.form.getByRole('button', { name: translate(SIMPLE_ROUTES_NS, 'custom.submit'), exact: true });
+    this.device = this.form.getByRole('combobox', {
+      name: translate(RULE_CUSTOM_ADD_NS, 'custom.device'),
+      exact: true,
+    });
+    this.outbound = this.form.getByRole('combobox', {
+      name: translate(RULE_CUSTOM_ADD_NS, 'custom.outbound'),
+      exact: true,
+    });
+    this.submit = this.form.getByRole('button', { name: translate(SHARED_NS, 'action.addToDraft'), exact: true });
   }
 
   row(subject: string) {
@@ -48,7 +56,7 @@ export class SimpleRuleControls {
   }
 
   reference(row: Locator, number: number) {
-    return row.getByRole('link', { name: translate(RULE_SET_TABLE_NS, 'details.rule', { number }), exact: true });
+    return row.getByRole('link', { name: translate(RULE_SET_NS, 'details.rule', { number }), exact: true });
   }
 
   move(index: number, direction: 'up' | 'down') {
@@ -67,7 +75,7 @@ export class SimpleRuleControls {
 
   exception(subject: string) {
     return this.row(subject).getByRole('button', {
-      name: translate(SIMPLE_ROUTES_NS, 'custom.exception'),
+      name: translate(RULE_CUSTOM_ADD_NS, 'custom.exception'),
       exact: true,
     });
   }

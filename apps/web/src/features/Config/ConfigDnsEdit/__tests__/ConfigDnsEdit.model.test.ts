@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { findValue, setValue } from '@entities/Config';
 
-import { planDnsAssignment, planDnsServer, readSimpleDns } from '../model/SimpleRoutes.dns';
+import { planDnsAssignment, planDnsServer, readDnsSettings } from '../model/ConfigDnsEdit.model';
 
 const VERSION = '1.14.3-extended-2.7.3';
 const HIJACK = { inbound: 'queries', action: 'hijack-dns' };
@@ -51,7 +51,7 @@ describe('resolver inventory', () => {
       },
     });
     expect(add.text).toContain('// imported setting');
-    const projection = readSimpleDns(add.text, VERSION);
+    const projection = readDnsSettings(add.text, VERSION);
     expect(projection.inventory.map(({ referenced }) => referenced)).toEqual([true, false, false, false]);
     expect(projection.paths.find(({ tag }) => tag === 'group')).toMatchObject({
       current: null,
@@ -71,7 +71,7 @@ describe('resolver inventory', () => {
       ]
     );
     text = setValue(text, ['dns', 'final'], 'chain');
-    const inventory = readSimpleDns(text, VERSION).inventory;
+    const inventory = readDnsSettings(text, VERSION).inventory;
     expect(inventory.map(({ referenced }) => referenced)).toEqual([true, true, true, false, true, false]);
     expect(inventory[3].address).toBe('');
   });
@@ -116,7 +116,7 @@ describe('explicit path assignments for exact destination names', () => {
     expect(findValue(result.text, ['dns', 'rules'])).toEqual([{ domain, action: 'route', server: resolver }]);
     expect(findValue(result.text, ['route'])).toEqual(findValue(TEXT, ['route']));
     expect(findValue(result.text, ['dns', 'servers'])).toEqual(SERVERS);
-    expect(readSimpleDns(result.text, VERSION).paths.find(({ tag }) => tag === outbound)?.current).toBe(resolver);
+    expect(readDnsSettings(result.text, VERSION).paths.find(({ tag }) => tag === outbound)?.current).toBe(resolver);
     expect(planDnsAssignment(result.text, VERSION, outbound, resolver)).toEqual(result);
   });
 
@@ -147,7 +147,7 @@ describe('explicit path assignments for exact destination names', () => {
     const withResolver = setValue(withRoutes, ['dns', 'servers'], [...SERVERS, { ...SERVERS[0], tag: 'second' }]);
     const text = setValue(withResolver, ['dns', 'rules'], [exactDns, catalogDns]);
 
-    expect(readSimpleDns(text, VERSION).paths.find(({ tag }) => tag === 'direct')).toMatchObject({
+    expect(readDnsSettings(text, VERSION).paths.find(({ tag }) => tag === 'direct')).toMatchObject({
       current: 'local',
       domains: ['direct.test'],
       reason: null,
@@ -185,11 +185,11 @@ describe('explicit path assignments for exact destination names', () => {
     const base = setValue(TEXT, ['dns', 'servers', 3], { ...SERVERS[1], tag: 'second' });
     for (const rules of [[GROUP_DNS], [GROUP_DNS, { domain: 'gamma.test', server: 'second' }]]) {
       const text = setValue(base, ['dns', 'rules'], rules);
-      const path = readSimpleDns(text, VERSION).paths.find(({ tag }) => tag === 'group');
+      const path = readDnsSettings(text, VERSION).paths.find(({ tag }) => tag === 'group');
       expect(path).toMatchObject({ current: null, mixed: true, reason: null });
       const next = planDnsAssignment(text, VERSION, 'group', 'second');
       if (!next.ok) throw new Error(next.reason);
-      expect(readSimpleDns(next.text, VERSION).paths.find(({ tag }) => tag === 'group')).toMatchObject({
+      expect(readDnsSettings(next.text, VERSION).paths.find(({ tag }) => tag === 'group')).toMatchObject({
         current: 'second',
         mixed: false,
       });
@@ -200,7 +200,7 @@ describe('explicit path assignments for exact destination names', () => {
     const text = setValue(TEXT, ['outbounds', 0, 'future_dns'], 'group-dns');
     const add = planDnsServer(text, VERSION, FORM);
     if (!add.ok) throw new Error(add.reason);
-    expect(readSimpleDns(add.text, VERSION).inventory.map(({ referenced }) => referenced)).toEqual([
+    expect(readDnsSettings(add.text, VERSION).inventory.map(({ referenced }) => referenced)).toEqual([
       true,
       null,
       false,

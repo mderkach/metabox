@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, Dialog, DialogTrigger } from '@shared/ui';
 
-import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
-import { SimpleRoutesCustomDialog } from './SimpleRoutesCustomDialog';
+import { RULE_CUSTOM_ADD_NS } from '../i18n/RuleCustomAdd.namespace.generated';
+import { RuleCustomAddDialog } from './RuleCustomAddDialog';
 
-export function SimpleRoutesCustomAction({
+export function RuleCustomAddButton({
   text,
   initialOutbound,
   ruleIndex,
@@ -16,7 +16,7 @@ export function SimpleRoutesCustomAction({
   initialOutbound?: string;
   ruleIndex?: number;
 }) {
-  const { t } = useTranslation(SIMPLE_ROUTES_NS);
+  const { t } = useTranslation(RULE_CUSTOM_ADD_NS);
   const [review, setReview] = useState<{ text: string; ruleIndex?: number } | null>(null);
   return (
     <Dialog
@@ -30,7 +30,7 @@ export function SimpleRoutesCustomAction({
         {t(ruleIndex === undefined ? 'custom.add' : 'custom.exception')}
       </DialogTrigger>
       {review && (
-        <SimpleRoutesCustomDialog
+        <RuleCustomAddDialog
           text={review.text}
           initialOutbound={initialOutbound}
           ruleIndex={review.ruleIndex}

@@ -4,17 +4,17 @@ import { useTranslation } from 'react-i18next';
 
 import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
-import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
-import type { CustomRuleForm } from '../model/SimpleRoutes.custom';
+import { RULE_CUSTOM_ADD_NS } from '../i18n/RuleCustomAdd.namespace.generated';
+import type { CustomRuleForm } from '../model/RuleCustomAdd.schema';
 
-export function SimpleRoutesCustomSelect({
+export function RuleCustomAddSelect({
   name,
   items,
 }: {
   name: 'device' | 'outbound';
   items: { value: string; label: string }[];
 }) {
-  const { t } = useTranslation(SIMPLE_ROUTES_NS);
+  const { t } = useTranslation(RULE_CUSTOM_ADD_NS);
   const { control } = useFormContext<CustomRuleForm>();
   const id = useId();
   return (

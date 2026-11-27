@@ -9,12 +9,14 @@ declare module 'i18next' {
   interface CustomTypeOptions {
     resources: {
       app: typeof import('./app/i18n/ru.json');
+      'entities/RuleSet': typeof import('./entities/RuleSet/i18n/ru.json');
       'features/Auth/AuthLogin': typeof import('./features/Auth/AuthLogin/i18n/ru.json');
       'features/Auth/AuthLogout': typeof import('./features/Auth/AuthLogout/i18n/ru.json');
       'features/Auth/AuthPassword': typeof import('./features/Auth/AuthPassword/i18n/ru.json');
       'features/Auth/AuthSessions': typeof import('./features/Auth/AuthSessions/i18n/ru.json');
       'features/Config/ConfigApply': typeof import('./features/Config/ConfigApply/i18n/ru.json');
       'features/Config/ConfigCacheFile': typeof import('./features/Config/ConfigCacheFile/i18n/ru.json');
+      'features/Config/ConfigDnsEdit': typeof import('./features/Config/ConfigDnsEdit/i18n/ru.json');
       'features/Config/ConfigNodeAdd': typeof import('./features/Config/ConfigNodeAdd/i18n/ru.json');
       'features/Config/ConfigNodeDelete': typeof import('./features/Config/ConfigNodeDelete/i18n/ru.json');
       'features/Config/ConfigNodeForm': typeof import('./features/Config/ConfigNodeForm/i18n/ru.json');
@@ -27,6 +29,7 @@ declare module 'i18next' {
       'features/Mcp/McpAccess': typeof import('./features/Mcp/McpAccess/i18n/ru.json');
       'features/Rule/RuleAdd': typeof import('./features/Rule/RuleAdd/i18n/ru.json');
       'features/Rule/RuleCatalogAdd': typeof import('./features/Rule/RuleCatalogAdd/i18n/ru.json');
+      'features/Rule/RuleCustomAdd': typeof import('./features/Rule/RuleCustomAdd/i18n/ru.json');
       'features/Rule/RuleDelete': typeof import('./features/Rule/RuleDelete/i18n/ru.json');
       'features/Rule/RuleEdit': typeof import('./features/Rule/RuleEdit/i18n/ru.json');
       'features/Rule/RuleRaw': typeof import('./features/Rule/RuleRaw/i18n/ru.json');

@@ -43,3 +43,6 @@ export type {
   RuleSetType,
   RuleSetUsage,
 } from './model/RuleSet.model';
+export { RULE_SET_NS } from './i18n/RuleSet.namespace.generated';
+export { RuleSetReferenceLinks, type RuleSetReferenceLink } from './ui/RuleSetReferenceLinks';
+export { RuleSetSourceDetails } from './ui/RuleSetSourceDetails';

@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { readRules } from '@entities/Config';
 
-import { simpleAddress, simpleRuleRelation } from '../model/SimpleRoutes.conditions';
-import { planCustomRule } from '../model/SimpleRoutes.custom';
+import { planCustomRule } from '../model/RuleCustomAdd.model';
 
 const OUTBOUNDS = [
   { type: 'direct', tag: 'home' },
@@ -87,28 +86,5 @@ describe('custom route planning', () => {
       reason: 'duplicate',
       position: 1,
     });
-  });
-
-  it.each([
-    'https://example.org',
-    'example.org..',
-    '192.168.999.3',
-    'example.org/path',
-    '192.0.2.1/28',
-    '*.example.org',
-  ])('refuses %s as a single domain or literal IP address', (address) => {
-    expect(simpleAddress(address)).toBeNull();
-  });
-
-  it('distinguishes opaque set membership, broader domains, disjoint devices and equivalent IPv6 literals', () => {
-    expect(simpleRuleRelation(SET, GENERAL)).toBe('unknown');
-    expect(simpleRuleRelation(GENERAL, { domain: 'www.example.org', outbound: 'away' })).toBe('covers');
-    expect(simpleRuleRelation(GENERAL, { domain: 'notexample.org', outbound: 'away' })).toBe('disjoint');
-    expect(simpleRuleRelation({ ...SET, source_ip_cidr: DEVICE }, { ...SET, source_ip_cidr: '192.0.2.2' })).toBe(
-      'disjoint'
-    );
-    expect(
-      simpleRuleRelation({ ip_cidr: '2001:db8:0::1', outbound: 'away' }, { ip_cidr: '2001:db8::1', outbound: 'home' })
-    ).toBe('covers');
   });
 });

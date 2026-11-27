@@ -4,14 +4,10 @@ import { useId, useMemo } from 'react';
 import { Controller, FormProvider, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import {
-  ConfigDocumentStore,
-  parseConfig,
-  selectConfigCurrent,
-  selectConfigStale,
-  useConfigStale,
-} from '@entities/Config';
+import { parseConfig, replaceReviewedDraft, useConfigStale } from '@entities/Config';
 import { getDevicesOptions, toDevices } from '@entities/Device';
+import { isLiteralRuleIp, readPlainRouteConditions } from '@entities/Rule';
+import { SHARED_NS } from '@shared/i18n';
 import {
   Button,
   DialogClose,
@@ -24,12 +20,12 @@ import {
   QueryFailure,
 } from '@shared/ui';
 
-import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
-import { isDeviceAddress, simpleTerminalConditions } from '../model/SimpleRoutes.conditions';
-import { CustomRuleSchema, customExits, planCustomRule, type CustomRuleForm } from '../model/SimpleRoutes.custom';
-import { SimpleRoutesCustomSelect } from './SimpleRoutesCustomSelect';
+import { RULE_CUSTOM_ADD_NS } from '../i18n/RuleCustomAdd.namespace.generated';
+import { customExits, planCustomRule } from '../model/RuleCustomAdd.model';
+import { CustomRuleSchema, type CustomRuleForm } from '../model/RuleCustomAdd.schema';
+import { RuleCustomAddSelect } from './RuleCustomAddSelect';
 
-export function SimpleRoutesCustomDialog({
+export function RuleCustomAddDialog({
   text,
   initialOutbound,
   ruleIndex,
@@ -42,13 +38,13 @@ export function SimpleRoutesCustomDialog({
   changed: boolean;
   onAdded: () => void;
 }) {
-  const { t } = useTranslation(SIMPLE_ROUTES_NS);
+  const { t } = useTranslation([RULE_CUSTOM_ADD_NS, SHARED_NS]);
   const addressId = useId();
   const serverChanged = useConfigStale();
   const config = useMemo(() => parseConfig(text).config, [text]);
   const exits = useMemo(() => customExits(config), [config]);
   const exception = ruleIndex !== undefined;
-  const subject = exception ? simpleTerminalConditions(config?.route?.rules?.[ruleIndex])?.entries?.join(', ') : '';
+  const subject = exception ? readPlainRouteConditions(config?.route?.rules?.[ruleIndex])?.entries?.join(', ') : '';
   const inventory = useQuery({ ...getDevicesOptions(), enabled: exception, select: toDevices });
   const devices = useMemo(() => {
     const rows = inventory.data ?? [];
@@ -59,7 +55,7 @@ export function SimpleRoutesCustomDialog({
       seen.add(ip);
     }
     return rows
-      .filter(({ ip }) => !ambiguous.has(ip) && isDeviceAddress(ip))
+      .filter(({ ip }) => !ambiguous.has(ip) && isLiteralRuleIp(ip))
       .map((row) => ({
         ...row,
         value: `${row.mac}/${row.ip}`,
@@ -86,12 +82,10 @@ export function SimpleRoutesCustomDialog({
   const stale = changed || serverChanged || !!form.formState.errors.root;
   const submit = form.handleSubmit(() => {
     if (plan?.ok !== true) return;
-    const state = ConfigDocumentStore.getState();
-    if (selectConfigCurrent(state) !== text || selectConfigStale(state)) {
+    if (!replaceReviewedDraft(text, plan.text)) {
       form.setError('root', { type: 'stale' });
       return;
     }
-    state.replace(plan.text);
     onAdded();
   });
   const scope = selected?.label ?? t('custom.all');
@@ -117,7 +111,7 @@ export function SimpleRoutesCustomDialog({
           {exception ? (
             <>
               {inventory.isLoadingError && <QueryFailure query={inventory} messageKey='source.devices' />}
-              <SimpleRoutesCustomSelect name='device' items={devices} />
+              <RuleCustomAddSelect name='device' items={devices} />
               {selected && !selected.static && (
                 <p className='text-sm text-muted-foreground'>{t('custom.dynamic', { ip: selected.ip })}</p>
               )}
@@ -141,7 +135,7 @@ export function SimpleRoutesCustomDialog({
               />
             </div>
           )}
-          <SimpleRoutesCustomSelect name='outbound' items={exits.map((value) => ({ value, label: value }))} />
+          <RuleCustomAddSelect name='outbound' items={exits.map((value) => ({ value, label: value }))} />
           <div role='status' className='grid min-w-0 gap-1 text-sm wrap-anywhere'>
             {plan?.ok === true && (
               <>
@@ -157,9 +151,11 @@ export function SimpleRoutesCustomDialog({
             {stale && <p className='text-destructive'>{t('custom.stale')}</p>}
           </div>
           <div className='flex flex-wrap justify-end gap-2 pt-1'>
-            <DialogClose render={<Button type='button' variant='ghost' />}>{t('custom.cancel')}</DialogClose>
+            <DialogClose render={<Button type='button' variant='ghost' />}>
+              {t('action.cancel', { ns: SHARED_NS })}
+            </DialogClose>
             <Button type='submit' disabled={stale || plan?.ok !== true}>
-              {t('custom.submit')}
+              {t('action.addToDraft', { ns: SHARED_NS })}
             </Button>
           </div>
         </form>

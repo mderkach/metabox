@@ -10,7 +10,6 @@ import {
   setValue,
   toElementName,
 } from '@entities/Config';
-import { cidrContains, parseIpv4Cidr, type Ipv4Cidr } from '@entities/Dataplane';
 import { deviceLabel, type Device, type DeviceIndex } from '@entities/Device';
 import {
   RULE_SET_MATCHER,
@@ -22,6 +21,7 @@ import {
   type RuleRow,
 } from '@entities/Rule';
 import { showQueryError } from '@shared/api';
+import { cidrContains, parseIpv4Cidr, type Ipv4Cidr } from '@shared/lib/ipv4';
 
 import {
   conditionLines,

@@ -2,10 +2,10 @@ import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ConfigDnsEdit } from '@features/Config/ConfigDnsEdit';
 import { Card } from '@shared/ui';
 
 import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
-import { SimpleRoutesDnsSettings } from './SimpleRoutesDnsSettings';
 import { SimpleRoutesSection } from './SimpleRoutesSection';
 
 export function SimpleRoutesDns({
@@ -47,7 +47,7 @@ export function SimpleRoutesDns({
                 {final !== undefined && final !== '' ? t('dns.final', { tag: final }) : t('dns.finalUnknown')}
               </span>
             </div>
-            {opened && <SimpleRoutesDnsSettings text={text} />}
+            {opened && <ConfigDnsEdit text={text} />}
           </div>
         </details>
       </Card>

@@ -17,18 +17,12 @@ import {
   strings,
   type ConfigDocument,
 } from '@entities/Config';
+import { parseRuleAddress, readPlainRouteConditions } from '@entities/Rule';
 import { isRecord } from '@shared/lib/isRecord';
 import { hasDuplicateJsoncKeys } from '@shared/lib/jsonc';
 
-import { simpleAddress, simpleTerminalConditions } from './SimpleRoutes.conditions';
+import { DnsServerSchema, type DnsServerForm } from './ConfigDnsEdit.schema';
 
-export const DnsServerSchema = z.object({
-  tag: z.string().trim().min(1, 'tag'),
-  address: z.ipv4('address'),
-  detour: z.string(),
-});
-
-export type DnsServerForm = z.infer<typeof DnsServerSchema>;
 export type DnsReason =
   | 'core'
   | 'draft'
@@ -41,7 +35,7 @@ export type DnsReason =
   | 'conflict'
   | 'resolver';
 
-export interface SimpleDnsPath {
+export interface DnsPath {
   tag: string;
   kind: 'direct' | 'proxy' | 'outbound';
   domains: string[];
@@ -69,7 +63,7 @@ function exactRule(node: unknown, field: 'outbound' | 'server') {
     typeof target !== 'string' ||
     !target ||
     !domains.length ||
-    domains.some((name) => simpleAddress(name)?.domain?.[0] !== name)
+    domains.some((name) => parseRuleAddress(name)?.domain?.[0] !== name)
   )
     return null;
   return { target, domains };
@@ -98,7 +92,7 @@ function routeDomains(config: ConfigDocument) {
   for (const node of (config.route?.rules ?? []).slice(1)) {
     const rule = exactRule(node, 'outbound');
     if (!rule) {
-      const match = simpleTerminalConditions(node);
+      const match = readPlainRouteConditions(node);
       if (
         match?.key === 'rule_set' &&
         !match.sources &&
@@ -185,7 +179,7 @@ function dnsContext(text: string, coreVersion: string | undefined) {
 function dnsPaths(config: ConfigDocument, problem: DnsReason | null) {
   const scopes = routeDomains(config);
   const verified = hasDomainDnsIngress(config) && dnsPathOverride(config) === undefined;
-  const paths: SimpleDnsPath[] = [];
+  const paths: DnsPath[] = [];
   for (const node of config.outbounds ?? []) {
     const tag = node.tag;
     if (tag === undefined || tag === '' || !eligibleDnsExit(config, tag)) continue;
@@ -201,7 +195,7 @@ function dnsPaths(config: ConfigDocument, problem: DnsReason | null) {
     const servers = new Set(matches?.rows.map((row) => row.server));
     const current =
       reason === null && matches?.missing.length === 0 && servers.size === 1 ? matches.rows[0].server : null;
-    let kind: SimpleDnsPath['kind'] = 'outbound';
+    let kind: DnsPath['kind'] = 'outbound';
     if (node.type === 'direct') kind = 'direct';
     else if (node.type === 'selector') kind = 'proxy';
     paths.push({
@@ -218,7 +212,7 @@ function dnsPaths(config: ConfigDocument, problem: DnsReason | null) {
   return paths.sort((a, b) => order[a.kind] - order[b.kind]);
 }
 
-export function readSimpleDns(text: string, coreVersion: string | undefined) {
+export function readDnsSettings(text: string, coreVersion: string | undefined) {
   const { config, possibleReference, problem, servers, tags, references, addReason } = dnsContext(text, coreVersion);
   const inventory = servers.map((server, index) => {
     const tag = tags[index];

@@ -1,7 +1,8 @@
 import { parse } from 'jsonc-parser';
 
+import { RULE_SET_NS } from '../src/entities/RuleSet/i18n/RuleSet.namespace.generated.ts';
+import { RULE_CUSTOM_ADD_NS } from '../src/features/Rule/RuleCustomAdd/i18n/RuleCustomAdd.namespace.generated.ts';
 import { SIMPLE_ROUTES_NS } from '../src/pages/SimpleRoutes/i18n/SimpleRoutes.namespace.generated.ts';
-import { RULE_SET_TABLE_NS } from '../src/widgets/RuleSet/RuleSetTable/i18n/RuleSetTable.namespace.generated.ts';
 import { E2E_TAG, expect, test, translate } from './fixtures/index.ts';
 
 const DIRECT = 'direct';
@@ -82,8 +83,8 @@ test(
       await controls.service(SET_TAG).click();
       const service = controls.row(SET_TAG);
       await expect(service).toContainText('v2fly');
-      await expect(service).toContainText(translate(RULE_SET_TABLE_NS, 'details.routeRules'));
-      await expect(service).toContainText(translate(RULE_SET_TABLE_NS, 'details.dnsRules'));
+      await expect(service).toContainText(translate(RULE_SET_NS, 'details.routeRules'));
+      await expect(service).toContainText(translate(RULE_SET_NS, 'details.dnsRules'));
       await expect(controls.reference(service, POSITION.third)).toHaveAttribute('href', '/config?rule=3');
       await expect(controls.reference(service, POSITION.second)).toHaveAttribute('href', '/config/dnsRules?node=2');
       await page.screenshot({ path: testInfo.outputPath('rule-order-desktop.png') });
@@ -162,14 +163,14 @@ test.describe('phone', () => {
         await controls.select(controls.device, /192\.168\.1\.60/);
         await controls.select(controls.outbound, DIRECT);
         await expect(controls.form).toContainText(
-          translate(SIMPLE_ROUTES_NS, 'custom.preview', {
+          translate(RULE_CUSTOM_ADD_NS, 'custom.preview', {
             position: POSITION.second,
             scope: DEVICE_LABEL,
             outbound: DIRECT,
           })
         );
         await expect(controls.form).toContainText(
-          translate(SIMPLE_ROUTES_NS, 'custom.before', { position: POSITION.second, next: POSITION.third })
+          translate(RULE_CUSTOM_ADD_NS, 'custom.before', { position: POSITION.second, next: POSITION.third })
         );
         await expect(applyBar.dirty).toBeHidden();
         await page.screenshot({ path: testInfo.outputPath('device-exception-phone.png') });
@@ -189,9 +190,9 @@ test.describe('phone', () => {
         await controls.address.fill(SITE);
         await controls.select(controls.outbound, MEDIA);
         await expect(controls.form).toContainText(
-          translate(SIMPLE_ROUTES_NS, 'custom.preview', {
+          translate(RULE_CUSTOM_ADD_NS, 'custom.preview', {
             position: POSITION.fourth,
-            scope: translate(SIMPLE_ROUTES_NS, 'custom.all'),
+            scope: translate(RULE_CUSTOM_ADD_NS, 'custom.all'),
             outbound: MEDIA,
           })
         );
@@ -228,7 +229,7 @@ test.describe('phone', () => {
       await controls.select(controls.outbound, DIRECT);
       await expect(controls.submit).toBeDisabled();
       await expect(controls.form).toContainText(
-        translate(SIMPLE_ROUTES_NS, 'custom.unknown', { position: POSITION.first })
+        translate(RULE_CUSTOM_ADD_NS, 'custom.unknown', { position: POSITION.first })
       );
       await page.keyboard.press('Escape');
       await expect(applyBar.dirty).toBeHidden();

@@ -1,15 +1,19 @@
 import { TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { RULE_SET_TYPE, type RuleSetRow, type useCachedRuleSets } from '@entities/RuleSet';
+import {
+  RuleSetReferenceLinks,
+  RuleSetSourceDetails,
+  RULE_SET_TYPE,
+  type RuleSetRow,
+  type useCachedRuleSets,
+} from '@entities/RuleSet';
 import type { CachedRuleSet } from '@entities/RuleSet';
 import { Button, SkeletonRows } from '@shared/ui';
 
 import { RULE_SET_TABLE_NS } from '../i18n/RuleSetTable.namespace.generated';
 import type { RuleSetLinks } from '../model/RuleSetTable.links';
-import { RuleSetReferenceLinks } from './RuleSetReferenceLinks';
 import { RuleSetSizeCell } from './RuleSetSizeCell';
-import { RuleSetSourceDetails } from './RuleSetSourceDetails';
 import { RuleSetUpdatedCell } from './RuleSetUpdatedCell';
 
 const CACHE_STATE_MESSAGE = {

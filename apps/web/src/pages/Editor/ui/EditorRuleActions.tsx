@@ -3,11 +3,13 @@ import { RuleReorderButtons } from '@features/Rule/RuleReorder';
 import { Separator } from '@shared/ui';
 
 export function EditorRuleActions({
+  text,
   index,
   total,
   onMoved,
   onDeleted,
 }: {
+  text: string | null;
   index: number;
   total: number;
   onMoved: (index: number) => void;
@@ -15,7 +17,7 @@ export function EditorRuleActions({
 }) {
   return (
     <>
-      <RuleReorderButtons index={index} total={total} onMoved={onMoved} />
+      <RuleReorderButtons text={text} index={index} total={total} onMoved={onMoved} />
       <Separator orientation='vertical' className='mx-1 h-5' />
       <RuleDeleteButton index={index} onDeleted={onDeleted} />
     </>

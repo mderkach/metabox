@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, CARD_TITLE } from '@shared/ui';
 
-import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
-import { useSimpleDnsDraft } from '../lib/SimpleRoutes.dnsDraft';
-import { SimpleRoutesDnsAssignment } from './SimpleRoutesDnsAssignment';
-import { SimpleRoutesDnsServerForm } from './SimpleRoutesDnsServerForm';
+import { CONFIG_DNS_EDIT_NS } from '../i18n/ConfigDnsEdit.namespace.generated';
+import { useConfigDnsEditDraft } from '../model/ConfigDnsEdit.draft';
+import { ConfigDnsEditAssignment } from './ConfigDnsEditAssignment';
+import { ConfigDnsEditServerForm } from './ConfigDnsEditServerForm';
 
-export function SimpleRoutesDnsSettings({ text }: { text: string }) {
-  const { t } = useTranslation(SIMPLE_ROUTES_NS);
-  const { model, addServer, assign, stale } = useSimpleDnsDraft(text);
+export function ConfigDnsEdit({ text }: { text: string }) {
+  const { t } = useTranslation(CONFIG_DNS_EDIT_NS);
+  const { model, addServer, assign, stale } = useConfigDnsEditDraft(text);
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState<{ tag: string; text: string } | null>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -72,7 +72,7 @@ export function SimpleRoutesDnsSettings({ text }: { text: string }) {
         {addReason !== null && <p className='text-sm text-muted-foreground'>{t(`dns.reason.${addReason}`)}</p>}
         <div id={formId} hidden={!adding}>
           {adding && (
-            <SimpleRoutesDnsServerForm
+            <ConfigDnsEditServerForm
               detours={model.detours}
               reason={addReason}
               onSubmit={(server) =>
@@ -97,7 +97,7 @@ export function SimpleRoutesDnsSettings({ text }: { text: string }) {
             <p className='max-w-prose text-sm text-muted-foreground'>{t('dns.scopeNote')}</p>
             <ul className='divide-y'>
               {model.paths.map((path) => (
-                <SimpleRoutesDnsAssignment key={path.tag} path={path} text={text} stale={stale} onAssign={assign} />
+                <ConfigDnsEditAssignment key={path.tag} path={path} text={text} stale={stale} onAssign={assign} />
               ))}
             </ul>
           </>

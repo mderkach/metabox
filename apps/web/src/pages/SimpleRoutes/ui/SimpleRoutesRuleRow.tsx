@@ -3,19 +3,18 @@ import { ChevronDown, GripVertical } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { isNamedRuleAction, RULE_TARGET, ruleSetReferencesOf, type RuleRow } from '@entities/Rule';
+import { ruleActionLabel, RULE_TARGET, ruleSetReferencesOf, type RuleRow } from '@entities/Rule';
 import type { RuleSetRow, RuleSetUsage } from '@entities/RuleSet';
+import { RuleSetReferenceLinks, RuleSetSourceDetails } from '@entities/RuleSet';
+import { canAddDeviceException, RuleCustomAddButton } from '@features/Rule/RuleCustomAdd';
 import { RuleReorderButtons } from '@features/Rule/RuleReorder';
 import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 import { Button } from '@shared/ui';
-import { RuleSetReferenceLinks, RuleSetSourceDetails } from '@widgets/RuleSet/RuleSetTable';
 
 import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
-import { canAddDeviceException } from '../model/SimpleRoutes.custom';
 import type { SimpleRuleNavigation, SimpleRoutesLinks } from '../model/SimpleRoutes.links';
 import type { SimpleMoveLimit, SimpleRuleGroup } from '../model/SimpleRoutes.order';
-import { SimpleRoutesCustomAction } from './SimpleRoutesCustomAction';
 
 export function SimpleRoutesRuleRow({
   rule,
@@ -122,18 +121,16 @@ export function SimpleRoutesRuleRow({
           </div>
         </div>
         <span className={cn('min-w-0 text-muted-foreground', rule.targetKind === RULE_TARGET.Outbound && 'font-mono')}>
-          {rule.targetKind === RULE_TARGET.Action && isNamedRuleAction(rule.target)
-            ? tShared(`ruleAction.${rule.target}`)
-            : rule.target || t('rules.targetUnknown')}
+          {ruleActionLabel(rule, tShared) ?? (rule.target || t('rules.targetUnknown'))}
         </span>
         {movable && (
           <span className='col-span-full inline-flex md:col-span-1 md:justify-self-end'>
-            <RuleReorderButtons index={rule.index} total={total} allowMove={(to) => allowMove(rule.index, to)} />
+            <RuleReorderButtons text={text} index={rule.index} total={total} allowMove={allowMove} />
           </span>
         )}
         {!ordered && canAddDeviceException(node) && (
           <div className='col-span-full md:col-span-1 md:justify-self-end'>
-            <SimpleRoutesCustomAction text={text} initialOutbound={outbound} ruleIndex={rule.index - 1} />
+            <RuleCustomAddButton text={text} initialOutbound={outbound} ruleIndex={rule.index - 1} />
           </div>
         )}
       </div>

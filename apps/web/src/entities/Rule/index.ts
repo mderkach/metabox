@@ -5,7 +5,7 @@ export {
   toRuleRows,
   toRuleRowsFromNodes,
 } from './model/Rule.adapter';
-export { toAppliedIndices } from './model/Rule.applied';
+export { toAppliedIndices, toEditedRuleIds } from './model/Rule.applied';
 export { toHostAddress, toRuleCaption } from './model/Rule.caption';
 export type { RuleCaption } from './model/Rule.caption';
 export { RULE_CHANGE, toRuleChanges } from './model/Rule.changes';
@@ -26,3 +26,10 @@ export { newRulePlace, RULE_TARGET, ruleSetReferencesOf, ruleSetsOf, toNewRuleRo
 export type { NewRulePlace, RuleBranch, RuleGroup, RuleMatcher, RuleRow, RuleTargetKind } from './model/Rule.model';
 export { useRuleTitle } from './ui/Rule.title';
 export type { RuleTitle } from './ui/Rule.title';
+export {
+  compareRouteConditions,
+  isLiteralRuleIp,
+  parseRuleAddress,
+  readPlainRouteConditions,
+} from './model/Rule.conditions';
+export { ruleActionLabel } from './ui/Rule.target';

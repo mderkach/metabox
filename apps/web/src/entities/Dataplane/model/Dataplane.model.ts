@@ -1,3 +1,5 @@
+import { cidrContains, formatIpv4, IPV4_HOST_PREFIX, ipv4NetworkAddress, parseIpv4Cidr } from '@shared/lib/ipv4';
+
 import { ACCESS_MODE } from '../api/Dataplane.schema';
 
 export type AccessMode = (typeof ACCESS_MODE)[number];
@@ -46,56 +48,7 @@ export interface RouteSource {
   static: boolean;
 }
 
-const HOST_PREFIX = '/32';
-const IPV4_BITS = 32;
-const IPV4_OCTET_MAX = 255;
-const IPV4_OCTETS = 4;
-const OCTET_BITS = 8;
-const IPV4_CIDR = /^(\d{1,3}(?:\.\d{1,3}){3})(?:\/(\d{1,2}))?$/;
-
-/** IPv4 address or subnet from `source_ip`; the address is an unsigned 32-bit number. */
-export interface Ipv4Cidr {
-  address: number;
-  prefix: number;
-}
-
-/**
- * A `source_ip` entry as an address and a prefix length; a bare address is a
- * `/32` subnet. IPv6 and anything that does not parse as IPv4 give `null`: the
- * daemon builds devices from DHCPv4 leases, and there is nothing to match IPv6
- * against.
- */
-export function parseIpv4Cidr(entry: string): Ipv4Cidr | null {
-  const match = IPV4_CIDR.exec(entry);
-
-  if (match === null) return null;
-
-  // An optional group without a match is `undefined`, although the RegExp type promises a string.
-  const [, address = '', length = ''] = match;
-  const octets = address.split('.').map(Number);
-  const prefix = length === '' ? IPV4_BITS : Number(length);
-
-  if (octets.some((octet) => octet > IPV4_OCTET_MAX) || prefix > IPV4_BITS) return null;
-
-  return { address: octets.reduce((value, octet) => value * (IPV4_OCTET_MAX + 1) + octet, 0), prefix };
-}
-
-/** The address falls into the subnet. The mask drops host bits: `192.168.1.67/29` reads as `192.168.1.64/29`. */
-export function cidrContains(cidr: Ipv4Cidr, address: number): boolean {
-  const mask = maskOf(cidr.prefix);
-
-  return (cidr.address & mask) >>> 0 === (address & mask) >>> 0;
-}
-
-function maskOf(prefix: number): number {
-  return prefix === 0 ? 0 : (~0 << (IPV4_BITS - prefix)) >>> 0;
-}
-
-function formatIpv4(address: number): string {
-  return Array.from({ length: IPV4_OCTETS }, (_, index) =>
-    String((address >>> ((IPV4_OCTETS - 1 - index) * OCTET_BITS)) & IPV4_OCTET_MAX)
-  ).join('.');
-}
+const HOST_PREFIX = `/${String(IPV4_HOST_PREFIX)}`;
 
 export const SOURCE_IP_ERROR = {
   Invalid: 'invalid',
@@ -116,7 +69,7 @@ export function sourceIpError(entry: string): SourceIpError | null {
 
   if (cidr === null) return { kind: SOURCE_IP_ERROR.Invalid };
 
-  const network = (cidr.address & maskOf(cidr.prefix)) >>> 0;
+  const network = ipv4NetworkAddress(cidr);
 
   return network === cidr.address
     ? null
@@ -136,13 +89,13 @@ function isHostOf(entry: string, ip: string): boolean {
 function entryContaining(entries: readonly string[], ip: string, wider: boolean): string | null {
   const address = parseIpv4Cidr(ip);
 
-  if (address === null || address.prefix !== IPV4_BITS) return null;
+  if (address === null || address.prefix !== IPV4_HOST_PREFIX) return null;
 
   return (
     entries.find((entry) => {
       const cidr = parseIpv4Cidr(entry);
 
-      return cidr !== null && (!wider || cidr.prefix < IPV4_BITS) && cidrContains(cidr, address.address);
+      return cidr !== null && (!wider || cidr.prefix < IPV4_HOST_PREFIX) && cidrContains(cidr, address.address);
     }) ?? null
   );
 }

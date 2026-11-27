@@ -24,9 +24,10 @@ import { DEFAULT_LOG_LEVEL, getLogTailOptions } from '@entities/Log';
 import { getProxiesOptions, getProxyProvidersOptions } from '@entities/Proxy';
 import type { RuleEditorSearch } from '@entities/Route';
 import { parseRuleSearch } from '@entities/Rule';
-import { getRuleSetCatalogOptions, parseRuleSetSearch } from '@entities/RuleSet';
+import { getRuleSetCatalogOptions, parseRuleSetSearch, RULE_SET_NS } from '@entities/RuleSet';
 import { AUTH_PASSWORD_NS } from '@features/Auth/AuthPassword';
 import { CONFIG_CACHE_FILE_NS } from '@features/Config/ConfigCacheFile';
+import { CONFIG_DNS_EDIT_NS } from '@features/Config/ConfigDnsEdit';
 import { CONFIG_NODE_ADD_NS } from '@features/Config/ConfigNodeAdd';
 import { CONFIG_NODE_DELETE_NS } from '@features/Config/ConfigNodeDelete';
 import { CONFIG_NODE_FORM_NS } from '@features/Config/ConfigNodeForm';
@@ -38,6 +39,7 @@ import { LOG_CLEAR_NS } from '@features/Log/LogClear';
 import { MCP_ACCESS_NS } from '@features/Mcp/McpAccess';
 import { RULE_ADD_NS } from '@features/Rule/RuleAdd';
 import { RULE_CATALOG_ADD_NS } from '@features/Rule/RuleCatalogAdd';
+import { RULE_CUSTOM_ADD_NS } from '@features/Rule/RuleCustomAdd';
 import { RULE_DELETE_NS } from '@features/Rule/RuleDelete';
 import { RULE_EDIT_NS } from '@features/Rule/RuleEdit';
 import { RULE_RAW_NS } from '@features/Rule/RuleRaw';
@@ -149,11 +151,13 @@ export const simpleRoutesRoute = createRoute({
     Promise.all([
       preloadNamespaces([
         SIMPLE_ROUTES_NS,
+        CONFIG_DNS_EDIT_NS,
         CONFIG_NODE_ADD_NS,
         CONFIG_CACHE_FILE_NS,
         RULE_CATALOG_ADD_NS,
+        RULE_CUSTOM_ADD_NS,
         RULE_REORDER_NS,
-        RULE_SET_TABLE_NS,
+        RULE_SET_NS,
       ]),
       QueryClientInstance.query(getDataplaneOptions()).catch(keepFailureForScreen),
     ]),
@@ -170,6 +174,7 @@ export const ruleSetsRoute = createRoute({
       preloadNamespaces([
         RULE_SETS_NS,
         RULE_SET_TABLE_NS,
+        RULE_SET_NS,
         RULE_SET_REMOTE_FORM_NS,
         RULE_SET_CUSTOM_NS,
         RULE_SET_DELETE_NS,

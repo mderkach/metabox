@@ -13,7 +13,7 @@ import { CONFIG_ENDPOINT, CONFIG_QUERY } from '@entities/Config';
 import { parseRuleSearch } from '@entities/Rule';
 import { PANEL_AS_SHEET } from '@shared/lib/media';
 
-import { toSelectedRuleId } from '../lib/Editor.lib';
+import { toSelectedRuleId } from '../lib/Editor.selection';
 import { EditorPage } from '../ui/EditorPage';
 import {
   CONFIG,

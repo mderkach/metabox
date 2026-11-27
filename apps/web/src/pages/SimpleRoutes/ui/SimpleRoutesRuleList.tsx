@@ -3,9 +3,11 @@ import { ChevronDown } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ConfigDocumentStore, RULES_PATH, selectConfigCurrent, selectConfigStale } from '@entities/Config';
+import { ConfigDocumentStore, selectConfigCurrent, selectConfigStale } from '@entities/Config';
 import { RULE_TARGET, useRuleTitle } from '@entities/Rule';
 import { toRuleSetRowsFromNodes, useRuleSetCatalog, type RuleSetRow } from '@entities/RuleSet';
+import { RuleCustomAddButton } from '@features/Rule/RuleCustomAdd';
+import { moveRouteRule } from '@features/Rule/RuleReorder';
 import { Button, Card, CardContent } from '@shared/ui';
 
 import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
@@ -17,7 +19,6 @@ import {
   simpleRuleGroup,
   type SimpleMoveLimit,
 } from '../model/SimpleRoutes.order';
-import { SimpleRoutesCustomAction } from './SimpleRoutesCustomAction';
 import { SimpleRoutesRuleFilter } from './SimpleRoutesRuleFilter';
 import { SimpleRoutesRuleRow } from './SimpleRoutesRuleRow';
 import { SimpleRoutesServiceSuggestions } from './SimpleRoutesServiceSuggestions';
@@ -117,9 +118,12 @@ export function SimpleRoutesRuleList({
 
   function release(to: number) {
     const source = drag.current;
-    if (source?.text === text && source.from !== to && allowMove(source.from, to)) {
-      if (!ConfigDocumentStore.getState().move(RULES_PATH, source.from - 1, to - 1))
-        setNotice({ from: source.from, text, message: t('list.unsafe') });
+    if (
+      source?.text === text &&
+      source.from !== to &&
+      moveRouteRule(source.text, source.from, to, allowMove) === 'failed'
+    ) {
+      setNotice({ from: source.from, text, message: t('list.unsafe') });
     }
     drag.current = null;
     setHover(null);
@@ -236,7 +240,7 @@ export function SimpleRoutesRuleList({
         )
       )}
       <div>
-        <SimpleRoutesCustomAction text={text} initialOutbound={outbound} />
+        <RuleCustomAddButton text={text} initialOutbound={outbound} />
       </div>
     </>
   );

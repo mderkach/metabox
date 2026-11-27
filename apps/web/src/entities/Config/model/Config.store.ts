@@ -6,6 +6,7 @@ import { createReactSelectors, stateCreator } from '@shared/lib/state';
 
 import { findValue, insertValue, moveValue, nameValue, removeValue, setValue } from './Config.model';
 import { rebaseEdits, type NodeEdit } from './Config.patch';
+import { selectConfigCurrent, selectConfigStale } from './Config.selectors';
 import { readStoredDraft, writeStoredDraft } from './Config.storage';
 
 export interface ConfigDocumentState {
@@ -198,6 +199,15 @@ function baseOf(state: ConfigDocumentState): string | null {
 export const ConfigDocumentState = createReactSelectors(ConfigDocumentStateProto);
 
 export const ConfigDocumentStore = ConfigDocumentStateProto;
+
+/** Stages a reviewed replacement only while the text and its applied base still match. */
+export function replaceReviewedDraft(reviewed: string, candidate: string): boolean {
+  const document = ConfigDocumentStore.getState();
+  if (selectConfigCurrent(document) !== reviewed || selectConfigStale(document)) return false;
+
+  if (candidate !== reviewed) document.replace(candidate);
+  return true;
+}
 
 ConfigDocumentStateProto.subscribe(function storeDraft(state, previous) {
   if (

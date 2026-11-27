@@ -3,21 +3,21 @@ import { useTranslation } from 'react-i18next';
 
 import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
-import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
-import type { DnsReason, SimpleDnsPath } from '../model/SimpleRoutes.dns';
+import { CONFIG_DNS_EDIT_NS } from '../i18n/ConfigDnsEdit.namespace.generated';
+import type { DnsReason, DnsPath } from '../model/ConfigDnsEdit.model';
 
-export function SimpleRoutesDnsAssignment({
+export function ConfigDnsEditAssignment({
   path,
   text,
   stale,
   onAssign,
 }: {
-  path: SimpleDnsPath;
+  path: DnsPath;
   text: string;
   stale: boolean;
   onAssign: (outbound: string, resolver: string) => DnsReason | 'stale' | null;
 }) {
-  const { t } = useTranslation(SIMPLE_ROUTES_NS);
+  const { t } = useTranslation(CONFIG_DNS_EDIT_NS);
   const id = useId();
   const openedAt = useRef(text);
   const [error, setError] = useState<DnsReason | 'stale' | null>(null);

@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 import {
   hasDomainDnsIngress,
   insertValue,
@@ -9,22 +7,11 @@ import {
   RULES_PATH,
   type ConfigDocument,
 } from '@entities/Config';
+import { compareRouteConditions, isLiteralRuleIp, parseRuleAddress, readPlainRouteConditions } from '@entities/Rule';
 import { isRecord } from '@shared/lib/isRecord';
 import { hasDuplicateJsoncKeys } from '@shared/lib/jsonc';
 
-import {
-  isDeviceAddress,
-  simpleAddress,
-  simpleRuleRelation,
-  simpleTerminalConditions,
-} from './SimpleRoutes.conditions';
-
-export const CustomRuleSchema = z.object({
-  address: z.string(),
-  device: z.string(),
-  outbound: z.string().min(1),
-});
-export type CustomRuleForm = z.infer<typeof CustomRuleSchema>;
+import type { CustomRuleForm } from './RuleCustomAdd.schema';
 
 export function customExits(config: ConfigDocument | null) {
   const exits = config?.outbounds ?? [];
@@ -42,9 +29,13 @@ export function customExits(config: ConfigDocument | null) {
   );
 }
 
+function deviceExceptionMatch(node: unknown) {
+  const match = readPlainRouteConditions(node);
+  return match?.key && !match.sources ? { key: match.key, entries: match.entries } : null;
+}
+
 export function canAddDeviceException(node: unknown) {
-  const match = simpleTerminalConditions(node);
-  return !!match?.key && !match.sources;
+  return deviceExceptionMatch(node) !== null;
 }
 
 function blocked(
@@ -73,25 +64,25 @@ export function planCustomRule(text: string, form: CustomRuleForm, ruleIndex?: n
     return blocked('draft');
   if (!customExits(parsed.config).includes(form.outbound)) return blocked('exit');
   const rules = parsed.config.route?.rules ?? [];
-  const parent = ruleIndex === undefined ? undefined : rules[ruleIndex];
-  const match = simpleTerminalConditions(parent);
-  if (ruleIndex !== undefined && (!match?.key || !canAddDeviceException(parent))) return blocked('parent');
+  const match = ruleIndex === undefined ? null : deviceExceptionMatch(rules[ruleIndex]);
+  if (ruleIndex !== undefined && match === null) return blocked('parent');
   if (
     match?.key === 'rule_set' &&
     match.entries?.some((tag) => parsed.config?.route?.rule_set?.filter((set) => set.tag === tag).length !== 1) === true
   )
     return blocked('parent');
-  if (ruleIndex !== undefined && !isDeviceAddress(form.device)) return blocked('deviceRequired');
-  const dest = match?.key ? { [match.key]: match.entries, source_ip_cidr: [form.device] } : simpleAddress(form.address);
+  if (ruleIndex !== undefined && !isLiteralRuleIp(form.device)) return blocked('deviceRequired');
+  const dest =
+    match !== null ? { [match.key]: match.entries, source_ip_cidr: [form.device] } : parseRuleAddress(form.address);
   if (!dest) return blocked('invalid');
   const node = { ...dest, action: 'route', outbound: form.outbound };
   let index = rules.length;
   for (let i = 0; i < rules.length; i++) {
     const previous = rules[i];
     if (isServiceStep(previous) || (i === 0 && hasDomainDnsIngress(parsed.config))) continue;
-    const relation = simpleRuleRelation(previous, node);
+    const relation = compareRouteConditions(previous, node);
     if (relation === 'disjoint') continue;
-    const reverse = simpleRuleRelation(node, previous);
+    const reverse = compareRouteConditions(node, previous);
     if (relation === 'covers') {
       if (reverse === 'covers') return blocked('duplicate', i + 1);
       index = i;

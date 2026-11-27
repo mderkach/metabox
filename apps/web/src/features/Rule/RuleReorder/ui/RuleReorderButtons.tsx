@@ -2,12 +2,12 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ConfigDocumentState, RULES_PATH } from '@entities/Config';
 import { showQueryError } from '@shared/api';
 import { Button } from '@shared/ui';
 
 import { RULE_REORDER_NS } from '../i18n/RuleReorder.namespace.generated';
 import { MOVE, type Move } from '../model/RuleReorder.constants';
+import { moveRouteRule, type RuleMovePolicy } from '../model/RuleReorder.move';
 
 /**
  * Moving a rule by one position: in sing-box rule order is the logic, so a move
@@ -23,11 +23,13 @@ import { MOVE, type Move } from '../model/RuleReorder.constants';
  * disabled button.
  */
 export function RuleReorderButtons({
+  text,
   index,
   total,
   onMoved,
   allowMove,
 }: {
+  text: string | null;
   /** Rule number, from one. */
   index: number;
   /** `route.rules` length, not the selected list's. */
@@ -35,10 +37,9 @@ export function RuleReorderButtons({
   /** The number the rule moved to. */
   onMoved?: (index: number) => void;
   /** A restricted view may refuse crossing an imported or overlapping rule. */
-  allowMove?: (target: number) => boolean;
+  allowMove?: RuleMovePolicy;
 }) {
   const { t } = useTranslation(RULE_REORDER_NS);
-  const move = ConfigDocumentState.use.move();
   const upRef = useRef<HTMLButtonElement>(null);
   const downRef = useRef<HTMLButtonElement>(null);
   const focusAfterMove = useRef<Move | null>(null);
@@ -61,9 +62,10 @@ export function RuleReorderButtons({
     const target = index + step;
     const atEdge = target === 1 || target === total;
 
-    if (allowMove?.(target) === false) return;
+    const result = moveRouteRule(text, index, target, allowMove);
+    if (result === 'blocked') return;
 
-    if (!move(RULES_PATH, index - 1, target - 1)) {
+    if (result === 'failed') {
       showQueryError({ showError: true, errorMessageKey: 'toast.rule.reorder.failed' }, null);
 
       return;

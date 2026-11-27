@@ -1,27 +1,27 @@
 import { z } from 'zod';
 
-import { cidrContains, parseIpv4Cidr } from '@entities/Dataplane';
+import { cidrContains, parseIpv4Cidr } from '@shared/lib/ipv4';
 import { isRecord } from '@shared/lib/isRecord';
 
 const MATCHERS = ['domain', 'domain_suffix', 'rule_set', 'ip_cidr'] as const;
-type Matcher = (typeof MATCHERS)[number];
+type PlainRouteMatcher = (typeof MATCHERS)[number];
 type Relation = 'covers' | 'disjoint' | 'unknown';
 
 const IP = z.union([z.ipv4(), z.ipv6()]);
 const PREFIX = z.union([IP, z.cidrv4(), z.cidrv6()]);
 const DOMAIN = z.hostname();
 
-export function simpleAddress(value: string) {
+export function isLiteralRuleIp(value: string) {
+  return IP.safeParse(value).success;
+}
+
+export function parseRuleAddress(value: string) {
   const address = value.trim().toLowerCase();
-  if (IP.safeParse(address).success) return { ip_cidr: [address] };
+  if (isLiteralRuleIp(address)) return { ip_cidr: [address] };
   const domain = address.replace(/\.$/, '');
   if (!domain.endsWith('.') && !/^[\d.]+$/.test(domain) && DOMAIN.safeParse(domain).success)
     return { domain: [domain] };
   return null;
-}
-
-export function isDeviceAddress(value: string) {
-  return IP.safeParse(value).success;
 }
 
 function values(value: unknown): string[] | undefined {
@@ -31,7 +31,7 @@ function values(value: unknown): string[] | undefined {
   return undefined;
 }
 
-export function simpleTerminalConditions(node: unknown) {
+export function readPlainRouteConditions(node: unknown) {
   if (
     !isRecord(node) ||
     typeof node.outbound !== 'string' ||
@@ -57,10 +57,6 @@ export function simpleTerminalConditions(node: unknown) {
   return { key, entries, sources };
 }
 
-export function isSimpleTerminalRule(node: unknown) {
-  return simpleTerminalConditions(node) !== null;
-}
-
 function addressRelation(left: string, right: string): Relation {
   if (left === right) return 'covers';
   const a = parseIpv4Cidr(left);
@@ -75,7 +71,7 @@ function addressRelation(left: string, right: string): Relation {
   return 'unknown';
 }
 
-function destinationRelation(a: Matcher, left: string, b: Matcher, right: string): Relation {
+function destinationRelation(a: PlainRouteMatcher, left: string, b: PlainRouteMatcher, right: string): Relation {
   if (a === 'rule_set' || b === 'rule_set') return a === b && left === right ? 'covers' : 'unknown';
   if (a === 'ip_cidr' || b === 'ip_cidr') return a === b ? addressRelation(left, right) : 'unknown';
   const outer = left.toLowerCase();
@@ -97,9 +93,9 @@ function compareLists(
   return matches.every((list) => list.every((match) => match === 'disjoint')) ? 'disjoint' : 'unknown';
 }
 
-export function simpleRuleRelation(earlier: unknown, later: unknown): Relation {
-  const left = simpleTerminalConditions(earlier);
-  const right = simpleTerminalConditions(later);
+export function compareRouteConditions(earlier: unknown, later: unknown): Relation {
+  const left = readPlainRouteConditions(earlier);
+  const right = readPlainRouteConditions(later);
   if (!left || !right) return 'unknown';
   const source = compareLists(left.sources, right.sources, addressRelation);
   const a = left.key;

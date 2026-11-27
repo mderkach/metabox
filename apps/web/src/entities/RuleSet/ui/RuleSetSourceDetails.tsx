@@ -1,11 +1,10 @@
 import { useTranslation } from 'react-i18next';
 
-import type { RuleSetDescription } from '@entities/RuleSet';
-
-import { RULE_SET_TABLE_NS } from '../i18n/RuleSetTable.namespace.generated';
+import { RULE_SET_NS } from '../i18n/RuleSet.namespace.generated';
+import type { RuleSetDescription } from '../model/RuleSet.model';
 
 export function RuleSetSourceDetails({ description }: { description: RuleSetDescription }) {
-  const { t } = useTranslation(RULE_SET_TABLE_NS);
+  const { t } = useTranslation(RULE_SET_NS);
 
   return (
     <div>

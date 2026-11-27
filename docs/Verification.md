@@ -737,16 +737,16 @@ Vitest covers inventory-only additions, reassignment of exact-domain rules and p
 
 An independent Impeccable review used the expanded v11 DNS section and the Chromium mock stand at 1280 × 800 and 375 × 812 with touch. The first review found that partially assigned domains and domains with different resolvers looked unassigned, and that a named exit separated the direct and proxy choices. The reviewer confirmed the replacement notice and the direct, proxy, then named display order at both widths. Form cancellation restored keyboard focus, touch controls measured at least 44 CSS pixels high, and the imported inventory stayed readable on an unsupported core.
 
-| ID     | Kind   | File                                                                         | Check                                                                                                      |
-| ------ | ------ | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.dns.test.ts`         | `appends only the requested server, leaving it unassigned and keeping the implicit final`                  |
-| AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.dns.test.ts`         | `refuses first-server creation, implicit bootstrap changes, collisions and dangling references`            |
-| AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.dns.test.ts`         | `distinguishes mixed and partial explicit assignments and replaces both atomically`                        |
-| AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.dns.test.ts`         | `updates an imported rule in place and adds only missing names for the same exit`                          |
-| AC-117 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutesDnsSettings.test.tsx` | `preserves a concurrent draft edit when the DNS server form is submitted`                                  |
-| AC-117 | e2e    | `apps/web/e2e/simpleDns.e2e.test.ts`                                         | `adding a resolver only changes inventory until reassignment in the shared DNS draft`                      |
-| AC-117 | e2e    | `apps/web/e2e/simpleDns.e2e.test.ts`                                         | `an exact DNS assignment stays editable ahead of a later catalog pair`                                     |
-| AC-117 | e2e    | `apps/web/e2e/simpleDns.e2e.test.ts`                                         | `the 375px DNS assignment distinguishes the proxy group from a specific exit without an eligible resolver` |
+| ID     | Kind   | File                                                                               | Check                                                                                                      |
+| ------ | ------ | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| AC-117 | vitest | `apps/web/src/features/Config/ConfigDnsEdit/__tests__/ConfigDnsEdit.model.test.ts` | `appends only the requested server, leaving it unassigned and keeping the implicit final`                  |
+| AC-117 | vitest | `apps/web/src/features/Config/ConfigDnsEdit/__tests__/ConfigDnsEdit.model.test.ts` | `refuses first-server creation, implicit bootstrap changes, collisions and dangling references`            |
+| AC-117 | vitest | `apps/web/src/features/Config/ConfigDnsEdit/__tests__/ConfigDnsEdit.model.test.ts` | `distinguishes mixed and partial explicit assignments and replaces both atomically`                        |
+| AC-117 | vitest | `apps/web/src/features/Config/ConfigDnsEdit/__tests__/ConfigDnsEdit.model.test.ts` | `updates an imported rule in place and adds only missing names for the same exit`                          |
+| AC-117 | vitest | `apps/web/src/features/Config/ConfigDnsEdit/__tests__/ConfigDnsEdit.test.tsx`      | `preserves a concurrent draft edit when the DNS server form is submitted`                                  |
+| AC-117 | e2e    | `apps/web/e2e/simpleDns.e2e.test.ts`                                               | `adding a resolver only changes inventory until reassignment in the shared DNS draft`                      |
+| AC-117 | e2e    | `apps/web/e2e/simpleDns.e2e.test.ts`                                               | `an exact DNS assignment stays editable ahead of a later catalog pair`                                     |
+| AC-117 | e2e    | `apps/web/e2e/simpleDns.e2e.test.ts`                                               | `the 375px DNS assignment distinguishes the proxy group from a specific exit without an eligible resolver` |
 
 ### Adding a catalog service in Simple
 
@@ -768,19 +768,19 @@ An independent Impeccable review compared the populated form and preview with v1
 
 ### Simple rule order and device exceptions
 
-| ID     | Kind   | File                                                                          | Check                                                                                                         |
-| ------ | ------ | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutesRules.test.tsx`        | `shows references outside the outbound filter and counts a nested rule only once`                             |
-| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutesRules.test.tsx`        | `keeps actual references visible when the source is $source`                                                  |
-| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.custom.test.ts`       | `inserts a device exception before the general service and retains its JSONC name and DNS rule`               |
-| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.custom.test.ts`       | `leaves service steps ahead and inserts a literal IP before a covering IPv4 prefix`                           |
-| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutesCustomDialog.test.tsx` | `previews the actual position and refuses to overwrite a changed shared draft`                                |
-| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.order.test.ts`        | `protects a device exception when either it or its covering rule is moved`                                    |
-| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.order.test.ts`        | `checks every crossed rule even when the source and drop target are disjoint`                                 |
-| AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                    | `an outbound deep link retains rule positions and reveals actual route and DNS references in the service row` |
-| AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                    | `pointer and keyboard reorder the shared draft while preserving an imported rule and its JSONC comment`       |
-| AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                    | `a device exception and a custom domain preserve the verified leading DNS hijack`                             |
-| AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                    | `an unknown overlap blocks staging and preserves the imported JSONC byte for byte`                            |
+| ID     | Kind   | File                                                                              | Check                                                                                                         |
+| ------ | ------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutesRules.test.tsx`            | `shows references outside the outbound filter and counts a nested rule only once`                             |
+| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutesRules.test.tsx`            | `keeps actual references visible when the source is $source`                                                  |
+| AC-116 | vitest | `apps/web/src/features/Rule/RuleCustomAdd/__tests__/RuleCustomAdd.model.test.ts`  | `inserts a device exception before the general service and retains its JSONC name and DNS rule`               |
+| AC-116 | vitest | `apps/web/src/features/Rule/RuleCustomAdd/__tests__/RuleCustomAdd.model.test.ts`  | `leaves service steps ahead and inserts a literal IP before a covering IPv4 prefix`                           |
+| AC-116 | vitest | `apps/web/src/features/Rule/RuleCustomAdd/__tests__/RuleCustomAddDialog.test.tsx` | `previews the actual position and refuses to overwrite a changed shared draft`                                |
+| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.order.test.ts`            | `protects a device exception when either it or its covering rule is moved`                                    |
+| AC-116 | vitest | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutes.order.test.ts`            | `checks every crossed rule even when the source and drop target are disjoint`                                 |
+| AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                        | `an outbound deep link retains rule positions and reveals actual route and DNS references in the service row` |
+| AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                        | `pointer and keyboard reorder the shared draft while preserving an imported rule and its JSONC comment`       |
+| AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                        | `a device exception and a custom domain preserve the verified leading DNS hijack`                             |
+| AC-116 | e2e    | `apps/web/e2e/simpleRuleOrder.e2e.test.ts`                                        | `an unknown overlap blocks staging and preserves the imported JSONC byte for byte`                            |
 
 An independent Impeccable review on the mock stand at 1280 × 800 and 375 × 812 checked both list views, the service disclosure, keyboard reordering, the custom form and device exceptions. The review led to aligned outbound columns, a separate device action on narrow screens, a refusal message in the affected row, and a preview that gives the general rule's old and new positions. The follow-up confirmed these changes, focus return and a layout that fits both viewport widths.
 

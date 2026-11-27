@@ -1,39 +1,30 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { ConfigDocumentStore, selectConfigCurrent, selectConfigStale, useConfigStale } from '@entities/Config';
+import { replaceReviewedDraft, useConfigStale } from '@entities/Config';
 import { getDaemonStatusOptions } from '@entities/Daemon';
 
-import {
-  planDnsAssignment,
-  planDnsServer,
-  readSimpleDns,
-  type DnsReason,
-  type DnsServerForm,
-} from '../model/SimpleRoutes.dns';
+import { planDnsAssignment, planDnsServer, readDnsSettings, type DnsReason } from './ConfigDnsEdit.model';
+import type { DnsServerForm } from './ConfigDnsEdit.schema';
 
-export function useSimpleDnsDraft(text: string) {
+export function useConfigDnsEditDraft(text: string) {
   const client = useQueryClient();
   const options = getDaemonStatusOptions();
   const status = useQuery(options);
   const core = status.isSuccess ? status.data.core : undefined;
   const version = core?.type === 'sing-box' && core.variant === 'extended' ? core.version : undefined;
-  const model = useMemo(() => readSimpleDns(text, version), [text, version]);
+  const model = useMemo(() => readDnsSettings(text, version), [text, version]);
   const stale = useConfigStale();
 
   function stage(plan: ReturnType<typeof planDnsServer>): DnsReason | 'stale' | null {
-    const document = ConfigDocumentStore.getState();
     const latest = client.getQueryState(options.queryKey);
     if (
-      selectConfigCurrent(document) !== text ||
-      selectConfigStale(document) ||
       latest?.status !== 'success' ||
-      latest.data?.core !== core
+      latest.data?.core !== core ||
+      !replaceReviewedDraft(text, plan.ok ? plan.text : text)
     )
       return 'stale';
-    if (!plan.ok) return plan.reason;
-    if (plan.text !== text) document.replace(plan.text);
-    return null;
+    return plan.ok ? null : plan.reason;
   }
 
   function addServer(server: DnsServerForm, onStaged: (next: string) => void) {

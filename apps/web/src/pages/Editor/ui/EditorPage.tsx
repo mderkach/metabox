@@ -10,7 +10,10 @@ import { ConfigSectionSettings } from '@widgets/Config/ConfigSectionSettings';
 import { RulePanel, RulePanelSheet } from '@widgets/Rule/RulePanel';
 import { RuleTable } from '@widgets/Rule/RuleTable';
 
-import { toSelectedRuleId, useRouteEditor, useRuleFilter, useRuleMarks, useRuleSelection } from '../lib/Editor.lib';
+import { useRouteEditor } from '../lib/Editor.document';
+import { useRuleFilter } from '../lib/Editor.filter';
+import { useRuleMarks } from '../lib/Editor.marks';
+import { toSelectedRuleId, useRuleSelection } from '../lib/Editor.selection';
 import { EditorConfigNotParsed } from './EditorConfigNotParsed';
 import { EditorFilteredEmpty } from './EditorFilteredEmpty';
 import { EditorNoRules } from './EditorNoRules';
@@ -118,6 +121,7 @@ export function EditorPage() {
                 actions={
                   pending === null ? (
                     <EditorRuleActions
+                      text={editor.text}
                       index={selected.index}
                       total={editor.nodes.length}
                       onMoved={selection.onMoved}
@@ -146,6 +150,7 @@ export function EditorPage() {
           actions={
             selected === null || pending !== null ? null : (
               <EditorRuleActions
+                text={editor.text}
                 index={selected.index}
                 total={editor.nodes.length}
                 onMoved={selection.onMoved}

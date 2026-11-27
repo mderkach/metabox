@@ -3,12 +3,14 @@ import { useEffect, useId, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '@shared/i18n';
 import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui';
 
-import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
-import { DnsServerSchema, type DnsReason, type DnsServerForm } from '../model/SimpleRoutes.dns';
+import { CONFIG_DNS_EDIT_NS } from '../i18n/ConfigDnsEdit.namespace.generated';
+import type { DnsReason } from '../model/ConfigDnsEdit.model';
+import { DnsServerSchema, type DnsServerForm } from '../model/ConfigDnsEdit.schema';
 
-export function SimpleRoutesDnsServerForm({
+export function ConfigDnsEditServerForm({
   detours,
   reason,
   onSubmit,
@@ -19,7 +21,7 @@ export function SimpleRoutesDnsServerForm({
   onSubmit: (values: DnsServerForm) => DnsReason | 'stale' | null;
   onClose: () => void;
 }) {
-  const { t } = useTranslation(SIMPLE_ROUTES_NS);
+  const { t } = useTranslation([CONFIG_DNS_EDIT_NS, SHARED_NS]);
   const id = useId();
   const [failure, setFailure] = useState<DnsReason | 'stale' | null>(null);
   const form = useForm<DnsServerForm>({
@@ -114,7 +116,7 @@ export function SimpleRoutesDnsServerForm({
       )}
       <div className='flex flex-wrap gap-2'>
         <Button type='submit' size='sm' variant='outline' disabled={reason !== null}>
-          {t('custom.submit')}
+          {t('action.addToDraft', { ns: SHARED_NS })}
         </Button>
         <Button
           type='button'
@@ -124,7 +126,7 @@ export function SimpleRoutesDnsServerForm({
             onClose();
           }}
         >
-          {t('custom.cancel')}
+          {t('action.cancel', { ns: SHARED_NS })}
         </Button>
       </div>
     </form>

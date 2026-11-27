@@ -1,7 +1,7 @@
-import type { RuleSetUsage } from '@entities/RuleSet';
+import type { RuleSetReferenceLink } from '@entities/RuleSet';
 import type { PageLink } from '@shared/lib/navigation';
 
 export interface RuleSetLinks {
-  reference: (usage: RuleSetUsage) => PageLink;
+  reference: RuleSetReferenceLink;
   byTag: (tag: string) => PageLink;
 }
