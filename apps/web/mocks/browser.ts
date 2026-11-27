@@ -11,11 +11,7 @@ import { createMissingHandlers } from '../src/test/handlers';
 export { http, HttpResponse } from 'msw';
 export { silenceRuntimeStream } from '../src/test/runtimeStream';
 
-/**
- * The last handler fails every unmocked `/api/` request: the dev server proxies `/api` to
- * `METABOX_API_TARGET`, which may be a live daemon, and an error thrown from `onUnhandledRequest`
- * does not stop the request in the browser worker.
- */
+// Throwing from onUnhandledRequest does not stop the browser worker from forwarding the request.
 const unmockedApi = http.all('/api/*', ({ request }) => {
   console.error(`[mocks] no mock for ${request.method} ${new URL(request.url).pathname}`);
 

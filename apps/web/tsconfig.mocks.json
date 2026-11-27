@@ -28,5 +28,6 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["mocks"]
+  "include": ["mocks"],
+  "exclude": ["mocks/server.ts"]
 }

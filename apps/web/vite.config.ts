@@ -1,14 +1,14 @@
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import path from 'node:path';
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { playwright } from '@vitest/browser-playwright';
-import type { ProxyOptions, ViteDevServer } from 'vite';
+import type { ProxyOptions } from 'vite';
 import { configDefaults, defineConfig, type Plugin } from 'vitest/config';
 
+import { metaboxMocks, metaboxTestMocks } from './mocks/server.ts';
 import { daemonOriginFor } from './tools/daemonOrigin.ts';
 import { metaboxI18n } from './tools/i18nPlugin.ts';
 import { metaboxLocalePreloads } from './tools/i18nPreload.ts';
@@ -25,39 +25,7 @@ const JSDOM_PROJECT = { environment: 'jsdom', setupFiles: './src/test/setup.ts',
 // FSD layers; the same list is in `paths` of both tsconfigs.
 const LAYERS = ['app', 'pages', 'widgets', 'features', 'entities', 'shared'];
 
-const APP_ENTRY = '/src/app/main.tsx';
-const MOCK_ENTRY = '/mocks/enable.ts';
-const WORKER_PATH = '/mockServiceWorker.js';
-
-/**
- * Daemon mocks. Enabled by `METABOX_MOCK=all` and live
- * only on the dev server: `apply: 'serve'` keeps the plugin out of the build,
- * so a substituted entry never ends up in `dist`.
- *
- * `METABOX_MOCK_CONNECTIONS=<number>` inflates the connection snapshot to the given
- * size: the panel must hold five thousand live connections, and
- * there is no other way to check this by hand — the test bench never has that much traffic.
- *
- * The worker script is served from `node_modules`, not put in `public/`: a file in
- * `public/` would go into `dist`, and from there via `go:embed` into the daemon binary.
- */
-function metaboxMocks(): Plugin | false {
-  if (process.env.METABOX_MOCK !== 'all') {
-    return false;
-  }
-
-  return {
-    name: 'metabox-mocks',
-    apply: 'serve',
-    config: () => ({
-      define: {
-        __METABOX_MOCK_CONNECTIONS__: JSON.stringify(Number(process.env.METABOX_MOCK_CONNECTIONS ?? 0)),
-      },
-    }),
-    configureServer: serveMockWorker,
-    transformIndexHtml: (html) => html.replace(APP_ENTRY, MOCK_ENTRY),
-  };
-}
+const MOCK_DAEMON = process.env.METABOX_MOCK === 'all';
 
 const PRODUCTION_ENV = { 'process.env.NODE_ENV': JSON.stringify('production') };
 
@@ -84,22 +52,6 @@ function metaboxProductionReact(): Plugin | false {
       optimizeDeps: { rolldownOptions: { transform: { define: PRODUCTION_ENV } } },
     }),
   };
-}
-
-function serveMockWorker(server: ViteDevServer) {
-  const require = createRequire(import.meta.url);
-  const worker = path.join(path.dirname(require.resolve('msw/package.json')), 'lib/mockServiceWorker.js');
-
-  server.middlewares.use(WORKER_PATH, (_request, response) => {
-    response.setHeader('Content-Type', 'text/javascript');
-    response.setHeader('Service-Worker-Allowed', '/');
-    response.end(readFileSync(worker, 'utf8'));
-  });
-}
-
-/** The same worker script for browser tests: they answer the panel's requests with the dev mocks. */
-function metaboxTestMocks(): Plugin {
-  return { name: 'metabox-test-mocks', configureServer: serveMockWorker };
 }
 
 const SCAN_ENTRY = '/dev/scan.ts';
@@ -210,6 +162,14 @@ const sendDaemonOrigin: ProxyOptions['configure'] = (proxy) => {
   });
 };
 
+// The test bench can use a daemon certificate signed by its own root.
+const daemonProxy: ProxyOptions = {
+  target: daemonTarget,
+  changeOrigin: true,
+  secure: false,
+  configure: sendDaemonOrigin,
+};
+
 export default defineConfig({
   plugins: [
     react(),
@@ -217,7 +177,7 @@ export default defineConfig({
     metaboxI18n(import.meta.dirname),
     metaboxLocalePreloads(import.meta.dirname),
     metaboxCompress(),
-    metaboxMocks(),
+    MOCK_DAEMON && metaboxMocks(),
     metaboxProductionReact(),
     metaboxScan(),
   ],
@@ -234,23 +194,7 @@ export default defineConfig({
     // The HMR payload goes over the same port as the page;
     // without an explicit setting the browser client tries to reach the container host.
     watch: { usePolling: false },
-    proxy: {
-      // The daemon lives in the target environment (the target container), not next to the dev server.
-      // With -https the daemon certificate comes from its own root, which the dev machine
-      // does not trust; the proxy talks to such a daemon without checking it.
-      '/api': {
-        target: daemonTarget,
-        changeOrigin: true,
-        secure: false,
-        configure: sendDaemonOrigin,
-      },
-      '/healthz': {
-        target: daemonTarget,
-        changeOrigin: true,
-        secure: false,
-        configure: sendDaemonOrigin,
-      },
-    },
+    proxy: MOCK_DAEMON ? undefined : { '/api': daemonProxy, '/healthz': daemonProxy },
   },
   test: {
     // A local run shares the machine with the dev server and parallel agents; a CI runner is free.
