@@ -243,6 +243,12 @@ jobs:
           METABOX_EPHEMERAL_BENCH: '1'
         run: cd apps/metaboxd && go test -tags integration -run TestApplyHTTPOnEphemeralBench -count=1 -v -timeout 5m .
 
+      - name: Interception scope confirmation and timeout
+        timeout-minutes: 4
+        env:
+          METABOX_EPHEMERAL_BENCH: '1'
+        run: cd apps/metaboxd && go test -tags integration -run '^TestInterceptionScopeOnEphemeralBench$' -count=1 -v -timeout 3m .
+
       - name: Cached rule sets with the running core
         timeout-minutes: 4
         env:
