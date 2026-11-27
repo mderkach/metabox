@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { replaceReviewedDraft, useConfigStale } from '@entities/Config';
 import { getDaemonStatusOptions } from '@entities/Daemon';
 
-import { planDnsAssignment, planDnsServer, readDnsSettings, type DnsReason } from './ConfigDnsEdit.model';
+import { planDnsAssignment, planDnsServer, readDnsSettings } from './ConfigDnsEdit.model';
 import type { DnsServerForm } from './ConfigDnsEdit.schema';
 
 export function useConfigDnsEditDraft(text: string) {
@@ -16,7 +16,7 @@ export function useConfigDnsEditDraft(text: string) {
   const model = useMemo(() => readDnsSettings(text, version), [text, version]);
   const stale = useConfigStale();
 
-  function stage(plan: ReturnType<typeof planDnsServer>): DnsReason | 'stale' | null {
+  function stage<R extends string>(plan: { ok: true; text: string } | { ok: false; reason: R }): R | 'stale' | null {
     const latest = client.getQueryState(options.queryKey);
     if (
       latest?.status !== 'success' ||
@@ -38,5 +38,5 @@ export function useConfigDnsEditDraft(text: string) {
     return stage(planDnsAssignment(text, version, outbound, resolver));
   }
 
-  return { model, stale, addServer, assign };
+  return { model, stale, version, stage, addServer, assign };
 }

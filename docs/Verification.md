@@ -749,6 +749,22 @@ An independent Impeccable review used the expanded v11 DNS section and the Chrom
 | AC-117 | e2e    | `apps/web/e2e/simpleDns.e2e.test.ts`                                               | `an exact DNS assignment stays editable ahead of a later catalog pair`                                     |
 | AC-117 | e2e    | `apps/web/e2e/simpleDns.e2e.test.ts`                                               | `the 375px DNS assignment distinguishes the proxy group from a specific exit without an eligible resolver` |
 
+### Sequential backup servers, address families and static DNS entries
+
+A loopback stand ran sing-box-extended `1.14.3-extended-2.7.3` with two local DNS responders. The inventory listed the backup first and the fallback transport listed the primary first. The primary alone received positive, empty NOERROR and NXDOMAIN queries. Both responders received the query in member order after SERVFAIL, REFUSED and a timeout. A hosts transport served the two IPv4 records and one IPv6 record for a mixed-case predefined name ahead of a conflicting file entry, and served a second name from the file. Queries for the excluded family returned an empty answer in each single-family mode. The [options contract](../openspec/changes/routes-simple/design.md#dns-options-in-the-shared-draft) records the verified scope.
+
+The local run passed 2,239 Vitest checks across 199 files and 119 Chromium mock scenarios. The Chromium comparison used 1280, 529 and 375 CSS pixels in light and dark themes. Two independent Impeccable assessments found that the last backup candidate still required an unnecessary selection, repeated Enter could undo an edit, and the family selector looked editable on an unsupported core. The reviewers rechecked the named add action, focus on the newly added or neighboring backup (or the empty chain’s heading), the multi-choice selector and the labelled read-only family. They also checked the open hosts form, cancellation and the shared Apply diff.
+
+| ID     | Kind   | File                                                                                  | Check                                                                             |
+| ------ | ------ | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| AC-117 | vitest | `apps/web/src/features/Config/ConfigDnsEdit/__tests__/ConfigDnsEdit.fallback.test.ts` | `keeps own-line imported annotations attached on a move`                          |
+| AC-117 | vitest | `apps/web/src/features/Config/ConfigDnsEdit/__tests__/ConfigDnsEditFallback.test.tsx` | `keeps imported parallel members readable alongside an editable sequential chain` |
+| AC-117 | vitest | `apps/web/src/features/Config/ConfigDnsEdit/__tests__/ConfigDnsEdit.options.test.ts`  | `renames the key in place and preserves the original address shape and comments`  |
+| AC-117 | vitest | `apps/web/src/features/Config/ConfigDnsEdit/__tests__/ConfigDnsEditOptions.test.tsx`  | `validates, cancels and stages a record from its inline form with focus restored` |
+| AC-117 | e2e    | `apps/web/e2e/simpleDnsOptions.e2e.test.ts`                                           | `the backup order follows the chain across pointer and keyboard edits`            |
+| AC-117 | e2e    | `apps/web/e2e/simpleDnsOptions.e2e.test.ts`                                           | `address family and static records share the JSONC draft and Apply diff`          |
+| AC-117 | e2e    | `apps/web/e2e/simpleDnsOptions.e2e.test.ts`                                           | `an imported parallel chain remains readable while inventory can be extended`     |
+
 ### Adding a catalog service in Simple
 
 The tests open the catalog from Rules and from an empty configuration, choose between providers publishing the same category, and review the proposed route and DNS positions before staging. The shared draft and Apply diff show the selected set and new rules. Reuse, cancellation and blocked proposals preserve existing entries. The browser checks use a synthetic configuration and the verified core version on the mock stand.

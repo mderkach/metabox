@@ -169,6 +169,8 @@ describe('catalog route and DNS preview', () => {
   });
 
   it.each([
+    { type: 'fallback', tag: 'local', servers: ['upstream'] },
+    { type: 'hosts', tag: 'local', predefined: { 'test.example': '192.0.2.1' } },
     { type: 'https', tag: 'local', server: '192.0.2.1' },
     { type: 'tcp', tag: 'local', server: 'resolver.test' },
     { type: 'tcp', tag: 'local', server: '999.2.3.4' },
