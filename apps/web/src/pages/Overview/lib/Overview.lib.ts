@@ -22,7 +22,6 @@ import {
   useTrafficNow,
   type SystemStat,
   type TrafficSample,
-  type TrafficShare,
   type UplinkRate,
 } from '@entities/Daemon';
 import { LATENCY_LEVEL, useProxies, type ServerLatencies } from '@entities/Proxy';
@@ -44,8 +43,6 @@ const STALE_AFTER = STALE_SECONDS * MS_IN_SECOND;
 const TICK_SECONDS = 3;
 const FRESHNESS_TICK = TICK_SECONDS * MS_IN_SECOND;
 
-const NO_SHARE: TrafficShare = { link: 0, proxy: 0, split: { proxy: 0, direct: 0, block: 0 }, seconds: 0 };
-
 /** Why core data is missing: the service is confirmed stopped, or the core sends nothing past the drop threshold. */
 export const CORE_GAP = {
   Stopped: 'stopped',
@@ -64,8 +61,6 @@ export interface OverviewRuntime {
   /** Device readings; `null` means no snapshot has arrived yet. */
   system: SystemStat | null;
   uplink: UplinkRate;
-  /** Channel and sing-box volumes over the daemon's observation window. */
-  share: TrafficShare;
   summary: ConnectionSummary;
   /** Number of open connections over a minute. */
   history: number[];
@@ -226,7 +221,6 @@ export function useOverviewRuntime(): OverviewRuntime {
     totals,
     system,
     uplink,
-    share: system?.share ?? NO_SHARE,
     summary,
     history,
     historyAt,

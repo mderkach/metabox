@@ -4,7 +4,7 @@ import { Empty, EMPTY_INLINE, EmptyDescription, EmptyHeader, SkeletonRows } from
 
 import { OVERVIEW_NS } from '../i18n/Overview.namespace.generated';
 import type { CoreGap } from '../lib';
-import { toCoreGapText } from '../lib/Overview.traffic';
+import { toCoreGapText } from './Overview.trafficText';
 
 /** Stands in place of a block whose core data will not arrive or is not current; `null` means it is still loading. */
 export function OverviewCoreGap({ gap }: { gap: CoreGap | null }) {

@@ -571,6 +571,20 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficHidesCountAfterLogOutputChanges`                               |
 | AC-97  | go-test | `apps/metaboxd/internal/logs/blocked_test.go`                   | `TestBlockedTrafficRejectsNonRegularLogFile`                                      |
 
+#### Traffic shares in the panel
+
+| ID    | Kind   | File                                                                  | Check                                                                                |
+| ----- | ------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| AC-97 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`         | `reconciles internet shares with the outbound totals for the same period`            |
+| AC-97 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`         | `normalizes both shares when the core volume exceeds the internet volume`            |
+| AC-97 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`         | `distinguishes a missing traffic snapshot from a snapshot with zero traffic`         |
+| AC-97 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`         | `marks both zero and nonzero blocked counts as computed from the core log`           |
+| AC-97 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`         | `explains the log levels when the blocked count is unavailable`                      |
+| AC-97 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`         | `does not show a partial blocked count even when earlier log lines are the only gap` |
+| AC-97 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.browser.test.tsx` | `aligns the traffic shares and puts blocked connections below at 375 px (%s)`        |
+| AC-97 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.browser.test.tsx` | `opens and dismisses the internet connection help with the keyboard`                 |
+| AC-97 | e2e    | `apps/web/e2e/mockApi.e2e.test.ts`                                    | `reopens the same accumulated traffic shares after a reload`                         |
+
 ### Verified rule references
 
 | ID     | Kind    | File                                                                        | Check                                                                               |

@@ -293,6 +293,7 @@ export const overviewRoute = createRoute({
     Promise.all([
       preloadNamespaces([
         OVERVIEW_NS,
+        ROUTE_NS,
         CONNECTION_SUMMARY_NS,
         DAEMON_SERVICE_NS,
         DAEMON_TRAFFIC_NS,

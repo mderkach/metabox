@@ -44,15 +44,18 @@ export function DaemonTraffic({
   sampledAt,
   peakDown,
   peakUp,
+  historical = false,
 }: {
   samples: TrafficSample[];
   /** When the last point arrived, epoch milliseconds; `null` means no points yet. */
   sampledAt: number | null;
   peakDown: number;
   peakUp: number;
+  historical?: boolean;
 }) {
   const { t } = useTranslation(DAEMON_TRAFFIC_NS);
   const reducedMotion = useReducedMotion();
+  const followNow = !historical && !reducedMotion;
   const [chart, setChart] = useState<PlotInstance | null>(null);
   const options = useMemo(() => buildOptions(t), [t]);
   // The page also renders on the stream freshness tick, not only on a new frame:
@@ -71,16 +74,16 @@ export function DaemonTraffic({
   const scales = useMemo<PlotScales>(() => {
     const y = { min: -ceiling, max: ceiling };
 
-    if (!reducedMotion || times.length === 0) {
+    if (followNow || times.length === 0) {
       return { y };
     }
 
     const last = times[times.length - 1];
 
     return { x: { min: last - TRAFFIC_WINDOW_SECONDS, max: last }, y };
-  }, [ceiling, reducedMotion, times]);
+  }, [ceiling, followNow, times]);
 
-  useFollowNow(chart, TRAFFIC_WINDOW_SECONDS, TRAFFIC_STEP_SECONDS, !reducedMotion);
+  useFollowNow(chart, TRAFFIC_WINDOW_SECONDS, TRAFFIC_STEP_SECONDS, followNow);
 
   if (sampledAt === null || samples.length < MIN_POINTS) {
     return <SkeletonRows rows={1} rowClassName='h-44' className='p-0' />;

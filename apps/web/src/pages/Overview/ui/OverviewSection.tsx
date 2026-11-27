@@ -17,7 +17,7 @@ export function OverviewSection({
 }: {
   title: string;
   /** Right-hand label: where the data comes from or context shared by the section. */
-  note?: string;
+  note?: ReactNode;
   collapsible?: boolean;
   children: ReactNode;
 }) {
@@ -49,7 +49,7 @@ export function OverviewSection({
             title
           )}
         </h2>
-        {note !== undefined && <p>{note}</p>}
+        {note != null && <div className='min-w-0'>{note}</div>}
       </div>
       <div id={contentId} hidden={!expanded} className='flex flex-col gap-3'>
         {expanded && children}
