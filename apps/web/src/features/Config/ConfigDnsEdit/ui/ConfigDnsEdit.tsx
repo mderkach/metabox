@@ -6,11 +6,13 @@ import { Button, CARD_TITLE } from '@shared/ui';
 import { CONFIG_DNS_EDIT_NS } from '../i18n/ConfigDnsEdit.namespace.generated';
 import { useConfigDnsEditDraft } from '../model/ConfigDnsEdit.draft';
 import { ConfigDnsEditAssignment } from './ConfigDnsEditAssignment';
+import { ConfigDnsEditFallback } from './ConfigDnsEditFallback';
+import { ConfigDnsEditOptions } from './ConfigDnsEditOptions';
 import { ConfigDnsEditServerForm } from './ConfigDnsEditServerForm';
 
 export function ConfigDnsEdit({ text }: { text: string }) {
   const { t } = useTranslation(CONFIG_DNS_EDIT_NS);
-  const { model, addServer, assign, stale } = useConfigDnsEditDraft(text);
+  const { model, addServer, assign, stale, version, stage } = useConfigDnsEditDraft(text);
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState<{ tag: string; text: string } | null>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -103,6 +105,8 @@ export function ConfigDnsEdit({ text }: { text: string }) {
           </>
         )}
       </section>
+      <ConfigDnsEditFallback text={text} version={version} stale={stale} stage={stage} />
+      <ConfigDnsEditOptions text={text} version={version} stale={stale} stage={stage} />
     </>
   );
 }

@@ -1,12 +1,9 @@
-import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { showQueryError } from '@shared/api';
-import { Button } from '@shared/ui';
+import { ReorderButtons } from '@shared/ui';
 
 import { RULE_REORDER_NS } from '../i18n/RuleReorder.namespace.generated';
-import { MOVE, type Move } from '../model/RuleReorder.constants';
 import { moveRouteRule, type RuleMovePolicy } from '../model/RuleReorder.move';
 
 /**
@@ -40,71 +37,22 @@ export function RuleReorderButtons({
   allowMove?: RuleMovePolicy;
 }) {
   const { t } = useTranslation(RULE_REORDER_NS);
-  const upRef = useRef<HTMLButtonElement>(null);
-  const downRef = useRef<HTMLButtonElement>(null);
-  const focusAfterMove = useRef<Move | null>(null);
-
-  useEffect(
-    function keepFocusAfterMove() {
-      const step = focusAfterMove.current;
-
-      if (step === null) {
-        return;
-      }
-
-      focusAfterMove.current = null;
-      (step === MOVE.Up ? upRef : downRef).current?.focus();
-    },
-    [index]
-  );
-
-  function onMove(step: Move) {
-    const target = index + step;
-    const atEdge = target === 1 || target === total;
-
+  function move(target: number) {
     const result = moveRouteRule(text, index, target, allowMove);
-    if (result === 'blocked') return;
-
-    if (result === 'failed') {
-      showQueryError({ showError: true, errorMessageKey: 'toast.rule.reorder.failed' }, null);
-
-      return;
-    }
-
-    focusAfterMove.current = atEdge ? opposite(step) : step;
+    if (result === 'failed') showQueryError({ showError: true, errorMessageKey: 'toast.rule.reorder.failed' }, null);
+    if (result !== 'moved') return false;
     onMoved?.(target);
+    return true;
   }
 
   return (
-    <>
-      <Button
-        ref={upRef}
-        variant='ghost'
-        size='icon-sm'
-        aria-label={t('up', { index })}
-        disabled={index <= 1}
-        onClick={() => {
-          onMove(MOVE.Up);
-        }}
-      >
-        <ChevronUp />
-      </Button>
-      <Button
-        ref={downRef}
-        variant='ghost'
-        size='icon-sm'
-        aria-label={t('down', { index })}
-        disabled={index >= total}
-        onClick={() => {
-          onMove(MOVE.Down);
-        }}
-      >
-        <ChevronDown />
-      </Button>
-    </>
+    <ReorderButtons
+      index={index}
+      first={1}
+      last={total}
+      upLabel={t('up', { index })}
+      downLabel={t('down', { index })}
+      onMove={move}
+    />
   );
-}
-
-function opposite(step: Move): Move {
-  return step === MOVE.Up ? MOVE.Down : MOVE.Up;
 }

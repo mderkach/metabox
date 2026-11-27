@@ -142,7 +142,7 @@ function implicitBootstrapSafe(config: ConfigDocument): boolean {
   );
 }
 
-function dnsContext(text: string, coreVersion: string | undefined) {
+export function dnsContext(text: string, coreVersion: string | undefined) {
   const { config, unknown } = parseConfig(text);
   const servers = config?.dns?.servers ?? [];
   const tags = servers.map(effectiveDnsTag);

@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { ChevronDown, GripVertical } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,7 +10,7 @@ import { canAddDeviceException, RuleCustomAddButton } from '@features/Rule/RuleC
 import { RuleReorderButtons } from '@features/Rule/RuleReorder';
 import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
-import { Button } from '@shared/ui';
+import { Button, ReorderGrip } from '@shared/ui';
 
 import { SIMPLE_ROUTES_NS } from '../i18n/SimpleRoutes.namespace.generated';
 import type { SimpleRuleNavigation, SimpleRoutesLinks } from '../model/SimpleRoutes.links';
@@ -81,23 +81,16 @@ export function SimpleRoutesRuleRow({
       <div className='grid min-w-0 grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-center gap-x-2 gap-y-1 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_minmax(0,2fr)]'>
         <div className='flex min-w-0 items-center gap-2'>
           {movable && (
-            // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Only the grip starts native dragging. Keyboard users have move buttons in this row.
-            <span
-              draggable
-              role='img'
-              aria-label={t('list.drag', { index: rule.index })}
-              className='cursor-grab text-muted-foreground active:cursor-grabbing'
-              onDragStart={(event) => {
-                event.dataTransfer.effectAllowed = 'move';
-                event.dataTransfer.setData('text/plain', String(rule.index));
+            <ReorderGrip
+              label={t('list.drag', { index: rule.index })}
+              value={String(rule.index)}
+              onStart={() => {
                 onDrag(rule.index);
               }}
-              onDragEnd={() => {
+              onEnd={() => {
                 onDrag(null);
               }}
-            >
-              <GripVertical aria-hidden='true' className='size-4' />
-            </span>
+            />
           )}
           <span className='shrink-0 font-mono text-muted-foreground tabular-nums'>{rule.index}.</span>
           <div className='flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2'>

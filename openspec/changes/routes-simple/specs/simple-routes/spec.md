@@ -144,6 +144,8 @@ Simple SHALL let users add supported resolvers to an inventory and separately as
 - **GIVEN** the active core and draft support editing a sequential fallback chain
 - **WHEN** the user adds, removes, or reorders a backup resolver
 - **THEN** Simple shows the actual ordered chain and stages the change using controls operable with a pointer and by keyboard
+- **AND** the primary stays fixed, backup choices come from earlier registered transports and only the selected fallback transport’s member list changes
+- **AND** Simple explains when the core advances to another member and when a successful or nonexistent-domain response ends the search
 
 #### Scenario: Preserve an unsupported imported DNS configuration
 
@@ -156,6 +158,9 @@ Simple SHALL let users add supported resolvers to an inventory and separately as
 - **GIVEN** the active core and draft support changing an IPv6 option or static DNS entry
 - **WHEN** the user sets the IPv6 option or adds, edits, or removes a static entry
 - **THEN** Simple validates the supported change and stages it without altering other DNS settings
+- **AND** the address-family field distinguishes the default, both family preferences and each single-family strategy, preserving equivalent imported representations when no change is requested
+- **AND** a static entry belongs to a named or indexed hosts transport and can have one or more literal IPv4 or IPv6 addresses; its external files, other entries, server order, default resolver and DNS rules retain their configuration
+- **AND** the user can inspect the edits in the shared document and in the existing diff before Apply
 
 #### Scenario: Show a confirmed DNS and traffic path mismatch
 

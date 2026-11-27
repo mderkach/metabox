@@ -1,4 +1,38 @@
 {
+  "options": {
+    "unknownStrategy": "The imported address strategy is outside the supported choices. Review it in JSON.",
+    "malformedHosts": "This server uses an unsupported format for its static records. Review them in JSON.",
+    "title": "Advanced: IPv6 and static records",
+    "family": "DNS address family",
+    "familyHelp": "For name lookups, the core requests both families or just the selected one. A preference orders the resulting addresses. Individual queries and rules can override this default.",
+    "strategy": {
+      "as_is": "Default (IPv4 and IPv6)",
+      "prefer_ipv4": "Prefer IPv4",
+      "prefer_ipv6": "Prefer IPv6",
+      "ipv4_only": "IPv4 only",
+      "ipv6_only": "IPv6 only"
+    },
+    "hosts": "Static records",
+    "hostsHelp": "When a query reaches this server, these addresses take precedence over entries from hosts files.",
+    "noHosts": "Static records need a hosts DNS server. Set one up in Editor and choose which queries it serves.",
+    "ambiguous": "This configuration contains matching server names or equivalent domain names. Resolve the conflict in JSON.",
+    "add": "Add record",
+    "edit": "Edit",
+    "remove": "Remove",
+    "editDomain": "Edit {{domain}}",
+    "removeDomain": "Remove {{domain}}",
+    "removed": "Removed {{domain}} from the draft.",
+    "saved": "Saved {{domain}} in the draft.",
+    "domain": "Domain",
+    "addresses": "IP addresses",
+    "addressHelp": "Enter one or more IPv4 or IPv6 addresses separated by commas or spaces.",
+    "duplicate": "This server already has an entry for that domain.",
+    "invalid": {
+      "domain": "Enter a domain name, such as printer.home.arpa.",
+      "addresses": "Enter one or more valid IPv4 or IPv6 addresses."
+    },
+    "save": "Save to draft"
+  },
   "dns": {
     "inventory": "DNS servers",
     "add": "Add server",
@@ -39,5 +73,24 @@
     "via": "Via {{outbound}}",
     "mixed": "Multiple assignments",
     "replaceAssignments": "The listed domains have different DNS settings. Choosing a server replaces the assignment for all of them."
+  },
+  "fallback": {
+    "title": "Backup servers",
+    "absent": "There is no fallback chain in this configuration. Configure one in Editor to use backup servers.",
+    "sequential": "The core tries the next server after a timeout, a connection error or a DNS failure. A successful reply, even an empty one, or a reply that the domain does not exist ends the search.",
+    "strategy": "This chain uses the {{strategy}} strategy. Simple can edit only sequential chains.",
+    "members": "This chain has missing, repeated or forward-referenced servers. Review its members in Editor.",
+    "first": "First server",
+    "order": "Order of backup servers",
+    "empty": "No backup servers in this chain.",
+    "noChoices": "All available servers are in this chain. The core can use only servers listed before the chain in the inventory.",
+    "choose": "Add a server to {{tag}}",
+    "addNamed": "Add {{tag}} as a backup",
+    "add": "Add backup",
+    "remove": "Remove",
+    "removeTag": "Remove {{tag}} from backups",
+    "up": "Move {{tag}} up",
+    "down": "Move {{tag}} down",
+    "drag": "Drag {{tag}}"
   }
 }

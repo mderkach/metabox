@@ -24,6 +24,7 @@ export {
   hasRuleSetCache,
   insertValue,
   isGenericSection,
+  moveValue,
   nameValue,
   parseSectionSearch,
   readRuleNames,

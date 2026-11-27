@@ -33,6 +33,8 @@ export { FacetFilter } from './FacetFilter';
 export type { FacetValue, FacetText } from './FacetFilter';
 export { JsonTextarea } from './JsonTextarea';
 export type { JsonTextareaHandle } from './JsonTextarea';
+export { ReorderButtons } from './ReorderButtons';
+export { ReorderGrip } from './ReorderGrip';
 export { LiveRegion } from './LiveRegion';
 export { Plot } from './Plot';
 export type { PlotOptions, PlotData, PlotInstance, PlotTone, PlotScales } from './Plot';
