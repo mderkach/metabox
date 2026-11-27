@@ -1,3 +1,5 @@
+import type { RuleRow } from './Rule.model';
+
 /**
  * Index of the same rule in the applied config for each draft rule; `null`
  * means the rule is new or changed. The whole node is compared: a rule the user
@@ -16,4 +18,18 @@ export function toAppliedIndices(draft: readonly unknown[], applied: readonly un
   }
 
   return draft.map((node) => free.get(JSON.stringify(node))?.shift() ?? null);
+}
+
+/** A name comes from a comment above the rule and does not affect the node comparison. */
+export function toEditedRuleIds(
+  rules: readonly RuleRow[],
+  appliedIndices: readonly (number | null)[],
+  appliedNames: readonly (string | null)[]
+): ReadonlySet<string> {
+  return new Set(
+    rules.flatMap((rule, position) => {
+      const index = appliedIndices[position];
+      return index === null || (appliedNames.at(index) ?? null) !== rule.name ? [rule.id] : [];
+    })
+  );
 }

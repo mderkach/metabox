@@ -1,11 +1,12 @@
 import { Link } from '@tanstack/react-router';
 import type { ParseKeys } from 'i18next';
 import { CircleCheck, CircleMinus, CircleX, Stethoscope, type LucideIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { DIAG_STATUS, toDiagAreas, useDiagReport, type CheckStatus, type DiagArea, type DiagRun } from '@entities/Diag';
+import { DIAG_STATUS, toDiagAreas, type CheckStatus, type DiagArea } from '@entities/Diag';
 import { toOutboundTargets, useProxies } from '@entities/Proxy';
+import { useDiagRun } from '@features/Diag/DiagRun';
 import { SHARED_NS } from '@shared/i18n';
 import { cn } from '@shared/lib/utils';
 import { Button, CARD_TITLE, QueryFailure, Skeleton } from '@shared/ui';
@@ -44,8 +45,7 @@ export function OverviewCheck({
   const { t } = useTranslation(OVERVIEW_NS);
   const proxies = useProxies();
   const target = toOutboundTargets(proxies.data).at(0) ?? '';
-  const [run, setRun] = useState<DiagRun | null>(null);
-  const report = useDiagReport(run);
+  const { report, start, started } = useDiagRun();
   const areas = report.data === undefined ? [] : toDiagAreas(report.data);
   const failed = areas.some((area) => area.status === DIAG_STATUS.Fail);
   const checkedAt = report.isSuccess ? report.dataUpdatedAt : null;
@@ -72,7 +72,7 @@ export function OverviewCheck({
           size='sm'
           disabled={report.isFetching || proxies.isPending}
           onClick={() => {
-            setRun({ proxy: target, run: Date.now() });
+            start(target);
           }}
         >
           <Stethoscope data-icon='inline-start' />
@@ -80,9 +80,9 @@ export function OverviewCheck({
         </Button>
       </div>
 
-      {run === null && <p className='text-xs text-pretty text-muted-foreground'>{t('check.hint')}</p>}
+      {!started && <p className='text-xs text-pretty text-muted-foreground'>{t('check.hint')}</p>}
 
-      {run !== null && report.isPending && (
+      {started && report.isPending && (
         <div aria-hidden='true' className='flex flex-wrap gap-x-4 gap-y-2'>
           {Object.keys(AREA_KEY).map((area) => (
             <Skeleton key={area} className='h-5 w-24' />

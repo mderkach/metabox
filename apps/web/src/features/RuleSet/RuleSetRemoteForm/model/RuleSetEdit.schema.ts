@@ -1,0 +1,82 @@
+import { z } from 'zod';
+
+import { defaultFormatOf } from '@entities/RuleSet';
+
+import { CUSTOM_PROVIDER } from './RuleSetAdd.constants';
+import {
+  makeRuleSetRemoteFormSchema,
+  RuleSetRemoteFormSchema,
+  type RuleSetRemoteFormModel,
+} from './RuleSetRemoteForm.schema';
+
+/**
+ * What the edit form of an existing set edits: the add form fields, but the
+ * address may be empty: the address field is shared with node forms and when
+ * cleared holds `null`, not an empty string.
+ */
+export const RuleSetEditSchema = RuleSetRemoteFormSchema.extend({
+  /** Address core downloads the set from; `null` means the field is cleared */
+  url: z.string().nullable(),
+});
+
+export type RuleSetEditModel = z.infer<typeof RuleSetEditSchema>;
+
+/**
+ * The checks are the same as when adding: an empty address is cast to a string
+ * and fails with the same code. The set's own tag does not count as taken.
+ */
+export function makeRuleSetEditSchema(takenTags: readonly string[], outbounds: readonly string[], ownTag: string) {
+  return RuleSetEditSchema.transform((data) => ({ ...data, url: data.url ?? '' })).pipe(
+    makeRuleSetRemoteFormSchema(
+      takenTags.filter((tag) => tag !== ownTag),
+      outbounds
+    )
+  );
+}
+
+function readText(node: Readonly<Record<string, unknown>>, key: string): string {
+  const value = node[key];
+
+  return typeof value === 'string' ? value : '';
+}
+
+/**
+ * The form opens on the node as is. The provider and category are not chosen by
+ * the edit form: the address is edited as a whole.
+ */
+export function ruleSetEditDefaults(node: Readonly<Record<string, unknown>>): RuleSetEditModel {
+  return {
+    providerId: CUSTOM_PROVIDER,
+    kind: '',
+    mirrorId: '',
+    category: '',
+    url: readText(node, 'url'),
+    tag: readText(node, 'tag'),
+    format: readText(node, 'format'),
+    updateInterval: readText(node, 'update_interval'),
+    detour: readText(node, 'download_detour'),
+  };
+}
+
+/**
+ * Node after the edit: form fields over the source node. An empty value deletes
+ * the key (`diffNode`), other node keys, `initial_path`, `http_client`, are not
+ * touched. A format the address contradicts is dropped, as when adding: the
+ * format field is hidden then, and the stale value could not be fixed.
+ */
+export function toRuleSetEditNode(
+  node: Readonly<Record<string, unknown>>,
+  data: RuleSetRemoteFormModel
+): Record<string, unknown> {
+  const url = data.url.trim();
+  const derived = defaultFormatOf(url);
+
+  return {
+    ...node,
+    tag: data.tag.trim(),
+    url,
+    format: derived === '' || data.format === derived ? data.format : '',
+    update_interval: data.updateInterval.trim(),
+    download_detour: data.detour.trim(),
+  };
+}

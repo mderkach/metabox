@@ -22,7 +22,7 @@ describe('RuleReorderButtons', () => {
     const user = userEvent.setup();
 
     ConfigDocumentStore.getState().load(text);
-    render(<RuleReorderButtons index={2} total={3} onMoved={onMoved} />);
+    render(<RuleReorderButtons text={text} index={2} total={3} onMoved={onMoved} />);
     await user.click(screen.getByRole('button', { name: 'Поднять правило 2 выше' }));
 
     expect(toast.error).toHaveBeenCalledWith(
@@ -38,12 +38,28 @@ describe('RuleReorderButtons', () => {
     const onMoved = vi.fn<(index: number) => void>();
     const user = userEvent.setup();
 
-    ConfigDocumentStore.getState().load('{"route":{"rules":[{"action":"sniff"},{"action":"hijack-dns"}]}}');
-    render(<RuleReorderButtons index={2} total={2} onMoved={onMoved} />);
+    const text = '{"route":{"rules":[{"action":"sniff"},{"action":"hijack-dns"}]}}';
+    ConfigDocumentStore.getState().load(text);
+    render(<RuleReorderButtons text={text} index={2} total={2} onMoved={onMoved} />);
     await user.click(screen.getByRole('button', { name: 'Поднять правило 2 выше' }));
 
     expect(onMoved).toHaveBeenCalledWith(1);
     expect(toast.error).not.toHaveBeenCalled();
     expect(selectConfigDirty(ConfigDocumentStore.getState())).toBe(true);
+  });
+
+  it('keeps a more recent draft when a button still points at the previous rule order', async () => {
+    const text = '{"route":{"rules":[{"action":"sniff"},{"action":"hijack-dns"}]}}';
+    const onMoved = vi.fn<(index: number) => void>();
+    const user = userEvent.setup();
+    ConfigDocumentStore.getState().load(text);
+    render(<RuleReorderButtons text={text} index={2} total={2} onMoved={onMoved} />);
+    ConfigDocumentStore.getState().move(['route', 'rules'], 1, 0);
+    const current = selectConfigCurrent(ConfigDocumentStore.getState());
+
+    await user.click(screen.getByRole('button', { name: 'Поднять правило 2 выше' }));
+
+    expect(onMoved).not.toHaveBeenCalled();
+    expect(selectConfigCurrent(ConfigDocumentStore.getState())).toBe(current);
   });
 });

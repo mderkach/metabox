@@ -46,46 +46,7 @@
     "rules_other": "{{count}} DNS rules",
     "final": "Default resolver · {{tag}}",
     "finalUnknown": "No default resolver specified in the config",
-    "settings": "DNS settings",
-    "inventory": "DNS servers",
-    "add": "Add server",
-    "assignment": "DNS assignment",
-    "unassigned": "Unassigned",
-    "used": "Used in this configuration",
-    "unknownUsage": "Usage unknown",
-    "added": "Added {{tag}} to the draft.",
-    "noPaths": "No supported outbounds for DNS assignment in this configuration.",
-    "scopeNote": "Each choice sets DNS for the domains listed under that outbound. Other domains keep their DNS settings.",
-    "field": {
-      "tag": "Server name",
-      "address": "DNS server address",
-      "detour": "Connection to the DNS server"
-    },
-    "directDial": "Direct connection",
-    "addHint": "Enter an IPv4 address for DNS over TCP. The connection setting controls how the router reaches this server.",
-    "path": {
-      "direct": "For direct connections",
-      "proxy": "For proxied connections",
-      "outbound": "For this outbound"
-    },
-    "choose": "Choose a DNS server",
-    "unavailable": "Unavailable",
-    "reason": {
-      "core": "DNS editing is unavailable for this core version.",
-      "draft": "Simple cannot safely edit DNS in this configuration. Review the settings in Editor or JSON.",
-      "firstServer": "The core uses its first DNS server by default. To set that default, add the first server in Editor.",
-      "tag": "Enter a unique server name.",
-      "address": "Enter the IPv4 address of the DNS server.",
-      "detour": "Choose a supported outbound from the current draft.",
-      "scope": "This outbound has no domain scope that Simple can safely edit.",
-      "conflict": "Existing rules can change which domains match. Review their order and conditions in Editor.",
-      "resolver": "No suitable DNS server for this outbound. Add a server with a matching connection.",
-      "stale": "The configuration changed. Review the current draft before editing DNS.",
-      "bootstrap": "The current server may also resolve hostnames for other connections. Set a hostname resolver in Editor before adding a second server."
-    },
-    "via": "Via {{outbound}}",
-    "mixed": "Multiple assignments",
-    "replaceAssignments": "The listed domains have different DNS settings. Choosing a server replaces the assignment for all of them."
+    "settings": "DNS settings"
   },
   "outbounds": {
     "empty": "No outbounds in the config",
@@ -116,34 +77,6 @@
   "catalog": {
     "action": "Add service",
     "findAnother": "Find another…"
-  },
-  "custom": {
-    "add": "Add site or address",
-    "exception": "Add device exception",
-    "address": "Domain or IP address",
-    "device": "Device",
-    "outbound": "Outbound",
-    "submit": "Add to draft",
-    "title": "Add site or address",
-    "exceptionTitle": "Add device exception",
-    "preview": "New rule {{position}} · {{scope}} → {{outbound}}",
-    "all": "All devices",
-    "before": "General rule {{position}} moves to position {{next}}.",
-    "unknown": "Possible overlap with rule {{position}}. Review its conditions in Editor or JSON.",
-    "invalid": "Enter an exact domain or a single IPv4 or IPv6 address.",
-    "deviceRequired": "Select a device with a known IP address.",
-    "exit": "Choose an unambiguous outbound from this draft.",
-    "draft": "Simple cannot safely insert a rule into this draft. Review it in Editor or JSON.",
-    "duplicate": "Rule {{position}} already matches this traffic. Review it in Editor or JSON.",
-    "parent": "This rule has conditions that Simple cannot narrow. Open it in Editor or JSON.",
-    "choose": "Choose…",
-    "noDevices": "No devices with a unique address",
-    "noExits": "No eligible outbounds",
-    "description": "Route traffic for one exact domain or IP address. DNS settings stay as configured.",
-    "exceptionDescription": "Route {{subject}} from one device separately from rule {{position}}. DNS settings stay as configured.",
-    "dynamic": "This device uses a dynamic address. The rule matches {{ip}} even if another device receives it later.",
-    "stale": "The draft or the configuration on the device changed. Close this preview and review the current draft.",
-    "cancel": "Cancel"
   },
   "list": {
     "groups": {

@@ -3,29 +3,26 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { RuntimeStore, useDaemonInstance, useRuntimeStream } from '@entities/Daemon';
+import { toOutboundTargets, useOutboundMetadata, useProxies, useProxyLatency, type ProxyGroup } from '@entities/Proxy';
+import { useLatestConfigApplySubmission } from '@features/Config/ConfigApply';
+import { useTestProxyDelay } from '@features/Proxy/ProxyDelay';
 import {
-  toOutboundTargets,
-  useOutboundMetadata,
-  useProviderNodeChanges,
-  useProxies,
-  useProxyLatency,
-  useProxyProviders,
-  type ProxyGroup,
-} from '@entities/Proxy';
+  PROXY_REALITY_RECOVERY_NS,
+  ProxyRealityRecoveryDetails,
+  useProxyRealityRecovery,
+  type ProxyRecoveryItem,
+} from '@features/Proxy/ProxyRealityRecovery';
 import { ApiError } from '@shared/api';
 import { SHARED_NS } from '@shared/i18n';
 import { useLiveRegion } from '@shared/lib/useLiveRegion';
-import { CARD_FLUSH, Card, LiveRegion, QueryFailure, SURFACE, SkeletonRows } from '@shared/ui';
+import { LiveRegion, QueryFailure, SURFACE, SkeletonRows } from '@shared/ui';
 import { PageHeader } from '@widgets/PageHeader';
 import { ProxyGroups, type ProxyNodeDiagnostics } from '@widgets/ProxyGroups';
 
 import { PROXIES_NS } from '../i18n/Proxies.namespace.generated';
-import { useMinuteClock } from '../lib/Proxies.lib';
-import { useProxiesRecovery, type ProxyRecoveryItem } from '../model/Proxies.recoveryState';
-import { ProxiesRecoveryDetails } from './ProxiesRecoveryDetails';
+import { ProxiesProviders } from './ProxiesProviders';
 import { ProxiesSection } from './ProxiesSection';
 import { ProxiesUnusedMetadata } from './ProxiesUnusedMetadata';
-import { ProxyProviderRow } from './ProxyProviderRow';
 import { ProxyTestAll } from './ProxyTestAll';
 
 const NOT_FOUND = 404;
@@ -33,8 +30,8 @@ const EMPTY_GROUPS: ProxyGroup[] = [];
 
 export function ProxiesPage() {
   const { t } = useTranslation(PROXIES_NS);
+  const { t: tRecovery } = useTranslation(PROXY_REALITY_RECOVERY_NS);
   const proxies = useProxies();
-  const providers = useProxyProviders();
   const metadataQuery = useOutboundMetadata();
   const metadata = metadataQuery.isSuccess ? metadataQuery.data : undefined;
   useRuntimeStream();
@@ -45,11 +42,9 @@ export function ProxiesPage() {
 
   const groups = proxies.data?.groups ?? EMPTY_GROUPS;
   const nodes = proxies.data?.standalone ?? [];
-  const subscriptions = providers.data ?? [];
-  const toNodeChange = useProviderNodeChanges(providers.data);
-  const now = useMinuteClock();
-
-  const recovery = useProxiesRecovery(nodes);
+  const submission = useLatestConfigApplySubmission();
+  const testServer = useTestProxyDelay();
+  const recovery = useProxyRealityRecovery({ nodes, submission, testServer: testServer.mutateAsync });
   const [checkedGroups, setCheckedGroups] = useState<ReadonlyMap<string, string>>(() => new Map());
   const groupByNode = useMemo(() => {
     const locations = new Map<string, string>();
@@ -70,17 +65,17 @@ export function ProxiesPage() {
     if (item === undefined || groupByNode.get(tag) !== group) return undefined;
 
     const statusLabel: Partial<Record<ProxyRecoveryItem['state'], string>> = {
-      'no-response': t('recovery.noResponse'),
-      'probe-error': t('recovery.probeError'),
-      ready: t('recovery.verify'),
-      restored: t('recovery.verify'),
-      checking: t('recovery.checking'),
+      'no-response': tRecovery('recovery.noResponse'),
+      'probe-error': tRecovery('recovery.probeError'),
+      ready: tRecovery('recovery.verify'),
+      restored: tRecovery('recovery.verify'),
+      checking: tRecovery('recovery.checking'),
     };
     const label = statusLabel[item.state];
 
     return {
-      label: t('recovery.open', { tag }),
-      content: <ProxiesRecoveryDetails item={item} />,
+      label: tRecovery('recovery.open', { tag }),
+      content: <ProxyRealityRecoveryDetails item={item} />,
       ...(label === undefined ? {} : { status: { label, failed: item.state === 'no-response' } }),
     };
   };
@@ -178,24 +173,7 @@ export function ProxiesPage() {
           </ProxiesSection>
         )}
 
-        {/* Subscriptions are a source of nodes, not one more group of them: a separate section
-            with its own title, not a card in the shared stack. The card has no
-            header of its own: the section already has the title, and repeating it is pointless. */}
-        {providers.isPending && <SkeletonRows className={SURFACE} />}
-
-        {providers.isLoadingError && <QueryFailure messageKey='source.providers' query={providers} />}
-
-        {subscriptions.length > 0 && (
-          <ProxiesSection title={t('providers.title')}>
-            <Card className={CARD_FLUSH}>
-              <ul className='divide-y divide-border'>
-                {subscriptions.map((provider) => (
-                  <ProxyProviderRow key={provider.name} provider={provider} change={toNodeChange(provider)} now={now} />
-                ))}
-              </ul>
-            </Card>
-          </ProxiesSection>
-        )}
+        <ProxiesProviders />
         {metadata !== undefined && unused.length > 0 && (
           <ProxiesUnusedMetadata
             entries={unused}

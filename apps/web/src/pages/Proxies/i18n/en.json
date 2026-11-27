@@ -24,9 +24,6 @@
   },
   "providers": {
     "title": "Subscriptions",
-    "update": "Update",
-    "updating": "Updating…",
-    "updateLabel": "Update subscription {{name}}",
     "neverUpdated": "never updated",
     "updatedUnknown": "update date unknown",
     "updatedNow": "updated just now",
@@ -45,29 +42,5 @@
     "tested": "Group {{group}}: latency updated",
     "testedAll": "Latency of all nodes updated",
     "testedOutbounds": "Outbound latency updated"
-  },
-  "recovery": {
-    "title": "REALITY compatibility",
-    "open": "Diagnostics for {{tag}}",
-    "stage": "Enable hybrid key exchange in draft",
-    "retry": "Test server again",
-    "restore": "Restore previous setting in draft",
-    "blocked": "Review the draft changes to this server before changing hybrid key exchange.",
-    "source": "Compare the settings with a fresh server link. For a server from a subscription, refresh the subscription and test again.",
-    "probeError": "Test not completed",
-    "verify": "Needs a test",
-    "checking": "Testing…",
-    "noResponse": "No response",
-    "states": {
-      "suggested": "Hybrid key exchange is off. If this REALITY server was recently updated, it may require this setting. The test does not identify the exact cause.",
-      "staged": "Hybrid key exchange is enabled in the draft. Apply the draft, then test the server again.",
-      "applying": "Confirm that you can still reach the router after applying.",
-      "ready": "Setting applied. Test this server again.",
-      "checking": "Testing this server…",
-      "no-response": "Server did not respond after the change. The cause is still unknown.",
-      "probe-error": "The test could not run. Try again when the core is available.",
-      "return-staged": "The previous setting is in the draft. Apply it to restore the server settings.",
-      "restored": "Previous setting restored. Test the server again."
-    }
   }
 }

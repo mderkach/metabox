@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 
 import { DELAY_TIMEOUT, toDelayLabel, type ProxyNode } from '@entities/Proxy';
+import { DELAY_TONE } from '@entities/Proxy';
 import { cn } from '@shared/lib/utils';
 
 import { PROXY_GROUPS_NS } from '../i18n/ProxyGroups.namespace.generated';
-import { DELAY_TONE } from './ProxyDelayTone';
 
 export function ProxyNodeDelayValue({ node }: { node: ProxyNode }) {
   const { t } = useTranslation(PROXY_GROUPS_NS);

@@ -20,3 +20,5 @@ export type {
   RouteRule,
   RuleHits,
 } from './model/Route.model';
+export { ROUTE_NS } from './i18n/Route.namespace.generated';
+export { RouteOriginBadge } from './ui/RouteOriginBadge';

@@ -1,5 +1,5 @@
+import type { RuleSetReferenceLink } from '@entities/RuleSet';
 import type { StaticPagePath, PageLink } from '@shared/lib/navigation';
-import type { RuleSetLinks } from '@widgets/RuleSet/RuleSetTable';
 
 export interface SimpleRoutesLinks {
   self: StaticPagePath;
@@ -11,6 +11,6 @@ export interface SimpleRoutesLinks {
 
 export interface SimpleRuleNavigation {
   links: Pick<SimpleRoutesLinks, 'self' | 'rule'>;
-  referenceLink: RuleSetLinks['reference'];
+  referenceLink: RuleSetReferenceLink;
   onOutboundChange: (outbound: string | undefined) => void;
 }

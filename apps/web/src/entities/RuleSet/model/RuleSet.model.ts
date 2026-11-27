@@ -118,9 +118,8 @@ export interface RuleSetRow {
  * make.
  */
 /**
- * Own list file name when the node is `local` from the `rule-sets/`
- * subdirectory; otherwise `null`. Deleting such a node must take the file
- * along: an orphaned file is not visible in the config but stays on the device.
+ * Resolves the relative path as the core does after expanding `{tag}`.
+ * Only files directly inside the managed `rule-sets/` directory belong to the Apply envelope.
  */
 export function localListFile(node: unknown): string | null {
   if (typeof node !== 'object' || node === null || Reflect.get(node, 'type') !== RULE_SET_TYPE.Local) {
@@ -128,14 +127,25 @@ export function localListFile(node: unknown): string | null {
   }
 
   const path: unknown = Reflect.get(node, 'path');
-
-  if (typeof path !== 'string' || !path.startsWith('rule-sets/')) {
+  const tag: unknown = Reflect.get(node, 'tag');
+  if (typeof path !== 'string' || (path.includes('{tag}') && (typeof tag !== 'string' || tag === ''))) {
     return null;
   }
 
-  const name = path.slice('rule-sets/'.length);
+  const expanded = typeof tag === 'string' ? path.replaceAll('{tag}', () => tag) : path;
+  if (expanded.startsWith('/')) return null;
 
-  return name === '' || name.includes('/') ? null : name;
+  const parts: string[] = [];
+  for (const part of expanded.split('/')) {
+    if (part === '..') {
+      if (parts.pop() === undefined) return null;
+    } else if (part !== '' && part !== '.') {
+      parts.push(part);
+    }
+  }
+
+  const [directory, ...subpath] = parts;
+  return directory === 'rule-sets' && subpath.length === 1 ? subpath[0] : null;
 }
 
 export function defaultFormatOf(url: string): RuleSetFormat | '' {

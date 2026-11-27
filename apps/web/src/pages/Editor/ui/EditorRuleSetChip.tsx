@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@shared/ui';
 
 import { EDITOR_NS } from '../i18n/Editor.namespace.generated';
-import type { RuleFilterState } from '../lib/Editor.lib';
+import type { RuleFilterState } from '../lib/Editor.filter';
 
 /**
  * Filter by the rule set from the address. Cleared right here: without the indicator a trimmed list

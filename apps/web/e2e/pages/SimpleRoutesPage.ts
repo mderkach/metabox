@@ -173,6 +173,7 @@ export class SimpleRoutesPage {
 
   async goto(outbound: string) {
     await this.page.goto(`/config/simple?outbound=${encodeURIComponent(outbound)}`);
+    await this.rules.waitFor({ state: 'visible' });
   }
 
   async mockConfig(config: Record<string, unknown> | string, coreVersion?: string) {

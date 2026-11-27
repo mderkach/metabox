@@ -5,13 +5,12 @@ import { useTranslation } from 'react-i18next';
 
 import {
   ConfigDocumentStore,
-  newSectionNode,
+  nodePreset,
   readSubscriptionTagReservations,
   selectConfigCurrent,
   type GenericSection,
   type NodeRegistry,
 } from '@entities/Config';
-import { nodePreset } from '@features/Config/ConfigNodeForm/@x/ConfigNodeAdd';
 import { showQueryError } from '@shared/api';
 import {
   Button,
@@ -77,7 +76,7 @@ export function ConfigNodeAddManual({
       return;
     }
 
-    if (!insertNode(nodePreset(registry, data.type, tag, newSectionNode))) {
+    if (!insertNode(nodePreset(registry, data.type, tag))) {
       showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
 
       return;

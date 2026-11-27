@@ -69,7 +69,7 @@ export function RulePanel({
    * The rule is not in the document yet: the form creates it here on the first
    * condition. Until then there is no node to show as text.
    */
-  onCreate?: (node: Record<string, unknown>) => boolean;
+  onCreate?: (node: Record<string, unknown>, name: string) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation(RULE_PANEL_NS);

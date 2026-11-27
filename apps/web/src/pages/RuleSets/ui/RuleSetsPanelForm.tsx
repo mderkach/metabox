@@ -1,6 +1,5 @@
-import { RuleSetAddForm } from '@features/RuleSet/RuleSetAdd';
 import { RuleSetCustomForm } from '@features/RuleSet/RuleSetCustom';
-import { RuleSetEditForm } from '@features/RuleSet/RuleSetEdit';
+import { RuleSetAddForm, RuleSetEditForm } from '@features/RuleSet/RuleSetRemoteForm';
 
 import { RULE_SET_FORM, type RuleSetEditorState, type RuleSetForm } from '../lib/RuleSets.lib';
 

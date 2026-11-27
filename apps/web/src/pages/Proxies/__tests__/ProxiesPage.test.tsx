@@ -377,9 +377,34 @@ describe('proxies screen', () => {
     // `us` is not an outbound of the file: there is nothing to wrap, and no action is offered.
     expect(screen.queryByRole('button', { name: 'Добавить выбор вручную для группы us' })).not.toBeInTheDocument();
 
-    await user.click(await screen.findByRole('button', { name: 'Добавить выбор вручную для группы proxy' }));
+    const action = await screen.findByRole('button', { name: 'Добавить выбор вручную для группы proxy' });
+    const before = ConfigDocumentStore.getState();
+    const publications: ReturnType<typeof ConfigDocumentStore.getState>[] = [];
+    const unsubscribe = ConfigDocumentStore.subscribe((state, previous) => {
+      if (state.draft !== previous.draft) publications.push(state);
+    });
+    try {
+      await user.click(action);
+    } finally {
+      unsubscribe();
+    }
 
-    const outbounds = readSectionNodes(selectConfigCurrent(ConfigDocumentStore.getState()) ?? '', 'outbounds');
+    expect(publications).toHaveLength(2);
+    for (const state of publications) {
+      expect(state.applied).toBe(before.applied);
+      expect(state.appliedEtag).toBe(before.appliedEtag);
+      expect(state.listsEtag).toBe(before.listsEtag);
+      expect(state.listsDraft).toBe(before.listsDraft);
+    }
+
+    const intermediate = readSectionNodes(selectConfigCurrent(publications[0]) ?? '', 'outbounds');
+    expect(intermediate).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'selector', tag: 'proxy' }),
+        expect.objectContaining({ type: 'urltest', tag: 'proxy' }),
+      ])
+    );
+    const outbounds = readSectionNodes(selectConfigCurrent(publications[1]) ?? '', 'outbounds');
 
     expect(outbounds).toContainEqual({
       type: 'selector',

@@ -5,8 +5,9 @@ import { deviceLabel, useDeviceIndex } from '@entities/Device/@x/rule';
 import { SHARED_NS } from '@shared/i18n';
 
 import { toRuleCaption } from '../model/Rule.caption';
-import { isNamedRuleAction, isNamedRuleMatcher } from '../model/Rule.constants';
-import { RULE_TARGET, type RuleRow } from '../model/Rule.model';
+import { isNamedRuleMatcher } from '../model/Rule.constants';
+import type { RuleRow } from '../model/Rule.model';
+import { ruleActionLabel } from './Rule.target';
 
 export interface RuleTitle {
   /** The name, or "main condition → outbound" derived from the content. */
@@ -56,10 +57,7 @@ export function useRuleTitle(): RuleTitle {
 
       if (rule.name !== null || numbered) return own;
 
-      const target =
-        rule.targetKind === RULE_TARGET.Action && isNamedRuleAction(rule.target)
-          ? t(`ruleAction.${rule.target}`)
-          : rule.target;
+      const target = ruleActionLabel(rule, t) ?? rule.target;
 
       return t('rule.caption', { subject: own, target });
     };

@@ -44,3 +44,4 @@ export type {
 
 export { useOutboundMetadata, useSaveOutboundMetadata } from './api/Proxy.metadata.query';
 export type { OutboundMetadata, OutboundMetadataMap } from './model/Proxy.metadata';
+export { DELAY_TONE } from './ui/ProxyDelayTone';

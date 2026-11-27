@@ -8,7 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CONFIG_ENDPOINT, ConfigDocumentState, findValue } from '@entities/Config';
+import { CONFIG_ENDPOINT, ConfigDocumentState, findValue, selectListChanges } from '@entities/Config';
 import { DAEMON_ENDPOINT } from '@entities/Daemon';
 import { DAEMON_STATUS_FIXTURE } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { parseRuleSetSearch, RULE_SET_ENDPOINT } from '@entities/RuleSet';
@@ -358,6 +358,64 @@ describe('rule sets screen', () => {
     expect(within(screen.getByRole('table', { name: 'Подключённые сеты' })).getAllByRole('row')).toHaveLength(
       HEADER_ROWS + 2
     );
+  });
+
+  it('cancels local deletion without edits, then stages the rule set removal before its file removal', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), () =>
+        HttpResponse.text(CONFIG_WITHOUT_REMOTE, { headers: { etag: '"config"' } })
+      ),
+      http.get(CONFIG_ENDPOINT.ruleSetFiles(), () =>
+        HttpResponse.json({ files: { 'big-list.json': '{}' }, etag: '"lists"', stats: {} })
+      )
+    );
+    renderWithRouter(RuleSetsScreen);
+    const trigger = await screen.findByRole('button', { name: 'Убрать сет big-list' });
+    await waitFor(() => {
+      expect(ConfigDocumentState.getState().listsEtag).toBe('"lists"');
+    });
+
+    function snapshot(state: ReturnType<typeof ConfigDocumentState.getState>) {
+      return {
+        draft: state.draft,
+        lists: selectListChanges(state),
+        appliedEtag: state.appliedEtag,
+        listsEtag: state.listsEtag,
+      };
+    }
+
+    const updates: ReturnType<typeof snapshot>[] = [];
+    const unsubscribe = ConfigDocumentState.subscribe((state, before) => {
+      if (state.draft !== before.draft || state.listsDraft !== before.listsDraft) updates.push(snapshot(state));
+    });
+    try {
+      await user.click(trigger);
+      const dialog = screen.getByRole('alertdialog', { name: 'Убрать сет big-list?' });
+      await user.click(within(dialog).getByRole('button', { name: 'Отмена' }));
+      expect(updates).toHaveLength(0);
+
+      await user.click(trigger);
+      await user.click(
+        within(screen.getByRole('alertdialog', { name: 'Убрать сет big-list?' })).getByRole('button', {
+          name: 'Убрать',
+        })
+      );
+
+      expect(updates).toHaveLength(2);
+      const [node, file] = updates;
+      expect(findValue(node.draft ?? '', ['route', 'rule_set'])).toEqual([
+        findValue(CONFIG_WITHOUT_REMOTE, ['route', 'rule_set', 0]),
+      ]);
+      expect(node).toMatchObject({
+        lists: { put: {}, remove: [] },
+        appliedEtag: '"config"',
+        listsEtag: '"lists"',
+      });
+      expect(file).toEqual({ ...node, lists: { put: {}, remove: ['big-list.json'] } });
+    } finally {
+      unsubscribe();
+    }
   });
 
   it('search filters rows and is reset by the empty screen button', async () => {

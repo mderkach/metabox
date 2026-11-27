@@ -4,11 +4,12 @@ import {
   selectConfigCurrent,
   ConfigDocumentStore,
   findValue,
+  nameValue,
   readRuleNames,
   ruleNodePath,
+  setValue,
   toElementName,
 } from '@entities/Config';
-import { cidrContains, parseIpv4Cidr, type Ipv4Cidr } from '@entities/Dataplane';
 import { deviceLabel, type Device, type DeviceIndex } from '@entities/Device';
 import {
   RULE_SET_MATCHER,
@@ -19,6 +20,8 @@ import {
   toRuleRowsFromNodes,
   type RuleRow,
 } from '@entities/Rule';
+import { showQueryError } from '@shared/api';
+import { cidrContains, parseIpv4Cidr, type Ipv4Cidr } from '@shared/lib/ipv4';
 
 import {
   conditionLines,
@@ -48,33 +51,27 @@ export function toRuleEditValues(rule: RuleRow): RuleEditModel {
  * comment line, there is no key order to keep.
  *
  * A rule not in the document yet goes to `onCreate` once it has a condition
- * or a set: without them it would take all traffic. A name typed before that
- * is written right after it, if `onCreate` reports the rule written.
+ * or a set: without them it would take all traffic.
  */
 export function writeRuleEdit(
-  edit: (path: JSONPath, value: unknown) => void,
-  rename: (path: JSONPath, name: string) => void,
   index: number,
   patch: RuleEditPatch,
   values: RuleEditModel,
   withRemovals: boolean,
-  onCreate?: (node: Record<string, unknown>) => boolean
+  onCreate?: (node: Record<string, unknown>, name: string) => void
 ): boolean {
   if (onCreate !== undefined) {
     const node = toNewRuleNode(patch);
 
-    // A refused insert leaves another rule at this position: the name must not go to it.
-    if (node !== null && onCreate(node)) {
-      if (toElementName(values.name).length > 0) {
-        rename(ruleNodePath(index), values.name);
-      }
-    }
+    if (node !== null) onCreate(node, values.name);
 
     return false;
   }
 
   const path = ruleNodePath(index);
-  const text = selectConfigCurrent(ConfigDocumentStore.getState()) ?? '';
+  const document = ConfigDocumentStore.getState();
+  const text = selectConfigCurrent(document);
+  if (text === null) return false;
   const node = findValue(text, path);
   const current = toRuleRowsFromNodes([node], [readRuleNames(text).at(index - 1) ?? null]).at(0);
 
@@ -85,8 +82,10 @@ export function writeRuleEdit(
   const before = toRuleEditValues(current);
   let held = false;
 
-  if (toElementName(values.name) !== before.name) {
-    rename(path, values.name);
+  const named = toElementName(values.name) === before.name ? text : nameValue(text, path, values.name);
+  let next = named ?? text;
+  function edit(field: JSONPath, value: unknown) {
+    next = setValue(next, field, value);
   }
 
   // `route` without an `action` key is the norm: the key is written only when the action changed.
@@ -131,6 +130,8 @@ export function writeRuleEdit(
     }
   }
 
+  if (next !== text) document.replace(next);
+  if (named === null) showQueryError({ showError: true, errorMessageKey: 'toast.rule.rename.failed' }, null);
   return held;
 }
 

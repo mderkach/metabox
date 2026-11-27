@@ -6,7 +6,7 @@ import { SHARED_NS } from '@shared/i18n';
 import { FacetFilter, type FacetText, type FacetValue } from '@shared/ui';
 
 import { EDITOR_NS } from '../i18n/Editor.namespace.generated';
-import type { RuleFilterState } from '../lib/Editor.lib';
+import type { RuleFilterState } from '../lib/Editor.filter';
 
 /** Outbound facet: an action is named in words, an outbound by its tag. */
 export function EditorTargetFacets({ filter }: { filter: RuleFilterState }) {

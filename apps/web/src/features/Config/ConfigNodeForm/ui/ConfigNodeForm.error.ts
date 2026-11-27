@@ -1,6 +1,8 @@
 import type { ParseKeys, TFunction } from 'i18next';
 import { get, useFormContext, useFormState, type FieldError as FormFieldError } from 'react-hook-form';
 
+import { SHARED_NS } from '@shared/i18n';
+
 import type { CONFIG_NODE_FORM_NS } from '../i18n/ConfigNodeForm.namespace.generated';
 import { NODE_OVERRIDE_ERROR, SUBSCRIPTION_TAG_CONFLICT, type ConfigNodeFormModel } from '../model';
 import { RAW_PARSE_ERROR } from './ConfigNodeForm.context';
@@ -30,7 +32,9 @@ export function errorText(t: TFunction<typeof CONFIG_NODE_FORM_NS>, error: FormF
     return t('error.parse', { reason: error.message ?? '' });
   }
 
-  return t(ERROR_KEY[error.type] ?? 'error.invalid');
+  const key = ERROR_KEY[error.type];
+
+  return key === undefined ? t('validation.schema', { ns: SHARED_NS }) : t(key);
 }
 
 /**

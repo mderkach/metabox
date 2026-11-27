@@ -22,11 +22,12 @@ import { getDataplaneOptions } from '@entities/Dataplane';
 import { getDevicesOptions } from '@entities/Device';
 import { DEFAULT_LOG_LEVEL, getLogTailOptions } from '@entities/Log';
 import { getProxiesOptions, getProxyProvidersOptions } from '@entities/Proxy';
-import type { RuleEditorSearch } from '@entities/Route';
+import { ROUTE_NS, type RuleEditorSearch } from '@entities/Route';
 import { parseRuleSearch } from '@entities/Rule';
-import { getRuleSetCatalogOptions, parseRuleSetSearch } from '@entities/RuleSet';
+import { getRuleSetCatalogOptions, parseRuleSetSearch, RULE_SET_NS } from '@entities/RuleSet';
 import { AUTH_PASSWORD_NS } from '@features/Auth/AuthPassword';
 import { CONFIG_CACHE_FILE_NS } from '@features/Config/ConfigCacheFile';
+import { CONFIG_DNS_EDIT_NS } from '@features/Config/ConfigDnsEdit';
 import { CONFIG_NODE_ADD_NS } from '@features/Config/ConfigNodeAdd';
 import { CONFIG_NODE_DELETE_NS } from '@features/Config/ConfigNodeDelete';
 import { CONFIG_NODE_FORM_NS } from '@features/Config/ConfigNodeForm';
@@ -36,14 +37,18 @@ import { DEVICE_RENAME_NS } from '@features/Device/DeviceRename';
 import { DEVICE_ROUTE_NS } from '@features/Device/DeviceRoute';
 import { LOG_CLEAR_NS } from '@features/Log/LogClear';
 import { MCP_ACCESS_NS } from '@features/Mcp/McpAccess';
+import { PROXY_PROVIDER_UPDATE_NS } from '@features/Proxy/ProxyProviderUpdate';
+import { PROXY_REALITY_RECOVERY_NS } from '@features/Proxy/ProxyRealityRecovery';
 import { RULE_ADD_NS } from '@features/Rule/RuleAdd';
 import { RULE_CATALOG_ADD_NS } from '@features/Rule/RuleCatalogAdd';
+import { RULE_CUSTOM_ADD_NS } from '@features/Rule/RuleCustomAdd';
 import { RULE_DELETE_NS } from '@features/Rule/RuleDelete';
 import { RULE_EDIT_NS } from '@features/Rule/RuleEdit';
 import { RULE_RAW_NS } from '@features/Rule/RuleRaw';
 import { RULE_REORDER_NS } from '@features/Rule/RuleReorder';
-import { RULE_SET_ADD_NS } from '@features/RuleSet/RuleSetAdd';
 import { RULE_SET_CUSTOM_NS } from '@features/RuleSet/RuleSetCustom';
+import { RULE_SET_DELETE_NS } from '@features/RuleSet/RuleSetDelete';
+import { RULE_SET_REMOTE_FORM_NS } from '@features/RuleSet/RuleSetRemoteForm';
 import { CONNECTIONS_NS, CONNECTIONS_PATH, loadConnectionsPage } from '@pages/Connections';
 import { DEVICES_NS, DEVICES_PATH, loadDevicesPage } from '@pages/Devices';
 import { DIAGNOSTICS_NS, DIAGNOSTICS_PATH, loadDiagnosticsPage } from '@pages/Diagnostics';
@@ -148,11 +153,13 @@ export const simpleRoutesRoute = createRoute({
     Promise.all([
       preloadNamespaces([
         SIMPLE_ROUTES_NS,
+        CONFIG_DNS_EDIT_NS,
         CONFIG_NODE_ADD_NS,
         CONFIG_CACHE_FILE_NS,
         RULE_CATALOG_ADD_NS,
+        RULE_CUSTOM_ADD_NS,
         RULE_REORDER_NS,
-        RULE_SET_TABLE_NS,
+        RULE_SET_NS,
       ]),
       QueryClientInstance.query(getDataplaneOptions()).catch(keepFailureForScreen),
     ]),
@@ -169,8 +176,10 @@ export const ruleSetsRoute = createRoute({
       preloadNamespaces([
         RULE_SETS_NS,
         RULE_SET_TABLE_NS,
-        RULE_SET_ADD_NS,
+        RULE_SET_NS,
+        RULE_SET_REMOTE_FORM_NS,
         RULE_SET_CUSTOM_NS,
+        RULE_SET_DELETE_NS,
         CONFIG_CACHE_FILE_NS,
         CONFIG_NODE_FORM_NS,
       ]),
@@ -215,7 +224,7 @@ export const howItWorksRoute = createRoute({
   getParentRoute: () => rootRoute,
   loader: async () =>
     Promise.all([
-      preloadNamespaces([HOW_IT_WORKS_NS, ROUTE_EXPLANATION_NS]),
+      preloadNamespaces([HOW_IT_WORKS_NS, ROUTE_NS]),
       QueryClientInstance.query(getProxiesOptions()).catch(keepFailureForScreen),
       QueryClientInstance.query(getProxyProvidersOptions()).catch(keepFailureForScreen),
       QueryClientInstance.query(getDevicesOptions()).catch(keepFailureForScreen),
@@ -227,7 +236,7 @@ export const proxiesRoute = createRoute({
   getParentRoute: () => rootRoute,
   loader: async () =>
     Promise.all([
-      preloadNamespaces([PROXIES_NS, PROXY_GROUPS_NS]),
+      preloadNamespaces([PROXIES_NS, PROXY_GROUPS_NS, PROXY_PROVIDER_UPDATE_NS, PROXY_REALITY_RECOVERY_NS]),
       QueryClientInstance.query(getConfigOptions()).catch(keepFailureForScreen),
       QueryClientInstance.query(getProxiesOptions()).catch(keepFailureForScreen),
       QueryClientInstance.query(getProxyProvidersOptions()).catch(keepFailureForScreen),
@@ -239,7 +248,7 @@ export const proxiesRoute = createRoute({
 export const connectionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   loader: async () =>
-    preloadNamespaces([CONNECTIONS_NS, CONNECTION_TABLE_NS, ROUTE_EXPLANATION_NS, CONNECTION_CLOSE_NS]),
+    preloadNamespaces([CONNECTIONS_NS, CONNECTION_TABLE_NS, ROUTE_NS, ROUTE_EXPLANATION_NS, CONNECTION_CLOSE_NS]),
   path: CONNECTIONS_PATH,
   validateSearch: parseConnectionSearch,
 });

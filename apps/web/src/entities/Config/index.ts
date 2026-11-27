@@ -24,6 +24,7 @@ export {
   hasRuleSetCache,
   insertValue,
   isGenericSection,
+  nameValue,
   parseSectionSearch,
   readRuleNames,
   readRules,
@@ -87,7 +88,7 @@ export type { NodeRegistry } from './model/Config.registry';
 export type { UnbuiltNode, UnbuiltOption } from './model/Config.build';
 export { useConfigDocument, useConfigFileLoad, useConfigLoad } from './model/Config.document';
 export type { ConfigDocumentView } from './model/Config.document';
-export { ConfigDocumentState, ConfigDocumentStore } from './model/Config.store';
+export { ConfigDocumentState, ConfigDocumentStore, replaceReviewedDraft } from './model/Config.store';
 export {
   selectConfigCurrent,
   selectConfigDirty,
@@ -108,3 +109,4 @@ export {
   onlyKeys,
   strings,
 } from './model/Config.dnsPath';
+export { nodePreset } from './model/Config.nodePreset';

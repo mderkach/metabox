@@ -2,7 +2,7 @@ import { ArrowRight } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { isNamedRuleAction, RULE_TARGET, type RuleRow as RuleRowModel } from '@entities/Rule';
+import { ruleActionLabel, type RuleRow as RuleRowModel } from '@entities/Rule';
 import { SHARED_NS } from '@shared/i18n';
 import { ROW_FOCUS } from '@shared/lib/rowFocus';
 import { cn } from '@shared/lib/utils';
@@ -49,10 +49,8 @@ function RuleRowProto({
   onSelect: (id: string) => void;
 }) {
   const { t, i18n } = useTranslation(RULE_TABLE_NS);
-  const actionName =
-    rule.targetKind === RULE_TARGET.Action && isNamedRuleAction(rule.target)
-      ? t(`ruleAction.${rule.target}`, { ns: SHARED_NS })
-      : null;
+  const { t: tShared } = useTranslation(SHARED_NS);
+  const actionName = ruleActionLabel(rule, tShared);
   const label = t('row.label', { title, index: rule.index });
   const targetRef = useRef<HTMLSpanElement>(null);
   const [hint, setHint] = useState(false);

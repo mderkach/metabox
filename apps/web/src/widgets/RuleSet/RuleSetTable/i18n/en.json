@@ -24,7 +24,6 @@
     "usedBy_other": "in {{count}} rules",
     "rules": "Rules that use the {{tag}} set",
     "edit": "Edit the {{tag}} set",
-    "remove": "Remove the {{tag}} set",
     "unknown": "unknown"
   },
   "details": {
@@ -33,14 +32,6 @@
     "showNamed": "Details for {{tag}}",
     "hideNamed": "Hide details for {{tag}}",
     "toggle": "Details for {{tag}}",
-    "geosite": "A list of sites from {{provider}}. The catalog calls it {{category}}.",
-    "geoip": "A list of addresses from {{provider}}. The catalog calls it {{category}}.",
-    "remote": "The core downloads this list from {{host}}.",
-    "remoteUnknown": "A remote list without a recognized host.",
-    "local": "A file on the router: {{path}}.",
-    "inline": "Conditions written in the config.",
-    "mirror": "Mirror: {{host}}",
-    "file": "File: {{name}}",
     "draftOnly": "Only in the draft. The core gets it after Apply.",
     "fetchFailed": "Could not load the check time and size.",
     "retry": "Retry",
@@ -50,18 +41,6 @@
     "memoryOnly": "The core keeps the list in memory. Check time and size are unknown.",
     "unreadable": "The saved copy is not a readable rule set.",
     "unavailable": "Saved copies are unavailable right now.",
-    "notDownloaded": "Not downloaded yet.",
-    "usage": "Used in the draft",
-    "unused": "No rule in the draft uses this rule set.",
-    "routeRules": "Routing rules",
-    "dnsRules": "DNS rules",
-    "rule": "Rule {{number}}"
-  },
-  "remove": {
-    "title": "Remove the {{tag}} set?",
-    "description": "The set leaves the draft. Only discarding the whole draft brings it back.",
-    "used_one": "{{count}} rule uses the set. Remove it there first, or the config will not apply.",
-    "used_other": "{{count}} rules use the set. Remove it there first, or the config will not apply.",
-    "action": "Remove"
+    "notDownloaded": "Not downloaded yet."
   }
 }

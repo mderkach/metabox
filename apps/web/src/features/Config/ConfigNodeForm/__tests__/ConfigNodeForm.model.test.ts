@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { NODE_REGISTRY } from '@entities/Config';
 import { SECRET_FIELD_KEYS } from '@shared/api/generated';
 import { FIELD_KIND, type FieldPlan } from '@shared/lib/schemaShape';
+import { SECRET_MASK } from '@shared/lib/secretMask';
 
 import {
   countFilled,
@@ -11,7 +12,6 @@ import {
   packList,
   parseNumber,
   parseScalar,
-  SECRET_MASK,
   secretMaskOf,
   UNSET,
 } from '../model';

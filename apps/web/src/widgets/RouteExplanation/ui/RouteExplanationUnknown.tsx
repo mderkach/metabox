@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 
 import { ROUTE_ORIGIN } from '@entities/Route';
+import { RouteOriginBadge } from '@entities/Route';
 
 import { ROUTE_EXPLANATION_NS } from '../i18n/RouteExplanation.namespace.generated';
-import { RouteOriginBadge } from './RouteOriginBadge';
 
 export function RouteExplanationUnknown({ reason }: { reason: string }) {
   const { t } = useTranslation(ROUTE_EXPLANATION_NS);

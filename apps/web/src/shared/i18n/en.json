@@ -1,4 +1,11 @@
 {
+  "secret": {
+    "show": "Show {{name}}",
+    "hide": "Hide {{name}}"
+  },
+  "validation": {
+    "schema": "Value does not match the schema"
+  },
   "toast": {
     "config": {
       "edit": {
@@ -274,6 +281,7 @@
   },
   "soon": "soon",
   "action": {
+    "addToDraft": "Add to draft",
     "cancel": "Cancel",
     "closePanel": "Close the panel",
     "close": "Close",

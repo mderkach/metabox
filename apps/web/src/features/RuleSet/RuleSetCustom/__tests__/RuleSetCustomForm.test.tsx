@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { selectConfigCurrent, ConfigDocumentState, findValue } from '@entities/Config';
+import { selectConfigCurrent, selectListChanges, ConfigDocumentState, findValue } from '@entities/Config';
 
 import { RuleSetCustomForm } from '../ui/RuleSetCustomForm';
 
@@ -81,8 +81,11 @@ describe('custom list', () => {
     });
   });
 
-  it('as a file: the local node and the file go into the draft together', async () => {
+  it('stages the local node before its file and preserves both Apply bases', async () => {
     const user = userEvent.setup();
+    const document = ConfigDocumentState.getState();
+    document.load(CONFIG_TEXT, '"config"');
+    document.loadLists({}, '"lists"');
 
     render(<RuleSetCustomForm takenTags={[]} />);
 
@@ -90,16 +93,43 @@ describe('custom list', () => {
     await user.click(screen.getByRole('button', { name: 'Файлом' }));
     await user.click(screen.getByLabelText('Домены и адреса'));
     await user.paste('example.com');
-    await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
-    await waitFor(() => {
-      expect(ConfigDocumentState.getState().listsDraft['big-list.json']).toContain('"version": 1');
-    });
+    function snapshot(state: ReturnType<typeof ConfigDocumentState.getState>) {
+      return {
+        draft: state.draft,
+        lists: selectListChanges(state),
+        appliedEtag: state.appliedEtag,
+        listsEtag: state.listsEtag,
+      };
+    }
 
-    const draft = ConfigDocumentState.getState().draft ?? '';
+    const updates: ReturnType<typeof snapshot>[] = [];
+    const unsubscribe = ConfigDocumentState.subscribe((state) => updates.push(snapshot(state)));
+    try {
+      await user.click(screen.getByRole('button', { name: 'Сохранить в черновик' }));
 
-    expect(draft).toContain('"type": "local"');
-    expect(draft).toContain('"path": "rule-sets/big-list.json"');
+      expect(updates).toHaveLength(2);
+      const [node, file] = updates;
+      expect(findValue(node.draft ?? '', ['route', 'rule_set'])).toEqual([
+        { type: 'local', tag: 'big-list', format: 'source', path: 'rule-sets/big-list.json' },
+      ]);
+      expect(node).toMatchObject({
+        lists: { put: {}, remove: [] },
+        appliedEtag: '"config"',
+        listsEtag: '"lists"',
+      });
+      expect(file).toEqual({
+        ...node,
+        lists: {
+          put: {
+            'big-list.json': `${JSON.stringify({ version: 1, rules: [{ domain_suffix: ['example.com'] }] }, null, 2)}\n`,
+          },
+          remove: [],
+        },
+      });
+    } finally {
+      unsubscribe();
+    }
   });
 
   it('keeps the form and list files unchanged when the config insert is refused', async () => {

@@ -38,7 +38,7 @@ export function RuleSetTable({
   appliedTags,
   cache,
   onEdit,
-  onRemove,
+  onNodeRemoved,
 }: {
   links: RuleSetLinks;
   sets: RuleSetRowModel[];
@@ -54,7 +54,7 @@ export function RuleSetTable({
   actions?: ReactNode;
   /** Opens editing of a rule set; without it rows do not offer editing. */
   onEdit?: (index: number) => void;
-  onRemove: (index: number) => void;
+  onNodeRemoved: () => void;
 }) {
   const { t } = useTranslation(RULE_SET_TABLE_NS);
   const table = useTable({ features: RULE_SET_TABLE_FEATURES, columns: RULE_SET_COLUMNS, data: sets });
@@ -107,7 +107,7 @@ export function RuleSetTable({
                 cache={cache}
                 onToggleDetails={toggleDetails}
                 onEdit={onEdit}
-                onRemove={onRemove}
+                onNodeRemoved={onNodeRemoved}
               />
             ))}
           </div>

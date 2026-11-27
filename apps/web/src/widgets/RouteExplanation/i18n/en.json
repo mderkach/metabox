@@ -8,9 +8,6 @@
     "description": "Find the rule by its condition and action in the rule list."
   },
   "origin": {
-    "observed": "from the core",
-    "computed": "computed",
-    "unknown": "unknown",
     "note": "“From the core” marks values reported by the core. The panel shows them as received."
   },
   "final": {

@@ -10,7 +10,7 @@ import {
   selectConfigStale,
   selectListChanges,
 } from '../model/Config.selectors';
-import { ConfigDocumentState } from '../model/Config.store';
+import { ConfigDocumentState, replaceReviewedDraft } from '../model/Config.store';
 import { CONFIG_FIXTURE } from './Config.fixture';
 
 const TEXT = JSON.stringify(CONFIG_FIXTURE, null, 2);
@@ -84,6 +84,28 @@ describe('ConfigDocumentState', () => {
 
     expect(config?.route?.default_mark).toBe(200);
     expect(config?.route?.final).toBe('direct');
+  });
+
+  it('only publishes a reviewed replacement when the text and its applied base are current', () => {
+    state().load(TEXT, '"base"');
+    const reviewed = TEXT + '\n';
+    const publish = vi.fn<() => void>();
+    const unsubscribe = ConfigDocumentState.subscribe(publish);
+    try {
+      expect(replaceReviewedDraft(TEXT, TEXT)).toBe(true);
+      expect(replaceReviewedDraft(TEXT, reviewed)).toBe(true);
+      expect(replaceReviewedDraft(TEXT, TEXT + ' ')).toBe(false);
+      expect(publish).toHaveBeenCalledTimes(1);
+      expect(selectConfigCurrent(state())).toBe(reviewed);
+
+      state().load(TEXT + ' ', '"new"');
+      publish.mockClear();
+      expect(replaceReviewedDraft(reviewed, reviewed + ' ')).toBe(false);
+      expect(publish).not.toHaveBeenCalled();
+      expect(selectConfigCurrent(state())).toBe(reviewed);
+    } finally {
+      unsubscribe();
+    }
   });
 
   it('a batch of edits lands as a single store update', () => {

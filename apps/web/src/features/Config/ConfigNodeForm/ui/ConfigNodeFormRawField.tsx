@@ -3,6 +3,7 @@ import { use, useEffect, useId, useState } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { SHARED_NS } from '@shared/i18n';
 import { Button, Textarea } from '@shared/ui';
 
 import { CONFIG_NODE_FORM_NS } from '../i18n/ConfigNodeForm.namespace.generated';
@@ -71,7 +72,7 @@ export function ConfigNodeFormRawField({ field, name }: NodeFieldProps) {
                   type='button'
                   variant='ghost'
                   size='icon-xs'
-                  aria-label={t(revealed ? 'secret.hide' : 'secret.show', { name: label })}
+                  aria-label={t(revealed ? 'secret.hide' : 'secret.show', { name: label, ns: SHARED_NS })}
                   aria-controls={id}
                   onClick={() => {
                     // Switching between the mask and the text drops unparsed text: its failure goes with it.

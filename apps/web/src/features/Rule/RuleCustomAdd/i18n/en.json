@@ -1,0 +1,28 @@
+{
+  "custom": {
+    "add": "Add site or address",
+    "exception": "Add device exception",
+    "address": "Domain or IP address",
+    "device": "Device",
+    "outbound": "Outbound",
+    "title": "Add site or address",
+    "exceptionTitle": "Add device exception",
+    "preview": "New rule {{position}} · {{scope}} → {{outbound}}",
+    "all": "All devices",
+    "before": "General rule {{position}} moves to position {{next}}.",
+    "unknown": "Possible overlap with rule {{position}}. Review its conditions in Editor or JSON.",
+    "invalid": "Enter an exact domain or a single IPv4 or IPv6 address.",
+    "deviceRequired": "Select a device with a known IP address.",
+    "exit": "Choose an unambiguous outbound from this draft.",
+    "draft": "Simple cannot safely insert a rule into this draft. Review it in Editor or JSON.",
+    "duplicate": "Rule {{position}} already matches this traffic. Review it in Editor or JSON.",
+    "parent": "This rule has conditions that Simple cannot narrow. Open it in Editor or JSON.",
+    "choose": "Choose…",
+    "noDevices": "No devices with a unique address",
+    "noExits": "No eligible outbounds",
+    "description": "Route traffic for one exact domain or IP address. DNS settings stay as configured.",
+    "exceptionDescription": "Route {{subject}} from one device separately from rule {{position}}. DNS settings stay as configured.",
+    "dynamic": "This device uses a dynamic address. The rule matches {{ip}} even if another device receives it later.",
+    "stale": "The draft or the configuration on the device changed. Close this preview and review the current draft."
+  }
+}

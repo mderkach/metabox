@@ -53,7 +53,7 @@ A slice is a domain area. Slices **do not import other slices of the same layer*
 
 Related slices get a grouping folder: `features/Rule/{RuleAdd,RuleReorder,RuleDelete}`. A group is not a slice and has no public API.
 
-Cross-imports go only through the `@x` segment (FSD 2.1):
+Cross-imports are limited to entities and go through the `@x` segment (FSD 2.1):
 
 ```text
 entities/Outbound/@x/rule/index.ts   // what Outbound allows the Rule slice to import

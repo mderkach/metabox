@@ -23,7 +23,9 @@ for (const directory of [
   'src/entities/Config',
   'src/entities/Daemon',
   'src/features/Rule/RuleEdit',
+  'src/features/Rule/RuleAdd',
   'src/widgets/RouteExplanation',
+  'src/widgets/PageHeader',
   'src/pages/Editor',
   'src/shared/api',
   'src/shared/ui',
@@ -130,11 +132,26 @@ tester.run('boundaries', plugin.rules.boundaries, {
     ),
     rejected(page, "import { value } from '../../../entities/Config';", /only via the alias/),
     rejected(page, "import { value } from '@shared/api/generated';", /generated shape/),
+    rejected(
+      'src/entities/Config/model/Config.ts',
+      "import { value } from '@entities/Daemon/@x/config/private';",
+      /cross-import Public API/
+    ),
     rejected(page, "import { value } from '@entities/Daemon/@x/config';", /own layer/),
     rejected(
       'src/entities/Config/model/Config.ts',
       "import { value } from '@entities/Daemon/@x/route';",
       /open to slice/
+    ),
+    rejected(
+      'src/features/Rule/RuleEdit/ui/RuleEdit.tsx',
+      "import { value } from '@features/Rule/RuleAdd/@x/RuleEdit';",
+      /reserved for cross-imports between entities/
+    ),
+    rejected(
+      'src/widgets/RouteExplanation/ui/RouteExplanation.tsx',
+      "import { value } from '@widgets/PageHeader/@x/RouteExplanation';",
+      /reserved for cross-imports between entities/
     ),
     rejected(page, "import { value } from '@test/render';", restricted),
     rejected(page, "import { value } from '../../../test/handlers';", restricted),
