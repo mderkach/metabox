@@ -1,10 +1,9 @@
 import { useSearch } from '@tanstack/react-router';
-import { useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 
-import { CONFIG_SECTION, ConfigDocumentState, ruleNodePath } from '@entities/Config';
+import { CONFIG_SECTION } from '@entities/Config';
 import { toNewRuleRow, type NewRulePlace } from '@entities/Rule';
 import { useCreateRule } from '@features/Rule/RuleAdd';
-import { showQueryError } from '@shared/api';
 import { usePanelAsSheet } from '@shared/lib/media';
 import { QueryFailure, SidePanelLayout, SURFACE, SkeletonRows } from '@shared/ui';
 import { ConfigSectionSettings } from '@widgets/Config/ConfigSectionSettings';
@@ -34,8 +33,6 @@ export function EditorPage() {
   const matchesDocument = ruleEtag === undefined || (ruleEtag === editor.appliedEtag && editor.isAppliedDocument);
   const currentRule = matchesDocument ? rule : undefined;
   const selection = useRuleSelection(toSelectedRuleId(currentRule), editor.rules, guardedLink);
-  const createRule = useCreateRule();
-  const edit = ConfigDocumentState.use.edit();
   const { reset: resetFilter } = filter;
   const { startAdding, onCreated } = selection;
 
@@ -50,30 +47,7 @@ export function EditorPage() {
   );
 
   const pending = selection.pending;
-  // A change typed before the panel re-renders still calls this closure: it
-  // goes over the rule already inserted instead of inserting it again.
-  const createdFrom = useRef<NewRulePlace | null>(null);
-  const onCreate =
-    pending === null
-      ? undefined
-      : (node: Record<string, unknown>) => {
-          if (createdFrom.current === pending) {
-            edit(ruleNodePath(pending.index), node);
-
-            return true;
-          }
-
-          if (!createRule(pending.index, node)) {
-            showQueryError({ showError: true, errorMessageKey: 'toast.config.edit.failed' }, null);
-
-            return false;
-          }
-
-          createdFrom.current = pending;
-          onCreated(pending.index, node);
-
-          return true;
-        };
+  const onCreate = useCreateRule(pending, onCreated);
 
   const listed = editor.rules.find((row) => row.id === selection.id);
   const selected = listed ?? selection.created ?? (pending === null ? null : toNewRuleRow(pending));

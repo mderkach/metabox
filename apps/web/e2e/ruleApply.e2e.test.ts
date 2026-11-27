@@ -1,3 +1,5 @@
+import { RULE_ADD_NS } from '../src/features/Rule/RuleAdd/i18n/RuleAdd.namespace.generated.ts';
+import { RULE_EDIT_NS } from '../src/features/Rule/RuleEdit/i18n/RuleEdit.namespace.generated.ts';
 import { SHARED_NS } from '../src/shared/i18n/Shared.namespace.generated.ts';
 import { E2E_TAG, expect, test, translate } from './fixtures/index.ts';
 
@@ -48,6 +50,38 @@ test(
 
       await expect(applyBar.confirmed).toBeVisible();
     });
+  }
+);
+
+test(
+  'Editor stages a new domain rule with the name entered before its first condition',
+  { tag: E2E_TAG.Mock },
+  async ({ configPage, applyBar }) => {
+    const { page, ruleName, rules } = configPage;
+    const name = 'New domain rule';
+    const domain = 'new-rule.example';
+
+    await configPage.goto();
+    await page.getByRole('button', { name: translate(RULE_ADD_NS, 'add') }).click();
+    await ruleName.fill(name);
+    await expect(applyBar.dirty).toBeHidden();
+
+    await page.getByRole('combobox', { name: translate(RULE_EDIT_NS, 'field.conditions.add') }).click();
+    await page.getByRole('option', { name: translate(RULE_EDIT_NS, 'condition.domain.label'), exact: true }).click();
+    const condition = page.getByRole('textbox', {
+      name: translate(RULE_EDIT_NS, 'condition.domain.label'),
+      exact: true,
+    });
+    await condition.fill(domain);
+    await condition.press('Enter');
+
+    await expect(rules.getByRole('button', { name })).toBeVisible();
+    await expect(ruleName).toHaveValue(name);
+    await applyBar.apply();
+    await expect(applyBar.ruleChanges.getByRole('link', { name })).toBeVisible();
+    await applyBar.showChangesText();
+    await expect(applyBar.diff).toContainText(`// ${name}`);
+    await expect(applyBar.diff).toContainText(domain);
   }
 );
 

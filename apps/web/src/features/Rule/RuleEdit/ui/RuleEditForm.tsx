@@ -1,11 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { JSONPath } from 'jsonc-parser';
 import { useMemo } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 
 import { ConfigDocumentState, ConfigDocumentStore } from '@entities/Config';
 import { ruleSetsOf, useRuleTitle, type RuleRow } from '@entities/Rule';
-import { showQueryError } from '@shared/api';
 import { useWriteOnChange } from '@shared/lib/useWriteOnChange';
 
 import { conditionTexts, hasOnlyEditableConditions, toRuleEditValues, writeRuleEdit } from '../model/RuleEdit.model';
@@ -38,10 +36,8 @@ export function RuleEditForm({
   /** Set tags of the document. */
   ruleSets: string[];
   /** The rule is not in the document yet: its node goes here once it has a condition. */
-  onCreate?: (node: Record<string, unknown>) => boolean;
+  onCreate?: (node: Record<string, unknown>, name: string) => void;
 }) {
-  const edit = ConfigDocumentState.use.edit();
-  const rename = ConfigDocumentState.use.rename();
   const { title } = useRuleTitle();
   const revision = ConfigDocumentState.use.revision();
   const values = useMemo(() => toRuleEditValues(rule), [rule]);
@@ -57,16 +53,9 @@ export function RuleEditForm({
     resolver: zodResolver(RuleEditAdapterSchema),
   });
 
-  const renameOrWarn = (path: JSONPath, name: string) => {
-    if (!rename(path, name)) {
-      showQueryError({ showError: true, errorMessageKey: 'toast.rule.rename.failed' }, null);
-    }
-  };
-
   const formRef = useWriteOnChange(
     form,
-    (patch, withRemovals) =>
-      writeRuleEdit(edit, renameOrWarn, rule.index, patch, form.getValues(), withRemovals, onCreate),
+    (patch, withRemovals) => writeRuleEdit(rule.index, patch, form.getValues(), withRemovals, onCreate),
     () => ConfigDocumentStore.getState().revision !== revision
   );
 

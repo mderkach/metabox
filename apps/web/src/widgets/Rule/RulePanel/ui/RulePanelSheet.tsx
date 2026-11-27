@@ -43,7 +43,7 @@ export function RulePanelSheet({
   /** Actions on the rule: panel header, before the close button. */
   actions?: ReactNode;
   /** The rule is not in the document yet; see `RulePanel`. */
-  onCreate?: (node: Record<string, unknown>) => boolean;
+  onCreate?: (node: Record<string, unknown>, name: string) => void;
   onClose: () => void;
 }) {
   const [shown, setShown] = useState<RulePanelContent | null>(null);
