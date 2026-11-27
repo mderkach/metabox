@@ -701,16 +701,16 @@ The mock stand starts with an empty configuration. The catalog uses the same ser
 
 The phone scenario follows the in-page link from Outbounds to the suggestions by keyboard. The catalog selects its initial search text so it can be replaced by typing. The desktop and phone pairing cases check that device scope appears in the preview and that the outbound and resolver are the available selectors.
 
-The subscription fixtures promote config and publish the synthetic runtime member only after Apply confirmation. The ungrouped subscription publishes a named member without adding a config outbound. The grouped case configures a selector and confirms its reported runtime membership. The catalog still blocks pairing for that group. An applied tag or a loaded member does not establish a verified DNS path.
+The subscription fixture publishes the synthetic runtime member after Apply confirmation. The ungrouped subscription publishes a named member without adding a config outbound. The grouped case configures a selector and confirms its reported runtime membership. The catalog still blocks pairing for that group. An applied tag or a loaded member does not establish a verified DNS path.
 
 Independent Impeccable assessments checked the mock stand at 1280 px and 375 px. The browser assessment also covered 529 px, both themes, keyboard focus and touch targets. The review led to visible recovery guidance for a missing or unsupported exit, subscription information scoped to the relevant exit, and confirmation when a staged service is hidden by the current filter.
 
-| ID     | Kind | File                                     | Check                                                                                                |
-| ------ | ---- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| AC-115 | e2e  | `apps/web/e2e/simpleCatalog.e2e.test.ts` | `the empty configuration opens the same catalog from a suggested service and Escape restores focus`  |
-| AC-115 | e2e  | `apps/web/e2e/simpleCatalog.e2e.test.ts` | `the first server keeps service suggestions, the outbound filter and the draft through confirmation` |
-| AC-115 | e2e  | `apps/web/e2e/simpleCatalog.e2e.test.ts` | `distinguishes the draft from runtime servers after confirmed Apply`                                 |
-| AC-116 | e2e  | `apps/web/e2e/simpleCatalog.e2e.test.ts` | `distinguishes the draft from runtime servers after confirmed Apply`                                 |
+| ID     | Kind | File                                     | Check                                                                                               |
+| ------ | ---- | ---------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| AC-115 | e2e  | `apps/web/e2e/simpleCatalog.e2e.test.ts` | `the empty configuration opens the same catalog from a suggested service and Escape restores focus` |
+| AC-115 | e2e  | `apps/web/e2e/simpleCatalog.e2e.test.ts` | `from an empty config, the first server and service share validation, confirmation and rollback`    |
+| AC-115 | e2e  | `apps/web/e2e/simpleCatalog.e2e.test.ts` | `distinguishes the draft from runtime servers after confirmed Apply`                                |
+| AC-116 | e2e  | `apps/web/e2e/simpleCatalog.e2e.test.ts` | `distinguishes the draft from runtime servers after confirmed Apply`                                |
 
 ### Catalog route and DNS mapping
 
@@ -767,18 +767,18 @@ The local run passed 2,239 Vitest checks across 199 files and 119 Chromium mock 
 
 ### Interception scope in Simple Routes
 
-| ID     | Kind    | File                                                                           | Check                                                                                               |
-| ------ | ------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| AC-118 | e2e     | `apps/web/e2e/simpleInterception.e2e.test.ts`                                  | `Simple previews interception without writing and keeps the shared JSON draft through confirmation` |
-| AC-118 | vitest  | `apps/web/src/features/Device/DeviceRoute/__tests__/DeviceRouteScope.test.tsx` | `keeps the selected device after a stale write and previews untouched new selectors before retry`   |
-| AC-118 | vitest  | `apps/web/src/features/Device/DeviceRoute/__tests__/DeviceRouteScope.test.tsx` | `disables an empty list and requires an explicit all-device choice`                                 |
-| AC-118 | vitest  | `apps/web/src/features/Device/DeviceRoute/__tests__/DeviceRouteScope.test.tsx` | `explains the read-only scope for %s`                                                               |
-| AC-118 | vitest  | `apps/web/src/features/Device/DeviceRoute/__tests__/DeviceRouteScope.test.tsx` | `locks the selection while a config apply awaits confirmation`                                      |
-| AC-118 | vitest  | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutesProxyAccess.test.tsx`   | `discloses saved listeners without exposing credentials or implying client access`                  |
-| AC-118 | go-test | `apps/metaboxd/dataplane_integration_test.go`                                  | `TestInterceptionScopeOnEphemeralBench`                                                             |
-| AC-118 | go-test | `apps/metaboxd/internal/dataplane/write_test.go`                               | `TestRestoreKeepsForeignSingletonListInPlace`                                                       |
+| ID     | Kind    | File                                                                           | Check                                                                                             |
+| ------ | ------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| AC-118 | e2e     | `apps/web/e2e/simpleInterception.e2e.test.ts`                                  | `Simple keeps the shared JSON draft through interception review, confirmation and rollback`       |
+| AC-118 | vitest  | `apps/web/src/features/Device/DeviceRoute/__tests__/DeviceRouteScope.test.tsx` | `keeps the selected device after a stale write and previews untouched new selectors before retry` |
+| AC-118 | vitest  | `apps/web/src/features/Device/DeviceRoute/__tests__/DeviceRouteScope.test.tsx` | `disables an empty list and requires an explicit all-device choice`                               |
+| AC-118 | vitest  | `apps/web/src/features/Device/DeviceRoute/__tests__/DeviceRouteScope.test.tsx` | `explains the read-only scope for %s`                                                             |
+| AC-118 | vitest  | `apps/web/src/features/Device/DeviceRoute/__tests__/DeviceRouteScope.test.tsx` | `locks the selection while a config apply awaits confirmation`                                    |
+| AC-118 | vitest  | `apps/web/src/pages/SimpleRoutes/__tests__/SimpleRoutesProxyAccess.test.tsx`   | `discloses saved listeners without exposing credentials or implying client access`                |
+| AC-118 | go-test | `apps/metaboxd/dataplane_integration_test.go`                                  | `TestInterceptionScopeOnEphemeralBench`                                                           |
+| AC-118 | go-test | `apps/metaboxd/internal/dataplane/write_test.go`                               | `TestRestoreKeepsForeignSingletonListInPlace`                                                     |
 
-The Chromium mock scenario records every dataplane write. It opens the proxy disclosure and picker by keyboard, cancels a device preview, discards the selection, explicitly chooses all devices and confirms the separate interception transaction. The JSON draft survives. The component cases exercise stale versions, missing inventory entries, empty selections, busy transactions and read-only configurations.
+The Chromium mock scenario records every dataplane write. It opens the proxy disclosure and picker by keyboard, cancels a device preview, discards the selection, explicitly chooses all devices and confirms the separate interception transaction. A second transaction selects specific devices and expires without confirmation. The previous model and ETag return, and the JSON draft survives both transactions. The component cases exercise stale versions, missing inventory entries, empty selections, busy transactions and read-only configurations.
 
 On the disposable OpenWrt target, confirming a listed scope added a second MAC alongside the original host and MAC. The next transaction switched to all devices, then timed out after the confirmation window. The daemon returned the previous ETag and model, nft matched the listed scope again, and the full UCI export matched byte for byte, including a foreign single-item list. The saved sing-box file also matched before and after both outcomes. The same test received HTTP 412 with the stale ETag and HTTP 409 during the active transaction. [OpenWrt transaction log](https://github.com/mderkach/metabox/actions/runs/45923952503/job/140260869757#step:9:1).
 
@@ -904,6 +904,22 @@ Two independent Impeccable assessments used Chromium at 1280 px and 375 px on th
 | AC-119 | go-test | `apps/metaboxd/internal/httpapi/logs_test.go`                                             | `TestLogsTail`                                                                                     |
 | AC-119 | go-test | `apps/metaboxd/internal/httpapi/logs_test.go`                                             | `TestLogsStream`                                                                                   |
 | AC-119 | go-test | `apps/metaboxd/internal/httpapi/httpapi_test.go`                                          | `TestApplyStateMasksSubscriptionCredentials`                                                       |
+
+### Simple Routes integration
+
+On 2026-11-27, the Chromium mock stand was checked against the local v11 prototype, starting from `origin/main` at `297fe1cb`. The `#empty` and `#simple` states were compared for the four sections, starter suggestions, contextual help and common controls. The `#addnode` and `#addsub` states were compared for the shared import, group choices, subscription refresh and User-Agent settings. The `#addsvc` state was compared for service search, catalog sources, exit and device scope. The panel classifies the pasted link in place. The service preview applies the verified OpenSpec mapping, with an explicit eligible resolver, effective rule positions and a fixed scope covering devices whose traffic enters the core. The prototype lets its starter stage a route to the imported VLESS exit. The panel explains the unsupported pairing and allows the first service once an eligible ingress, direct exit and TCP resolver are explicitly configured. The sample mismatch notice in the prototype depends on the diagnostic tracked in [#392](https://github.com/mderkach/metabox/issues/392).
+
+The [Routes scenarios](../apps/web/e2e/simpleRoutes.e2e.test.ts) cover keyboard tab navigation and focus return, normal and reduced motion, both themes, and widths of 375, 529 and 1280 px. The [catalog scenario](../apps/web/e2e/simpleCatalog.e2e.test.ts) starts at `{}`, imports a server, verifies the same draft in all three views after a rejected core check, and confirms the corrected configuration. It then stages the first service with its DNS rule, edits the DNS address family, checks both entries in the same Apply diff, and verifies that a missed confirmation restores the saved baseline while keeping the draft. The [DNS scenarios](../apps/web/e2e/simpleDns.e2e.test.ts) and [DNS options scenarios](../apps/web/e2e/simpleDnsOptions.e2e.test.ts) cover resolver inventory, assignments, backup ordering and static entries. The [interception scenario](../apps/web/e2e/simpleInterception.e2e.test.ts) checks a separate Apply with its reviewed ETag, explicit confirmation and timeout rollback alongside a pending configuration draft.
+
+The mock browser run covers Chromium and simulated API responses. Live interception, DNS traffic, subscription fetching and core validation are outside this run. Earlier disposable-stand evidence for supported DNS mappings and interception is linked above.
+
+`pnpm --filter web test:e2e --workers=1 --grep @mock` reported `121 passed (3.6m)`. The `@mock` filter selects the same stand scenarios as CI. `pnpm --filter web test --maxWorkers=1` reported `Test Files  201 passed (201)` and `Tests  2250 passed (2250)`. `make trace-check` reported `coverage: 93 of 93 ticked criteria and NFRs have a check in docs/Verification.md`.
+
+| ID     | Kind | File                                     | Check                                                                                            |
+| ------ | ---- | ---------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| AC-116 | e2e  | `apps/web/e2e/simpleCatalog.e2e.test.ts` | `from an empty config, the first server and service share validation, confirmation and rollback` |
+| AC-117 | e2e  | `apps/web/e2e/simpleCatalog.e2e.test.ts` | `from an empty config, the first server and service share validation, confirmation and rollback` |
+| AC-119 | e2e  | `apps/web/e2e/simpleCatalog.e2e.test.ts` | `from an empty config, the first server and service share validation, confirmation and rollback` |
 
 ### Subscription cache tags
 
