@@ -31,8 +31,12 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  // A real Apply restarts sing-box, which takes longer than the default five seconds.
-  expect: LIVE ? { timeout: 30_000 } : {},
+  // The first mock response waits for cold Vite modules and service worker activation on CI.
+  // A real Apply also waits for sing-box to restart.
+  expect: {
+    ...(LIVE && { timeout: 30_000 }),
+    ...(!LIVE && !LOAD && { timeout: 10_000 }),
+  },
   timeout: LIVE ? 120_000 : undefined,
   // On the mock stand every request goes to the dev mocks (`METABOX_MOCK=all`) and no daemon is needed.
   webServer: {
