@@ -67,6 +67,8 @@ There is no Go module at the repository root. Run Go build, generation and lint 
 
 ## Commands
 
+Run `make help` from the repository root to list all Make targets with their descriptions.
+
 Build and generation:
 
 | Command              | What it does                                                                                                                                                |
@@ -83,7 +85,7 @@ Frontend without the test bench:
 
 | Command         | What it does                                          |
 | --------------- | ----------------------------------------------------- |
-| `make dev`      | Vite dev server                                       |
+| `make dev`      | Vite dev server using an already running daemon       |
 | `make dev-mock` | dev server on mock data: no daemon or sing-box needed |
 
 Checks:

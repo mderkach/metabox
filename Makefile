@@ -9,9 +9,13 @@ LDFLAGS    := -s -w -X metabox/internal/version.Version=$(VERSION) -X metabox/in
 # Pins the version down: the `go` directive in go.mod raises it but does not lower it.
 export GOTOOLCHAIN := go$(shell cat .go-version)
 
-.PHONY: all schema schema-daemon rule-set-snapshot web embed daemon daemon-device daemon-target ldflags dev dev-mock test test-schemagen cache-fixture singbox-pin-check trace-check lint hooks clean up up-dev down sh target-sh apply-check reach-check dataplane-check package stand-base stand-reset
+.PHONY: all help schema schema-daemon rule-set-snapshot web embed daemon daemon-device daemon-target ldflags dev dev-mock test test-schemagen cache-fixture singbox-pin-check trace-check lint hooks clean up up-dev down sh target-sh apply-check reach-check dataplane-check package stand-base stand-reset
 
-all: daemon
+all: daemon ## Build the panel and daemon for this machine (default)
+
+help: ## List available Make targets
+	@echo 'Usage: make <target>'
+	@awk -F ':[^#]*## ' '/^[a-zA-Z0-9_-]+:.*## / { printf "  %-18s %s\n", $$1, $$2 }' Makefile
 
 # Without with_wireguard the schema loses the warp type; go:linkname in the fork requires
 # -checklinkname=0. with_purego is added on top of the fork's set: otherwise
@@ -23,14 +27,14 @@ SINGBOX_DIR = $(or $(shell cd tools/schemagen && go mod download github.com/sage
 SCHEMA_TAGS = $(shell cat '$(SINGBOX_DIR)/release/DEFAULT_BUILD_TAGS'),with_purego
 SCHEMA_LDFLAGS = $(shell cat '$(SINGBOX_DIR)/release/LDFLAGS')
 
-schema:
+schema: ## Generate the sing-box config schema and MCP field reference
 	mkdir -p apps/web/src/shared/api
 	cd tools/schemagen && go run \
 		-tags "$(SCHEMA_TAGS)" -ldflags "$(SCHEMA_LDFLAGS)" . \
 		-out ../../apps/web/src/shared/api/generated.ts \
 		-fields ../../apps/metaboxd/internal/mcp/fields.generated.go
 
-schema-daemon:
+schema-daemon: ## Generate the TypeScript contract for the daemon API
 	mkdir -p apps/web/src/shared/api
 	cd apps/metaboxd && go run ./cmd/contractgen \
 		-root . \
@@ -38,57 +42,57 @@ schema-daemon:
 
 # Snapshot of the rule set catalog embedded in the binary: with it the daemon starts before it has
 # checked with the providers itself. It calls the GitHub API, so it is not part of the build.
-rule-set-snapshot:
+rule-set-snapshot: ## Refresh the embedded rule set catalog from GitHub
 	cd apps/metaboxd && go run ./cmd/rulesetsnap -out internal/ruleset/snapshot.json
 
-web:
+web: ## Build the frontend for production
 	pnpm --filter web build
 
 # go:embed does not see directories above its package, so the SPA is moved here.
 EMBED_DIR := apps/metaboxd/internal/webui/static
 
 # Depends on web: in a parallel build embed would copy a half-written directory.
-embed: web
+embed: web ## Build the frontend and copy it into the daemon source tree
 	find $(EMBED_DIR) -mindepth 1 ! -name .gitkeep -delete
 	cp -R apps/web/dist/. $(EMBED_DIR)/
 
-daemon: embed
+daemon: embed ## Build the daemon with the embedded panel for this machine
 	cd apps/metaboxd && go build -ldflags "$(LDFLAGS)" -o ../../$(BIN) .
 
 # Without CGO_ENABLED=0 the binary links to the libc of the build machine and will not
 # start on the router.
-daemon-device: embed
+daemon-device: embed ## Build the daemon with the embedded panel for an arm64 router
 	cd apps/metaboxd && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 \
 		go build -ldflags "$(LDFLAGS)" -o ../../$(DEVICE_BIN) .
 
 # CI builds the daemon for its own arch without the panel, and takes the version stamps from here.
-ldflags:
+ldflags: ## Print the Go linker flags for the daemon
 	@echo '$(LDFLAGS)'
 
-dev:
+dev: ## Start Vite with HMR against a running daemon (default: 127.0.0.1:8080)
 	pnpm --filter web dev
 
-dev-mock:
+dev-mock: ## Start Vite with HMR and mock API data, no daemon required
 	pnpm --filter web dev:mock
 
-test:
+test: ## Run daemon, schema generator and frontend tests
 	cd apps/metaboxd && go test ./...
 	$(MAKE) test-schemagen
 	pnpm --filter web test
 
-test-schemagen:
+test-schemagen: ## Run schema generator tests
 	cd tools/schemagen && go test \
 		-tags "$(SCHEMA_TAGS)" -ldflags "$(SCHEMA_LDFLAGS)" ./...
 
 # The cache file the daemon tests edit is written by the pinned fork itself.
-cache-fixture:
+cache-fixture: ## Regenerate the sing-box cache fixture for daemon tests
 	cd tools/schemagen && go test \
 		-tags "$(SCHEMA_TAGS)" -ldflags "$(SCHEMA_LDFLAGS)" \
 		-run TestCacheFileFixture -count=1 . -update-cache-fixture
 
 # install.sh carries the fork version and the router package hash as literals, because it runs
 # from a bare router; they must equal the pin the test bench reads.
-singbox-pin-check:
+singbox-pin-check: ## Check the installer against the pinned sing-box version and checksum
 	@set -eu; \
 	line=$$(grep '_openwrt_aarch64_cortex-a53\.apk$$' sing-box-extended.sha256); \
 	sum=$${line%% *}; \
@@ -98,16 +102,16 @@ singbox-pin-check:
 
 # Requirements point at their checks in docs/Verification.md, and code does not name documents.
 # Coverage of the ticked criteria is reported, not enforced, until the table is filled.
-trace-check:
+trace-check: ## Check links between requirements, decisions and their verification
 	python3 -I .github/scripts/trace-check.py --strict-coverage
 
 GOLANGCI = go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 
-lint:
+lint: ## Lint the Go daemon and schema generator
 	cd apps/metaboxd && $(GOLANGCI) run ./...
 	cd tools/schemagen && $(GOLANGCI) run --build-tags "$(SCHEMA_TAGS)" ./...
 
-hooks:
+hooks: ## Install Git hooks
 	pnpm exec lefthook install
 
 # Test bench settings are not committed and live in one file: docker compose reads it
@@ -142,14 +146,14 @@ DC := docker compose -f .devcontainer/docker-compose.yml
 # GOTOOLCHAIN goes into the container explicitly: the golang image keeps it at `local`, and
 # the version from .go-version is not picked up there: the build fails as soon as
 # go.mod requires a newer patch than the one frozen into the image.
-daemon-target:
+daemon-target: ## Build the daemon in the development container
 	$(DC) up -d dev
 	$(DC) exec -T -e GOTOOLCHAIN=$(GOTOOLCHAIN) dev sh -c 'cd apps/metaboxd && go build -ldflags "$(LDFLAGS)" -o ../../$(BIN) .'
 
 # Panel package for the device. Built by the same stage that installs the panel into the
 # test bench, and for the same arch that the test bench base declares: the delivery and
 # the check cannot diverge. No OpenWrt SDK needed: apk-tools comes from alpine.
-package: daemon-device
+package: daemon-device ## Build the OpenWrt APK package
 	$(if $(APK_VERSION),,$(error version $(VERSION) is not expressible as an apk version: need X.Y.Z or X.Y.Z-(alpha|beta|rc).N))
 	docker build --platform $(OPENWRT_PLATFORM) \
 		--build-arg BASE_IMAGE=$(METABOX_BASE_IMAGE) \
@@ -165,7 +169,7 @@ package: daemon-device
 # changes less often than the test bench, and CI builds on the public rootfs of its arch.
 DEVICE_IMAGE ?= metabox/openwrt-device:latest
 
-stand-base:
+stand-base: ## Build the OpenWrt test bench base image from device firmware
 	docker build --platform $(OPENWRT_PLATFORM) \
 		$(if $(DEVICE_IMAGE_URL),--build-arg DEVICE_IMAGE_URL=$(DEVICE_IMAGE_URL),) \
 		-t $(DEVICE_IMAGE) .devcontainer/target/device-base
@@ -173,29 +177,29 @@ stand-base:
 # The test bench installs the panel as a package, so it needs a binary for the device.
 # --build is required: otherwise a sing-box version bump or a daemon change
 # does not reach the test bench.
-up: daemon-device
+up: daemon-device ## Start the Docker test bench with the built panel on port 8080
 	$(DC) up -d --build
 
 # Same plus a dev server with HMR: the panel opens on 5173 and talks to the same daemon.
-up-dev: daemon-device
+up-dev: daemon-device ## Start the Docker test bench and Vite with HMR on port 5173
 	$(DC) --profile dev up -d --build
 
-down:
+down: ## Stop the Docker test bench
 	$(DC) --profile dev down
 
 # The config lives in a named volume and survives down/up; reset restores
 # the reference from the image.
-stand-reset: down
+stand-reset: down ## Delete the test bench config volume and restart with the reference config
 	docker volume rm -f metabox_singbox-etc
 	$(MAKE) up
 
-sh:
+sh: ## Open a shell in the development container
 	$(DC) exec dev bash
 
-target-sh:
+target-sh: ## Open a shell in the OpenWrt test bench container
 	$(DC) exec target sh
 
-apply-check:
+apply-check: ## Check the Apply cycle on the running test bench
 	$(DC) exec -T target sh /usr/bin/apply-cycle-check
 
 # The panel must be reachable from all local networks of the owner and from none of the
@@ -203,7 +207,7 @@ apply-check:
 # Clash API listens on all addresses, and only the fw4 zones close it to guest and external
 # clients: this checks the rules themselves, not just the address the panel listens on.
 # Its reply from the wired network shows that a refusal elsewhere comes from the firewall.
-reach-check:
+reach-check: ## Check panel and Clash API access from the test bench networks
 	@set -eu; \
 	docker inspect metabox-target-1 >/dev/null 2>&1 || { echo "test bench is not up: run make up first" >&2; exit 1; }; \
 	fail=0; \
@@ -225,9 +229,9 @@ reach-check:
 # Interception dataplane: wired-network clients routed through the test bench, nft
 # counters, fail-closed when sing-box dies, Apply without restarting dnsmasq and fw4,
 # stop leaves no traces. Needs a privileged test bench and a kernel with tproxy.
-dataplane-check:
+dataplane-check: ## Check traffic interception on the privileged test bench
 	sh .devcontainer/dataplane-check.sh
 
-clean:
+clean: ## Remove build outputs and embedded frontend files
 	rm -rf dist apps/web/dist
 	find $(EMBED_DIR) -mindepth 1 ! -name .gitkeep -delete
