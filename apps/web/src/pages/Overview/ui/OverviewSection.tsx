@@ -24,11 +24,12 @@ export function OverviewSection({
   const [open, setOpen] = useState(false);
   const expanded = !collapsible || open;
   const contentId = useId();
+  const titleId = useId();
 
   return (
-    <section className='flex flex-col gap-3'>
+    <section aria-labelledby={titleId} className='flex flex-col gap-3'>
       <div className='flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-muted-foreground'>
-        <h2 className={cn(SECTION_HEADING, 'text-foreground')}>
+        <h2 id={titleId} className={cn(SECTION_HEADING, 'text-foreground')}>
           {collapsible ? (
             <Button
               variant='ghost'

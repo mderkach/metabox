@@ -24,7 +24,7 @@ import {
   type TrafficSample,
   type UplinkRate,
 } from '@entities/Daemon';
-import { LATENCY_LEVEL, useProxies, type ServerLatencies } from '@entities/Proxy';
+import { LATENCY_LEVEL, type ProxyRuntime, type ServerLatencies } from '@entities/Proxy';
 import { useDaemonRestarting } from '@features/Daemon/DaemonControl';
 import { SHARED_NS } from '@shared/i18n';
 import { MS_IN_SECOND } from '@shared/lib/time';
@@ -75,6 +75,7 @@ export interface OverviewRuntime {
   awaiting: boolean;
   /** Device snapshots are arriving right now: the daemon sends them even without sing-box. */
   daemonLive: boolean;
+  reachable: boolean;
   /** The drop threshold has passed since the screen opened or the core started, and there is still no first traffic frame. */
   overdue: boolean;
   /** When the last traffic frame of the current core run arrived, epoch milliseconds. */
@@ -229,6 +230,7 @@ export function useOverviewRuntime(): OverviewRuntime {
     live: isFresh(frameAt, checkedAt),
     awaiting: frameAt === null,
     daemonLive,
+    reachable,
     overdue,
     sampledAt: frameAt,
     trafficAt,
@@ -273,17 +275,16 @@ export interface Verdict {
  * the daemon sends device snapshots but there is no traffic from sing-box.
  */
 export function useOverviewVerdict(
-  runtime: Pick<OverviewRuntime, 'system' | 'live' | 'awaiting' | 'daemonLive' | 'overdue' | 'starting'>,
+  runtime: Pick<OverviewRuntime, 'system' | 'live' | 'awaiting' | 'daemonLive' | 'reachable' | 'overdue' | 'starting'>,
   latencies: ServerLatencies | undefined,
+  proxies: ProxyRuntime | undefined,
   links: Pick<OverviewLinks, 'logs' | 'proxies'>
 ): Verdict {
   const { t } = useTranslation(OVERVIEW_NS);
-  const reachable = useDaemonReachable();
   const service = useServiceState();
-  const proxies = useProxies();
   const logs = { to: links.logs, label: t('verdict.action.logs') } as const;
 
-  if (!reachable) {
+  if (!runtime.reachable) {
     return { tone: VERDICT_TONE.Idle, title: t('verdict.offline'), hint: t('verdict.offlineHint'), action: null };
   }
 
@@ -305,7 +306,7 @@ export function useOverviewVerdict(
       : { tone: VERDICT_TONE.Idle, title: t('verdict.offline'), hint: t('verdict.offlineHint'), action: null };
   }
 
-  const failed = (proxies.data?.groups ?? []).some(
+  const failed = (proxies?.groups ?? []).some(
     (group) => group.now !== null && latencies?.get(group.now)?.level === LATENCY_LEVEL.NoAnswer
   );
 

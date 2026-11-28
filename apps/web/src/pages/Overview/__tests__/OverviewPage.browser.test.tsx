@@ -18,9 +18,10 @@ import {
 } from '@entities/Daemon/__tests__/Daemon.fixture';
 import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
 import { PROXY_ENDPOINT } from '@entities/Proxy';
-import { proxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
+import { CLASH_PROXIES_FIXTURE } from '@entities/Proxy/__tests__/Proxy.fixture';
 
 import { OVERVIEW_NS } from '../i18n/Overview.namespace.generated';
+import { OVERVIEW_ROUTED_CONFIG } from './Overview.fixture';
 import { OverviewScreen } from './OverviewScreen';
 
 const MINIMAL_CONFIG = JSON.stringify({ outbounds: [{ type: 'direct', tag: 'direct' }] }, null, 2);
@@ -50,48 +51,6 @@ describe('overview screen picked with the mouse', () => {
     serveStatus();
   });
 
-  it('switches the node of a selector group from the status strip and announces it', async () => {
-    worker.use(...proxyHandlers);
-
-    renderWithRouter(OverviewScreen);
-
-    const region = await screen.findByRole('status', { name: 'Результат действия' });
-
-    await userEvent.click(await screen.findByRole('combobox', { name: 'Выход группы us-fallback' }));
-    await userEvent.click(await screen.findByRole('option', { name: 'proxy' }));
-
-    await waitFor(() => {
-      expect(region).toHaveTextContent('us-fallback: выбран выход proxy');
-    });
-  });
-
-  it('shows member labels before tags and sends the selected tag to the core', async () => {
-    const writes: unknown[] = [];
-    worker.use(...proxyHandlers);
-    worker.use(
-      http.get(PROXY_ENDPOINT.outbounds(), () =>
-        HttpResponse.json({ us: { label: 'America' }, proxy: { label: 'Europe' } })
-      ),
-      http.put(PROXY_ENDPOINT.proxy('us-fallback'), async ({ request }) => {
-        writes.push(await request.json());
-
-        return new HttpResponse(null, { status: 204 });
-      })
-    );
-
-    renderWithRouter(OverviewScreen);
-
-    const control = await screen.findByRole('combobox', { name: 'Выход группы us-fallback' });
-    expect(await within(control).findByText('America', { exact: true })).toBeVisible();
-    expect(within(control).getByText('us', { exact: true })).toHaveClass('font-mono');
-    await userEvent.click(control);
-    await userEvent.click(await screen.findByRole('option', { name: /Europe\s*proxy/ }));
-
-    await waitFor(() => {
-      expect(writes).toEqual([{ name: 'proxy' }]);
-    });
-  });
-
   it('switches the Clash API mode with a runtime request', async () => {
     // On a narrow screen the process section is collapsed, and the mode switch is inside it.
     await page.viewport(1280, 900);
@@ -113,6 +72,72 @@ describe('overview screen picked with the mouse', () => {
       expect(patches).toEqual([{ mode: 'Direct' }]);
     });
   });
+});
+
+describe('outbound rows on a phone', () => {
+  beforeEach(async () => {
+    ConnectionStore.getState().reset();
+    RuntimeStore.getState().reset();
+    serveStatus();
+    await page.viewport(375, 812);
+  });
+
+  it.each([
+    { language: 'en', theme: 'light', title: 'Outbounds and rules', volume: '30.0 MB', minutes: '10 min' },
+    { language: 'en', theme: 'dark', title: 'Outbounds and rules', volume: '30.0 MB', minutes: '10 min' },
+    { language: 'ru', theme: 'light', title: 'Выходы и правила', volume: '30.0 МБ', minutes: '10 мин' },
+    { language: 'ru', theme: 'dark', title: 'Выходы и правила', volume: '30.0 МБ', minutes: '10 мин' },
+  ])(
+    'stacks the outbound, rules and readings without horizontal overflow at 375 px ($language, $theme)',
+    async ({ language, theme, title, volume, minutes }) => {
+      const serverTag = 'subscription-with-a-long-tag/'.repeat(7);
+      const serverLabel = 'VeryLongServerNameWithoutSpaces'.repeat(2);
+      const proxies = {
+        ...CLASH_PROXIES_FIXTURE.proxies,
+        proxy: { ...CLASH_PROXIES_FIXTURE.proxies.proxy, now: serverTag, all: [serverTag] },
+        [serverTag]: { ...CLASH_PROXIES_FIXTURE.proxies['sub-eu/eu-reality'], name: serverTag },
+      };
+      worker.use(
+        http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(OVERVIEW_ROUTED_CONFIG)),
+        http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json({ proxies })),
+        http.get(PROXY_ENDPOINT.outbounds(), () =>
+          HttpResponse.json({
+            proxy: { label: 'VeryLongOutboundLabel'.repeat(3) },
+            [serverTag]: { label: serverLabel },
+          })
+        )
+      );
+      RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+      RuntimeStore.getState().pushSystem({ ...OUTBOUND_SYSTEM_FIXTURE, thermal: [] });
+      const root = document.documentElement;
+      const previousDark = root.classList.contains('dark');
+      const previousLanguage = i18next.language;
+      root.classList.toggle('dark', theme === 'dark');
+      await i18next.changeLanguage(language);
+
+      try {
+        renderWithRouter(OverviewScreen);
+
+        const table = await screen.findByRole('table', { name: title });
+        const row = within(await within(table).findByRole('row', { name: /video\.example/ }));
+        const server = await row.findByText(serverLabel, { exact: true });
+        const rules = row.getByText(/video\.example/);
+        const amount = row.getByText(volume);
+
+        expect(server).toBeVisible();
+        const [firstCell] = row.getAllByRole('cell');
+        expect(within(firstCell).getByText(serverLabel, { exact: true })).toBeVisible();
+        expect(server.getBoundingClientRect().bottom).toBeLessThan(rules.getBoundingClientRect().top);
+        expect(rules.getBoundingClientRect().bottom).toBeLessThan(amount.getBoundingClientRect().top);
+        expect(row.getByText(new RegExp(minutes))).toBeVisible();
+        expect(table.scrollWidth).toBe(table.clientWidth);
+        expect(root.scrollWidth).toBe(375);
+      } finally {
+        root.classList.toggle('dark', previousDark);
+        await i18next.changeLanguage(previousLanguage);
+      }
+    }
+  );
 });
 
 describe('traffic shares on a phone', () => {

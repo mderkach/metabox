@@ -440,7 +440,7 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | NFR-1 | vitest  | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`                                     | `past the drop threshold without a first frame stops loading and says no data comes from the core`                                                                                                                                                     |
 | NFR-1 | vitest  | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`                                     | `with the core silent after frames does not show the last numbers as current`                                                                                                                                                                          |
 | NFR-1 | vitest  | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`                                     | `with the core stopped the header names the card and the button that start it`                                                                                                                                                                         |
-| NFR-1 | vitest  | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`                                     | `with the core stopped the node card shows no latency as current`                                                                                                                                                                                      |
+| NFR-1 | vitest  | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`                                     | `replaces outbound rows with a no-data message while the core is stopped`                                                                                                                                                                              |
 | NFR-1 | go-test | `apps/metaboxd/internal/httpapi/service_test.go`                                                  | `TestServiceState`                                                                                                                                                                                                                                     |
 | NFR-1 | go-test | `apps/metaboxd/apply_integration_test.go`                                                         | `TestApplyHTTPOnEphemeralBench`                                                                                                                                                                                                                        |
 | NFR-2 | vitest  | `apps/web/src/widgets/ConnectionTable/__tests__/ConnectionTable.budget.test.ts`                   | `sorts 5000 rows by a numeric column within the budget`                                                                                                                                                                                                |
@@ -643,38 +643,51 @@ A `manual` row in the table below is a check still owed. A part that cannot be a
 | AC-107 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `walks a connection from the menu at`                                                                   |
 | AC-107 | e2e    | `apps/web/e2e/howItWorks.e2e.test.ts`                                    | `opens the verified applied rule from the walk`                                                         |
 
+### Overview outbound rows
+
+| ID     | Kind   | File                                                                  | Check                                                                                          |
+| ------ | ------ | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| AC-98  | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`         | `lists the applied rule outbounds by volume with the default rule before rows without traffic` |
+| AC-98  | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`         | `shows the outbound label and each step of a nested choice on separate lines`                  |
+| AC-98  | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`         | `replaces outbound rows with a no-data message while the core is stopped`                      |
+| AC-98  | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.browser.test.tsx` | `stacks the outbound, rules and readings without horizontal overflow at 375 px`                |
+| AC-101 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`         | `reconciles internet shares with the outbound totals for the same period`                      |
+| AC-101 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`         | `keeps default traffic separate from explicit rules to the same outbound`                      |
+| AC-98  | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`         | `uses the first configured outbound for the default rule when route.final is absent`           |
+| AC-102 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`         | `shows a fresh row delay after a manual check without inventing a norm`                        |
+| AC-102 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`         | `reports no answer and marks a computed usual delay in the outbound row`                       |
+| AC-104 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx`         | `shows the outbound label and each step of a nested choice on separate lines`                  |
+
 ### Overview service controls
 
-| ID     | Kind   | File                                                          | Check                                                                                         |
-| ------ | ------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| AC-95  | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx` | `keeps the highlighted core restart in the service card and explains interrupted connections` |
-| AC-95  | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx` | `shows the core verdict in the header and keeps the core service card for commands`           |
-| AC-95  | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx` | `shows a core started elsewhere in the header without offering service commands`              |
-| AC-104 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx` | `shows an outbound label before the original tag on Overview`                                 |
+| ID    | Kind   | File                                                          | Check                                                                                         |
+| ----- | ------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| AC-95 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx` | `keeps the highlighted core restart in the service card and explains interrupted connections` |
+| AC-95 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx` | `shows the core verdict in the header and keeps the core service card for commands`           |
+| AC-95 | vitest | `apps/web/src/pages/Overview/__tests__/OverviewPage.test.tsx` | `shows a core started elsewhere in the header without offering service commands`              |
 
 ### Outbound metadata
 
-| ID     | Kind    | File                                                                  | Check                                                                              |
-| ------ | ------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| AC-104 | go-test | `apps/metaboxd/internal/config/outbounds_test.go`                     | `TestOutboundMetadataSurvivesRestart`                                              |
-| AC-104 | go-test | `apps/metaboxd/internal/config/outbounds_test.go`                     | `TestOutboundMetadataRejectsInvalidValuesWithoutChangingState`                     |
-| AC-104 | go-test | `apps/metaboxd/internal/config/outbounds_test.go`                     | `TestOutboundMetadataLimitsSavedEntries`                                           |
-| AC-104 | go-test | `apps/metaboxd/internal/httpapi/outbounds_test.go`                    | `TestOutboundsUsesAppliedAndRuntimeInventory`                                      |
-| AC-104 | go-test | `apps/metaboxd/internal/httpapi/outbounds_test.go`                    | `TestOutboundsEditsEscapedTagsWithoutRequiringInventoryMembership`                 |
-| AC-104 | go-test | `apps/metaboxd/internal/httpapi/outbounds_test.go`                    | `TestOutboundsRejectsMalformedOrOversizedEdits`                                    |
-| AC-104 | go-test | `apps/metaboxd/internal/httpapi/outbounds_test.go`                    | `TestBrokenOutboundMetadataDisablesEndpointsAndPreservesFile`                      |
-| AC-104 | go-test | `apps/metaboxd/internal/history/latency_test.go`                      | `TestLatencyAppliesManualNormWithoutLosingComputedNorm`                            |
-| AC-104 | vitest  | `apps/web/src/pages/Overview/__tests__/OverviewPage.browser.test.tsx` | `shows member labels before tags and sends the selected tag to the core`           |
-| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `edits one group label in place and returns focus to the pencil on Escape`         |
-| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `edits the server label independently and keeps the current delay visible`         |
-| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `saves a label through the daemon without changing the config draft or the core`   |
-| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `clears a label and retains the manual norm for an encoded server tag`             |
-| AC-113 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `does not label an old manual norm as computed while refreshed history is pending` |
-| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `lists unused tags apart and preserves object key names`                           |
-| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `moves unused metadata to a subscription server before clearing its old tag`       |
-| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `asks before overwrite and keeps the source if removing it fails`                  |
-| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `deletes unused metadata and can restore it from the toast`                        |
-| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx`       | `shows tags without editing buttons when metadata endpoints are unavailable`       |
+| ID     | Kind    | File                                                            | Check                                                                              |
+| ------ | ------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| AC-104 | go-test | `apps/metaboxd/internal/config/outbounds_test.go`               | `TestOutboundMetadataSurvivesRestart`                                              |
+| AC-104 | go-test | `apps/metaboxd/internal/config/outbounds_test.go`               | `TestOutboundMetadataRejectsInvalidValuesWithoutChangingState`                     |
+| AC-104 | go-test | `apps/metaboxd/internal/config/outbounds_test.go`               | `TestOutboundMetadataLimitsSavedEntries`                                           |
+| AC-104 | go-test | `apps/metaboxd/internal/httpapi/outbounds_test.go`              | `TestOutboundsUsesAppliedAndRuntimeInventory`                                      |
+| AC-104 | go-test | `apps/metaboxd/internal/httpapi/outbounds_test.go`              | `TestOutboundsEditsEscapedTagsWithoutRequiringInventoryMembership`                 |
+| AC-104 | go-test | `apps/metaboxd/internal/httpapi/outbounds_test.go`              | `TestOutboundsRejectsMalformedOrOversizedEdits`                                    |
+| AC-104 | go-test | `apps/metaboxd/internal/httpapi/outbounds_test.go`              | `TestBrokenOutboundMetadataDisablesEndpointsAndPreservesFile`                      |
+| AC-104 | go-test | `apps/metaboxd/internal/history/latency_test.go`                | `TestLatencyAppliesManualNormWithoutLosingComputedNorm`                            |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx` | `edits one group label in place and returns focus to the pencil on Escape`         |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx` | `edits the server label independently and keeps the current delay visible`         |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx` | `saves a label through the daemon without changing the config draft or the core`   |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx` | `clears a label and retains the manual norm for an encoded server tag`             |
+| AC-113 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx` | `does not label an old manual norm as computed while refreshed history is pending` |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx` | `lists unused tags apart and preserves object key names`                           |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx` | `moves unused metadata to a subscription server before clearing its old tag`       |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx` | `asks before overwrite and keeps the source if removing it fails`                  |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx` | `deletes unused metadata and can restore it from the toast`                        |
+| AC-104 | vitest  | `apps/web/src/pages/Proxies/__tests__/ProxiesMetadata.test.tsx` | `shows tags without editing buttons when metadata endpoints are unavailable`       |
 
 ### Compact norm editor
 
