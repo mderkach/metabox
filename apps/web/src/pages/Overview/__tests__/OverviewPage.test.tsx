@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CONFIG_ENDPOINT } from '@entities/Config';
+import { CONFIG_ENDPOINT, CONFIG_QUERY } from '@entities/Config';
 import { ConnectionStore } from '@entities/Connection';
 import { CONNECTIONS_FIXTURE, makeConnectionsSnapshot } from '@entities/Connection/__tests__/Connection.fixture';
 import { DAEMON_ENDPOINT, RuntimeStore, SCHEMA_VERSION } from '@entities/Daemon';
@@ -24,10 +24,11 @@ import {
 import { createDeviceHandlers } from '@entities/Device/__tests__/Device.handlers';
 import { DIAG_ENDPOINT } from '@entities/Diag';
 import { DIAG_REPORT_FIXTURE } from '@entities/Diag/__tests__/Diag.fixture';
-import { PROXY_ENDPOINT } from '@entities/Proxy';
+import { PROXY_ENDPOINT, PROXY_QUERY } from '@entities/Proxy';
 import { CHECKED_AT, CLASH_PROXIES_FIXTURE } from '@entities/Proxy/__tests__/Proxy.fixture';
 import { proxyHandlers } from '@entities/Proxy/__tests__/Proxy.handlers';
 
+import { OVERVIEW_ACTIVE_SERVER, OVERVIEW_ROUTED_CONFIG } from './Overview.fixture';
 import { OverviewScreen } from './OverviewScreen';
 
 function serveStatus(configPath?: string, singboxVersion = SCHEMA_VERSION) {
@@ -58,6 +59,8 @@ function serveStatus(configPath?: string, singboxVersion = SCHEMA_VERSION) {
 const STALE_MS = 9000;
 
 const MINIMAL_CONFIG = JSON.stringify({ outbounds: [{ type: 'direct', tag: 'direct' }] }, null, 2);
+
+const OUTBOUND_TABLE = 'Выходы и правила';
 
 describe('overview screen', () => {
   beforeEach(() => {
@@ -119,9 +122,29 @@ describe('overview screen', () => {
 
   it('reconciles internet shares with the outbound totals for the same period', async () => {
     const system = { ...OUTBOUND_SYSTEM_FIXTURE, thermal: [] };
+    let config = JSON.stringify({
+      outbounds: [
+        { type: 'direct', tag: 'direct' },
+        { type: 'urltest', tag: 'proxy', outbounds: ['sub-eu/eu-reality'] },
+      ],
+      route: {
+        rules: [
+          { domain: ['lan.example'], outbound: 'direct' },
+          { domain: ['video.example'], outbound: 'proxy' },
+        ],
+        final: 'direct',
+      },
+    });
+    const { direct, proxy } = CLASH_PROXIES_FIXTURE.proxies;
+    let proxies: typeof CLASH_PROXIES_FIXTURE.proxies = { direct, proxy };
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(config)),
+      http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json({ proxies }))
+    );
+    RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
     RuntimeStore.getState().pushSystem(system);
 
-    renderWithRouter(OverviewScreen);
+    const { queryClient } = renderWithRouter(OverviewScreen);
 
     function expectShares() {
       const shares = within(screen.getByLabelText('Доли трафика'));
@@ -134,10 +157,14 @@ describe('overview screen', () => {
 
     expect(await screen.findByText('За 10 мин с запуска демона', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
     expect(screen.getByText('pppoe-wan', { exact: true })).toBeInTheDocument();
-    expect(system.outbounds.map(({ tag, bytes }) => [tag, bytes])).toEqual([
-      ['direct', 20 * 1024 ** 2],
-      ['proxy', 30 * 1024 ** 2],
-    ]);
+    const table = within(await screen.findByRole('table', { name: OUTBOUND_TABLE }));
+    const throughProxy = await table.findByRole('row', { name: /video\.example/ });
+    const throughDirect = table.getByRole('row', { name: /lan\.example/ });
+    const proxyRow = within(throughProxy);
+    expect(proxyRow.getByText('30.0 МБ', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+    expect(proxyRow.getByText('513 Б/с', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+    expect(proxyRow.getAllByText('вычислено')).toHaveLength(2);
+    expect(within(throughDirect).getByText('20.0 МБ', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
     expectShares();
 
     const user = userEvent.setup();
@@ -147,14 +174,141 @@ describe('overview screen', () => {
     );
     await user.keyboard('{Escape}');
 
-    act(() => {
+    config = JSON.stringify({
+      outbounds: [{ type: 'direct', tag: 'direct' }],
+      route: { rules: [{ domain: ['lan.example'], outbound: 'direct' }], final: 'direct' },
+    });
+    proxies = { direct };
+    await act(async () => {
       RuntimeStore.getState().pushSystem({
         ...system,
         outbounds: system.outbounds.filter(({ tag }) => tag !== 'proxy'),
+        servers: [],
       });
+      await queryClient.invalidateQueries({ queryKey: CONFIG_QUERY.current() });
+      await queryClient.invalidateQueries({ queryKey: PROXY_QUERY.list() });
     });
 
+    await waitFor(() => {
+      expect(table.queryByRole('row', { name: /video\.example/ })).not.toBeInTheDocument();
+    });
+    expect(
+      within(table.getByRole('row', { name: /lan\.example/ })).getByText('20.0 МБ', WITHOUT_WORD_JOINERS)
+    ).toBeInTheDocument();
     expectShares();
+  });
+
+  it('lists the applied rule outbounds by volume with the default rule before rows without traffic', async () => {
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(OVERVIEW_ROUTED_CONFIG)),
+      http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(CLASH_PROXIES_FIXTURE))
+    );
+    RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+    RuntimeStore.getState().pushSystem({ ...OUTBOUND_SYSTEM_FIXTURE, thermal: [] });
+
+    renderWithRouter(OverviewScreen);
+
+    const table = within(await screen.findByRole('table', { name: OUTBOUND_TABLE }));
+    const manual = await table.findByRole('row', { name: /Work sites/ });
+    expect(table.getAllByRole('row')).toEqual([
+      table.getByRole('row', { name: /Задержка и норма/ }),
+      table.getByRole('row', { name: /video\.example/ }),
+      table.getByRole('row', { name: /lan\.example/ }),
+      table.getByRole('row', { name: /Всё остальное/ }),
+      manual,
+    ]);
+
+    const row = within(manual);
+    expect(row.getByText('Work sites')).toBeInTheDocument();
+    expect(row.getByText(/docs\.example/)).toBeInTheDocument();
+    expect(row.getByText(/mail\.example/)).toBeInTheDocument();
+    expect(row.getByText('и ещё 1')).toBeInTheDocument();
+    expect(row.getByText('4 правила')).toBeInTheDocument();
+    expect(row.getByText('Сейчас нет трафика')).toBeInTheDocument();
+    expect(row.queryByText(/hidden\.example/)).not.toBeInTheDocument();
+    expect(row.queryByText(/work\.example/)).not.toBeInTheDocument();
+  });
+
+  it('keeps default traffic separate from explicit rules to the same outbound', async () => {
+    server.use(http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(OVERVIEW_ROUTED_CONFIG)));
+    const system = { ...OUTBOUND_SYSTEM_FIXTURE, thermal: [] };
+    RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+    RuntimeStore.getState().pushSystem({
+      ...system,
+      outbounds: system.outbounds.map((entry) =>
+        entry.tag === 'direct' ? { ...entry, final: { bytes: 7 * 1024 ** 2, rate: 128, origin: 'observed' } } : entry
+      ),
+    });
+    const [sample] = CONNECTIONS_FIXTURE.connections;
+    const direct = { ...sample, id: 'explicit', chain: ['direct'], action: 'route(direct)', final: false };
+    const final = { ...direct, id: 'fallback', final: true };
+    const secondFinal = { ...final, id: 'fallback-2' };
+    const now = Date.now();
+    ConnectionStore.getState().apply({ ...CONNECTIONS_FIXTURE, connections: [direct, final, secondFinal] }, now - 1000);
+    ConnectionStore.getState().apply(
+      {
+        ...CONNECTIONS_FIXTURE,
+        connections: [
+          { ...direct, download: direct.download + 8 * 1024, upload: direct.upload + 3 * 1024 },
+          { ...final, download: final.download + 2 * 1024, upload: final.upload + 1024 },
+          secondFinal,
+        ],
+      },
+      now
+    );
+
+    renderWithRouter(OverviewScreen);
+
+    const table = within(await screen.findByRole('table', { name: OUTBOUND_TABLE }));
+    const explicit = within(await table.findByRole('row', { name: /lan\.example/ }));
+    const fallback = within(table.getByRole('row', { name: /Всё остальное/ }));
+    expect(explicit.getByText('20.0 МБ', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+    expect(fallback.getByText('7.0 МБ', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+    expect(explicit.getByText(/8\.0 кБ\/с/, WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+    expect(explicit.getByText(/3\.0 кБ\/с/, WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+    expect(explicit.getByText('1', { exact: true })).toBeInTheDocument();
+    expect(fallback.getByText(/2\.0 кБ\/с/, WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+    expect(fallback.getByText(/1\.0 кБ\/с/, WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+    expect(fallback.getByText('2', { exact: true })).toBeInTheDocument();
+  });
+
+  it('uses the first configured outbound for the default rule when route.final is absent', async () => {
+    const config = JSON.stringify({
+      outbounds: [
+        { type: 'urltest', tag: 'proxy', outbounds: ['sub-eu/eu-reality'] },
+        { type: 'direct', tag: 'direct' },
+      ],
+      route: {
+        rules: [
+          { domain: ['lan.example'], outbound: 'direct' },
+          { domain: ['video.example'], outbound: 'proxy' },
+        ],
+      },
+    });
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(config)),
+      http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(CLASH_PROXIES_FIXTURE))
+    );
+    RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+    const system = { ...OUTBOUND_SYSTEM_FIXTURE, thermal: [] };
+    RuntimeStore.getState().pushSystem({
+      ...system,
+      outbounds: system.outbounds.map((entry) =>
+        entry.tag === 'proxy' ? { ...entry, final: { bytes: 7 * 1024 ** 2, rate: 128, origin: 'observed' } } : entry
+      ),
+    });
+
+    renderWithRouter(OverviewScreen);
+
+    const table = within(await screen.findByRole('table', { name: OUTBOUND_TABLE }));
+    const fallback = within(await table.findByRole('row', { name: /Всё остальное/ }));
+    const direct = within(table.getByRole('row', { name: /lan\.example/ }));
+    const proxy = within(table.getByRole('row', { name: /video\.example/ }));
+    expect(fallback.getByText('proxy', { exact: true })).toBeInTheDocument();
+    expect(fallback.getByText('7.0 МБ', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+    expect(direct.getByText('direct', { exact: true })).toBeInTheDocument();
+    expect(direct.getByText('20.0 МБ', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+    expect(proxy.getByText('30.0 МБ', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
   });
 
   it('normalizes both shares when the core volume exceeds the internet volume', async () => {
@@ -422,16 +576,6 @@ describe('overview screen', () => {
     expect(requested).toHaveBeenCalledTimes(1);
   });
 
-  // A URL test picks its node itself: a switch there would be undone by the next measurement.
-  it('offers no switch for a group that picks its node by latency', async () => {
-    server.use(...proxyHandlers);
-
-    renderWithRouter(OverviewScreen);
-
-    expect(await screen.findByRole('combobox', { name: 'Выход группы us-fallback' })).toBeInTheDocument();
-    expect(screen.queryByRole('combobox', { name: 'Выход группы proxy' })).not.toBeInTheDocument();
-  });
-
   // A check sends packets from the router: it runs on the button only, and a failure leads
   // to the screen with the checks themselves.
   it('runs the quick check on demand and folds a failure into its area', async () => {
@@ -505,20 +649,117 @@ describe('overview screen', () => {
     expect(ConnectionStore.getState().history).toHaveLength(60);
   });
 
-  it('shows an outbound label before the original tag on Overview', async () => {
+  it('shows the outbound label and each step of a nested choice on separate lines', async () => {
     server.use(
+      http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(OVERVIEW_ROUTED_CONFIG)),
       http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(CLASH_PROXIES_FIXTURE)),
-      http.get(PROXY_ENDPOINT.outbounds(), () => HttpResponse.json({ 'us-fallback': { label: 'Work traffic' } }))
+      http.get(PROXY_ENDPOINT.outbounds(), () =>
+        HttpResponse.json({
+          'us-fallback': { label: 'Work traffic' },
+          us: { label: 'America' },
+          [OVERVIEW_ACTIVE_SERVER]: { label: 'Home server' },
+        })
+      )
     );
+    RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+    RuntimeStore.getState().pushSystem({ ...OUTBOUND_SYSTEM_FIXTURE, thermal: [] });
 
     renderWithRouter(OverviewScreen);
 
-    expect(
-      await screen.findByRole('combobox', { name: 'Выход группы Work traffic · us-fallback' })
-    ).toBeInTheDocument();
-    const row = screen.getAllByRole('listitem').find((item) => within(item).queryByText('Work traffic') !== null);
-    expect(row).toHaveTextContent(/Work traffic\s*us-fallback/);
-    expect(screen.getByText('us-fallback', { selector: 'span.font-mono' })).toBeInTheDocument();
+    const table = within(await screen.findByRole('table', { name: OUTBOUND_TABLE }));
+    const row = within(await table.findByRole('row', { name: /Work traffic/ }));
+    const path = row.getByRole('cell', { name: /Work traffic/ });
+    const details = within(path);
+    expect(path).toHaveTextContent(/Work traffic\s*us-fallback/);
+    expect(details.getByText('us-fallback', { exact: true })).toHaveClass('font-mono');
+    expect(details.getByText(/выбор вручную/i)).toBeInTheDocument();
+    expect(details.getByText(/Выбрана группа/i)).toBeInTheDocument();
+    expect(details.getByText('America', { exact: true })).toBeInTheDocument();
+    expect(details.getByText(/Работает сервер/i)).toBeInTheDocument();
+    expect(path).toHaveTextContent(/Home server\s*sub-us\/us-reality/);
+    expect(details.getByText(OVERVIEW_ACTIVE_SERVER, { exact: true })).toHaveClass('font-mono');
+    expect(path).not.toHaveTextContent(/[→›]/);
+  });
+
+  it('shows a fresh row delay after a manual check without inventing a norm', async () => {
+    let checked = false;
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(OVERVIEW_ROUTED_CONFIG)),
+      http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(CLASH_PROXIES_FIXTURE)),
+      http.get(PROXY_ENDPOINT.latency(), () => {
+        const current = { at: '2026-09-10T19:30:00Z', delay_ms: 123 };
+        return HttpResponse.json({
+          servers: [
+            {
+              tag: OVERVIEW_ACTIVE_SERVER,
+              recent: [{ at: CHECKED_AT, delay_ms: 609 }, ...(checked ? [current] : [])],
+              hourly: [],
+              ...(checked ? { current, level: 'within_norm' } : { level: 'no_measurement' }),
+              origin: 'computed',
+            },
+          ],
+        });
+      }),
+      http.get(PROXY_ENDPOINT.proxyDelay(OVERVIEW_ACTIVE_SERVER), () => {
+        checked = true;
+        return HttpResponse.json({ delay: 123, time: '2026-09-10T19:30:00Z' });
+      })
+    );
+    RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+    RuntimeStore.getState().pushSystem({ ...OUTBOUND_SYSTEM_FIXTURE, thermal: [] });
+    const user = userEvent.setup();
+
+    renderWithRouter(OverviewScreen);
+
+    const table = within(await screen.findByRole('table', { name: OUTBOUND_TABLE }));
+    const row = within(await table.findByRole('row', { name: /Работает сервер.*sub-us\/us-reality/i }));
+    const check = row.getByRole('button', { name: /Проверить задержку.*sub-us\/us-reality/i });
+    expect(row.getByText('Нет замера')).toBeInTheDocument();
+    expect(row.queryByText('609 мс', WITHOUT_WORD_JOINERS)).not.toBeInTheDocument();
+    expect(checked).toBe(false);
+
+    await user.click(check);
+
+    expect(await row.findByText('123 мс', WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+    expect(row.queryByText('Нет замера')).not.toBeInTheDocument();
+    expect(row.queryByText(/Обычно/i)).not.toBeInTheDocument();
+    const announcement = screen.getByRole('status', { name: 'Результат действия' });
+    await waitFor(() => {
+      expect(announcement).toHaveTextContent('Задержка обновлена');
+    });
+  });
+
+  it('reports no answer and marks a computed usual delay in the outbound row', async () => {
+    server.use(
+      http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(OVERVIEW_ROUTED_CONFIG)),
+      http.get(PROXY_ENDPOINT.proxies(), () => HttpResponse.json(CLASH_PROXIES_FIXTURE)),
+      http.get(PROXY_ENDPOINT.latency(), () =>
+        HttpResponse.json({
+          servers: [
+            {
+              tag: OVERVIEW_ACTIVE_SERVER,
+              recent: [],
+              hourly: [],
+              current: { at: CHECKED_AT },
+              usual_ms: 609,
+              computed_usual_ms: 609,
+              level: 'no_answer',
+              origin: 'computed',
+            },
+          ],
+        })
+      )
+    );
+    RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+    RuntimeStore.getState().pushSystem({ ...OUTBOUND_SYSTEM_FIXTURE, thermal: [] });
+
+    renderWithRouter(OverviewScreen);
+
+    const table = within(await screen.findByRole('table', { name: OUTBOUND_TABLE }));
+    const row = within(await table.findByRole('row', { name: /Work sites/ }));
+    expect(await row.findByText('Нет ответа')).toBeInTheDocument();
+    expect(row.getByText(/609 мс/, WITHOUT_WORD_JOINERS)).toBeInTheDocument();
+    expect(row.getByText('вычислено')).toBeInTheDocument();
   });
 
   // The verdict answers the question the screen is opened for, and stands in the header.
@@ -669,17 +910,20 @@ describe('overview screen', () => {
       ).toBeInTheDocument();
     });
 
-    it('with the core stopped the node card shows no latency as current', async () => {
+    it('replaces outbound rows with a no-data message while the core is stopped', async () => {
       server.use(
         ...proxyHandlers,
+        http.get(CONFIG_ENDPOINT.config(), () => HttpResponse.text(OVERVIEW_ROUTED_CONFIG)),
         http.get(DAEMON_ENDPOINT.service(), () => HttpResponse.json(SERVICE_FAILED_FIXTURE))
       );
+      RuntimeStore.getState().pushTraffic({ up: 8500, down: 43_400 });
+      RuntimeStore.getState().pushSystem({ ...OUTBOUND_SYSTEM_FIXTURE, thermal: [] });
 
       renderWithRouter(OverviewScreen);
 
-      expect(await (await card('Выбор выхода')).findByText(STOPPED)).toBeInTheDocument();
-      expect((await card('Выбор выхода')).queryByRole('combobox')).not.toBeInTheDocument();
-      expect((await card('Выбор выхода')).queryByText(/мс$/)).not.toBeInTheDocument();
+      const section = within(await screen.findByRole('region', { name: OUTBOUND_TABLE }));
+      expect(await section.findByText(STOPPED)).toBeInTheDocument();
+      expect(section.queryByRole('table')).not.toBeInTheDocument();
     });
 
     it('past the drop threshold without a first frame stops loading and says no data comes from the core', async () => {

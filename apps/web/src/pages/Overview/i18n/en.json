@@ -27,12 +27,47 @@
   "status": {
     "label": "System status"
   },
-  "node": {
-    "title": "Node",
-    "noGroups": "The config has no groups: rules send traffic straight to outbounds.",
-    "none": "No group has manual choice: the other groups pick their node themselves. Add one on the Proxies screen.",
-    "select": "Node of the {{group}} group",
-    "selected": "{{group}}: node {{node}} selected"
+  "outbounds": {
+    "title": "Outbounds and rules",
+    "empty": "No outbounds in the applied rules.",
+    "offline": "Outbound data is unavailable while the daemon is unreachable.",
+    "rules": "Rules",
+    "identity": "Outbound and server",
+    "latency": "Latency and norm",
+    "delay": "Latency",
+    "rate": "Rate",
+    "connections": "Connections",
+    "defaultRule": "Default rule",
+    "final": "Everything else",
+    "ruleCount_one": "{{count}} rule",
+    "ruleCount_other": "{{count}} rules",
+    "kind": {
+      "group": "Group",
+      "direct": "Direct, without a proxy",
+      "block": "Block",
+      "dns": "DNS interception",
+      "server": "Server"
+    },
+    "choice": {
+      "manual": "Manual choice",
+      "latency_one": "Picks by latency from {{count}} server",
+      "latency_other": "Picks by latency from {{count}} servers",
+      "firstAvailable": "Chooses the first available server",
+      "loadBalance": "Distributes connections",
+      "automatic": "Chooses automatically"
+    },
+    "selectedGroup": "Selected group <name/>",
+    "activeServer": "Server in use <name/>",
+    "usually": "Usually {{value}} ms",
+    "noAnswer": "No answer",
+    "testServer": "Check latency for server {{name}}",
+    "download": "Download",
+    "upload": "Upload",
+    "combinedRate": "Combined",
+    "noTraffic": "No traffic now",
+    "unavailable": "No data",
+    "volume": "Volume",
+    "period": "Over {{age}}"
   },
   "check": {
     "title": "Quick check",

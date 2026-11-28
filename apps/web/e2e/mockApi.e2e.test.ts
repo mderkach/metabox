@@ -25,6 +25,7 @@ test(
     await test.step('Open Overview from the root with the accumulated volumes', async () => {
       await page.goto('/');
       await expect(page).toHaveURL(/\/overview$/);
+      await expect(overviewPage.outbounds).toBeVisible();
       await expect(overviewPage.trafficPeriod).toBeVisible();
       await expect(overviewPage.trafficShares).toHaveText(/30\.0 MB\s*30%.*70\.0 MB\s*70%/s);
     });
